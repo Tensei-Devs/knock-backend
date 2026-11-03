@@ -1,6 +1,6 @@
 # Rulesets básicos
 
-Reglas mínimas de GitHub para este repositorio. El profesor dijo que compartiría una imagen con los *rulesets* sugeridos; **no se recibió**, así que estos son los básicos que el equipo definió. Cuando llegue la imagen se comparan y se ajustan.
+Reglas mínimas de GitHub para este repositorio. El profesor compartió capturas de su ruleset «Main Proteccion» (2026-11-03) y `main.json` se alineó con ellas. `develop` y las etiquetas son básicos del equipo.
 
 | Archivo | Qué protege | Reglas |
 |---|---|---|
@@ -13,6 +13,12 @@ El rol de administrador del repositorio puede saltarse las reglas (para emergenc
 ## Cómo aplicarlos
 1. En GitHub: **Settings → Rules → Rulesets → New ruleset → Import a ruleset**.
 2. Elegir cada archivo `.json` de esta carpeta y crear el ruleset.
+
+## Qué trae `main.json` frente al ruleset del profesor
+- Igual: no borrar, bloquear force push, pull request con 1 aprobación, métodos de fusión Merge/Squash/Rebase, regla de comprobaciones obligatorias (sin ninguna agregada todavía) y revisión automática de Copilot.
+- Más estricto que el profesor: aprobaciones descartadas con commits nuevos e hilos resueltos antes de fusionar.
+- Distinto: el profesor deja la lista de excepciones vacía; aquí el rol de administrador puede saltarse las reglas (decisión del líder).
+- Sin copiar (no está en el JSON): «Require an additional approval for unattributed Copilot pull requests»; se marca en la interfaz o al importar el JSON exportado por el profesor.
 
 ## Pendiente
 - **Comprobaciones obligatorias del CI** (`required_status_checks`): se agregan cuando exista el spec de CI/CD y sus trabajos tengan nombre. Hoy no hay pipeline.

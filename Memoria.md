@@ -51,3 +51,9 @@
 - **Porqué:** el profesor mostró esa estructura y dijo que compartiría los rulesets; la imagen no llegó, así que se dejaron los básicos (rama `main` y `develop` protegidas, etiquetas de versión protegidas).
 - **Dependencias nuevas (plantilla de xUnit):** `xunit` 2.9.3, `xunit.runner.visualstudio` 3.1.5, `Microsoft.NET.Test.Sdk` 17.14.1 y `coverlet.collector` 6.0.4, solo en proyectos de prueba. Evaluación de licencia y mantenimiento pendiente.
 - **A evitar:** afirmar que los rulesets se aplican: en una organización gratuita no se hacen cumplir en repositorios privados.
+
+## 2026-11-03 — Ruleset de `main` alineado con las capturas del profesor
+- **Decisión:** `main.json` copia las reglas de su ruleset «Main Proteccion»: no borrar, sin force push, pull request con 1 aprobación, métodos Merge/Squash/Rebase, regla de comprobaciones obligatorias (lista vacía hasta que exista el spec de CI/CD) y revisión automática de Copilot. Se conservan dos reglas más estrictas (aprobaciones descartadas con commits nuevos e hilos resueltos) y el rol de administrador como excepción, que en el ruleset del profesor no existe.
+- **Porqué:** el profesor pidió cumplir a la letra; la imagen ya llegó y reemplaza los básicos provisionales de la entrada anterior.
+- **Pendiente:** «Additional approval for unattributed Copilot pull requests» no está en el JSON (parámetro sin confirmar); `copilot_code_review` y la lista vacía de comprobaciones se escribieron sin validar la importación en GitHub.
+- **A evitar:** afirmar que se aplican: en una organización gratuita no se hacen cumplir en repositorios privados.
