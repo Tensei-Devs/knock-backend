@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Knock.Contracts/Knock.Contracts.csproj" />
+    <Project Path="src/Knock.Gateway/Knock.Gateway.csproj" />
+    <Project Path="src/Knock.Identity.Api/Knock.Identity.Api.csproj" />
+    <Project Path="src/Knock.Market.Api/Knock.Market.Api.csproj" />
+    <Project Path="src/Knock.Messaging.Api/Knock.Messaging.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ContractTest/Knock.ContractTest.csproj" />
+    <Project Path="tests/DatabaseTest/Knock.DatabaseTest.csproj" />
+    <Project Path="tests/IntegrationTest/Knock.IntegrationTest.csproj" />
+    <Project Path="tests/MutationTest/Knock.MutationTest.csproj" />
+    <Project Path="tests/PerformanceTest/Knock.PerformanceTest.csproj" />
+    <Project Path="tests/SecurityTest/Knock.SecurityTest.csproj" />
+    <Project Path="tests/UnitTest/Knock.UnitTest.csproj" />
+  </Folder>
+</Solution>
