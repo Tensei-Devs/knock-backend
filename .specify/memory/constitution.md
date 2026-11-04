@@ -1,174 +1,117 @@
 ---
-version: 2.2.1
-ratified: pendiente
-last_amended: 2026-10-24
-status: draft
-source_of_truth: .specify/memory/constitution.md
-mirror: ./constitution.md
-applies_to: [knock-backend, knock-frontend]
-methodology: SDD
+version: 1.1.0
+status: borrador
+methodology: SDD (Spec Driven Development)
+applies_to: knock-backend
 ---
 
-# Constitución — Knock
+# Constitución — Knock · Backend
 
-> Rector SDD de **ambos repositorios** (copia idéntica en knock-backend y knock-frontend; un cambio se hace en los dos con PR propio).
-> Ante conflicto con cualquier otro artefacto (specs, AGENTS.md, skills, código), **manda esta constitución**.
-> Porqué de cada decisión: `docs/DECISION_TECNICA.md`. Cómo trabajar: `AGENTS.md` de cada repositorio.
+> Reglas no negociables de este repositorio. Si otro documento (spec, plan, tareas, AGENTS.md o código) la contradice, **manda esta constitución**.
+> Fuente: `docs/descripcion-del-proyecto.md`.
 
 ## 1. Propósito y alcance
+- Knock conecta a personas con técnicos de confianza (mecánica, plomería, electricidad) de su colonia, empezando por una ciudad piloto. Este repositorio es el **backend**: los servicios que usan la app móvil y el panel web, su infraestructura en la nube y sus bases de datos. La descripción completa del proyecto está en `docs/descripcion-del-proyecto.md`.
+- Se trabaja con **Spec Driven Development**: primero se escribe qué se va a construir y por qué (spec), después cómo (plan), después los pasos (tareas) y solo entonces se escribe código.
+- Esta primera versión define la **base**: arquitectura, estructura del repositorio e infraestructura. No incluye funcionalidad de negocio.
 
-- Knock conecta a personas con técnicos de confianza (mecánica, plomería, electricidad) en la ciudad piloto, colonia por colonia.
-- **knock-backend:** API ASP.NET Core en **microservicios** (Identidad y confianza, Mensajería y notificaciones y Mercado, que incluye el módulo Asistente) con un gateway, bases **MongoDB** (Azure DocumentDB), scripts de datos, infraestructura con **Terraform** y pruebas (ADR-001 a ADR-006 en `docs/decisiones/`).
-- **knock-frontend:** app móvil Flutter (clientes y técnicos), panel interno Angular (moderación, verificación, métricas) y la landing page (redirección a Google Play, aviso de privacidad, eliminar cuenta y Google Analytics).
-- Cada historia (HU-NNN), tarea técnica (TT-ÁREA-NN) o defecto (BUG-NNN) tiene una spec en `specs/<ID>-<slug>/` y un issue de Jira `KNOCK-<N>`. **Sin spec Aprobada no hay código ni cambio de contrato.**
-- Fuera del MVP: pagos en la app, servicios remotos, verificación automática KYC, multi-región.
+## 2. Principios
+1. **Spec primero:** no se escribe código sin una spec aprobada que lo justifique.
+2. **Una fuente de verdad:** cada decisión vive en un solo documento; los demás la referencian.
+3. **Cambios pequeños y trazables:** cada cambio parte de una spec, tiene su plan y sus tareas y termina con pruebas.
+4. **Pruebas que prueban:** cada criterio de aceptación tiene una prueba que falla si la lógica está mal.
+5. **Seguridad y privacidad desde el diseño:** validar en la frontera, denegar por defecto, mínimo privilegio, sin secretos en el repositorio.
+6. **Simplicidad:** se elige la solución más simple que cumpla la spec; no se construye para necesidades futuras.
+7. **Honestidad:** no se declara que algo pasó si no se ejecutó, y las limitaciones se informan.
+8. **La IA propone, la persona decide:** los agentes redactan y verifican, pero una persona aprueba cada spec y cada cambio.
+9. **Caché en todo acceso a datos:** toda lectura pasa por una capa con caché (Redis) y toda escritura invalida sus claves; lo personal que cambia al crear algo no se cachea.
+10. **Respuestas rápidas:** todo listado se pagina por cursor, todo campo por el que se filtra u ordena lleva índice y las respuestas grandes se comprimen.
+11. **Versionado por puntos:** cada componente (servicios, gateway, app, panel y landing) lleva su versión `X.Y.Z`, calculada con los puntos de cada cambio; la primera versión publicada es `1.0.0`.
+12. **Observabilidad:** toda petición lleva `X-Correlation-Id` y los registros van a un servicio central sin datos personales.
+13. **Contenido moderado:** todo texto e imagen que sube una persona pasa por la API de moderación antes de guardarse; si la API no responde, no se publica.
+14. **Uso de IA declarado:** todo pull request incluye una sección «Uso de IA» con qué generó la IA y qué revisó una persona (la sección va en la plantilla del PR, no en cada spec); la IA nunca recibe datos personales sensibles.
 
-## 2. Principios no negociables
-
-1. **Microservicios con gateway:** tres servicios desplegables por separado y una puerta de entrada; cada servicio es dueño de su base lógica y solo se comunica por su contrato público (REST o gRPC) o por eventos. Dentro de cada servicio los módulos conservan sus fronteras (ADR-001).
-2. **Stateless:** nada de estado de negocio en memoria del proceso; lo compartido vive en MongoDB o Redis.
-3. **Seguridad y privacidad primero:** validar en la frontera, denegar por defecto, mínimo privilegio, datos mínimos, sin secretos en código, logs ni errores.
-4. **Contrato primero:** el OpenAPI de knock-backend es la fuente; knock-frontend lo vendoriza y genera sus clientes; nadie escribe llamadas HTTP a mano.
-5. **La IA propone, la persona decide:** ningún cambio de estado, sanción o aprobación lo ejecuta un modelo; la IA nunca recibe INE, CURP, dirección ni teléfono.
-6. **Reutilizar antes de crear:** se busca en el mapa de código antes de escribir algo nuevo; el CI rechaza duplicados y violaciones de arquitectura.
-7. **Pruebas que prueban:** cada criterio de aceptación tiene un caso `TC-<ID>-KK` y una prueba que falla si la lógica está mal.
-8. **Honestidad:** no se declara que algo pasó si no se ejecutó; las limitaciones se informan.
-9. **Real-first:** servicios reales en integración (MongoDB, Redis, emulador de Firebase); fakes solo en unitarias. Además, una prueba de humo contra el DocumentDB real, porque Testcontainers con MongoDB no reproduce todo lo que hace DocumentDB.
-10. **Caché en todo acceso a datos:** toda lectura pasa por el repositorio con caché de su servicio (una prueba de arquitectura con NetArchTest prohíbe usar `IMongoCollection` fuera de `Data/`). Cada colección declara en su spec `cache: <TTL en s>` o `cache: no` con motivo. Toda escritura invalida sus claves antes de responder. Valores por defecto: catálogos 86 400 s, perfiles públicos 60 s, búsquedas 10 s; solicitudes, cotizaciones, mensajes y datos personales: `no`. La app tiene su propia caché local (§12).
-11. **Respuestas rápidas:** todo listado va paginado por cursor, todo campo por el que se filtra u ordena lleva índice y las respuestas se comprimen (§12).
-12. **Escalable y sin estado:** durante la ventana de evaluación (§13) cada servicio de negocio y el gateway corren con `minReplicas = maxReplicas = 2` (o más) y sin reglas de escalado; nada de negocio vive en la memoria del proceso; todo el tráfico externo va por HTTPS.
-13. **Logout real:** cerrar sesión cancela el token en el backend (lista de revocados en Redis) y borra la sesión y la caché en la app.
-14. **Contenido moderado:** todo texto e imagen que sube una persona pasa por la API de moderación antes de guardarse; si la API no responde o no hay cuota, no se guarda y se informa (falla cerrado); no se admite video. Las fotos de INE y selfie no se envían a moderación ni a IA: las revisa una persona en el panel.
-15. **Idempotencia:** toda operación que crea algo (solicitud, cotización, mensaje) exige el encabezado `Idempotency-Key`; repetirla con el mismo cuerpo devuelve la respuesta original y no crea un duplicado (§5).
-16. **Costo cero:** niveles gratuitos y crédito de estudiante; el número de réplicas se fija por variable de Terraform y baja fuera de la ventana de evaluación (§12); el consumo se revisa cada semana (§13).
-
-## 3. Stack obligatorio
-
+## 3. Stack
 | Capa | Tecnología |
 |---|---|
-| API | .NET 10 / ASP.NET Core 10 con **Controllers**, REST + OpenAPI 3.1 versionado `/api/v1`, FluentValidation, Serilog, ProblemDetails |
-| Datos | MongoDB en Azure DocumentDB (plan B: Atlas) con el controlador oficial de .NET; una base lógica por servicio (ADR-002) |
-| Eventos y plazos | Outbox transaccional (transacciones de MongoDB) + mensajes programados (MassTransit 8 o Wolverine, se fija en TT-API-04) · mecanismo de eventos entre servicios y su costo se fijan en TT-ARQ-03 |
-| Tiempo real | SignalR con Redis como backplane (reparte los mensajes entre réplicas); push con FCM |
-| Datos compartidos | Redis 7 (contenedor propio en Container Apps, §12): tokens revocados, caché, contadores del límite de peticiones y backplane de SignalR. Es la segunda base NoSQL (clave-valor) |
-| Acceso | Firebase Phone Auth → JWT propio 15 min + refresh rotativo 30 días (refresh guardado como huella en MongoDB); el logout revoca el `jti` en Redis |
-| IA y ML | Azure OpenAI con filtro de datos personales (si no hay cuota, el proveedor alterno lo fija un ADR) · ML.NET |
-| App móvil | Flutter estable, Riverpod, go_router, cliente Dart generado, ARB es/en |
-| Panel interno | Angular + Angular Material, cliente TypeScript generado, TypeScript strict |
-| Nube | Azure (Azure for Students, 5 regiones permitidas): Container Apps por servicio, Azure DocumentDB, Blob, Key Vault, Application Insights; **Terraform**. Redis como contenedor propio; Front Door con WAF y Redis administrado no se despliegan salvo decisión de costos; la CDN de imágenes públicas la fija un ADR (§13) |
-| Landing | Railway (espacio ya contratado por el líder del proyecto; HTTPS), Google Analytics solo con consentimiento de cookies |
-| Calidad | **Activo hoy:** xUnit · Testcontainers · NetArchTest · Stryker.NET (informativa) · flutter_test · Playwright (panel). **Se activa después:** mutation_test, StrykerJS, k6 (TT-QA-02), RESTler y un job nocturno |
-| Seguridad | **Activo hoy:** Semgrep (con SARIF) · gitleaks · OSV-Scanner · dependency-review · Trivy · Dockle · Checkov · oasdiff · ZAP baseline. **Se activa después:** CodeQL, SBOM y firma de imágenes; Checkov pasa de Bicep a Terraform con TT-AZ-02 |
+| Plataforma | .NET 11 / ASP.NET Core 11 con Controllers (siempre la última versión estable; mientras .NET 11 esté en candidata a versión final se usa el RC y se pasa a la versión final cuando salga) |
+| API | REST con OpenAPI 3.1, rutas versionadas (`/api/v1`), FluentValidation, ProblemDetails (RFC 9457) |
+| Servicios | Tres servicios (Identidad y confianza, Mensajería y notificaciones, Mercado) y una puerta de entrada (gateway) |
+| Base de datos principal | MongoDB en Azure DocumentDB (plan B: MongoDB Atlas); una base lógica por servicio |
+| Datos compartidos | Redis en contenedor propio: tokens cancelados, caché, contadores del límite de peticiones y mensajes entre copias |
+| Nube | Azure: Container Apps, DocumentDB, Blob Storage, Key Vault y Application Insights |
+| Infraestructura como código | Terraform con estado remoto |
+| Registro | Serilog con `X-Correlation-Id` en toda petición, sin datos personales |
+| Pruebas | xUnit, Testcontainers y NetArchTest |
+| Integración y entrega continua | GitHub Actions |
 
-No se agregan dependencias sin evaluar necesidad, licencia, mantenimiento y vulnerabilidades (registrar en `Memoria.md`).
+No se agregan dependencias sin evaluar necesidad, licencia, mantenimiento y vulnerabilidades, y se registran en `Memoria.md`.
 
 ## 4. Arquitectura
+- **Microservicios con una puerta de entrada.** Tres servicios pequeños —Identidad y confianza, Mensajería y notificaciones y Mercado— y un gateway que recibe todo el tráfico, valida el token, limita las peticiones y reparte la petición al servicio correcto. Los servicios internos no tienen dirección pública.
+- **Por qué tres servicios:** usar microservicios es un requerimiento; un solo programa obliga a desplegar todo junto y un error en una parte puede tirar las demás; ocho servicios (uno por módulo) no caben en un equipo de cuatro personas ni en el costo cero. Tres agrupan los módulos que cambian juntos.
+- **Cada servicio es dueño de lo suyo:** tiene su base lógica, su imagen de contenedor, su módulo de infraestructura y su despliegue. Ningún servicio lee la base de datos de otro: se piden lo que necesitan por la interfaz pública del otro servicio.
+- **Contratos compartidos sin lógica:** una biblioteca solo con tipos y contratos describe lo que los servicios se intercambian, para no acoplarlos.
+- **Capas dentro de cada servicio:** `Controllers` (reciben, validan y responden) → `Services` (reglas de negocio y coordinación) → `Domain` (entidades y sus reglas) → `Data` (MongoDB y Redis). Cada función se construye de punta a punta (rebanada vertical) y los módulos tienen fronteras que las pruebas de arquitectura verifican.
+- **Sin estado en el proceso:** nada de negocio vive en la memoria de una copia; lo compartido vive en MongoDB o en Redis, de modo que el servicio puede correr en varias copias.
+- **Eventos fiables:** un cambio importante guarda su aviso en la misma operación (colección `outbox`) y un proceso de fondo lo entrega, para que no se pierda ni se avise algo que no ocurrió.
 
-### knock-backend
-- `src/Knock.<Servicio>.Api/Modules/<Modulo>/{Controllers,Dtos,Validators,Services,Domain,Data,Events}` + `Common/`, `Hosting/`, `Middleware/`; `src/Knock.Gateway/` y `src/Knock.Contracts/` (solo contratos, sin lógica). Mientras TT-ARQ-01 no termine, el código sigue en `src/Knock.Api/`.
-- Servicios y módulos: Identidad y confianza (Identity, Trust) · Mensajería y notificaciones (Messaging, Notifications) · Mercado (Catalog, Requests, Reputation, Assistant). Una base lógica MongoDB por servicio.
-- Orden fijo de la tubería (fuente: `docs/MIDDLEWARES.md`, comprobado por `PipelineOrderTests`): `ForwardedHeaders → CorrelationId → SecurityHeaders → ExceptionHandling → RequestLogging → HSTS (no Dev) → HttpsRedirection → CORS → RateLimiter → RequestBodyLimit → Authentication → Authorization → Endpoints`. Hoy están implementados `ForwardedHeaders`, `CorrelationId`, `ExceptionHandling`, `RequestLogging`, `RateLimiter`, `RequestBodyLimit`, `Authentication` y `Authorization`; `SecurityHeaders`, `HSTS`, `HttpsRedirection` y `CORS` entran con TT-API-06.
-- Errores en ProblemDetails (RFC 9457); estados con máquina de estados en `Domain/` (transición inválida → 409).
-- Scripts de índices y semillas en `db/`; infraestructura con Terraform en `deploy/`, con cuatro pasos manuales (crear, desplegar, eliminar lo desplegado y destruir). El clúster gratuito de DocumentDB vive en una raíz de Terraform aparte (`deploy/persistent/`) que el destroy principal no toca.
-- **Transición de datos:** mientras TT-BD-06 no termine, el código, las pruebas y el CI existentes con PostgreSQL y EF Core se toleran y no se amplían; ningún código nuevo usa PostgreSQL ni EF Core.
+**Estructura del repositorio**
 
-### knock-frontend
-- App: `app/lib/{core,features/<feature>/{presentation,domain,data}}`; `domain/` Dart puro; cliente generado en `app/packages/knock_api`.
-- Panel: `panel/src/app/{core,shared,features/<feature>/{pages,components,services,models},api}`; componentes sin `HttpClient`; `api/` generado.
-- Landing: `landing/` (sitio estático) con las páginas de privacidad, términos y eliminar cuenta.
-- Contrato vendorizado en `contracts/openapi.v1.json`.
+```
+src/
+  Knock.Gateway/              puerta de entrada
+  Knock.Identity.Api/         servicio Identidad y confianza
+  Knock.Messaging.Api/        servicio Mensajería y notificaciones
+  Knock.Market.Api/           servicio Mercado (incluye el módulo Asistente)
+  Knock.Contracts/            solo tipos y contratos, sin lógica
+  cada servicio: Modules/<Modulo>/{Controllers,Dtos,Validators,Services,Domain,Data,Events}
+                 + Common/, Hosting/, Middleware/
+tests/                        UnitTest, IntegrationTest, SecurityTest, ContractTest, DatabaseTest, MutationTest y PerformanceTest
+db/                           scripts de índices y datos de ejemplo
+deploy/                       Terraform: un módulo por servicio y uno compartido
+docs/                         descripción del proyecto y decisiones
+specs/                        spec.md, plan.md y task.md de cada cambio
+```
 
-## 5. Código y datos
+## 5. Infraestructura y escalabilidad
+- **Nube:** Azure con la suscripción gratuita de estudiante: Container Apps (ejecuta los servicios y el gateway y reparte las peticiones), DocumentDB (MongoDB), Blob Storage, Key Vault y Application Insights. El backend corre en una sola región de las cinco que permite la suscripción.
+- **Infraestructura como código:** todo se describe con Terraform (un módulo por servicio y uno compartido, con estado remoto) y se crea y se borra con cuatro pasos manuales: crear, desplegar, eliminar lo desplegado y destruir.
+- **Escalado, mínimo dos instancias:** durante la ventana de evaluación cada servicio de negocio y el gateway corren con al menos dos copias (`minReplicas = maxReplicas = 2` o más), fijadas por variable de Terraform; es escalado y no autoescalado, porque no es un requerimiento tener reglas que las suban solas.
+- **Balanceador:** la entrada de Container Apps reparte las peticiones entre las copias, saca de rotación a una copia enferma (usa `/health/ready`) y termina el cifrado HTTPS.
+- **Sin estado en el proceso:** tokens, caché, límite de peticiones y mensajes entre copias viven en Redis o en MongoDB, para que cualquier copia atienda cualquier petición.
+- **Costo cero:** niveles gratuitos y crédito de estudiante; fuera de la ventana de evaluación el número de copias baja y el consumo se revisa cada semana.
+- **Entrega del proyecto:** el proyecto se entrega con el script de la base de datos (`db/`) y la infraestructura se puede levantar y tumbar con comandos.
 
-- Inglés en código; español en specs, documentación y textos de UI (archivos de traducción).
-- MongoDB: colecciones en `snake_case` plural, campos en camelCase, `_id` de tipo `ObjectId`, fechas en UTC y dinero como `Decimal128` en MXN. El campo `version` del documento se devuelve como `ETag` y se exige como `If-Match` al escribir (412 si cambió), así una sola pieza cubre la caché de lectura y la concurrencia optimista.
-- Idempotencia: el encabezado `Idempotency-Key` (UUID) se guarda en el campo `idempotencyKey` con índice único por usuario y operación durante 24 h; con el mismo cuerpo devuelve la respuesta original, con otro cuerpo devuelve 422.
-- Complejidad ≤ 10 por método; warnings como errores; sin `TODO` sin issue; sin código muerto.
-- Supresiones de analizadores solo con excepción registrada (`EXC-NNN`, ver §8).
+## 6. Código y convenciones
+- Código y comentarios técnicos en inglés; specs, documentación y textos de interfaz en español.
+- Warnings como errores; complejidad máxima de 10 por método o función.
+- Sin `TODO` sin explicación, sin código muerto y sin secretos.
+- Nombres claros: el nombre explica la intención, no la implementación.
 
-## 6. Seguridad y privacidad
+## 7. Seguridad y privacidad
+- Ningún secreto, clave, dato personal real ni documento de identidad vive en el repositorio, en los registros ni en un prompt.
+- Se sigue OWASP Top 10 y OWASP API Security Top 10 como lista mínima.
+- Toda entrada se valida; toda autorización se decide en el servidor.
 
-- OWASP Top 10 y OWASP API Security Top 10 como matriz mínima (skill `security-core`).
-- Autorización por recurso en el servidor; el técnico solo ve la colonia hasta ser elegido; panel con permisos y doble factor.
-- **Biométricos (INE y selfie):** contenedor privado y separado, cifrados con llave propia por verificación, enlaces de 5 min, registro de cada acceso; se borran al decidir o a los 7 días destruyendo la llave. Nunca en la base, logs, fixtures ni datos de prueba reales.
-- CURP solo como HMAC; dirección y celular cifrados; ubicación del dispositivo convertida en colonia y descartada.
-- Secretos solo en Key Vault o variables; nada en el repositorio. Acciones de GitHub fijadas a SHA; permisos mínimos por job.
-- Límite de peticiones: los servicios internos no se exponen a internet (ingreso interno). El gateway limita por IP antes de autenticar y por usuario (`sub`) después, con contadores en Redis; más estricto en inicio de sesión y envío de SMS. Cada servicio limita por la IP original solo si `ForwardedHeaders` confía en el gateway (red del entorno de Container Apps). Valores en configuración.
-- JWT: el gateway y cada servicio validan el token (HS256, clave en Key Vault, solo ese algoritmo); un ingreso interno no sustituye a la autenticación. Riesgo aceptado: cualquier servicio que tenga la clave podría emitir tokens; se reevalúa con un algoritmo asimétrico si el proyecto sigue después del 2-dic.
-- SMS solo a números +52. Los SMS reales requieren el plan Blaze de Firebase, que se activa antes de abrir la prueba cerrada de Google Play (los testers son más de los 10 números de prueba permitidos), con presupuesto y alertas; hasta entonces, números de prueba.
-- Eliminar cuenta con confirmación por SMS y 7 días de gracia; las opiniones se anonimizan y no se borran; los reportes se conservan solo el tiempo que obligue la ley.
-- No se usan datos personales reales en desarrollo ni en pruebas (no solo los biométricos).
-- El aviso de privacidad declara que los datos se alojan en Estados Unidos (Azure y Google) y pide consentimiento expreso para los datos sensibles (INE y selfie).
-
-## 7. Pruebas y calidad
-
-- Doce tipos posibles: unitarias, widget/componente, integración, aceptación, seguridad negativa, contrato, mutación, arquitectura, E2E, rendimiento, usabilidad, accesibilidad (+ fuzzing, base de datos, smoke, caos, compatibilidad cuando aplique). Cada spec declara cuáles aplican y por qué.
-- Cobertura mínima: backend 60 % líneas y 50 % ramas; app 50 % líneas; panel 60 % líneas y 50 % ramas.
-- Mutación por módulo crítico: sesión (Identity) ≥ 80 %; reglas de negocio (Requests, Trust, Reputation; `domain/` de la app) ≥ 70 %.
-- El umbral de mutación se aplica en un job nocturno (por crear); mientras no exista es una meta y no un control. Hoy Stryker corre informativo en cada PR (`--break-at 0`).
-- Accesibilidad en la app: etiquetas semánticas en cada control y áreas táctiles de al menos 48 dp.
-- Rendimiento con k6 contra 2 réplicas; cada técnica de caché (principio 10) tiene una prueba que comprueba la invalidación al escribir.
-- Los umbrales no se bajan para que el CI pase.
-
-## 8. Vulnerabilidades y excepciones
-
-- Crítica o alta explotable en el contexto de ejecución → bloquea el merge.
-- Falso positivo o riesgo aceptado → `security/exceptions.yaml` con id, herramienta, regla, alcance, justificación con evidencia, responsable, fecha, vencimiento (máx. 90 días) y plan. El CI falla con excepciones vencidas o supresiones sin `EXC-NNN`.
-- Prohibidas las supresiones globales o silenciosas.
+## 8. Pruebas y calidad
+- Tipos de prueba posibles: unitarias, integración, arquitectura, seguridad negativa, contrato, accesibilidad y de aceptación; cada spec declara cuáles aplican y por qué.
+- Cobertura mínima definida en la spec de calidad; los umbrales no se bajan para que el CI pase.
+- Un cambio está terminado cuando cumple sus criterios, sus pruebas pasan, el CI está en verde, un par lo revisó y `Memoria.md` está al día.
 
 ## 9. Flujo de trabajo
-
-- Ramas: `main` (producción) ← `release` (estabilización: sin entorno desplegado; las pruebas pesadas pasan a correr aquí cuando se configure en el CI) ← `develop` (integración) ← `sprint-XX` ← `<tipo>/KNOCK-<N>-<english-description>`; `hotfix/KNOCK-<N>-…` desde main. El CI rechaza nombres y combinaciones fuera del esquema. Hay un solo entorno en Azure y el único despliegue sale de `main`.
-- Commits en inglés, Conventional Commits `type(scope): description in english, imperative, lowercase (KNOCK-N)` (la clave es obligatoria y coincide con la de la rama; sin atribución a IA ni `Co-Authored-By` de agentes; el de una persona del equipo sí se permite); PR `KNOCK-N · <ID> <título>` con plantilla, informe de verificación y sección «Uso de IA»; aprueba y fusiona el Tech Lead (cuando él es el autor, aprueba el revisor de pares); todo PR que cambie código, workflows, scripts, infraestructura o seguridad tiene al menos un comentario de revisión de otro integrante; un PR que cambie **solo documentación** (specs, ADR, `Memoria.md`, evidencia) necesita la revisión final del Tech Lead y el reporte de la pre-revisión automática (`ai-review.yml`), y el comentario de otro integrante es opcional (si la pre-revisión no corrió o falló, se aplica la regla general; la pre-revisión automática nunca sustituye a una persona en un PR de código); checks requeridos en verde.
-- Versiones `X.Y.Z` por componente (cada servicio, gateway, app, panel y landing), con la **matriz de puntos** y primera versión `1.0.0`. Cada PR declara `puntos-<componente>-N` por cada componente que toca; un despliegue con 0 puntos no cambia la versión; el despliegue suma los puntos y aplica la versión. El `versionCode` de Android es `X×1 000 000 + Y×10 000 + Z×100 + n` (n = subida de esa versión, de 0 a 99). Hasta que TT-CD-03 implemente el control en el CI, la etiqueta se revisa a mano. Esquema y matriz en `docs/VERSIONAMIENTO.md`.
-- Todo despliegue sale del pipeline; nadie sube a producción a mano.
-- Una sola cuenta de GitHub y un solo correo del proyecto para dar de alta los servicios.
-- Definición de terminado: criterios cumplidos, pruebas del plan en verde, PR revisado, CI en verde, «Uso de IA» completo, `Memoria.md` al día y la fila correspondiente de `docs/CUMPLIMIENTO_LINEAMIENTOS.md` actualizada.
+- Ramas: `main` (listo para publicar) ← `develop` (integración) ← `<tipo>/<descripcion-en-ingles>` (una por cambio).
+- Commits en inglés con Conventional Commits: `tipo(alcance): descripcion`.
+- Todo cambio entra por pull request con descripción, pruebas ejecutadas y revisión de otra persona.
+- Ciclo SDD de cada cambio: **spec → plan → tareas → implementación → verificación → memoria**.
+- Cada PR declara los puntos que aporta a cada componente que toca (`puntos-<componente>-N`); al desplegar se suman, se calcula la versión nueva y se crea una etiqueta de Git y una imagen con ese número. Un despliegue con cero puntos no cambia la versión.
+- La plantilla de PR tiene las secciones Descripción, Pruebas, Seguridad, Riesgos y «Uso de IA».
 
 ## 10. Agentes de IA
+- Los agentes leen `AGENTS.md`, esta constitución y `Memoria.md` antes de actuar.
+- Un agente nunca aprueba una spec, nunca fusiona y nunca opera sobre producción.
+- Prohibido: omitir pruebas, desactivar reglas o escáneres, exponer secretos, afirmar ejecuciones que no se hicieron y agregar dependencias sin evaluar.
 
-- Todo código generado o modificado por IA pasa los mismos controles que cualquier otro cambio.
-- Los commits y PR no llevan atribución a IA (trailers `Co-Authored-By` de agentes ni líneas «Generated with…»); el uso de IA se declara solo en la sección «Uso de IA» de la plantilla del PR. Un `Co-Authored-By` de una persona del equipo sí se permite.
-- Prohibido: omitir pruebas, desactivar reglas/escáneres/workflows, cambiar pruebas para ocultar fallos, agregar dependencias sin evaluar, exponer secretos o datos sensibles, afirmar ejecuciones no hechas, marcar vulnerabilidades como resueltas sin verificar, operaciones destructivas o sobre producción sin autorización explícita.
-- Las instrucciones de agentes no sustituyen los controles de CI ni la revisión humana de cambios sensibles.
-- MCP se usa donde el servicio lo ofrece (Jira, GitHub y MongoDB de solo lectura en desarrollo).
-
-## 11. Gobernanza SDD
-
-- Estados de spec: Borrador (agente) → Aprobada (persona; habilita el código; requiere KNOCK-N y revisor) → Firmada (tras el merge; no se edita) → Reemplazada (por <ID>; cuando otra spec la sustituye, como TT-BD-01 y TT-BD-02 por la migración a MongoDB).
-- `Memoria.md` por repositorio: estado, decisiones con porqué y errores a evitar. Sin datos sensibles.
-- Cambios a esta constitución: PR en ambos repositorios con la aprobación de al menos 2 de los 4 integrantes, `version` incrementada y registro en `Memoria.md`. Excepción: el Tech Lead puede aprobar solo un PR que cambie únicamente documentación (sin código, workflows ni infraestructura) y lo deja escrito en el PR.
-
-## 12. Rendimiento, caché y escalabilidad
-
-- **Caché en tres niveles:** base de datos (capa de acceso con Redis, `cache-aside`, invalidación al escribir, índices y proyecciones), backend (`ETag` débil `W/` y respuesta 304; las respuestas por usuario llevan `Cache-Control: private, no-cache`) y app (caché local con revalidación `ETag`). Los valores por defecto están en el principio 10.
-- **Paginación por cursor:** 20 por página, máximo 50.
-- **Compresión:** respuestas JSON de más de 1 KB, salvo `/auth/*` y las que llevan tokens (riesgo BREACH); serializadores JSON generados en compilación; fotos reducidas en el teléfono antes de subirlas.
-- **Réplicas:** en la ventana de evaluación, `minReplicas = maxReplicas = 2`. Fuera de ella el número se cambia a mano por variable de Terraform (1; 0 solo para un servicio que no ejecuta procesos con tiempo). El servicio que ejecuta procesos con tiempo (oleadas, vencimientos, borrados) mantiene al menos 1 réplica; con 2, cada tarea se reserva con una operación atómica para que solo una réplica la ejecute.
-- **Redis:** contenedor propio de 1 réplica, ingreso TCP interno, contraseña desde Key Vault y sin persistencia. Riesgo aceptado: si se reinicia, un access token cerrado vale hasta 15 min; la revocación del refresh es permanente en MongoDB. No es gratis: su consumo cuenta contra el crédito.
-- **Balanceo:** la entrada de Container Apps; cada servicio expone `/health` y `/health/ready` y lee los encabezados reenviados.
-- **Observabilidad:** Application Insights con `X-Correlation-Id` en toda llamada; los registros no llevan datos personales, y una prueba pasa un celular +52 y una CURP por Serilog y comprueba que no salen.
-
-## 13. Nube y costo
-
-- **Costo cero:** niveles gratuitos y crédito de Azure for Students; 2 réplicas fijas solo del 25-nov al 5-dic de 2026; consumo y permisos se revisan cada semana (las alertas de presupuesto avisan, no frenan). Lo que exceda la capa gratuita sale del crédito, y la estimación con tarifas citadas (TT-AZ-04) es requisito antes de abrir la ventana.
-- **Servicios sin nivel gratuito** (Front Door con WAF, Redis administrado, registro de contenedores de Azure) no se despliegan sin decisión explícita.
-- **Imágenes públicas:** Blob Storage detrás de una CDN de Azure; el producto y su costo se fijan en un ADR antes de la ventana (Front Door Standard o el servicio de CDN que Azure permita crear), encendido solo cuando haga falta. Las fotos de verificación nunca pasan por la CDN.
-- **IaC:** todo con Terraform; el pipeline entra a Azure con identidad federada (OIDC), sin contraseñas, con rol mínimo sobre el grupo de recursos de Knock.
-- **Moderación:** Content Safety (nivel gratuito, con cuota mensual limitada). Las pruebas de carga usan un moderador falso para no agotarla.
-- **IA generativa:** es obligatoria para la entrega. Proveedor: Azure OpenAI; si 3 semanas antes de la evaluación (11-nov) la cuota sigue en cero, un ADR fija el proveedor alterno con el mismo filtro de datos personales (principio 5). Las plantillas y reglas locales solo responden cuando el proveedor falla.
-- **Respaldo:** `mongodump` diario a Blob con restauración probada antes de la ventana (TT-BD-04); el DocumentDB gratuito no tiene respaldo.
-- **Región:** la base y los servicios van en West US; el grupo de recursos puede estar en otra región (ADR-006).
-- **Registro de imágenes:** GitHub Container Registry; imágenes con etiqueta de versión, nunca `latest`.
-
-## 14. App móvil y landing
-
-- **Sesión viva** hasta el logout, con renovación automática; se pierde por logout, token de renovación reutilizado o 30 días sin abrir la app.
-- **Permisos** del teléfono pedidos al usarlos, con su motivo y sin romper la app si se niegan; no se pide el permiso de contactos.
-- **Aviso de privacidad y eliminar cuenta** dentro de la app, enlazados a la landing (requisito de Google Play).
-- **Push (FCM):** solicitud nueva, cotización recibida, cotización elegida y cita confirmada.
-- **Modo sin conexión:** caché y borradores locales; SQLite con sincronización en alcance mínimo (catálogos, últimas conversaciones y cola de mensajes por enviar).
-- **Maqueta:** ninguna función de la maqueta se elimina; una función se puede posponer como historia en espera.
-- **Publicación:** AAB firmado desde GitHub a Google Play con claves en GitHub Secrets; pista interna, prueba cerrada con al menos 12 testers (el plan recluta 20 por si alguno se sale) durante 14 días seguidos, y producción.
-- **Landing:** redirección a Google Play, parámetros UTM, páginas de privacidad, términos y eliminar cuenta; Google Analytics solo si la persona acepta las cookies.
-- **Entrega del curso (2-dic-2026):** proyectos en `.rar` y el script de la base (`mongosh`) en `db/`.
+## 11. Gobernanza
+- Estados de una spec: **Borrador** (la escribe un agente o una persona) → **Aprobada** (una persona; habilita el código) → **Implementada** (tras el merge).
+- Cambios a esta constitución: pull request con la aprobación de al menos dos integrantes, `version` incrementada y registro en `Memoria.md`.

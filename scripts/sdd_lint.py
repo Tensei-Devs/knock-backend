@@ -24,7 +24,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SPECS = ROOT / "specs"
+SPECS = ROOT / "specs" / "_legacy"  # migración: valida el formato TT/HU; las specs NNN-tema aún no tienen validador
 CONFIG = json.loads((ROOT / ".agents" / "knock.json").read_text(encoding="utf-8")) if (ROOT / ".agents" / "knock.json").exists() else {}
 REQUIRED_FILES = ("spec.md", "plan.md", "task.md", "checklists/gates.md")
 SECTIONS = [rf"^## {n}\. " for n in range(1, 9)] + [r"^## Aprobación"]
