@@ -57,3 +57,9 @@
 - **Porqué:** el profesor pidió cumplir a la letra; la imagen ya llegó y reemplaza los básicos provisionales de la entrada anterior.
 - **Pendiente:** «Additional approval for unattributed Copilot pull requests» no está en el JSON (parámetro sin confirmar); `copilot_code_review` y la lista vacía de comprobaciones se escribieron sin validar la importación en GitHub.
 - **A evitar:** afirmar que se aplican: en una organización gratuita no se hacen cumplir en repositorios privados.
+
+## 2026-11-03 — Specs 003, 007, 008, 009 y 013 alineadas con las reglas del equipo
+- **Decisión:** se agregan a las specs de arquitectura reglas que el repositorio del equipo ya aplicaba y que no estaban: región West US (003), Semgrep, Gitleaks, Trivy y Dependabot en el CI (007), Testcontainers con `documentdb-local` y nombres de prueba con el criterio que cubren (008), cifrado de campo AES-256-GCM con HMAC-SHA256 y cancelación de tokens en Redis (009), y Azure AI Content Safety como API de moderación (013). Cada regla nueva tiene criterio y tarea; las specs siguen en Borrador.
+- **Porqué:** la auditoría de la migración mostró que esas reglas solo vivían en la constitución del equipo y en el código, no en las specs de la base.
+- **Pendiente:** cancelar por `jti` o por `sid` (duda abierta en la spec 009; decide el líder con Guillermo); INE y selfie necesitan su propia spec.
+- **A evitar:** dar por firmadas estas specs: las cambió un agente y las firma una persona.

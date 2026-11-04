@@ -1,0 +1,24 @@
+# Revisores por área. GitHub los solicita en cada PR; solo bloquea el merge si se activa «Require review from Code Owners» (hoy no aplicable en repos privados gratuitos).
+*                                   @JulianH2 @Erciksssj
+# Servicio de Identidad y confianza y servicio de Mensajería y notificaciones: Guillermo (ADR-005)
+# Servicio de Mercado y servicio de Asistente (IA y ML): Alexis
+# Carpetas de los servicios (se crean con TT-ARQ-01)
+/src/Knock.Gateway/                   @GuillermoRH19 @JulianH2
+/src/Knock.Identity.Api/              @GuillermoRH19 @JulianH2
+/src/Knock.Messaging.Api/             @GuillermoRH19
+/src/Knock.Market.Api/                @AlexisBBY
+/src/Knock.Assistant.Api/             @AlexisBBY @JulianH2
+/src/Knock.Contracts/                 @GuillermoRH19 @AlexisBBY
+/db/                                @AlexisBBY
+/**/Migrations/                     @AlexisBBY @GuillermoRH19
+# Gobierno, seguridad y CI: solo el Tech Lead
+/.github/                           @JulianH2
+/scripts/                           @JulianH2
+/.agents/                           @JulianH2
+/.specify/                          @JulianH2
+/.semgrep/                          @JulianH2
+/security/                          @JulianH2
+/deploy/                            @JulianH2
+/stryker-config.json                @JulianH2
+/Directory.Build.props              @JulianH2
+/AGENTS.md                          @JulianH2

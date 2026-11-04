@@ -21,13 +21,15 @@ Definir las reglas de código y los tipos de pruebas que se esperan en todo el r
 - **R-03:** Código y comentarios técnicos en inglés; specs y documentación en español.
 - **R-04:** Cada criterio de aceptación de una spec tiene al menos una prueba que falla si la lógica está mal.
 - **R-05:** La cobertura mínima es del 60 % de líneas y del 50 % de ramas.
-- **R-06:** Las pruebas de integración usan servicios reales en contenedor (MongoDB y Redis); los dobles solo en pruebas unitarias.
+- **R-06:** Las pruebas de integración y de base de datos usan servicios reales en contenedor con Testcontainers (`documentdb-local` para MongoDB, y Redis); los dobles solo en pruebas unitarias.
 - **R-07:** No se agregan dependencias sin evaluar necesidad, licencia, mantenimiento y vulnerabilidades.
+- **R-08:** El nombre de cada prueba lleva el identificador del criterio que cubre (por ejemplo, `..._CA_01`), para poder trazar criterio y prueba con un script.
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dado un método con complejidad mayor a 10, cuando se compila, entonces el analizador lo marca.
 - **CA-02:** Dado un PR que baja la cobertura del mínimo, cuando corre el CI, entonces falla.
 - **CA-03:** Dada una dependencia nueva, cuando se revisa el PR, entonces `Memoria.md` registra su evaluación.
+- **CA-04:** Dado un criterio de aceptación de una spec Aprobada sin ninguna prueba que lo nombre, cuando corre el script de trazabilidad, entonces lo reporta.
 
 ## 5. Contrato
 No aplica.

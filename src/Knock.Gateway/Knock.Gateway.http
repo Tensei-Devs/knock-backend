@@ -1,6 +1,0 @@
-@Knock.Gateway_HostAddress = http://localhost:5198
-
-GET {{Knock.Gateway_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

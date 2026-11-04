@@ -9,6 +9,7 @@
 | T-03 | Definir el esquema de nombres de pruebas con el ID del criterio | R-04 | pendiente |
 | T-04 | Configurar la cobertura y su umbral | R-05 · CA-02 | pendiente |
 | T-05 | Documentar la definición de terminado y el registro de dependencias | R-03, R-06, R-07 · CA-03 | pendiente |
+| T-06 | Agregar el script de trazabilidad criterio ↔ prueba y correrlo en el CI | R-08 · CA-04 | pendiente |
 
 ## Definición de terminado
 - Los criterios de aceptación de `spec.md` están cubiertos por pruebas en verde.

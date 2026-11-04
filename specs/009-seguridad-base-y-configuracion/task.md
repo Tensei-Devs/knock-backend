@@ -9,7 +9,9 @@
 | T-03 | Configurar CORS y el límite de peticiones | R-03, R-04 | pendiente |
 | T-04 | Configurar la autenticación JWT y la autorización por defecto | R-05 · CA-01, CA-04 | pendiente |
 | T-05 | Agregar el filtro que oculta datos personales en los registros | R-06 · CA-03 | pendiente |
-| T-06 | Escribir las pruebas de seguridad negativa | R-01 a R-06 | pendiente |
+| T-06 | Escribir las pruebas de seguridad negativa | R-01 a R-08 | pendiente |
+| T-07 | Cifrar y buscar campos sensibles con AES-256-GCM y HMAC-SHA256 (llaves en Key Vault) | R-07 · CA-05 | pendiente |
+| T-08 | Cancelar tokens en Redis y rechazarlos en el gateway | R-08 · CA-06 | pendiente |
 
 ## Definición de terminado
 - Los criterios de aceptación de `spec.md` están cubiertos por pruebas en verde.

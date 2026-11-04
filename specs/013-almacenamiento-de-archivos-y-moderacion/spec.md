@@ -15,7 +15,7 @@ Definir cómo se suben, guardan y sirven las imágenes y cómo se revisa el cont
 
 **Fuera**
 - Las pantallas y flujos que suben fotos.
-- Verificación de identidad.
+- Verificación de identidad: INE y selfie (consentimiento expreso, contenedor privado con llave propia, borrado a los 7 días) siguen la constitución del equipo (§6) y necesitan su propia spec.
 
 ## 3. Requisitos
 - **R-01:** Las imágenes públicas y las privadas viven en contenedores de Blob separados.
@@ -23,7 +23,7 @@ Definir cómo se suben, guardan y sirven las imágenes y cómo se revisa el cont
 - **R-03:** Al subir, se quitan los metadatos de ubicación y se reduce el tamaño.
 - **R-04:** Las imágenes públicas se sirven por la CDN; las privadas nunca pasan por ella y se entregan con enlaces temporales.
 - **R-05:** Todo texto e imagen que sube una persona se envía a la API de moderación antes de guardarse; si se marca como inapropiado o la API no responde, no se guarda ni se publica.
-- **R-06:** Un cliente de moderación compartido lo usa desde cada servicio.
+- **R-06:** Un cliente de moderación compartido lo usa desde cada servicio; la API es Azure AI Content Safety.
 - **R-07:** No se admite video.
 
 ## 4. Criterios de aceptación
