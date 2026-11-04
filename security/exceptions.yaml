@@ -90,3 +90,16 @@ excepciones:
     creada: 2026-11-03
     vence: 2026-12-02
     plan: portar esas pruebas a IAsyncStartupValidator y retirar el NoWarn antes de vencer.
+  - id: EXC-007
+    herramienta: jscpd
+    regla: duplicación de código (clones)
+    alcance: src/Knock.Identity.Api/Hosting/{LoggingExtensions,ObservabilityExtensions,TelemetryRedactor}.cs, src/Knock.Messaging.Api/Hosting/{LoggingExtensions,ObservabilityExtensions,TelemetryRedactor}.cs y src/Knock.Gateway/Hosting/{LoggingExtensions,ObservabilityExtensions,TelemetryRedactor}.cs (9 archivos, entre «// jscpd:ignore-start -- EXC-007» y su cierre)
+    justificacion: >-
+      Spec 011 (KNOCK-206): los tres servicios y el gateway deben registrar con el mismo formato y la misma redacción de datos personales
+      que Market. Aún no existe una biblioteca técnica compartida y un servicio no referencia a otro, así que se copian las tres clases de
+      src/Knock.Market.Api/Hosting cambiando solo el espacio de nombres, la categoría por defecto del log y la ruta de salud. Las copias se
+      prueban por separado en tests/UnitTest/Hosting/Spec011ObservabilityTests.cs. Aprobada por el líder el 2026-11-04.
+    responsable: Ángel Alexis Blas Castillo
+    creada: 2026-11-04
+    vence: 2027-02-02
+    plan: unificar las tres clases en una biblioteca técnica compartida (junto con las copias de EXC-008), quitar los marcadores y retirar la excepción antes de vencer.
