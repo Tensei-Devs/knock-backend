@@ -90,3 +90,15 @@ excepciones:
     creada: 2026-11-03
     vence: 2026-12-02
     plan: portar esas pruebas a IAsyncStartupValidator y retirar el NoWarn antes de vencer.
+  - id: EXC-015
+    herramienta: jscpd
+    regla: duplicación textual (y huella estructural de codemap)
+    alcance: src/Knock.Identity.Api/Common/** y src/Knock.Identity.Api/Hosting/** (marcadores jscpd:ignore-start/end con EXC-015)
+    justificacion: >-
+      Identity.Api nace con la misma base técnica que Market (seguridad, versionado, validación, límites, CORS, respuestas de error, correlación),
+      copiada para que cada servicio sea desplegable por separado (spec 001). La duplicación es intencional y temporal; los archivos de Mongo, salud,
+      registros y observabilidad se descartan al entrar los PR #8 y #10. Evidencia: PR #12 y la lista de duplicados de `codemap.py --check`.
+    responsable: José Guillermo Rangel Hernández
+    creada: 2026-11-04
+    vence: 2026-12-04
+    plan: unificar en una biblioteca técnica compartida (Knock.Contracts o una nueva) y retirar los marcadores y la excepción antes de vencer.
