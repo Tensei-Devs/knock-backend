@@ -37,13 +37,13 @@ El job `pr-meta` del CI rechaza nombres y combinaciones fuera de este esquema.
 - Commit: mensaje **en inglés**, Conventional Commits: `type(scope): description in english, imperative, lowercase (KNOCK-N)`.
   Ejemplo: `feat(requests): upload up to 5 photos with the request (KNOCK-45)`.
   - Types: feat, fix, docs, refactor, test, chore, ci, build, perf.
-  - Scopes: identity, catalog, requests, messaging, reputation, trust, notifications, assistant, app, panel, ci, infra, docs (fuente: `.agents/knock.json`).
+  - Scopes: identity, catalog, requests, messaging, reputation, trust, notifications, assistant, media, app, panel, ci, infra, docs, gateway, contracts, deploy, docker, container, scripts, architecture, security, db (fuente: `.agents/knock.json`).
   - La clave `(KNOCK-N)` es obligatoria, va al final y debe coincidir con la de la rama.
   - Descripción en imperativo, empieza en minúscula, sin punto final; encabezado de hasta 100 caracteres.
   - **Prohibida** la atribución a IA en commits y PR: trailers `Co-Authored-By` de agentes (Claude, Copilot, Codex, Gemini, Cursor, opencode, `noreply@anthropic.com`) y líneas «Generated with…». El uso de IA se declara solo en la sección «Uso de IA» de la plantilla del PR. Un `Co-Authored-By` de una persona del equipo (trabajo en parejas) sí se permite.
   - Excepción para bots (sin clave KNOCK-N): release-please (`chore(main|release)`), Dependabot (`build(deps)`) y el commit automático del contrato de la API (`chore(deps): update api contract to <sha>`).
 - PR: título `KNOCK-N · <ID> <título>` y la plantilla completa (criterios, pruebas, amenazas, riesgos, **Uso de IA**, evidencia). Sin atribución a IA en la descripción salvo en esa sección.
-- **Revisión de pares obligatoria:** antes de la aprobación final, al menos otra persona (distinta de quien escribió el PR) deja su revisión como comentario en el PR (quién revisa a quién: `docs/FLUJO_EQUIPO.md` §3). **La aprobación final y el merge los hace el Tech Lead (`@JulianH2`)**; ninguna otra persona fusiona. Requisitos: check `gate` en verde y, en zonas sensibles, el Code Owner.
+- **Revisión de pares obligatoria:** antes de la aprobación final, al menos otra persona (distinta de quien escribió el PR) deja su revisión como comentario en el PR (quién revisa a quién: `docs/FLUJO_EQUIPO.md` §3). **La aprobación final y el merge los hace el Tech Lead (`@JulianH2`)**; ninguna otra persona fusiona. Requisitos: check `gate` en verde y, en zonas sensibles, el Code Owner. La revisión de otra persona es **una** y obligatoria; una segunda es opcional. Si el PR es del Tech Lead, él mismo lo puede aprobar y, cuando el cambio es urgente o no hay nadie disponible, la revisión es opcional: en ese caso anota el motivo en «Riesgos y pendientes» del PR (spec 004, R-04 y CA-06).
 
 ## 4. Definición de terminado
 Criterios de la spec cumplidos · pruebas del plan en verde (resultados reales) · PR revisado · CI en verde · «Uso de IA» completo · `Memoria.md` al día · spec firmada tras el merge.
