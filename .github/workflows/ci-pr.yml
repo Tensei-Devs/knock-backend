@@ -77,8 +77,8 @@ jobs:
 
   pr-meta:
     name: Rama, commits y PR (branch-name)
-    # Desactivado en la migración a Demo Base: exige ramas KNOCK-n de Jira; se readapta al cerrar la migración.
-    if: false
+    # Desactivado en la migración a Demo Base: exige ramas KNOCK-n de Jira. Se activa poniendo la variable del repositorio ENFORCE_BRANCH_RULES=true.
+    if: github.event_name == 'pull_request' && vars.ENFORCE_BRANCH_RULES == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
