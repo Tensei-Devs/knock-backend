@@ -1,6 +1,6 @@
 # Mapa de código
 
-> Generado por `scripts/codemap.py` el 2026-11-04T08:15:59Z. No editar a mano.
+> Generado por `scripts/codemap.py` el 2026-11-04T20:46:07Z. No editar a mano.
 > **Antes de crear una clase, método o archivo, busca aquí o corre `python scripts/codemap.py --query "<qué necesitas>"`.**
 
 ## Resumen
@@ -9,15 +9,26 @@
 |---|---|---|---|---|
 | `Catalog` | -, controllers, data, domain, dtos, services, validators | 21 | 23 | 30 |
 | `Knock.Contracts` | - | 2 | 3 | 6 |
-| `Knock.Gateway` | - | 1 | 1 | 0 |
+| `Knock.Gateway` | -, hosting | 10 | 22 | 25 |
 | `Knock.Identity.Api` | - | 1 | 0 | 0 |
 | `Knock.Market.Api` | -, common, hosting | 25 | 51 | 65 |
 | `Knock.Messaging.Api` | - | 1 | 0 | 0 |
 
+## ⚠️ Código duplicado (misma estructura)
+
+- `src/Knock.Gateway/Hosting/CorsExtensions.cs:36 CorsExtensions.AddKnockGatewayForwardedHeaders` · `src/Knock.Market.Api/Hosting/ForwardedHeadersExtensions.cs:15 ForwardedHeadersExtensions.AddKnockForwardedHeaders`
+- `src/Knock.Gateway/Hosting/ProblemResponses.cs:9 ProblemResponses.WriteAsync` · `src/Knock.Market.Api/Hosting/RequestBodyLimitMiddleware.cs:9 ProblemResponses.WriteAsync`
+
 ## Tipos con el mismo nombre en varios lugares
 
+- `AuthenticationExtensions`: `src/Knock.Gateway/Hosting/AuthenticationExtensions.cs:42`, `src/Knock.Market.Api/Hosting/AuthenticationExtensions.cs:9`
 - `CorrelationId`: `src/Knock.Contracts/Correlation/CorrelationId.cs:9`, `src/Knock.Market.Api/Hosting/CorrelationIdMiddleware.cs:7`
 - `CorrelationIdMiddleware`: `src/Knock.Contracts/Correlation/CorrelationIdMiddleware.cs:11`, `src/Knock.Market.Api/Hosting/CorrelationIdMiddleware.cs:30`
+- `HealthExtensions`: `src/Knock.Gateway/Hosting/HealthExtensions.cs:10`, `src/Knock.Market.Api/Hosting/HealthExtensions.cs:5`
+- `ProblemResponses`: `src/Knock.Gateway/Hosting/ProblemResponses.cs:7`, `src/Knock.Market.Api/Hosting/RequestBodyLimitMiddleware.cs:7`
+- `RateLimitSettings`: `src/Knock.Gateway/Hosting/RateLimitingExtensions.cs:20`, `src/Knock.Market.Api/Hosting/RateLimitingExtensions.cs:21`
+- `RateLimitingExtensions`: `src/Knock.Gateway/Hosting/RateLimitingExtensions.cs:63`, `src/Knock.Market.Api/Hosting/RateLimitingExtensions.cs:33`
+- `SecurityHeadersMiddleware`: `src/Knock.Gateway/Hosting/SecurityHeadersMiddleware.cs:10`, `src/Knock.Market.Api/Hosting/SecurityHeadersMiddleware.cs:11`
 
 ## Índice por módulo
 
@@ -93,6 +104,27 @@
 **-**
 
 - `src/Knock.Gateway/Program.cs` — class `Program`
+
+**hosting**
+
+- `src/Knock.Gateway/Hosting/AuthenticationExtensions.cs` — record `GatewayJwtSettings`, class `AuthenticationExtensions`
+  - `GatewayJwtSettings()`:9, `Create()`:13, `AddKnockGatewayAuthentication()`:47
+- `src/Knock.Gateway/Hosting/CorsExtensions.cs` — class `CorsExtensions`
+  - `AddKnockGatewayCors()`:12, `AddKnockGatewayForwardedHeaders()`:36
+- `src/Knock.Gateway/Hosting/DataExtensions.cs` — class `DataExtensions`
+  - `AddKnockData()`:9
+- `src/Knock.Gateway/Hosting/HealthExtensions.cs` — class `HealthExtensions`
+  - `MapKnockReadiness()`:16
+- `src/Knock.Gateway/Hosting/ProblemResponses.cs` — class `ProblemResponses`
+  - `WriteAsync()`:9, `AddKnockGatewayProblemDetails()`:25
+- `src/Knock.Gateway/Hosting/RateLimitingExtensions.cs` — class `RateLimitPolicy`, class `RateLimitSettings`, interface `IRequestCounter`, class `RedisRequestCounter`, class `RateLimitingExtensions`, class `IpRateLimitMiddleware`, class `UserRateLimitMiddleware`, class `RateLimitCheck`
+  - `HitAsync()`:50, `AddKnockGatewayRateLimiting()`:65, `ClientKey()`:78, `IpRateLimitMiddleware()`:106, `InvokeAsync()`:110, `IsAuthPath()`:133, `UserRateLimitMiddleware()`:144, `InvokeAsync()`:146, `RejectedAsync()`:162
+- `src/Knock.Gateway/Hosting/RedisExtensions.cs` — class `KnockRedisOptions`, class `KnockRedisOptionsValidator`, class `RedisExtensions`, class `RedisReadinessHealthCheck`
+  - `Validate()`:41, `AddKnockRedis()`:105, `CreateConfiguration()`:123, `CheckHealthAsync()`:162
+- `src/Knock.Gateway/Hosting/RevokedSessions.cs` — interface `IRevokedSessions`, class `RedisRevokedSessions`
+  - `IsRevokedAsync()`:19
+- `src/Knock.Gateway/Hosting/SecurityHeadersMiddleware.cs` — class `SecurityHeadersMiddleware`
+  - `SecurityHeadersMiddleware()`:10, `InvokeAsync()`:16
 
 ### Knock.Identity.Api
 

@@ -90,3 +90,15 @@ excepciones:
     creada: 2026-11-03
     vence: 2026-12-02
     plan: portar esas pruebas a IAsyncStartupValidator y retirar el NoWarn antes de vencer.
+  - id: EXC-016
+    herramienta: jscpd
+    regla: duplicación textual (y huella estructural de codemap)
+    alcance: src/Knock.Gateway/Hosting/ProblemResponses.cs y src/Knock.Gateway/Hosting/CorsExtensions.cs (marcadores jscpd:ignore-start/end con EXC-016)
+    justificacion: >-
+      El gateway necesita la misma respuesta ProblemDetails de error y la misma lectura de los proxies de confianza que Market (spec 009); cada servicio es
+      desplegable por separado (spec 001) y no comparten código técnico todavía. La duplicación es intencional y temporal. Evidencia: PR de KNOCK-204 y la lista
+      de duplicados de `codemap.py --check`.
+    responsable: José Guillermo Rangel Hernández
+    creada: 2026-11-04
+    vence: 2026-12-04
+    plan: unificar en la biblioteca técnica compartida (la misma de EXC-015) y retirar los marcadores y la excepción antes de vencer.
