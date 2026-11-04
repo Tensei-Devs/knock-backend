@@ -49,7 +49,7 @@ resource "azurerm_virtual_network" "this" {
 }
 
 resource "azurerm_subnet" "container_apps" {
-  #checkov:skip=CKV2_AZURE_31: EXC-010 Container Apps administra su propio tráfico; un NSG a mano puede romper el entorno
+  #checkov:skip=CKV2_AZURE_31: EXC-014 Container Apps administra su propio tráfico; un NSG a mano puede romper el entorno
   name                 = "snet-container-apps"
   resource_group_name  = data.azurerm_resource_group.this.name
   virtual_network_name = azurerm_virtual_network.this.name
@@ -79,14 +79,14 @@ resource "azurerm_container_app_environment" "this" {
 # ---- Imágenes ----
 
 resource "azurerm_container_registry" "this" {
-  #checkov:skip=CKV_AZURE_233: EXC-007 requieren ACR Premium; el crédito de estudiante no lo cubre (ADR-006). El escaneo de imágenes lo hace Trivy en el CI
-  #checkov:skip=CKV_AZURE_237: EXC-007 requieren ACR Premium; el crédito de estudiante no lo cubre (ADR-006). El escaneo de imágenes lo hace Trivy en el CI
-  #checkov:skip=CKV_AZURE_167: EXC-007 requieren ACR Premium; el crédito de estudiante no lo cubre (ADR-006). El escaneo de imágenes lo hace Trivy en el CI
-  #checkov:skip=CKV_AZURE_166: EXC-007 requieren ACR Premium; el crédito de estudiante no lo cubre (ADR-006). El escaneo de imágenes lo hace Trivy en el CI
-  #checkov:skip=CKV_AZURE_165: EXC-007 requieren ACR Premium; el crédito de estudiante no lo cubre (ADR-006). El escaneo de imágenes lo hace Trivy en el CI
-  #checkov:skip=CKV_AZURE_164: EXC-007 requieren ACR Premium; el crédito de estudiante no lo cubre (ADR-006). El escaneo de imágenes lo hace Trivy en el CI
-  #checkov:skip=CKV_AZURE_163: EXC-007 requieren ACR Premium; el crédito de estudiante no lo cubre (ADR-006). El escaneo de imágenes lo hace Trivy en el CI
-  #checkov:skip=CKV_AZURE_139: EXC-007 requieren ACR Premium; el crédito de estudiante no lo cubre (ADR-006). El escaneo de imágenes lo hace Trivy en el CI
+  #checkov:skip=CKV_AZURE_233: EXC-011 requieren ACR Premium; el crédito de estudiante no lo cubre (ADR-006). El escaneo de imágenes lo hace Trivy en el CI
+  #checkov:skip=CKV_AZURE_237: EXC-011 requieren ACR Premium; el crédito de estudiante no lo cubre (ADR-006). El escaneo de imágenes lo hace Trivy en el CI
+  #checkov:skip=CKV_AZURE_167: EXC-011 requieren ACR Premium; el crédito de estudiante no lo cubre (ADR-006). El escaneo de imágenes lo hace Trivy en el CI
+  #checkov:skip=CKV_AZURE_166: EXC-011 requieren ACR Premium; el crédito de estudiante no lo cubre (ADR-006). El escaneo de imágenes lo hace Trivy en el CI
+  #checkov:skip=CKV_AZURE_165: EXC-011 requieren ACR Premium; el crédito de estudiante no lo cubre (ADR-006). El escaneo de imágenes lo hace Trivy en el CI
+  #checkov:skip=CKV_AZURE_164: EXC-011 requieren ACR Premium; el crédito de estudiante no lo cubre (ADR-006). El escaneo de imágenes lo hace Trivy en el CI
+  #checkov:skip=CKV_AZURE_163: EXC-011 requieren ACR Premium; el crédito de estudiante no lo cubre (ADR-006). El escaneo de imágenes lo hace Trivy en el CI
+  #checkov:skip=CKV_AZURE_139: EXC-011 requieren ACR Premium; el crédito de estudiante no lo cubre (ADR-006). El escaneo de imágenes lo hace Trivy en el CI
   name                = "acr${local.compact}"
   location            = var.location
   resource_group_name = data.azurerm_resource_group.this.name
@@ -98,11 +98,11 @@ resource "azurerm_container_registry" "this" {
 # ---- Secretos ----
 
 resource "azurerm_key_vault" "this" {
-  #checkov:skip=CKV_AZURE_109: EXC-008 Container Apps no es un servicio de confianza del firewall y los endpoints privados cuestan; sin purge protection para poder destruir y recrear (ADR-006, punto 6)
-  #checkov:skip=CKV_AZURE_189: EXC-008 Container Apps no es un servicio de confianza del firewall y los endpoints privados cuestan; sin purge protection para poder destruir y recrear (ADR-006, punto 6)
-  #checkov:skip=CKV_AZURE_110: EXC-008 Container Apps no es un servicio de confianza del firewall y los endpoints privados cuestan; sin purge protection para poder destruir y recrear (ADR-006, punto 6)
-  #checkov:skip=CKV_AZURE_42: EXC-008 Container Apps no es un servicio de confianza del firewall y los endpoints privados cuestan; sin purge protection para poder destruir y recrear (ADR-006, punto 6)
-  #checkov:skip=CKV2_AZURE_32: EXC-008 Container Apps no es un servicio de confianza del firewall y los endpoints privados cuestan; sin purge protection para poder destruir y recrear (ADR-006, punto 6)
+  #checkov:skip=CKV_AZURE_109: EXC-012 Container Apps no es un servicio de confianza del firewall y los endpoints privados cuestan; sin purge protection para poder destruir y recrear (ADR-006, punto 6)
+  #checkov:skip=CKV_AZURE_189: EXC-012 Container Apps no es un servicio de confianza del firewall y los endpoints privados cuestan; sin purge protection para poder destruir y recrear (ADR-006, punto 6)
+  #checkov:skip=CKV_AZURE_110: EXC-012 Container Apps no es un servicio de confianza del firewall y los endpoints privados cuestan; sin purge protection para poder destruir y recrear (ADR-006, punto 6)
+  #checkov:skip=CKV_AZURE_42: EXC-012 Container Apps no es un servicio de confianza del firewall y los endpoints privados cuestan; sin purge protection para poder destruir y recrear (ADR-006, punto 6)
+  #checkov:skip=CKV2_AZURE_32: EXC-012 Container Apps no es un servicio de confianza del firewall y los endpoints privados cuestan; sin purge protection para poder destruir y recrear (ADR-006, punto 6)
   name                       = "kv-${local.compact}"
   location                   = var.location
   resource_group_name        = data.azurerm_resource_group.this.name
@@ -110,7 +110,7 @@ resource "azurerm_key_vault" "this" {
   sku_name                   = "standard"
   rbac_authorization_enabled = true
   soft_delete_retention_days = 7
-  # Se puede destruir y volver a crear en el mismo ciclo de evaluación (ADR-006, punto 6). Ver EXC-008.
+  # Se puede destruir y volver a crear en el mismo ciclo de evaluación (ADR-006, punto 6). Ver EXC-012.
   purge_protection_enabled = false
   tags                     = local.tags
 }
@@ -126,12 +126,12 @@ resource "azurerm_role_assignment" "secret_admins" {
 # ---- Archivos (spec 013) y respaldos (spec 003, R-08) ----
 
 resource "azurerm_storage_account" "files" {
-  #checkov:skip=CKV_AZURE_206: EXC-009 replicación geográfica, endpoints privados y llaves administradas cuestan; sin cola y sin acceso público a blobs
-  #checkov:skip=CKV_AZURE_33: EXC-009 replicación geográfica, endpoints privados y llaves administradas cuestan; sin cola y sin acceso público a blobs
-  #checkov:skip=CKV2_AZURE_21: EXC-009 replicación geográfica, endpoints privados y llaves administradas cuestan; sin cola y sin acceso público a blobs
-  #checkov:skip=CKV_AZURE_59: EXC-009 replicación geográfica, endpoints privados y llaves administradas cuestan; sin cola y sin acceso público a blobs
-  #checkov:skip=CKV2_AZURE_33: EXC-009 replicación geográfica, endpoints privados y llaves administradas cuestan; sin cola y sin acceso público a blobs
-  #checkov:skip=CKV2_AZURE_1: EXC-009 replicación geográfica, endpoints privados y llaves administradas cuestan; sin cola y sin acceso público a blobs
+  #checkov:skip=CKV_AZURE_206: EXC-013 replicación geográfica, endpoints privados y llaves administradas cuestan; sin cola y sin acceso público a blobs
+  #checkov:skip=CKV_AZURE_33: EXC-013 replicación geográfica, endpoints privados y llaves administradas cuestan; sin cola y sin acceso público a blobs
+  #checkov:skip=CKV2_AZURE_21: EXC-013 replicación geográfica, endpoints privados y llaves administradas cuestan; sin cola y sin acceso público a blobs
+  #checkov:skip=CKV_AZURE_59: EXC-013 replicación geográfica, endpoints privados y llaves administradas cuestan; sin cola y sin acceso público a blobs
+  #checkov:skip=CKV2_AZURE_33: EXC-013 replicación geográfica, endpoints privados y llaves administradas cuestan; sin cola y sin acceso público a blobs
+  #checkov:skip=CKV2_AZURE_1: EXC-013 replicación geográfica, endpoints privados y llaves administradas cuestan; sin cola y sin acceso público a blobs
   name                            = "st${local.compact}"
   location                        = var.location
   resource_group_name             = data.azurerm_resource_group.this.name
@@ -161,7 +161,7 @@ resource "azurerm_storage_account" "files" {
 }
 
 resource "azurerm_storage_container" "private" {
-  #checkov:skip=CKV2_AZURE_21: EXC-009 el registro de lecturas necesita un diagnóstico con costo; los contenedores son privados
+  #checkov:skip=CKV2_AZURE_21: EXC-013 el registro de lecturas necesita un diagnóstico con costo; los contenedores son privados
   for_each              = toset(["imagenes", "respaldos"])
   name                  = each.value
   storage_account_id    = azurerm_storage_account.files.id

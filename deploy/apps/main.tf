@@ -28,13 +28,10 @@ locals {
   # Dirección interna de cada servicio dentro del entorno: la Container App se resuelve por su nombre.
   cluster_address = { for s in ["identity", "messaging", "market"] : s => "http://knock-${s}/" }
 
-  redis_env = {
-    Redis__Host = "knock-redis"
-    Redis__Port = "6379"
-  }
-  # Nombres de los secretos en Key Vault (no son valores).
-  kv           = { redis = "redis-password" }
-  redis_secret = { Redis__Password = local.kv.redis }
+  # `redis` es la contraseña del servidor Redis; `redis_cs` es la cadena que leen los servicios
+  # (ConnectionStrings:KnockRedis, p. ej. «knock-redis:6379,password=...»; spec 003, R-02).
+  kv           = { redis = "redis-password", redis_cs = "redis-connection-string" }
+  redis_secret = { ConnectionStrings__KnockRedis = local.kv.redis_cs }
 
   services = {
     gateway = {
@@ -48,7 +45,7 @@ locals {
     }
     identity = {
       external = false
-      env      = local.redis_env
+      env      = {}
       secret_env = merge(local.redis_secret, {
         ConnectionStrings__KnockMongo = "mongo-identity"
         Jwt__SigningKey               = "jwt-signing-key"
@@ -63,7 +60,7 @@ locals {
     }
     market = {
       external = false
-      env      = local.redis_env
+      env      = {}
       secret_env = merge(local.redis_secret, {
         ConnectionStrings__KnockMongo = "mongo-market"
         Jwt__SigningKey               = "jwt-signing-key"
