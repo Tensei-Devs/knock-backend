@@ -22,3 +22,4 @@ Cada carpeta tiene `spec.md`, `plan.md` y `task.md`. Estados: Borrador → Aprob
 | 016 | Renovación y cierre de sesión (SES-02, SES-03) | Borrador | [`016-renovacion-y-cierre-de-sesion`](016-renovacion-y-cierre-de-sesion/spec.md) |
 | 017 | Perfil de la persona (USR-01, USR-02) | Borrador | [`017-perfil-de-la-persona`](017-perfil-de-la-persona/spec.md) |
 | 018 | Sesiones por dispositivo (SES-04, SES-05) | Borrador | [`018-sesiones-por-dispositivo`](018-sesiones-por-dispositivo/spec.md) |
+| 019 | MCP del proyecto | Borrador | [`019-mcp-del-proyecto`](019-mcp-del-proyecto/spec.md) |
