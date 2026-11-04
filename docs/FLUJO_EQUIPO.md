@@ -94,6 +94,8 @@ Todo PR necesita al menos un comentario de revisión de otra persona **antes** d
 
 **Excepción para documentación (2026-10-24, propuesta pendiente de la aprobación de 2 de los 4):** un PR que cambie **solo documentación** (specs, ADR, `Memoria.md`, evidencia) necesita la revisión final del Tech Lead y el reporte de la pre-revisión automática (`ai-review.yml`); el comentario de otro integrante es opcional. Todo PR que cambie código, workflows, scripts, infraestructura o seguridad sigue necesitando al menos un comentario de otro integrante, y la pre-revisión automática nunca lo sustituye. Si la pre-revisión no corrió o falló, se aplica la regla general. Porqué: la espera del par humano en cambios de bajo riesgo retrasaba los sprints; el riesgo se limita a documentación y se cubre con la revisión del Tech Lead más un revisor automático independiente.
 
+**Regla vigente desde 2026-11-04.** Cada PR necesita **una** revisión de otra persona, obligatoria; una segunda revisión es opcional y queda a criterio de quien abre el PR. Los PR del Tech Lead los puede aprobar él mismo, y su revisión es opcional cuando el cambio es urgente o no hay nadie disponible: en ese caso anota el motivo en el PR. Esto sustituye a la excepción solo para documentación de arriba. Un agente sigue sin aprobar ni fusionar nada.
+
 La tabla rota cuando el equipo lo decida (retrospectiva); si el revisor asignado no puede, el autor pide a otra persona y lo anota en el PR. Detalle y motivos en [ADR-005](decisiones/ADR-005-roles-carga-y-revision.md).
 
 ### Tareas libres (asignación por carga)

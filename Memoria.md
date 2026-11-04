@@ -63,3 +63,26 @@
 - **Porqué:** la auditoría de la migración mostró que esas reglas solo vivían en la constitución del equipo y en el código, no en las specs de la base.
 - **Pendiente:** cancelar por `jti` o por `sid` (duda abierta en la spec 009; decide el líder con Guillermo); INE y selfie necesitan su propia spec.
 - **A evitar:** dar por firmadas estas specs: las cambió un agente y las firma una persona.
+
+## 2026-11-04 — Spec 019: MCP del proyecto
+- **Decisión:** se escribe, en Borrador, la spec de MCP que pidió el profesor al final de la secuencia (RP-72 y RP-16). Jira con el MCP oficial de Atlassian (OAuth por persona, sin tokens en el repositorio), GitHub con la CLI `gh`, y solo lectura por defecto.
+- **Porqué:** hoy el repositorio no tiene MCP configurado y el uso en el equipo es personal; sin spec no hay reglas de permisos ni de secretos.
+- **Pendiente:** confirmar la dirección oficial y las herramientas del servidor de Atlassian al implementar; decidir si se usa MongoDB, Figma o el MCP de Dart.
+- **A evitar:** guardar tokens en la configuración o permitir escritura en Jira desde un agente sin aprobación.
+
+## 2026-11-04 — Revisión de todas las specs antes de la firma
+- **Decisión:** se revisaron las specs de arquitectura y de endpoints con comprobaciones automáticas (cada requisito y criterio tiene tarea; valores como 15 minutos, 30 días, 10 sesiones y 5 minutos coinciden entre specs) y se corrigieron las diferencias: la región West US ahora está en la spec 005, el frontend define `deviceId` y la aceptación del aviso (spec 009), y las specs de MCP cubren todos sus requisitos con tareas.
+- **Porqué:** el frontend y el backend se contradecían en el contrato de inicio de sesión, y una spec afirmaba una región que la otra no fijaba.
+- **Pendiente (decide una persona):** `Idempotency-Key` (el frontend lo consume y el backend no lo define), el comportamiento ante 429 y `Retry-After`, y cancelar por `jti` o `sid`. Las specs siguen en Borrador: las firma una persona.
+- **A evitar:** darlas por aprobadas sin leer las dudas abiertas de la sección 9.
+
+## 2026-11-04 — Dudas de las specs resueltas
+- **Decisión:** se resolvieron las dudas abiertas para poder aprobar: cancelar sesiones por `sid` (no `jti`), una sola colección `sesiones` (no `refresh_tokens`), 429 con `Retry-After`, `Idempotency-Key` fuera de esta etapa, colonia validada siempre contra Mercado (503 si no responde), 409 en eliminación programada, 404 para sesión ajena, y MCP de MongoDB y de Dart sin activar.
+- **Porqué:** las dudas bloqueaban la aprobación de las specs de sesión y de seguridad; cada decisión quedó en la sección 9 de su spec con el motivo.
+- **Pendiente:** actualizar la hoja de endpoints del Excel (sesión ajena: 404) y la constitución al fusionarlas (`sid` en lugar de `jti`); avisar a Guillermo del cambio de HU-001.
+- **A evitar:** dar estas decisiones por firmadas: las aprueba una persona al aprobar cada spec.
+
+## 2026-11-04 — Una revisión de pares obligatoria
+- **Decisión:** cada PR necesita una revisión de otra persona y la segunda es opcional; el Tech Lead puede aprobar sus propios PR, y su revisión es opcional si es urgente o no hay nadie disponible (anota el motivo). Los rulesets dejan de descartar aprobaciones por commits nuevos y de exigir hilos resueltos.
+- **Porqué:** dos revisiones frenaban el flujo con cuatro personas; el profesor tampoco las exige en su ruleset.
+- **A evitar:** que un agente apruebe o fusione: sigue prohibido.
