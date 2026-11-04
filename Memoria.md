@@ -87,6 +87,11 @@
 - **Porqué:** dos revisiones frenaban el flujo con cuatro personas; el profesor tampoco las exige en su ruleset.
 - **A evitar:** que un agente apruebe o fusione: sigue prohibido.
 
+## 2026-11-04 — Las pruebas de tiempo corren sin cobertura (KNOCK-203)
+- **Decisión:** las pruebas con `[Trait("Category", "Performance")]` se excluyen del paso de unitarias con cobertura y corren en un paso aparte, sin cobertura, con el mismo límite.
+- **Porqué:** la instrumentación de cobertura hace más lento el código y `TC_TT_OBS_01_12` (1 ms por 4 KB) daba entre 1,01 y 1,08 ms; subir el límite le quitaría fuerza donde sí mide.
+- **A evitar:** subir el límite de una prueba de tiempo para que pase con cobertura; marca la prueba con la categoría `Performance`.
+
 ## 2026-11-04 — Validador de ramas y commits al día con las specs numeradas (KNOCK-199)
 - **Decisión:** `scripts/ci/branch_rules.py` acepta los ámbitos de commit que ya usa el equipo (gateway, contracts, deploy, docker, container, scripts, architecture, security, db) y un título de PR con ID opcional (`KNOCK-N · <título>`, o con HU-, TT-, BUG-, B-NNN o F-NNN); se agregaron pruebas en `scripts/ci/test_branch_rules.py`.
 - **Porqué:** con `ENFORCE_BRANCH_RULES=true` los commits y PR de Sprint 3 habrían fallado (ámbitos y títulos del esquema antiguo); sin reglas aplicables en GitHub (plan gratuito), el CI es el único control.
