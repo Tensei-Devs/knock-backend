@@ -54,7 +54,7 @@ DECL = {
     ".ts": re.compile(r"\b(?:class|interface|enum|type)\s+([A-Z]\w+)|\bfunction\s+([a-zA-Z]\w+)|export\s+const\s+([a-zA-Z]\w+)\s*=\s*(?:\(|async)"),
 }
 SUPPRESSION = re.compile(r"nosemgrep|eslint-disable|#pragma\s+warning\s+disable|//\s*ignore(?:_for_file)?:|\[SuppressMessage|@ts-ignore|@ts-expect-error|NOSONAR|gitleaks:allow")
-SPEC_ID = re.compile(r"^(HU-\d{3}|TT-[A-Z]+-\d{2}|BUG-\d{3})")
+SPEC_ID = re.compile(r"^(HU-\d{3}|TT-[A-Z]+-\d{2}|BUG-\d{3}|\d{3}-[a-z0-9])")  # también las specs numeradas (001-tema)
 
 
 # ------------------------------------------------------------------ entrada
@@ -138,6 +138,13 @@ def active_spec() -> tuple[str, Path | None]:
     if not m:
         return "", None
     key = f"KNOCK-{m.group(1)}"
+    # Primero la cabecera «> **Jira:** KNOCK-N»: otra spec puede citar la clave en su texto y, por orden alfabético,
+    # ganaría a la spec propia de la tarea (misma regla que el CI).
+    header = re.compile(rf"^> \*\*Jira:\*\*[^\n]*\b{key}\b", re.M)
+    for d in spec_dirs():
+        spec = d / "spec.md"
+        if spec.exists() and header.search(spec.read_text(encoding="utf-8")):
+            return key, d
     for d in spec_dirs():
         spec = d / "spec.md"
         if spec.exists() and re.search(rf"\b{key}\b", spec.read_text(encoding="utf-8")):
