@@ -14,7 +14,7 @@ namespace Knock.DatabaseTest.Scripts;
 public sealed class Spec003IndexScriptTests
 {
     [Fact]
-    public async Task IndexScript_OnCleanInstance_CreatesIndexes_AndReapplyingDoesNotFail_CA_01()
+    public async Task IndexScript_OnCleanInstance_CreatesIndexes_AndReapplyingDoesNotFail_CA_003_01()
     {
         var documentDb = await DocumentDbFixture.SharedAsync();
         var suffix = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(6));

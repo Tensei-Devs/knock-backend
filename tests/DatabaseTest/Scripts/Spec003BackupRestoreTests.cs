@@ -18,7 +18,7 @@ public sealed class Spec003BackupRestoreTests
     private static readonly string[] _collections = ["outbox", "tareas_programadas", "datos_ficticios"];
 
     [Fact]
-    public async Task Backup_RestoredIntoEmptyDatabase_HasSameDocumentsAndIndexes_CA_04()
+    public async Task Backup_RestoredIntoEmptyDatabase_HasSameDocumentsAndIndexes_CA_003_04()
     {
         var documentDb = await DocumentDbFixture.SharedAsync();
         var suffix = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(6));
@@ -60,7 +60,7 @@ public sealed class Spec003BackupRestoreTests
     }
 
     [Fact]
-    public async Task Backup_WithoutConnectionVariable_FailsWithoutRunningTools_CA_04()
+    public async Task Backup_WithoutConnectionVariable_FailsWithoutRunningTools_CA_003_04()
     {
         var documentDb = await DocumentDbFixture.SharedAsync();
         await using var tools = await MongoToolsContainer.StartAsync(documentDb, new Dictionary<string, string>
