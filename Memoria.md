@@ -86,3 +86,9 @@
 - **Decisión:** cada PR necesita una revisión de otra persona y la segunda es opcional; el Tech Lead puede aprobar sus propios PR, y su revisión es opcional si es urgente o no hay nadie disponible (anota el motivo). Los rulesets dejan de descartar aprobaciones por commits nuevos y de exigir hilos resueltos.
 - **Porqué:** dos revisiones frenaban el flujo con cuatro personas; el profesor tampoco las exige en su ruleset.
 - **A evitar:** que un agente apruebe o fusione: sigue prohibido.
+
+## 2026-11-04 — Validador de ramas y commits al día con las specs numeradas (KNOCK-199)
+- **Decisión:** `scripts/ci/branch_rules.py` acepta los ámbitos de commit que ya usa el equipo (gateway, contracts, deploy, docker, container, scripts, architecture, security, db) y un título de PR con ID opcional (`KNOCK-N · <título>`, o con HU-, TT-, BUG-, B-NNN o F-NNN); se agregaron pruebas en `scripts/ci/test_branch_rules.py`.
+- **Porqué:** con `ENFORCE_BRANCH_RULES=true` los commits y PR de Sprint 3 habrían fallado (ámbitos y títulos del esquema antiguo); sin reglas aplicables en GitHub (plan gratuito), el CI es el único control.
+- **Pendiente:** corregir en la spec 004 (R-02) que las ramas salen de `sprint-XX`, no de `develop` (lo edita José); poner `ENFORCE_BRANCH_RULES=true` en los dos repositorios tras fusionar este cambio.
+- **A evitar:** activar `ENFORCE_BRANCH_RULES` antes de fusionar este cambio y los PR abiertos de Sprint 3: varios de sus commits tienen encabezados de más de 100 caracteres (regla vigente) y fallarían; hay que activarlo cuando ya estén fusionados, o reescribir esos commits con autorización.
