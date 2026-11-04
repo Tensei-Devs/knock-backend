@@ -11,6 +11,7 @@
 | T-05 | Configurar Redis y su acceso desde la capa de datos | R-07 | pendiente |
 | T-06 | Preparar el fixture de pruebas con MongoDB y Redis reales | CA-03 | pendiente |
 | T-07 | Programar el respaldo con `mongodump` y probar la restauración | R-08 · CA-04 | pendiente |
+| T-08 | Fijar y comprobar la región West US en la configuración de datos | R-09 · CA-05 | pendiente |
 
 ## Definición de terminado
 - Los criterios de aceptación de `spec.md` están cubiertos por pruebas en verde.

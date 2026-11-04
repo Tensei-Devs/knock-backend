@@ -13,7 +13,7 @@ Definir las verificaciones automáticas de cada cambio y cómo el código llega 
 - Despliegue desde la rama principal.
 
 **Fuera**
-- Escaneos avanzados que se activan después.
+- Escaneo dinámico (ZAP) y mutación incremental (Stryker): se activan cuando haya un servicio desplegado y una línea de base de pruebas.
 
 ## 3. Requisitos
 - **R-01:** Cada PR detecta qué servicio cambió y construye y prueba solo ese.
@@ -22,11 +22,13 @@ Definir las verificaciones automáticas de cada cambio y cómo el código llega 
 - **R-04:** Las acciones de terceros se fijan por SHA y los permisos del workflow son los mínimos.
 - **R-05:** Al fusionar, el pipeline construye la imagen, la publica en el registro con la etiqueta de versión y despliega.
 - **R-06:** Los secretos del pipeline viven en GitHub Secrets.
+- **R-07:** Cada PR corre además análisis estático del código (Semgrep con reglas del proyecto), búsqueda de secretos (Gitleaks) y auditoría de dependencias y licencias; Dependabot propone las actualizaciones; y la imagen se escanea con Trivy antes de publicarse. Un hallazgo crítico bloquea.
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dado un PR que solo toca un servicio, cuando corre el CI, entonces solo se construye ese.
 - **CA-02:** Dado un PR con una prueba fallida, cuando corre el CI, entonces el check falla y no se puede fusionar.
 - **CA-03:** Dado un cambio aprobado y fusionado, cuando termina el despliegue, entonces la prueba de humo responde.
+- **CA-04:** Dado un PR con un secreto de ejemplo o una dependencia con vulnerabilidad crítica, cuando corre el CI, entonces el check falla.
 
 ## 5. Contrato
 No aplica. Interfaces que fija: los nombres de los checks obligatorios y las etiquetas de imagen con la versión.

@@ -9,6 +9,7 @@
 | T-03 | Agregar los jobs de secretos y dependencias | R-03, R-04 | pendiente |
 | T-04 | Crear el workflow de construcción y despliegue | R-05, R-06 · CA-03 | pendiente |
 | T-05 | Registrar los checks obligatorios | R-02 | pendiente |
+| T-06 | Agregar al workflow Semgrep, Gitleaks, Trivy y Dependabot, y una prueba negativa con un secreto de ejemplo | R-07 · CA-04 | pendiente |
 
 ## Definición de terminado
 - Los criterios de aceptación de `spec.md` están cubiertos por pruebas en verde.
