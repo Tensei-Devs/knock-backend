@@ -367,16 +367,13 @@ jobs:
           file: src/${{ matrix.proyecto }}/Dockerfile
           load: true
           tags: ${{ matrix.imagen }}:ci
+      # Trivy como contenedor oficial: el instalador de la acción (aquasecurity/setup-trivy) falla con
+      # «exit code 6» en los runners sin caché del binario (KNOCK-232). Mismos umbrales que antes.
       - name: Trivy (críticas y altas con corrección bloquean)
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        with:
-          image-ref: ${{ matrix.imagen }}:ci
-          severity: CRITICAL,HIGH
-          exit-code: "1"
-          ignore-unfixed: true
-          trivyignores: .trivyignore
-          # La versión por defecto de la acción (v0.70.0) falla al instalarse sin caché de binario.
-          version: v0.76.1
+        env:
+          IMAGEN: ${{ matrix.imagen }}:ci
+        run: |
+          docker run --rm             -v /var/run/docker.sock:/var/run/docker.sock             -v "$PWD:/work" -w /work             ghcr.io/aquasecurity/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c             image --severity CRITICAL,HIGH --exit-code 1 --ignore-unfixed             --ignorefile .trivyignore --quiet "$IMAGEN"
       - name: Dockle (buenas prácticas de imagen)
         uses: goodwithtech/dockle-action@e30e6af832aad6ea7dca2a248d31a85eab6dbd68 # v0.4.15
         with:
