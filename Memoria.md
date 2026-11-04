@@ -86,3 +86,9 @@
 - **Decisión:** cada PR necesita una revisión de otra persona y la segunda es opcional; el Tech Lead puede aprobar sus propios PR, y su revisión es opcional si es urgente o no hay nadie disponible (anota el motivo). Los rulesets dejan de descartar aprobaciones por commits nuevos y de exigir hilos resueltos.
 - **Porqué:** dos revisiones frenaban el flujo con cuatro personas; el profesor tampoco las exige en su ruleset.
 - **A evitar:** que un agente apruebe o fusione: sigue prohibido.
+
+## 2026-11-04 — Las pruebas de tiempo corren sin cobertura (KNOCK-203)
+- **Decisión:** las pruebas con `[Trait("Category", "Performance")]` se excluyen del paso de unitarias con cobertura y corren en un paso aparte, sin cobertura, con el mismo límite.
+- **Porqué:** la instrumentación de cobertura hace más lento el código y `TC_TT_OBS_01_12` (1 ms por 4 KB) daba entre 1,01 y 1,08 ms; subir el límite le quitaría fuerza donde sí mide.
+- **A evitar:** subir el límite de una prueba de tiempo para que pase con cobertura; marca la prueba con la categoría `Performance`.
+
