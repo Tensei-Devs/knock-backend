@@ -62,7 +62,7 @@ Fija el uso de `ETag`/`If-None-Match` y 304, el encabezado `Cache-Control` por t
 
 ## 9. Riesgos y dudas abiertas
 - Las vigencias iniciales pueden no ser las óptimas; se ajustan con las pruebas de carga.
-- Ninguna duda abierta por ahora; se agregan aquí las que surjan al revisar la spec.
+- La spec 010 del frontend consume el encabezado `Idempotency-Key`, pero ninguna spec del backend lo define. Hay que decidir si el backend lo implementa (qué endpoints, cuánto tiempo guarda la clave) o si el frontend deja de usarlo.
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: ________ fecha: ________

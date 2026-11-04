@@ -27,7 +27,7 @@ Definir qué bases de datos usa el backend, por qué, cómo se conecta cada serv
 - **R-06:** Los scripts de `db/` son idempotentes, se aplican en orden y son el script de la base de la entrega.
 - **R-07:** Redis corre como contenedor propio de una réplica, con contraseña desde Key Vault y sin persistencia.
 - **R-08:** Se programa una copia periódica con `mongodump` a Blob Storage y se prueba restaurarla.
-- **R-09:** Los datos se alojan en la región West US de Azure (Estados Unidos), la misma de la spec 005; el aviso de privacidad lo declara y no se cambia de región sin una spec nueva.
+- **R-09:** Los datos se alojan en la región West US de Azure (Estados Unidos), fijada en la spec 005; el aviso de privacidad lo declara y no se cambia de región sin una spec nueva.
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dada una instancia limpia, cuando se aplican los scripts de `db/`, entonces quedan creados los índices y reaplicarlos no falla.

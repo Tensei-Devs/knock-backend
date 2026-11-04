@@ -62,6 +62,7 @@ Fija las cabeceras de seguridad de toda respuesta, el esquema de autenticación 
 
 ## 9. Riesgos y dudas abiertas
 - ¿Se cancela por el identificador del token (`jti`, como dice la constitución del equipo) o por el de la sesión (`sid`, como usan las specs 016 y 018)? Decide José Julián con Guillermo; las specs 016 y 018 se alinean con lo que se decida.
+- Qué debe hacer la app cuando recibe 429 (límite de peticiones): si el servidor envía `Retry-After` y cómo reacciona el cliente. Hoy ninguna spec lo fija.
 - Si Redis se reinicia, un token cancelado vale hasta 15 minutos más; el riesgo está aceptado (spec 003), la renovación cancelada sigue bloqueada porque su huella se guarda en MongoDB.
 
 ## Aprobación

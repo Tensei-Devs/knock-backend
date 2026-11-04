@@ -23,7 +23,7 @@ Definir en qué nube corre el backend, qué servicios usa y cómo se crea y se b
 - **R-03:** El estado de Terraform vive en un almacenamiento compartido de Azure.
 - **R-04:** El pipeline entra a Azure con identidad federada y el rol mínimo sobre el grupo de recursos; no guarda contraseñas.
 - **R-05:** Cada servicio lee sus secretos de Key Vault con una identidad administrada propia.
-- **R-06:** Los recursos se crean solo en las cinco regiones que permite la suscripción; la base y los servicios van en la misma región.
+- **R-06:** Los recursos se crean solo en las cinco regiones que permite la suscripción; la base y los servicios van en la misma región, que es West US (ADR-006); el grupo de recursos puede estar en otra.
 - **R-07:** El clúster gratuito de DocumentDB, único por suscripción, se importa y el paso de destruir lo excluye.
 
 ## 4. Criterios de aceptación
