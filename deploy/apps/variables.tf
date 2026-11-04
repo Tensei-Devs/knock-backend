@@ -1,0 +1,55 @@
+variable "subscription_id" {
+  type = string
+}
+
+variable "use_oidc" {
+  type    = bool
+  default = false
+}
+
+variable "environment" {
+  type    = string
+  default = "dev"
+}
+
+variable "location" {
+  type    = string
+  default = "westus"
+}
+
+variable "resource_group_name" {
+  type = string
+}
+
+variable "image_tag" {
+  description = "Etiqueta de las imágenes en el ACR (la publica el pipeline, spec 007). Usa el SHA del commit, no `latest`."
+  type        = string
+}
+
+variable "replicas" {
+  description = <<-EOT
+    Réplicas por servicio (ADR-006). Fuera de la ventana de evaluación: 1 en todos. Del 25-nov al 5-dic: min = max = 2
+    en el gateway y los servicios de negocio, sin reglas de escalado. Redis siempre 1.
+  EOT
+  type = map(object({
+    min = number
+    max = number
+  }))
+  default = {
+    gateway   = { min = 1, max = 1 }
+    identity  = { min = 1, max = 1 }
+    messaging = { min = 1, max = 1 }
+    market    = { min = 1, max = 1 }
+  }
+
+  validation {
+    condition     = alltrue([for k, v in var.replicas : v.min >= 0 && v.max >= v.min && v.max <= 10])
+    error_message = "Cada servicio necesita 0 <= min <= max <= 10."
+  }
+}
+
+variable "redis_image" {
+  description = "Imagen de Redis (spec 003, R-07): contenedor propio de una réplica, sin persistencia."
+  type        = string
+  default     = "docker.io/library/redis:7.4-alpine"
+}
