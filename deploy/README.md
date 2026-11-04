@@ -30,7 +30,7 @@ Con `database/` se importa el clúster la primera vez: `terraform apply -var sub
 
 ## Secretos (una persona, a mano)
 Los valores no pasan por Terraform ni por el repositorio (CA-04). Nombres fijos en Key Vault:
-`jwt-signing-key`, `redis-password`, `pii-encryption-key`, `pii-hmac-key`, `mongo-identity`, `mongo-market`,
+`jwt-signing-key`, `redis-password` (contraseña del servidor Redis), `redis-connection-string` (la cadena que leen los servicios: `knock-redis:6379,password=<la misma contraseña>`), `pii-encryption-key`, `pii-hmac-key`, `mongo-identity`, `mongo-market`,
 `mongo-messaging`.
 ```
 az keyvault secret set --vault-name <kv> --name redis-password --value "<valor>"

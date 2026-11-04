@@ -90,7 +90,7 @@ excepciones:
     creada: 2026-11-03
     vence: 2026-12-02
     plan: portar esas pruebas a IAsyncStartupValidator y retirar el NoWarn antes de vencer.
-  - id: EXC-007
+  - id: EXC-011
     herramienta: checkov
     regla: CKV_AZURE_233, CKV_AZURE_237, CKV_AZURE_167, CKV_AZURE_166, CKV_AZURE_165, CKV_AZURE_164, CKV_AZURE_163, CKV_AZURE_139
     alcance: deploy/modules/shared/main.tf, recurso azurerm_container_registry.this
@@ -100,7 +100,7 @@ excepciones:
     creada: 2026-11-04
     vence: 2027-01-31
     plan: reevaluar si el proyecto pasa a una suscripción de pago y retirar las supresiones que ya se puedan cumplir.
-  - id: EXC-008
+  - id: EXC-012
     herramienta: checkov
     regla: CKV_AZURE_109, CKV_AZURE_189, CKV_AZURE_110, CKV_AZURE_42, CKV2_AZURE_32
     alcance: deploy/modules/shared/main.tf, recurso azurerm_key_vault.this
@@ -110,7 +110,7 @@ excepciones:
     creada: 2026-11-04
     vence: 2027-01-31
     plan: activar purge protection y restringir la red al terminar la evaluación (5-dic-2026) o si se agrega una red privada.
-  - id: EXC-009
+  - id: EXC-013
     herramienta: checkov
     regla: CKV_AZURE_206, CKV_AZURE_33, CKV2_AZURE_21, CKV_AZURE_59, CKV2_AZURE_33, CKV2_AZURE_1
     alcance: deploy/modules/shared/main.tf, recursos azurerm_storage_account.files y azurerm_storage_container.private
@@ -120,7 +120,7 @@ excepciones:
     creada: 2026-11-04
     vence: 2027-01-31
     plan: reevaluar con los respaldos de MongoDB (spec 003, R-08) y retirar lo que ya se pueda cumplir.
-  - id: EXC-010
+  - id: EXC-014
     herramienta: checkov
     regla: CKV2_AZURE_31
     alcance: deploy/modules/shared/main.tf, recurso azurerm_subnet.container_apps

@@ -49,7 +49,7 @@ variable "replicas" {
 }
 
 variable "redis_image" {
-  description = "Imagen de Redis (spec 003, R-07): contenedor propio de una réplica, sin persistencia."
+  description = "Imagen de Redis (spec 003, R-07): una réplica, sin persistencia. 7.2 es la última con licencia BSD-3; no subir a 7.4 o posterior (RSAL/SSPL)."
   type        = string
-  default     = "docker.io/library/redis:7.4-alpine"
+  default     = "docker.io/library/redis:7.2-alpine@sha256:2c933526722b4126a61d5c170f766dc159adf97682f0b1cbbc27b1666ba96d84"
 }
