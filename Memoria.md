@@ -93,3 +93,22 @@
 - **Dependencias:** **StackExchange.Redis 2.13.23** (última estable 2.x, licencia MIT) en Market, Identity y Gateway; **MongoDB.Driver 3.12.0** (la de Market) en Identity y Messaging. Imagen **`redis:7.2-alpine`** fijada por digest en el compose y en `RedisFixture`: 7.2 es la última versión BSD-3; 7.4 y posteriores son RSALv2/SSPLv1 (y 8.x, además, AGPLv3). Imagen **`mongo:8.0`** fijada por digest, solo por mongosh, mongodump y mongorestore en `MongoToolsContainer` (CA-01 y CA-04).
 - **Pendiente:** programar el respaldo y subirlo a Blob Storage (spec 005); pruebas en IntegrationTest, SecurityTest y ContractTest (hoy vacíos).
 - **A evitar:** dos agentes en la misma carpeta de trabajo (otro agente cambió aquí la imagen a `redis:7-alpine` sin digest y metió `AddKnockRedis()` en el arranque general de Market). En UnitTest, referenciar otro servicio sin alias: su `Program` choca con el de los demás (`Aliases` en la referencia).
+
+## 2026-11-04 — Las pruebas de tiempo corren sin cobertura (KNOCK-203)
+- **Decisión:** las pruebas con `[Trait("Category", "Performance")]` se excluyen del paso de unitarias con cobertura y corren en un paso aparte, sin cobertura, con el mismo límite.
+- **Porqué:** la instrumentación de cobertura hace más lento el código y `TC_TT_OBS_01_12` (1 ms por 4 KB) daba entre 1,01 y 1,08 ms; subir el límite le quitaría fuerza donde sí mide.
+- **A evitar:** subir el límite de una prueba de tiempo para que pase con cobertura; marca la prueba con la categoría `Performance`.
+
+## 2026-11-04 — Validador de ramas y commits al día con las specs numeradas (KNOCK-199)
+- **Decisión:** `scripts/ci/branch_rules.py` acepta los ámbitos de commit que ya usa el equipo (gateway, contracts, deploy, docker, container, scripts, architecture, security, db) y un título de PR con ID opcional (`KNOCK-N · <título>`, o con HU-, TT-, BUG-, B-NNN o F-NNN); se agregaron pruebas en `scripts/ci/test_branch_rules.py`.
+- **Porqué:** con `ENFORCE_BRANCH_RULES=true` los commits y PR de Sprint 3 habrían fallado (ámbitos y títulos del esquema antiguo); sin reglas aplicables en GitHub (plan gratuito), el CI es el único control.
+- **Pendiente:** corregir en la spec 004 (R-02) que las ramas salen de `sprint-XX`, no de `develop` (lo edita José); poner `ENFORCE_BRANCH_RULES=true` en los dos repositorios tras fusionar este cambio.
+- **A evitar:** activar `ENFORCE_BRANCH_RULES` antes de fusionar este cambio y los PR abiertos de Sprint 3: varios de sus commits tienen encabezados de más de 100 caracteres (regla vigente) y fallarían; hay que activarlo cuando ya estén fusionados, o reescribir esos commits con autorización.
+
+## 2026-11-04 — Spec 001 (KNOCK-196): gateway, correlación y fronteras entre servicios
+- **Decisión:** el gateway usa YARP con las rutas y las direcciones en configuración (`ReverseProxy`); el middleware de `X-Correlation-Id` y su regla viven en `Knock.Contracts.Correlation` (biblioteca común, sin lógica de negocio) y los tres servicios nuevos y el gateway lo usan; los cuatro proyectos responden `/health`. Se agrega `tests/ArchitectureTest` (19 pruebas: ningún servicio referencia a otro, `Knock.Contracts` no referencia servicios y la regla puede fallar) y 11 pruebas de integración del gateway con servicios simulados.
+- **Porqué:** la spec 001 pide una sola entrada pública, correlación en toda petición y fronteras comprobadas por prueba; así lo siguen la 009 (token y límite de peticiones en el gateway, de Guillermo) y la 005 (ingreso interno).
+- **Quitado:** `UseHttpsRedirection` del gateway, de Identity y de Messaging (Market lo conserva, condicionado a `Security:Https:RedirectPort`): el HTTPS lo termina el ingreso de Container Apps y la redirección interna rompería las llamadas del gateway por HTTP.
+- **Pendiente:** validar el token y limitar peticiones en el gateway (spec 009); unificar el middleware de correlación de `Knock.Market.Api` con el de `Knock.Contracts`; Dockerfiles (KNOCK-232); CA-04 (servicio interno inaccesible desde fuera) se comprueba en el despliegue.
+- **A evitar:** agregar lógica de negocio a `Knock.Contracts` o referencias directas entre servicios.
+

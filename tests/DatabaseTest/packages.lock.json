@@ -764,6 +764,9 @@
         "resolved": "0.7.3",
         "contentHash": "U9Ix4l4cl58Kzz1rJzj5hoVTjmbx1qGMwzAcbv1j/d3NzrFaESIurQyg+ow4mivCgkE3S413y+U9k4WdnEIkRA=="
       },
+      "knock.contracts": {
+        "type": "Project"
+      },
       "knock.market.api": {
         "type": "Project",
         "dependencies": {
@@ -771,6 +774,7 @@
           "Azure.Monitor.OpenTelemetry.Exporter": "[1.10.0, )",
           "FluentValidation": "[12.1.1, )",
           "FluentValidation.DependencyInjectionExtensions": "[12.1.1, )",
+          "Knock.Contracts": "[1.0.0, )",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[11.0.0-rc.3.26522.148, )",
           "Microsoft.AspNetCore.OpenApi": "[11.0.0-rc.3.26522.148, )",
           "MongoDB.Driver": "[3.12.0, )",
