@@ -32,7 +32,9 @@ locals {
     Redis__Host = "knock-redis"
     Redis__Port = "6379"
   }
-  redis_secret = { Redis__Password = "redis-password" }
+  # Nombres de los secretos en Key Vault (no son valores).
+  kv           = { redis = "redis-password" }
+  redis_secret = { Redis__Password = local.kv.redis }
 
   services = {
     gateway = {
@@ -80,7 +82,7 @@ module "redis" {
   key_vault_id        = local.infra.key_vault_id
   key_vault_uri       = local.infra.key_vault_uri
   image               = var.redis_image
-  secret_env          = { REDIS_PASSWORD = "redis-password" }
+  secret_env          = { REDIS_PASSWORD = local.kv.redis }
   ingress_transport   = "tcp"
   target_port         = 6379
   health_path         = null
