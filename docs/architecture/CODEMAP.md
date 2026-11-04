@@ -1,6 +1,6 @@
 # Mapa de código
 
-> Generado por `scripts/codemap.py` el 2026-11-04T19:30:43Z. No editar a mano.
+> Generado por `scripts/codemap.py` el 2026-11-04T20:21:20Z. No editar a mano.
 > **Antes de crear una clase, método o archivo, busca aquí o corre `python scripts/codemap.py --query "<qué necesitas>"`.**
 
 ## Resumen
@@ -13,7 +13,7 @@
 | `Knock.Identity.Api` | -, common, hosting | 25 | 51 | 65 |
 | `Knock.Market.Api` | -, common, hosting | 25 | 51 | 65 |
 | `Knock.Messaging.Api` | - | 1 | 0 | 0 |
-| `Sesiones` | -, controllers, data, domain, dtos, services, validators | 17 | 32 | 27 |
+| `Sesiones` | -, controllers, data, domain, dtos, services, validators | 23 | 43 | 42 |
 
 ## ⚠️ Código duplicado (misma estructura)
 
@@ -343,25 +343,31 @@
 
 - `src/Knock.Identity.Api/Modules/Sesiones/Controllers/V1/AuthController.cs` — class `AuthController`
   - `ExchangeFirebaseToken()`:30
+- `src/Knock.Identity.Api/Modules/Sesiones/Controllers/V1/LogoutController.cs` — class `LogoutController`
+  - `Logout()`:20
+- `src/Knock.Identity.Api/Modules/Sesiones/Controllers/V1/RefreshController.cs` — class `RefreshController`
+  - `Refresh()`:27
 
 **data**
 
 - `src/Knock.Identity.Api/Modules/Sesiones/Data/ISesionesStore.cs` — interface `ISesionesStore`
+- `src/Knock.Identity.Api/Modules/Sesiones/Data/SesionCancelada.cs` — interface `ISesionCancelada`, class `RedisSesionCancelada`
+  - `Key()`:20, `CancelAsync()`:22
 - `src/Knock.Identity.Api/Modules/Sesiones/Data/SesionesDataExtensions.cs` — class `SesionesDataExtensions`
   - `AddSesionesData()`:11
 - `src/Knock.Identity.Api/Modules/Sesiones/Data/SesionesStore.cs` — class `SesionesStore`
-  - `EnsureIndexesAsync()`:69, `FindBySubAsync()`:87, `FindByPhoneHashAsync()`:92, `CreateAccountAsync()`:100, `AddSessionAsync()`:141, `IsDuplicateKey()`:194
+  - `EnsureIndexesAsync()`:78, `FindBySubAsync()`:96, `FindByPhoneHashAsync()`:101, `CreateAccountAsync()`:109, `AddSessionAsync()`:150, `FindByIdAsync()`:203, `FindSessionByFingerprintAsync()`:214, `FindSessionByUsedFingerprintAsync()`:218, `RotateAsync()`:223, `RevokeAllAsync()`:247, `RevokeAsync()`:270, `IsDuplicateKey()`:284
 
 **domain**
 
 - `src/Knock.Identity.Api/Modules/Sesiones/Domain/PhoneNumberPolicy.cs` — class `PhoneNumberPolicy`
   - `IsValid()`:12
-- `src/Knock.Identity.Api/Modules/Sesiones/Domain/SesionesDomain.cs` — class `AccountState`, class `ConsentDocuments`, record `UserAccount`, record `NewSession`, record `NewAccount`, enum `AccountCreation`
+- `src/Knock.Identity.Api/Modules/Sesiones/Domain/SesionesDomain.cs` — class `AccountState`, class `ConsentDocuments`, record `UserAccount`, record `NewSession`, record `NewAccount`, enum `AccountCreation`, record `StoredSession`
   - `NewSession()`:34
 
 **dtos**
 
-- `src/Knock.Identity.Api/Modules/Sesiones/Dtos/SessionDtos.cs` — record `FirebaseExchangeRequest`, record `SessionResponse`
+- `src/Knock.Identity.Api/Modules/Sesiones/Dtos/SessionDtos.cs` — record `FirebaseExchangeRequest`, record `SessionResponse`, record `RefreshRequest`, record `RefreshResponse`
 
 **services**
 
@@ -371,12 +377,16 @@
   - `FirebaseIdentity()`:7, `ToString()`:9
 - `src/Knock.Identity.Api/Modules/Sesiones/Services/LoginService.cs` — record `LoginRequest`, record `LoginResult`, class `ConsentVersionsOptions`, class `LoginService`
   - `LoginService()`:30, `LoginAsync()`:44
+- `src/Knock.Identity.Api/Modules/Sesiones/Services/LogoutService.cs` — class `LogoutService`
+  - `LogoutService()`:9, `LogoutAsync()`:20
 - `src/Knock.Identity.Api/Modules/Sesiones/Services/PhoneProtectionOptions.cs` — class `PhoneProtectionOptions`, class `PhoneProtectionKeys`, class `PhoneProtectionOptionsValidator`
   - `TryCreate()`:56, `Validate()`:138
 - `src/Knock.Identity.Api/Modules/Sesiones/Services/PhoneProtector.cs` — record `ProtectedPhone`, record `PhoneHash`, class `PhoneProtector`
   - `PhoneProtector()`:19, `Protect()`:29, `Hash()`:53, `AssociatedData()`:60
 - `src/Knock.Identity.Api/Modules/Sesiones/Services/RefreshTokenFingerprint.cs` — class `RefreshTokenFingerprint`
-  - `Compute()`:15
+  - `Compute()`:15, `TryCompute()`:36
+- `src/Knock.Identity.Api/Modules/Sesiones/Services/SessionRefreshService.cs` — record `RefreshResult`, class `SessionRefreshService`
+  - `SessionRefreshService()`:13, `RefreshAsync()`:20
 - `src/Knock.Identity.Api/Modules/Sesiones/Services/SessionTokenIssuer.cs` — record `IssuedSession`, class `SessionTokenIssuer`
   - `SessionTokenIssuer()`:15, `Issue()`:21
 - `src/Knock.Identity.Api/Modules/Sesiones/Services/UserIdDerivation.cs` — class `UserIdDerivation`
@@ -385,3 +395,4 @@
 **validators**
 
 - `src/Knock.Identity.Api/Modules/Sesiones/Validators/FirebaseExchangeRequestValidator.cs` — class `FirebaseExchangeRequestValidator`
+- `src/Knock.Identity.Api/Modules/Sesiones/Validators/RefreshRequestValidator.cs` — class `RefreshRequestValidator`
