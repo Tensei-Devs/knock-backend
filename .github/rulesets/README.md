@@ -10,6 +10,9 @@ Reglas mínimas de GitHub para este repositorio. El profesor compartió capturas
 
 El rol de administrador del repositorio puede saltarse las reglas (para emergencias y para el líder del proyecto).
 
+## Revisión de pares (2026-11-04)
+Los rulesets piden **1 aprobación**; la segunda revisión es opcional. Para no frenar el flujo no se descartan las aprobaciones con commits nuevos ni se obliga a resolver todos los hilos (igual que el ruleset del profesor). El Tech Lead puede aprobar sus propios cambios mediante la excepción de administrador, y debe anotar el motivo en el PR.
+
 ## Cómo aplicarlos
 1. En GitHub: **Settings → Rules → Rulesets → New ruleset → Import a ruleset**.
 2. Elegir cada archivo `.json` de esta carpeta y crear el ruleset.
