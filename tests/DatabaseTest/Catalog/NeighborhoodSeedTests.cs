@@ -1,9 +1,9 @@
 using AwesomeAssertions;
+using Knock.DatabaseTest.Support;
+using Knock.IntegrationTest.Support;
 using Knock.Market.Api.Modules.Catalog;
 using Knock.Market.Api.Modules.Catalog.Domain;
 using Knock.Market.Api.Modules.Catalog.Services;
-using Knock.DatabaseTest.Support;
-using Knock.IntegrationTest.Support;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Xunit;

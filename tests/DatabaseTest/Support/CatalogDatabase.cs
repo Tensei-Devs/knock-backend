@@ -1,9 +1,9 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
+using Knock.IntegrationTest.Support;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Catalog;
 using Knock.Market.Api.Modules.Catalog.Data;
-using Knock.IntegrationTest.Support;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;

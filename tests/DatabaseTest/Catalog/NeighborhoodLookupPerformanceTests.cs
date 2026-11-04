@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using AwesomeAssertions;
-using Knock.Market.Api.Modules.Catalog.Services;
 using Knock.DatabaseTest.Support;
+using Knock.Market.Api.Modules.Catalog.Services;
 using MongoDB.Bson;
 using Xunit;
 using Xunit.Abstractions;

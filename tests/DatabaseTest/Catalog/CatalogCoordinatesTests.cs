@@ -1,9 +1,9 @@
 using System.Globalization;
 using AwesomeAssertions;
+using Knock.DatabaseTest.Support;
 using Knock.Market.Api.Modules.Catalog;
 using Knock.Market.Api.Modules.Catalog.Data;
 using Knock.Market.Api.Modules.Catalog.Services;
-using Knock.DatabaseTest.Support;
 using MongoDB.Bson;
 using Xunit;
 

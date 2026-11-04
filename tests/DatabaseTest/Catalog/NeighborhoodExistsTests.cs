@@ -1,6 +1,6 @@
 using AwesomeAssertions;
-using Knock.Market.Api.Modules.Catalog;
 using Knock.DatabaseTest.Support;
+using Knock.Market.Api.Modules.Catalog;
 using MongoDB.Bson;
 using Xunit;
 
