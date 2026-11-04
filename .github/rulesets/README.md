@@ -24,6 +24,9 @@ Los rulesets piden **1 aprobación**; la segunda revisión es opcional. Para no 
 - Sin copiar (no está en el JSON): «Require an additional approval for unattributed Copilot pull requests»; se marca en la interfaz o al importar el JSON exportado por el profesor.
 
 ## Pendiente
-- **Comprobaciones obligatorias del CI** (`required_status_checks`): se agregan cuando exista el spec de CI/CD y sus trabajos tengan nombre. Hoy no hay pipeline.
-- **Plan de GitHub:** los repositorios están en una organización con plan gratuito y son privados; en ese caso GitHub no hace cumplir los rulesets en repositorios privados. Opciones: hacerlos públicos o pasar la organización a un plan de pago.
-- **Revisión de código propietaria** (`CODEOWNERS`): se activa cuando haya un archivo `CODEOWNERS`.
+- **Comprobaciones obligatorias del CI** (`required_status_checks`): hoy el pipeline existe y el trabajo que las reúne se llama `gate`; falta agregarlo al ruleset cuando se puedan hacer cumplir.
+- **Plan de GitHub:** los repositorios están en una organización con plan gratuito y son privados; en ese caso GitHub no hace cumplir los rulesets ni la protección de ramas (la API responde 403). Opciones: hacerlos públicos o pasar la organización a un plan de pago. Mientras tanto:
+  - el CI revisa el nombre de la rama, el formato de los commits y la plantilla del PR en el trabajo `pr-meta`, que se activa con la variable del repositorio `ENFORCE_BRANCH_RULES=true`;
+  - la revisión de otra persona (una, obligatoria) es regla del equipo, no una restricción de GitHub (CA-02 de la spec 004 solo se cumple con un plan que lo permita);
+  - cuando el Tech Lead aprueba su propio PR, anota el motivo en el PR (CA-06).
+- **Revisión de código propietaria** (`CODEOWNERS`): el archivo existe en `.github/CODEOWNERS`; solo bloquea el merge si se activa «Require review from Code Owners», que tampoco aplica en repositorios privados gratuitos.
