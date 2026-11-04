@@ -11,7 +11,8 @@
 | T-05 | Agregar el filtro que oculta datos personales en los registros | R-06 · CA-03 | pendiente |
 | T-06 | Escribir las pruebas de seguridad negativa | R-01 a R-08 | pendiente |
 | T-07 | Cifrar y buscar campos sensibles con AES-256-GCM y HMAC-SHA256 (llaves en Key Vault) | R-07 · CA-05 | pendiente |
-| T-08 | Cancelar tokens en Redis y rechazarlos en el gateway | R-08 · CA-06 | pendiente |
+| T-08 | Cancelar la sesión (`sid`) en Redis y rechazar sus JWT en el gateway | R-08 · CA-06 | pendiente |
+| T-09 | Agregar `Retry-After` a las respuestas 429 | R-09 · CA-07 | pendiente |
 
 ## Definición de terminado
 - Los criterios de aceptación de `spec.md` están cubiertos por pruebas en verde.

@@ -1,6 +1,6 @@
 # Spec 011 — Observabilidad y registro
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 
 ## 1. Objetivo
 Definir cómo se registran los eventos y errores de todos los servicios en un lugar central y cómo se sigue una petición entre servicios.
@@ -60,6 +60,6 @@ Fija el encabezado `X-Correlation-Id` y el formato de los registros (campos `tim
 - Ninguna duda abierta por ahora; se agregan aquí las que surjan al revisar la spec.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-04
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

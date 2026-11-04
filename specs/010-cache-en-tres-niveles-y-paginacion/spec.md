@@ -1,6 +1,6 @@
 # Spec 010 — Caché en tres niveles y paginación
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 
 ## 1. Objetivo
 Definir cómo el backend responde rápido: caché en la capa de datos y en las respuestas, paginación por cursor y las demás técnicas de rendimiento que se establecieron como requerimientos.
@@ -60,11 +60,13 @@ Fija el uso de `ETag`/`If-None-Match` y 304, el encabezado `Cache-Control` por t
 - **Paginación por cursor y no por número de página:** contar desde el principio se vuelve más lento mientras más profundo se pagina.
 - **No cachear lo personal que cambia al crear algo:** una lista cacheada mostraría datos viejos justo después de crear.
 
-## 9. Riesgos y dudas abiertas
-- Las vigencias iniciales pueden no ser las óptimas; se ajustan con las pruebas de carga.
-- Ninguna duda abierta por ahora; se agregan aquí las que surjan al revisar la spec.
+## 9. Decisiones de la revisión, riesgos y dudas
+Decisiones tomadas en la revisión del 2026-11-04. Quien aprueba la spec las acepta; si alguna no convence, se cambia aquí antes de aprobar.
+
+- **`Idempotency-Key` (decidido): no se implementa en esta etapa.** Ningún endpoint de las specs 015 a 018 lo necesita; se define en la spec del primer endpoint que cree recursos con riesgo de duplicado (por ejemplo, crear una solicitud). El frontend deja de consumirlo (spec 010 del frontend).
+- **Riesgo:** las vigencias iniciales de la caché pueden no ser las óptimas; se ajustan con las pruebas de carga.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-04
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

@@ -1,6 +1,6 @@
 # Spec 017 — Perfil de la persona
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Servicio:** Identidad y confianza · **Endpoints del Excel:** USR-01 (`GET /api/v1/me`) y USR-02 (`PUT /api/v1/me`) · **Colección:** `usuarios`
 
 ## 1. Objetivo
@@ -28,6 +28,8 @@ Que la persona con sesión pueda ver y editar su propio perfil (nombre, foto, co
 - **R-08:** `sub`, `celularCifrado`, `celularHash`, `esTecnico`, `estado`, `perfilCompleto` (salvo por el nombre), `consentimientos` y `creadoEn` no se pueden cambiar por este endpoint: si vienen en el cuerpo se ignoran.
 - **R-09:** El perfil se identifica solo por el `sub` del token (se busca en `usuarios.sub`); la ruta no lleva identificador, para que nadie pueda pedir el de otro.
 - **R-10:** Los registros no incluyen el celular, el `uid` ni el nombre. Errores en ProblemDetails.
+- **R-11:** Si el servicio de Mercado no responde al validar la colonia, `PUT /me` responde 503 y no guarda nada; no se acepta una colonia sin validar.
+- **R-12:** Si la cuenta está en eliminación programada, `PUT /me` responde 409 hasta que se cancele la eliminación.
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dado un JWT válido, cuando se pide `GET /me`, entonces responde 200 con el perfil de esa persona.
@@ -40,11 +42,13 @@ Que la persona con sesión pueda ver y editar su propio perfil (nombre, foto, co
 - **CA-08:** Dado un cuerpo con `sub`, `celularHash`, `esTecnico` o `estado`, cuando se hace el `PUT`, entonces esos campos no cambian.
 - **CA-09:** Dadas dos personas con sesión, cuando cada una pide `/me`, entonces cada una recibe solo su perfil.
 - **CA-10:** Dado un registro de la operación, cuando se escribe, entonces no contiene celular ni nombre.
+- **CA-12:** Dado el servicio de Mercado caído, cuando se hace `PUT /me` con colonia, entonces responde 503 y el perfil no cambia.
+- **CA-13:** Dada una cuenta en eliminación programada, cuando se hace `PUT /me`, entonces responde 409 y no cambia nada.
 - **CA-11:** Dada una cuenta recién creada (`perfilCompleto = false`), cuando guarda su nombre con `PUT /me`, entonces `perfilCompleto` es verdadero y la respuesta de `GET /me` no incluye el celular.
 
 ## 5. Contrato
 - `GET /api/v1/me` · persona · 200 (perfil), 304, 401.
-- `PUT /api/v1/me` · persona · cuerpo `{ nombre, fotoUrl?, colonia?, codigoPostal? }` · 200 (perfil), 400, 401, 422.
+- `PUT /api/v1/me` · persona · cuerpo `{ nombre, fotoUrl?, colonia?, codigoPostal? }` · 200 (perfil), 400, 401, 409, 422, 503.
 - Respuesta de lectura con `ETag` y `Cache-Control: private, no-cache`.
 - Interfaz en `Knock.Contracts` para consultar si una colonia existe.
 
@@ -71,12 +75,14 @@ Que la persona con sesión pueda ver y editar su propio perfil (nombre, foto, co
 - **Caché de 60 segundos con invalidación:** el perfil solo cambia con este `PUT` y con otras acciones de la cuenta, que también invalidan la clave.
 - **`PUT` en lugar de `PATCH`:** el Excel define la operación como actualizar los cuatro campos; mandar un campo opcional vacío lo borra.
 
-## 9. Riesgos y dudas abiertas
-- La colonia se valida con el servicio de Mercado. Para la evaluación del 3 y 4 de noviembre quizá Mercado aún no esté desplegado. ¿Se acepta la colonia sin validar hasta entonces, o se omite el campo en la primera versión? Decide el equipo.
-- ¿Qué pasa con `PUT /me` si la cuenta está en eliminación programada? Propuesta: 409 hasta que cancele la eliminación.
-- ¿Se exige `If-Match` con el `ETag` para evitar sobrescribir cambios desde dos dispositivos? Propuesta: no en esta versión.
+## 9. Decisiones de la revisión, riesgos y dudas
+Decisiones tomadas en la revisión del 2026-11-04. Quien aprueba la spec las acepta; si alguna no convence, se cambia aquí antes de aprobar.
+
+- **Colonia (decidido): se valida siempre contra Mercado; si no responde, 503.** Es mejor no guardar que guardar una colonia inexistente. El catálogo ya existe en `Knock.Market.Api`, así que para la evaluación se despliega junto con Identidad.
+- **Cuenta en eliminación programada (decidido): 409.**
+- **`If-Match` (decidido): no en esta versión.** Un perfil con cuatro campos editados por una persona no justifica la complejidad; se agrega si aparecen conflictos reales.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-04
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

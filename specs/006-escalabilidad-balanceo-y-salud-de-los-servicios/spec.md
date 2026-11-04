@@ -1,6 +1,6 @@
 # Spec 006 — Escalabilidad, balanceo y salud de los servicios
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 
 ## 1. Objetivo
 Definir cómo corre cada servicio en varias copias detrás de un balanceador y qué debe cumplir el código para que eso funcione.
@@ -57,6 +57,6 @@ Fija las rutas de salud de cada servicio: `/health` (el proceso vive) y `/health
 - Ninguna duda abierta por ahora; se agregan aquí las que surjan al revisar la spec.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-04
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

@@ -1,6 +1,6 @@
 # Spec 001 — Arquitectura de microservicios y puerta de entrada
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 
 ## 1. Objetivo
 Definir el tipo de arquitectura del backend: qué servicios existen, qué responsabilidad tiene cada uno, cómo entra el tráfico y cómo se relacionan entre sí.
@@ -63,6 +63,6 @@ No expone endpoints de negocio. Interfaces que fija: el gateway como única entr
 - Ninguna duda abierta por ahora; se agregan aquí las que surjan al revisar la spec.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-04
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

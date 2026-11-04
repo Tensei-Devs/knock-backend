@@ -1,6 +1,6 @@
 # Spec 012 — Versionamiento por puntos
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 
 ## 1. Objetivo
 Definir cómo se numeran las versiones de cada componente, cuántos puntos vale cada cambio y cómo se calcula la versión en cada despliegue.
@@ -60,6 +60,6 @@ Fija el nombre de la etiqueta de PR `puntos-<componente>-N` y el formato de la e
 - Ninguna duda abierta por ahora; se agregan aquí las que surjan al revisar la spec.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-04
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

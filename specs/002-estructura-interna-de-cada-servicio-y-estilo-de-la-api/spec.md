@@ -1,6 +1,6 @@
 # Spec 002 — Estructura interna de cada servicio y estilo de la API
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 
 ## 1. Objetivo
 Definir cómo está organizado cada servicio por dentro y qué estilo de API expone, para que todos se construyan igual.
@@ -60,6 +60,6 @@ Fija el formato común de la API: rutas bajo `/api/v1`, errores en ProblemDetail
 - Ninguna duda abierta por ahora; se agregan aquí las que surjan al revisar la spec.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-04
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

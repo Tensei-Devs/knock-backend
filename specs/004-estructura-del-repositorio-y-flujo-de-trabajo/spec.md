@@ -1,6 +1,6 @@
 # Spec 004 — Estructura del repositorio y flujo de trabajo
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 
 ## 1. Objetivo
 Fijar cómo está organizado el repositorio, cómo se nombran las ramas y los commits y cómo se revisa un cambio, para que el equipo y los agentes de IA trabajen igual.
@@ -21,14 +21,15 @@ Fijar cómo está organizado el repositorio, cómo se nombran las ramas y los co
 - **R-01:** `main` contiene solo código listo para publicar y `develop` integra los cambios.
 - **R-02:** Cada cambio vive en una rama `<tipo>/<descripcion-en-ingles>` creada desde `develop`.
 - **R-03:** Los commits siguen Conventional Commits en inglés.
-- **R-04:** Todo cambio entra por pull request con descripción, pruebas ejecutadas y revisión de otra persona.
+- **R-04:** Todo cambio entra por pull request con descripción, pruebas ejecutadas y **una** revisión de otra persona, que es obligatoria; una segunda revisión es opcional. Los pull request del líder técnico los puede aprobar él mismo, y la revisión es opcional cuando el cambio es urgente o no hay nadie disponible; en ese caso el PR anota el motivo.
 - **R-05:** Una spec aprobada precede al código de cada cambio.
 - **R-06:** `Memoria.md` se actualiza al cerrar cada cambio.
 - **R-07:** La plantilla de pull request tiene las secciones Descripción, Pruebas, Seguridad, Riesgos y «Uso de IA» (qué generó la IA y qué revisó una persona).
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dado un commit con otro formato, cuando se valida, entonces se rechaza.
-- **CA-02:** Dado un PR sin revisión, cuando se intenta fusionar, entonces no se permite.
+- **CA-02:** Dado un PR de una persona distinta del líder técnico sin ninguna revisión, cuando se intenta fusionar, entonces no se permite.
+- **CA-06:** Dado un PR del líder técnico, urgente o sin nadie disponible para revisarlo, cuando lo aprueba y fusiona él mismo, entonces el PR anota el motivo.
 - **CA-03:** Dado el repositorio, cuando se abre `README.md`, entonces explica cómo compilar y probar.
 - **CA-04:** Dado un PR sin la sección «Uso de IA», cuando corre la comprobación de la plantilla, entonces falla.
 
@@ -55,11 +56,12 @@ No aplica. Interfaces que fija: el formato `tipo(alcance): descripcion` de los c
 - **Un repositorio de backend:** contiene los tres servicios, el gateway, la infraestructura, los scripts de base de datos y las pruebas, y cada servicio se construye y despliega por separado.
 - **Flujo con `develop`:** permite integrar y probar antes de tocar `main`.
 - **Commits en inglés y documentación en español.**
+- **Una revisión obligatoria, la segunda opcional (2026-11-04):** pedir dos revisiones frenaba el flujo con cuatro personas; con una basta para detectar lo importante y la segunda queda a criterio de quien abre el PR. El líder técnico puede aprobar sus propios cambios para no bloquear lo urgente; queda el rastro en el PR.
 
 ## 9. Riesgos y dudas abiertas
 - Ninguna duda abierta por ahora; se agregan aquí las que surjan al revisar la spec.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-04
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)
