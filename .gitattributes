@@ -1,0 +1,7 @@
+# Los scripts de shell y los git hooks deben quedar con LF aunque Git en Windows convierta saltos de línea.
+*.sh text eol=lf
+.githooks/* text eol=lf
+
+# Fin de línea LF en todo el repositorio: el CI corre en Linux y genera archivos (OpenAPI, mapa de código) que deben coincidir byte a byte.
+* text=auto eol=lf
+*.ps1 text eol=crlf
