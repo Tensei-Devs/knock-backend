@@ -1,6 +1,7 @@
 using Knock.Contracts.Correlation;
 using Knock.Gateway.Hosting;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +16,9 @@ builder.Services
     .AddKnockData()
     .AddKnockGatewayRateLimiting()
     .AddKnockGatewayAuthentication();
+// Spec 011: Serilog estructurado y OpenTelemetry con redacción; Azure Monitor solo si hay APPLICATIONINSIGHTS_CONNECTION_STRING.
+builder.Services.AddKnockLogging(builder.Configuration);
+builder.Services.AddKnockObservability(builder.Configuration, builder.Environment);
 
 var app = builder.Build();
 
@@ -22,6 +26,7 @@ app.UseForwardedHeaders();
 app.UseKnockCorrelationId();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseExceptionHandler();
+app.UseSerilogRequestLogging(LoggingExtensions.ConfigureRequestLogging);
 if (!app.Environment.IsDevelopment())
 {
     app.UseHsts();
