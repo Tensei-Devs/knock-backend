@@ -57,6 +57,7 @@ Fija el encabezado `X-Correlation-Id` y el formato de los registros (campos `tim
 
 ## 9. Riesgos y dudas abiertas
 - La cuota gratuita de registros puede agotarse si se deja un nivel muy detallado.
+- El celular nacional sin `+` en texto libre es un riesgo aceptado (ver `docs/OBSERVABILIDAD.md`): un patrón sin prefijo también podría tapar otros identificadores. Por eso, en los mensajes de log de los servicios de este PR no se registra la propiedad `{Phone}`.
 - Ninguna duda abierta por ahora; se agregan aquí las que surjan al revisar la spec.
 
 ## Aprobación
