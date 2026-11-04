@@ -30,7 +30,7 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PROJECT = ROOT / "src" / "Knock.Api" / "Knock.Api.csproj"
+PROJECT = ROOT / "src" / "Knock.Market.Api" / "Knock.Market.Api.csproj"
 DEFAULT_OUTPUT = ROOT / "docs" / "openapi.v1.json"
 # Cadena sintética: puerto 9 (descarte) en loopback, sin credenciales. La API solo la valida al arrancar; el cliente no conecta.
 UNREACHABLE_MONGO = "mongodb://127.0.0.1:9/?directConnection=true"

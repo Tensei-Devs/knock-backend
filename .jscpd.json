@@ -6,7 +6,7 @@
   "output": "reports/jscpd",
   "format": ["csharp", "sql", "javascript", "yaml"],
   "ignore": ["**/bin/**", "**/obj/**", "**/Migrations/**", "**/node_modules/**", "**/reports/**", "**/StrykerOutput/**",
-             "docs/**", ".claude/**", ".opencode/**", ".github/agents/**", ".github/instructions/**", ".cursor/**", "**/Fixtures/**"],
+             "docs/**", "legacy/**", ".claude/**", ".opencode/**", ".github/agents/**", ".github/instructions/**", ".cursor/**", "**/Fixtures/**"],
   "absolute": false,
   "exitCode": 1
 }

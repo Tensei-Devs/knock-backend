@@ -257,7 +257,7 @@ def scan(root: Path) -> list[SourceFile]:
         if path.suffix not in EXTENSIONS or not path.is_file():
             continue
         rel = path.relative_to(root).as_posix()
-        if set(path.relative_to(root).parts) & SKIP_DIRS or rel.endswith(SKIP_SUFFIXES) or rel.startswith(generated) or rel.startswith(("scripts/", "docs/")):
+        if set(path.relative_to(root).parts) & SKIP_DIRS or rel.endswith(SKIP_SUFFIXES) or rel.startswith(generated) or rel.startswith(("scripts/", "docs/", "legacy/")):
             continue
         module, layer, is_test = classify(rel)
         sf = SourceFile(rel, EXTENSIONS[path.suffix], module, layer, is_test)

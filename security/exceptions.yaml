@@ -31,7 +31,7 @@ excepciones:
   - id: EXC-002
     herramienta: checkov
     regla: CKV_DOCKER_2
-    alcance: src/Knock.Api/Dockerfile
+    alcance: src/Knock.Market.Api/Dockerfile
     justificacion: >-
       El Dockerfile no define HEALTHCHECK. La API se despliega en Azure Container Apps, que define sus sondas
       (liveness y readiness sobre /health y /health/ready) fuera de la imagen, por lo que la instrucción no se usaría;
@@ -44,7 +44,7 @@ excepciones:
   - id: EXC-003
     herramienta: dockle
     regla: CIS-DI-0010
-    alcance: knock-api (imagen construida desde src/Knock.Api/Dockerfile); workflow ci-pr.yml, paso de Dockle (accept-key)
+    alcance: knock-api (imagen construida desde src/Knock.Market.Api/Dockerfile); workflow ci-pr.yml, paso de Dockle (accept-key)
     justificacion: >-
       Falso positivo. Dockle marca como «credenciales» variables de la imagen base de Microsoft y del propio
       Dockerfile (DOTNET_VERSION, ASPNET_VERSION, ASPNETCORE_URLS, ASPNETCORE_ENVIRONMENT, ASPNETCORE_HTTP_PORTS, DOTNET_RUNNING_IN_CONTAINER, DOTNET_EnableDiagnostics, APP_UID, la etiqueta org.opencontainers.image.version y los argumentos --gid y --uid del `groupadd` de la imagen base);
@@ -79,3 +79,14 @@ excepciones:
     creada: 2026-11-03
     vence: 2027-01-31
     plan: sustituir la muestra por una construida en tiempo de ejecución (como se hizo en el PR #89) y retirar la excepción antes de vencer.
+  - id: EXC-006
+    herramienta: dotnet
+    regla: SYSLIB0066
+    alcance: tests/UnitTest/Knock.UnitTest.csproj
+    justificacion: >-
+      En .NET 11 la interfaz IStartupValidator está marcada como obsoleta y las pruebas de arranque de MongoDB (KnockMongoOptionsTests y
+      KnockMongoDatabasesTests) la usan por reflexión sobre el host. Se portó el código desde .NET 10 sin cambios de lógica; el aviso es solo de API obsoleta.
+    responsable: José Julián Hernández Hernández
+    creada: 2026-11-03
+    vence: 2026-12-02
+    plan: portar esas pruebas a IAsyncStartupValidator y retirar el NoWarn antes de vencer.
