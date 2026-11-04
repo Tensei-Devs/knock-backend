@@ -672,6 +672,28 @@
         "resolved": "0.7.3",
         "contentHash": "U9Ix4l4cl58Kzz1rJzj5hoVTjmbx1qGMwzAcbv1j/d3NzrFaESIurQyg+ow4mivCgkE3S413y+U9k4WdnEIkRA=="
       },
+      "knock.gateway": {
+        "type": "Project",
+        "dependencies": {
+          "Azure.Monitor.OpenTelemetry.Exporter": "[1.10.0, )",
+          "Microsoft.AspNetCore.OpenApi": "[11.0.0-rc.3.26522.148, )",
+          "OpenTelemetry.Extensions.Hosting": "[1.20.1, )",
+          "OpenTelemetry.Instrumentation.AspNetCore": "[1.20.1, )",
+          "OpenTelemetry.Instrumentation.Http": "[1.20.1, )",
+          "Serilog.AspNetCore": "[10.0.0, )"
+        }
+      },
+      "knock.identity.api": {
+        "type": "Project",
+        "dependencies": {
+          "Azure.Monitor.OpenTelemetry.Exporter": "[1.10.0, )",
+          "Microsoft.AspNetCore.OpenApi": "[11.0.0-rc.3.26522.148, )",
+          "OpenTelemetry.Extensions.Hosting": "[1.20.1, )",
+          "OpenTelemetry.Instrumentation.AspNetCore": "[1.20.1, )",
+          "OpenTelemetry.Instrumentation.Http": "[1.20.1, )",
+          "Serilog.AspNetCore": "[10.0.0, )"
+        }
+      },
       "knock.market.api": {
         "type": "Project",
         "dependencies": {
@@ -686,6 +708,17 @@
           "OpenTelemetry.Instrumentation.AspNetCore": "[1.20.1, )",
           "OpenTelemetry.Instrumentation.Http": "[1.20.1, )",
           "Scalar.AspNetCore": "[2.18.0, )",
+          "Serilog.AspNetCore": "[10.0.0, )"
+        }
+      },
+      "knock.messaging.api": {
+        "type": "Project",
+        "dependencies": {
+          "Azure.Monitor.OpenTelemetry.Exporter": "[1.10.0, )",
+          "Microsoft.AspNetCore.OpenApi": "[11.0.0-rc.3.26522.148, )",
+          "OpenTelemetry.Extensions.Hosting": "[1.20.1, )",
+          "OpenTelemetry.Instrumentation.AspNetCore": "[1.20.1, )",
+          "OpenTelemetry.Instrumentation.Http": "[1.20.1, )",
           "Serilog.AspNetCore": "[10.0.0, )"
         }
       }
