@@ -55,6 +55,13 @@ internal sealed partial class LoginService(
         var phoneHash = phones.Hash(identity.PhoneNumber);
         var bySub = await store.FindBySubAsync(sub.ToString("D"), cancellationToken);
         var byPhone = await store.FindByPhoneHashAsync(phoneHash.Value, cancellationToken);
+        if (bySub is null != byPhone is null)
+        {
+            // Las dos lecturas no son atómicas: si un canje simultáneo confirmó la cuenta entre ellas, una vio la cuenta y la otra no.
+            // Se leen otra vez antes de declarar conflicto (R-05, R-06).
+            bySub = await store.FindBySubAsync(sub.ToString("D"), cancellationToken);
+            byPhone = await store.FindByPhoneHashAsync(phoneHash.Value, cancellationToken);
+        }
 
         if (bySub is null && byPhone is null)
         {

@@ -47,8 +47,19 @@ public class LoginServiceTests
         /// <summary>Si se asigna, el siguiente alta la rechaza (otro canje ganó) y deja esta cuenta guardada.</summary>
         public UserAccount? WinnerOfRace { get; set; }
 
-        public Task<UserAccount?> FindBySubAsync(string sub, CancellationToken cancellationToken) =>
-            Task.FromResult(Users.FirstOrDefault(a => a.Sub == sub));
+        /// <summary>Si es verdadero, la primera lectura por <c>sub</c> no ve la cuenta (otro canje la confirma entre las dos lecturas).</summary>
+        public bool HideSubOnFirstRead { get; set; }
+
+        public Task<UserAccount?> FindBySubAsync(string sub, CancellationToken cancellationToken)
+        {
+            if (HideSubOnFirstRead)
+            {
+                HideSubOnFirstRead = false;
+                return Task.FromResult<UserAccount?>(null);
+            }
+
+            return Task.FromResult(Users.FirstOrDefault(a => a.Sub == sub));
+        }
 
         public Task<UserAccount?> FindByPhoneHashAsync(byte[] phoneHash, CancellationToken cancellationToken) =>
             Task.FromResult(Users.FirstOrDefault(a => a.PhoneHash.AsSpan().SequenceEqual(phoneHash)));
@@ -201,6 +212,20 @@ public class LoginServiceTests
         result.IsNew.Should().BeFalse("el perdedor de la carrera recibe 200, no un error");
         store.Created.Should().BeEmpty();
         store.Sessions.Should().ContainSingle().Which.UserId.Should().Be("665f1b2c3d4e5f6071829304");
+    }
+
+    [Fact]
+    public async Task AccountConfirmedBetweenTheTwoReads_IsTreatedAsExisting_CA_015_08()
+    {
+        var (service, store, phones, _) = Build();
+        store.Users.Add(ExistingAccount(phones));
+        store.HideSubOnFirstRead = true;
+
+        var result = await service.LoginAsync(_request, CancellationToken.None);
+
+        result.Should().NotBeNull();
+        result.IsNew.Should().BeFalse("la segunda lectura ve la cuenta que otro canje confirmó");
+        store.Created.Should().BeEmpty();
     }
 
     [Fact]
