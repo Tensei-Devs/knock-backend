@@ -103,3 +103,16 @@ excepciones:
     creada: 2026-11-04
     vence: 2027-02-02
     plan: unificar las tres clases en una biblioteca técnica compartida (junto con las copias de EXC-008), quitar los marcadores y retirar la excepción antes de vencer.
+  - id: EXC-008
+    herramienta: jscpd, codemap
+    regla: código duplicado (jscpd:ignore y línea base de clones de docs/architecture/clones-baseline.json)
+    alcance: src/Knock.Identity.Api/Hosting/MongoExtensions.cs, src/Knock.Identity.Api/Hosting/RedisExtensions.cs, src/Knock.Identity.Api/Hosting/HealthExtensions.cs, src/Knock.Messaging.Api/Hosting/MongoExtensions.cs, src/Knock.Messaging.Api/Hosting/HealthExtensions.cs, src/Knock.Gateway/Hosting/RedisExtensions.cs, src/Knock.Gateway/Hosting/HealthExtensions.cs
+    justificacion: >-
+      Spec 003 (KNOCK-198): cada servicio necesita su cliente de MongoDB y de Redis, y la constitución solo permite una biblioteca
+      compartida de tipos y contratos sin lógica (Knock.Contracts). Por decisión del líder del 2026-11-04 se aceptan por ahora copias
+      de src/Knock.Market.Api/Hosting/MongoExtensions.cs y RedisExtensions.cs, y un HealthExtensions igual en los tres servicios,
+      cada una marcada con «jscpd:ignore-start -- EXC-008». Evidencia: PR de KNOCK-198.
+    responsable: Ángel Alexis Blas Castillo
+    creada: 2026-11-04
+    vence: 2027-02-02
+    plan: unificar después en una biblioteca técnica (con su spec y el cambio de la constitución que la permita), borrar las copias y retirar la excepción antes de vencer.
