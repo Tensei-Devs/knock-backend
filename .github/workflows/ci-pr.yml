@@ -375,6 +375,8 @@ jobs:
           exit-code: "1"
           ignore-unfixed: true
           trivyignores: .trivyignore
+          # La versión por defecto de la acción (v0.70.0) falla al instalarse sin caché de binario.
+          version: v0.76.1
       - name: Dockle (buenas prácticas de imagen)
         uses: goodwithtech/dockle-action@e30e6af832aad6ea7dca2a248d31a85eab6dbd68 # v0.4.15
         with:
