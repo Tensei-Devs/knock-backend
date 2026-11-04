@@ -135,7 +135,10 @@ jobs:
       - name: Formato y estilo
         run: dotnet format Knock.slnx --verify-no-changes --no-restore
       - name: Unitarias y arquitectura
-        run: dotnet test tests/UnitTest -c Release --no-build --collect:"XPlat Code Coverage" --results-directory reports/unit --logger trx
+        run: dotnet test tests/UnitTest -c Release --no-build --filter "Category!=Performance" --collect:"XPlat Code Coverage" --results-directory reports/unit --logger trx
+      # Las pruebas de tiempo (Category=Performance) corren sin cobertura: la instrumentación las vuelve inestables y no mide lo que se quiere.
+      - name: Rendimiento (sin cobertura)
+        run: dotnet test tests/UnitTest -c Release --no-build --filter "Category=Performance" --results-directory reports/performance --logger trx
       - name: Arquitectura (fronteras entre servicios)
         run: dotnet test tests/ArchitectureTest -c Release --no-build --logger trx --results-directory reports/architecture
       # TT-CI-03 (KNOCK-139): emulador de Firebase Auth para las pruebas de inicio de sesión. Sin Java ni credenciales:
