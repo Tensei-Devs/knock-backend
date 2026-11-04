@@ -3,6 +3,8 @@ extern alias identity;
 extern alias messaging;
 
 using System.Collections.Concurrent;
+using System.Globalization;
+using System.Text.Json;
 using AwesomeAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,10 +21,13 @@ namespace Knock.UnitTest.Hosting;
 
 /// <summary>
 /// Spec 011 en Identity, Messaging y el Gateway, con el mismo cableado que su <c>Program.cs</c> (<c>AddKnockLogging</c> y
-/// <c>AddKnockObservability</c>) y su <c>appsettings.json</c> del repositorio. Lo que se mira es el registro que sale hacia OpenTelemetry
-/// (Application Insights), ya pasado por la redacción. El <c>correlationId</c> del contrato no se prueba aquí: llega con
-/// <c>Knock.Contracts</c> (PR #3). CA-03 (alerta) se verifica a mano en el PR, con la infraestructura de KNOCK-200.
+/// <c>AddKnockObservability</c>) y su <c>appsettings.json</c> del repositorio. Se mira lo que sale hacia OpenTelemetry (Application
+/// Insights) y lo que Serilog escribe en la consola, ya pasados por la redacción. El <c>correlationId</c> del contrato no se prueba aquí:
+/// llega con <c>Knock.Contracts</c> (PR #3). CA-03 (alerta) se verifica a mano en el PR, con la infraestructura de KNOCK-200.
+/// Las pruebas de esta clase corren en serie (una colección propia) porque la de consola cambia <see cref="Console.Out"/>; solo se revisa
+/// la línea del evento de la prueba, así que lo que escriban otras pruebas en paralelo no la afecta.
 /// </summary>
+[Collection("Spec011ConsoleOutput")]
 public sealed class Spec011ObservabilityTests
 {
     private const string _environment = "Testing";
@@ -37,8 +42,12 @@ public sealed class Spec011ObservabilityTests
         LoggerMessage.Define<string, string, string, string>(
             LogLevel.Information, new EventId(2, "Contact"), "Contacto {Contacto} con {Documento} en {Ubicacion} y {Credencial}");
 
-    private static readonly Action<ILogger, string, Exception?> _phoneByKey =
-        LoggerMessage.Define<string>(LogLevel.Information, new EventId(3, "PhoneByKey"), "Alta de {Phone}");
+    private static readonly Action<ILogger, Exception?> _altaRegistrada =
+        LoggerMessage.Define(LogLevel.Information, new EventId(3, "AltaRegistrada"), "Alta de registro");
+
+    private static readonly Action<ILogger, string, string, string, string, Exception?> _consoleWithPersonalData =
+        LoggerMessage.Define<string, string, string, string>(
+            LogLevel.Error, new EventId(5, "ConsoleContact"), "Contacto {Contacto} con {Documento} en {Ubicacion} pidió {Ruta}");
 
     private static readonly Action<ILogger, Exception?> _frameworkInfo =
         LoggerMessage.Define(LogLevel.Information, new EventId(4, "FrameworkInfo"), "Detalle del framework");
@@ -72,6 +81,26 @@ public sealed class Spec011ObservabilityTests
     };
 
     public static TheoryData<string> Services() => [.. _services.Keys];
+
+    /// <summary>
+    /// Copias de <c>TelemetryRedactor</c> (EXC-007) con las entradas de la prueba de tiempo de Market
+    /// (<c>TelemetryRedactorTests.Redact_LongAdversarialInput_TakesUnderOneMillisecondPer4KB_TC_TT_OBS_01_12</c>), que ya cubre a Market; se
+    /// repite para las copias de Identity, Messaging y Gateway.
+    /// </summary>
+    public static TheoryData<string, string> CopiesWithAdversarialUnits()
+    {
+        string[] units = ["+5", "+5 ", "eyJa", "eyJa.", "1.11111 ", "11111.1111", "token=", "Bearer ", "XEXX0101", "authorization", "eyJ+5 1.11111 bearer token=XEXX0101 "];
+        var data = new TheoryData<string, string>();
+        foreach (var service in _services.Keys)
+        {
+            foreach (var unit in units)
+            {
+                data.Add(service, unit);
+            }
+        }
+
+        return data;
+    }
 
     /// <summary>Texto con un dato personal o secreto ficticio y el fragmento que no debe sobrevivir a la redacción.</summary>
     public static TheoryData<string, string, string> SensitiveText()
@@ -146,14 +175,12 @@ public sealed class Spec011ObservabilityTests
         {
             var logger = factory.CreateLogger<Spec011ObservabilityTests>();
             _contactWithPersonalData(logger, "+52 55 5555 0101", "XEXX010101HNEXXXA4", "19.4326, -99.1332", "Bearer " + _fakeJwt, null);
-            _phoneByKey(logger, "5555550101", null);
+            _altaRegistrada(logger, null);
         });
 
         records.Should().HaveCount(2);
-        // Primer registro: datos en texto libre (mensaje y atributos). Segundo: la clave «Phone» se redacta siempre en el atributo.
-        // El mensaje renderizado del segundo no se revisa: un celular nacional sin «+» en texto libre es el riesgo aceptado de
-        // docs/OBSERVABILIDAD.md (pendiente de decisión: el mensaje lo repite tal cual).
-        var exported = records.Take(1).SelectMany(r => r.Attributes.Select(a => Convert.ToString(a.Value, System.Globalization.CultureInfo.InvariantCulture)).Append(r.Message).Append(r.Body));
+        // Datos personales en texto libre (mensaje y atributos) y en el alta: ninguna debe salir. El alta no registra la propiedad {Phone}.
+        var exported = records.SelectMany(r => r.Attributes.Select(a => Convert.ToString(a.Value, System.Globalization.CultureInfo.InvariantCulture)).Append(r.Message).Append(r.Body));
         foreach (var text in exported)
         {
             foreach (var secret in secrets)
@@ -163,7 +190,6 @@ public sealed class Spec011ObservabilityTests
         }
 
         records[0].Message.Should().Contain(_services[service].Placeholder);
-        records[1].Attributes.Should().Contain(new KeyValuePair<string, object?>("Phone", _services[service].Placeholder));
     }
 
     [Theory]
@@ -200,6 +226,72 @@ public sealed class Spec011ObservabilityTests
         redact("notes", notes).Should().BeEquivalentTo(new[] { placeholder, "ok" });
         redact("StatusCode", 500).Should().Be(500);
         redact("RequestPath", "/api/v1/oficios").Should().Be("/api/v1/oficios");
+    }
+
+    [Theory]
+    [MemberData(nameof(Services))]
+    public async Task ConsoleSink_WithFakeSensitiveData_WritesRedactedJson_CA_011_02(string service)
+    {
+        var placeholder = _services[service].Placeholder;
+        string[] secrets = ["5555 0101", "XEXX010101HNEXXXA4", "19.4326", "99.1332", "t-ficticio", "s-ficticio", "firma-ficticia", "abc.def-ghi"];
+
+        var lines = await CaptureConsoleAsync(service, factory =>
+        {
+            var logger = factory.CreateLogger<Spec011ObservabilityTests>();
+            // La clave «lat» llega como propiedad numérica (scope): se reemplaza entera y la línea sigue siendo JSON válido.
+            using (logger.BeginScope(new Dictionary<string, object> { ["lat"] = 19.4326, ["Authorization"] = "Bearer abc.def-ghi" }))
+            {
+                _consoleWithPersonalData(
+                    logger,
+                    "+52 55 5555 0101",
+                    "XEXX010101HNEXXXA4",
+                    "19.4326, -99.1332",
+                    "/api/v1/x?token=t-ficticio&sig=s-ficticio",
+                    new InvalidOperationException("Fallo con Authorization: Bearer " + _fakeJwt + " y curp XEXX010101HNEXXXA4"));
+            }
+        });
+
+        var category = $"\"SourceContext\":\"{typeof(Spec011ObservabilityTests).FullName}\"";
+        var line = lines.Should().ContainSingle(l => l.Contains(category, StringComparison.Ordinal)).Subject;
+        var json = JsonElement.Parse(line);
+        foreach (var secret in secrets)
+        {
+            line.Should().NotContain(secret);
+        }
+
+        json.GetProperty("@m").GetString().Should().Contain(placeholder);
+        json.GetProperty("@x").GetString().Should().Contain(placeholder).And.Contain(nameof(InvalidOperationException));
+        json.GetProperty("lat").GetString().Should().Be(placeholder);
+        json.GetProperty("Authorization").GetString().Should().Be(placeholder);
+        json.GetProperty("@l").GetString().Should().Be("Error");
+    }
+
+    [Theory]
+    [Trait("Category", "Performance")]
+    [MemberData(nameof(CopiesWithAdversarialUnits))]
+    public void Redact_LongAdversarialInput_TakesUnderOneMillisecondPer4KB_CA_011_02(string service, string unit)
+    {
+        var best = RedactTiming.BestMillisecondsPerCall(_services[service].Redact, RedactTiming.Input4KB(unit));
+
+        best.Should().BeLessThan(1.0, "sin retroceso catastrófico en un atributo de 4 KB");
+    }
+
+    /// <summary>Lo que Serilog escribe en la consola mientras corre el host del servicio, una línea por evento.</summary>
+    private static async Task<string[]> CaptureConsoleAsync(string service, Action<ILoggerFactory> write)
+    {
+        var original = Console.Out;
+        using var console = new StringWriter(CultureInfo.InvariantCulture);
+        Console.SetOut(console);
+        try
+        {
+            await CaptureAsync(service, write);
+        }
+        finally
+        {
+            Console.SetOut(original);
+        }
+
+        return console.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     }
 
     /// <summary>Arranca un host con el cableado y el appsettings.json del servicio, escribe los logs y devuelve lo que llega al exportador.</summary>
