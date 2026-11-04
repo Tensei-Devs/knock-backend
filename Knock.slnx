@@ -7,6 +7,7 @@
     <Project Path="src/Knock.Messaging.Api/Knock.Messaging.Api.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/ArchitectureTest/Knock.ArchitectureTest.csproj" />
     <Project Path="tests/ContractTest/Knock.ContractTest.csproj" />
     <Project Path="tests/DatabaseTest/Knock.DatabaseTest.csproj" />
     <Project Path="tests/IntegrationTest/Knock.IntegrationTest.csproj" />

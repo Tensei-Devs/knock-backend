@@ -3,34 +3,17 @@ using Serilog.Context;
 
 namespace Knock.Market.Api.Hosting;
 
-/// <summary>Reglas del <c>X-Correlation-Id</c>: máximo 64 caracteres de <c>[A-Za-z0-9._-]</c>; si no, se genera un GUID sin guiones.</summary>
+/// <summary>Reglas del <c>X-Correlation-Id</c>: las define <c>Knock.Contracts.Correlation.CorrelationId</c> y las comparten todos los servicios (spec 001, R-05).</summary>
 internal static class CorrelationId
 {
-    public const string HeaderName = "X-Correlation-Id";
-    public const string LogProperty = "CorrelationId";
-    public const string ItemKey = "Knock.CorrelationId";
-    public const int MaxLength = 64;
+    public const string HeaderName = Knock.Contracts.Correlation.CorrelationId.HeaderName;
+    public const string LogProperty = Knock.Contracts.Correlation.CorrelationId.LogProperty;
+    public const string ItemKey = Knock.Contracts.Correlation.CorrelationId.ItemKey;
+    public const int MaxLength = Knock.Contracts.Correlation.CorrelationId.MaxLength;
 
-    public static bool IsValid(string? value)
-    {
-        if (string.IsNullOrEmpty(value) || value.Length > MaxLength)
-        {
-            return false;
-        }
+    public static bool IsValid(string? value) => Knock.Contracts.Correlation.CorrelationId.IsValid(value);
 
-        foreach (var c in value)
-        {
-            var allowed = c is (>= 'a' and <= 'z') or (>= 'A' and <= 'Z') or (>= '0' and <= '9') or '.' or '_' or '-';
-            if (!allowed)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    public static string Create() => Guid.NewGuid().ToString("N");
+    public static string Create() => Knock.Contracts.Correlation.CorrelationId.Create();
 
     /// <summary>Id de la petición actual (lo fija <see cref="CorrelationIdMiddleware"/>); <c>null</c> si el middleware no corrió.</summary>
     public static string? Current(HttpContext context)
