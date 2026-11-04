@@ -7,8 +7,8 @@ namespace Knock.Market.Api.Hosting;
 internal static class CorrelationId
 {
     public const string HeaderName = Knock.Contracts.Correlation.CorrelationId.HeaderName;
-    public const string LogProperty = "CorrelationId";
-    public const string ItemKey = "Knock.CorrelationId";
+    public const string LogProperty = Knock.Contracts.Correlation.CorrelationId.LogProperty;
+    public const string ItemKey = Knock.Contracts.Correlation.CorrelationId.ItemKey;
     public const int MaxLength = Knock.Contracts.Correlation.CorrelationId.MaxLength;
 
     public static bool IsValid(string? value) => Knock.Contracts.Correlation.CorrelationId.IsValid(value);
