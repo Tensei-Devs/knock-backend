@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>Knock.ArchitectureTest</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="AwesomeAssertions" Version="9.6.0" />
+    <PackageReference Include="coverlet.collector" Version="10.1.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+    <PackageReference Include="NetArchTest.eNhancedEdition" Version="1.4.5" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Knock.Contracts\Knock.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Knock.Gateway\Knock.Gateway.csproj" />
+    <ProjectReference Include="..\..\src\Knock.Identity.Api\Knock.Identity.Api.csproj" />
+    <ProjectReference Include="..\..\src\Knock.Market.Api\Knock.Market.Api.csproj" />
+    <ProjectReference Include="..\..\src\Knock.Messaging.Api\Knock.Messaging.Api.csproj" />
+  </ItemGroup>
+</Project>

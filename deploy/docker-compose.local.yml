@@ -18,5 +18,37 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
+  # Spec 003: MongoDB local con la misma imagen que fijó el spike (DocumentDbFixture). Usuario y contraseña solo por variables.
+  documentdb:
+    image: ghcr.io/microsoft/documentdb/documentdb-local@sha256:0fcf634531c1917ad0855ff9f4354aca0a5c5d8e435f08250568deb37eeb0ad5
+    command:
+      - --username
+      - ${KNOCK_MONGO_USER:-knock}
+      - --password
+      - ${KNOCK_MONGO_PASSWORD:?KNOCK_MONGO_PASSWORD is required}
+    ports:
+      - "127.0.0.1:10260:10260"
+
+  # Spec 003, R-07: Redis de una réplica, con contraseña y sin persistencia. 7.2 es la última versión con licencia BSD-3.
+  redis:
+    image: redis:7.2-alpine@sha256:2c933526722b4126a61d5c170f766dc159adf97682f0b1cbbc27b1666ba96d84
+    environment:
+      REDIS_PASSWORD: ${KNOCK_REDIS_PASSWORD:?KNOCK_REDIS_PASSWORD is required}
+      REDISCLI_AUTH: ${KNOCK_REDIS_PASSWORD:?KNOCK_REDIS_PASSWORD is required}
+    command:
+      - sh
+      - -c
+      - exec redis-server --requirepass "$$REDIS_PASSWORD" --save "" --appendonly no
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test:
+        - CMD
+        - redis-cli
+        - ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres-data:
