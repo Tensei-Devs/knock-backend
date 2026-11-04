@@ -86,3 +86,11 @@
 - **Decisión:** cada PR necesita una revisión de otra persona y la segunda es opcional; el Tech Lead puede aprobar sus propios PR, y su revisión es opcional si es urgente o no hay nadie disponible (anota el motivo). Los rulesets dejan de descartar aprobaciones por commits nuevos y de exigir hilos resueltos.
 - **Porqué:** dos revisiones frenaban el flujo con cuatro personas; el profesor tampoco las exige en su ruleset.
 - **A evitar:** que un agente apruebe o fusione: sigue prohibido.
+
+## 2026-11-04 — Spec 001 (KNOCK-196): gateway, correlación y fronteras entre servicios
+- **Decisión:** el gateway usa YARP con las rutas y las direcciones en configuración (`ReverseProxy`); el middleware de `X-Correlation-Id` y su regla viven en `Knock.Contracts.Correlation` (biblioteca común, sin lógica de negocio) y los tres servicios nuevos y el gateway lo usan; los cuatro proyectos responden `/health`. Se agrega `tests/ArchitectureTest` (19 pruebas: ningún servicio referencia a otro, `Knock.Contracts` no referencia servicios y la regla puede fallar) y 11 pruebas de integración del gateway con servicios simulados.
+- **Porqué:** la spec 001 pide una sola entrada pública, correlación en toda petición y fronteras comprobadas por prueba; así lo siguen la 009 (token y límite de peticiones en el gateway, de Guillermo) y la 005 (ingreso interno).
+- **Quitado:** `UseHttpsRedirection` de los servicios y el gateway: el HTTPS lo termina el ingreso de Container Apps y la redirección interna rompería las llamadas del gateway por HTTP.
+- **Pendiente:** validar el token y limitar peticiones en el gateway (spec 009); unificar el middleware de correlación de `Knock.Market.Api` con el de `Knock.Contracts`; Dockerfiles (KNOCK-232); CA-04 (servicio interno inaccesible desde fuera) se comprueba en el despliegue.
+- **A evitar:** agregar lógica de negocio a `Knock.Contracts` o referencias directas entre servicios.
+
