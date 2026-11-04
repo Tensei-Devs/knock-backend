@@ -14,7 +14,7 @@ internal static class LoggingExtensions
 {
 
     /// <summary>
-    /// Serilog a consola en JSON (una línea por evento), configurable desde appsettings. Los mismos eventos, ya filtrados y enriquecidos,
+    /// Serilog a consola en JSON (una línea por evento, redactada con <see cref="RedactingJsonFormatter"/>), configurable desde appsettings. Los mismos eventos, ya filtrados y enriquecidos,
     /// van a OpenTelemetry (TT-OBS-01) con <see cref="OpenTelemetryLogSink"/>.
     /// </summary>
     public static IServiceCollection AddKnockLogging(this IServiceCollection services, IConfiguration configuration)
@@ -23,7 +23,7 @@ internal static class LoggingExtensions
             .ReadFrom.Configuration(configuration)
             .Enrich.FromLogContext()
             .Enrich.With<ScopeRequestPathEnricher>()
-            .WriteTo.Console(new RenderedCompactJsonFormatter())
+            .WriteTo.Console(new RedactingJsonFormatter(new RenderedCompactJsonFormatter()))
             .WriteTo.Sink(new OpenTelemetryLogSink(provider)));
         return services;
     }
