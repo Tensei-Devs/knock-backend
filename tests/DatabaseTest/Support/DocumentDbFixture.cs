@@ -47,6 +47,20 @@ internal sealed class DocumentDbFixture : IAsyncDisposable
         DirectConnection = true,
     }.ToString();
 
+    /// <summary>
+    /// Misma cadena, pero con la IP del contenedor en la red de Docker: para otro contenedor (por ejemplo, las herramientas de
+    /// respaldo de TC-003-04), que no ve el puerto publicado en el anfitrión.
+    /// </summary>
+    public string ContainerNetworkConnectionString => new MongoUrlBuilder
+    {
+        Server = new MongoServerAddress(_container.IpAddress, Port),
+        Username = _user,
+        Password = _password,
+        UseTls = true,
+        AllowInsecureTls = true,
+        DirectConnection = true,
+    }.ToString();
+
     /// <summary>Contenedor propio, para pruebas que lo detienen.</summary>
     public static async Task<DocumentDbFixture> StartAsync()
     {
