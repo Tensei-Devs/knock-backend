@@ -11,6 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using StackExchange.Redis;
 
 namespace Knock.IntegrationTest.Support;
 
@@ -32,11 +33,16 @@ internal sealed class IdentityApiFactory(IReadOnlyDictionary<string, string?> se
     private static readonly byte[] _phoneEncryptionKey = RandomNumberGenerator.GetBytes(32);
     private static readonly byte[] _phoneHmacKey = RandomNumberGenerator.GetBytes(32);
 
+    private RedisTestFixture? _redis;
+
     public string DatabaseName => settings["Mongo:Databases:Identity"]!;
 
     public IMongoDatabase Database => Services.GetRequiredService<IMongoClient>().GetDatabase(DatabaseName);
 
     public IMongoCollection<BsonDocument> Users => Database.GetCollection<BsonDocument>(SesionesStore.UsersCollection);
+
+    /// <summary>Redis del host: la lista de sesiones canceladas (<c>sesion-cancelada:{sid}</c>).</summary>
+    public IDatabase Redis => Services.GetRequiredService<IConnectionMultiplexer>().GetDatabase();
 
     public IMongoCollection<BsonDocument> Sessions => Database.GetCollection<BsonDocument>(SesionesStore.SessionsCollection);
 
@@ -44,6 +50,7 @@ internal sealed class IdentityApiFactory(IReadOnlyDictionary<string, string?> se
     public static async Task<IdentityApiFactory> CreateAsync(IReadOnlyDictionary<string, string?>? overrides = null)
     {
         var mongo = await DocumentDbFixture.SharedAsync();
+        var redis = await RedisTestFixture.SharedAsync();
         var values = new Dictionary<string, string?>
         {
             ["ConnectionStrings:KnockMongo"] = mongo.ConnectionString,
@@ -54,7 +61,7 @@ internal sealed class IdentityApiFactory(IReadOnlyDictionary<string, string?> se
             values[key] = value;
         }
 
-        var factory = new IdentityApiFactory(values);
+        var factory = new IdentityApiFactory(values) { _redis = redis };
         await factory.Services.GetRequiredService<SesionesStore>().EnsureIndexesAsync(CancellationToken.None);
         return factory;
     }
@@ -85,7 +92,12 @@ internal sealed class IdentityApiFactory(IReadOnlyDictionary<string, string?> se
 
             configuration.AddInMemoryCollection(values);
         });
-        builder.ConfigureServices(services => services.AddSingleton<IStartupFilter>(new RemoteIpStartupFilter()));
+        builder.ConfigureServices(services =>
+        {
+            services.AddSingleton<IStartupFilter>(new RemoteIpStartupFilter());
+            // La conexión a Redis de producción llega con la spec 003 (AddKnockRedis); aquí se usa la del contenedor de pruebas.
+            services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(_redis!.ConnectionString));
+        });
     }
 }
 

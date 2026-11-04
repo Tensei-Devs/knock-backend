@@ -60,3 +60,11 @@ internal enum AccountCreation
     Created,
     AlreadyExists,
 }
+
+/// <summary>Sesión guardada, tal como la necesitan la renovación y el cierre (spec 016): sin la huella ni el token.</summary>
+/// <param name="Id"><c>_id</c> de la sesión (el <c>sid</c> del JWT).</param>
+/// <param name="UserId"><c>_id</c> del usuario dueño.</param>
+/// <param name="Sub"><c>sub</c> del usuario.</param>
+/// <param name="Revoked">Si el logout, el reuso o el límite de sesiones la revocó.</param>
+/// <param name="ExpiresAt">Fecha UTC en que vence; se mueve 30 días en cada renovación.</param>
+internal sealed record StoredSession(string Id, string UserId, string Sub, bool Revoked, DateTime ExpiresAt);

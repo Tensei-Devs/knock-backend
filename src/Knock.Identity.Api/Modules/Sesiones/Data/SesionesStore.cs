@@ -56,6 +56,15 @@ internal sealed class SesionesStore(
         .Include(ProfileCompleteField)
         .Include(PhoneHashField);
 
+    /// <summary>Huellas usadas que se conservan por sesión para detectar un token ya rotado (spec 016, R-03).</summary>
+    public const int MaxUsedFingerprints = 5;
+
+    private static readonly ProjectionDefinition<BsonDocument> _sessionProjection = Builders<BsonDocument>.Projection
+        .Include(UserIdField)
+        .Include(SubField)
+        .Include(RevokedField)
+        .Include(ExpiresAtField);
+
     private readonly FindOptions _findOptions = new() { MaxTime = mongoOptions.Value.QueryMaxTime };
 
     public IMongoCollection<BsonDocument> Users { get; } = database.GetCollection<BsonDocument>(UsersCollection);
@@ -191,6 +200,87 @@ internal sealed class SesionesStore(
             cancellationToken: cancellationToken);
     }
 
+    public async Task<UserAccount?> FindByIdAsync(string userId, CancellationToken cancellationToken)
+    {
+        if (!ObjectId.TryParse(userId, out var id))
+        {
+            return null;
+        }
+
+        return ToAccount(await Users.Find(_filter.Eq(IdField, id), _findOptions).Project(_accountProjection).Limit(1)
+            .FirstOrDefaultAsync(cancellationToken));
+    }
+
+    public async Task<StoredSession?> FindSessionByFingerprintAsync(byte[] fingerprint, CancellationToken cancellationToken) =>
+        ToSession(await Sessions.Find(_filter.Eq(FingerprintField, new BsonBinaryData(fingerprint)), _findOptions).Project(_sessionProjection).Limit(1)
+            .FirstOrDefaultAsync(cancellationToken));
+
+    public async Task<StoredSession?> FindSessionByUsedFingerprintAsync(byte[] fingerprint, CancellationToken cancellationToken) =>
+        ToSession(await Sessions.Find(_filter.AnyEq(UsedFingerprintsField, new BsonBinaryData(fingerprint)), _findOptions).Project(_sessionProjection).Limit(1)
+            .FirstOrDefaultAsync(cancellationToken));
+
+    /// <summary>Un solo <c>updateOne</c> con la huella vigente en el filtro: MongoDB lo ejecuta de forma atómica sobre el documento.</summary>
+    public async Task<bool> RotateAsync(
+        string sessionId, byte[] currentFingerprint, byte[] newFingerprint, DateTime now, DateTime newExpiresAt, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(currentFingerprint);
+        ArgumentNullException.ThrowIfNull(newFingerprint);
+        if (!ObjectId.TryParse(sessionId, out var id))
+        {
+            return false;
+        }
+
+        var filter = _filter.And(
+            _filter.Eq(IdField, id),
+            _filter.Eq(FingerprintField, new BsonBinaryData(currentFingerprint)),
+            _filter.Eq(RevokedField, false),
+            _filter.Gt(ExpiresAtField, new BsonDateTime(now)));
+        var update = Builders<BsonDocument>.Update
+            .Set(FingerprintField, new BsonBinaryData(newFingerprint))
+            .Set(LastActivityField, new BsonDateTime(now))
+            .Set(ExpiresAtField, new BsonDateTime(newExpiresAt))
+            .PushEach(UsedFingerprintsField, [new BsonBinaryData(currentFingerprint)], slice: -MaxUsedFingerprints);
+        var result = await Sessions.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
+        return result.ModifiedCount == 1;
+    }
+
+    public async Task<IReadOnlyList<string>> RevokeAllAsync(string userId, CancellationToken cancellationToken)
+    {
+        if (!ObjectId.TryParse(userId, out var id))
+        {
+            return [];
+        }
+
+        var open = _filter.And(_filter.Eq(UserIdField, id), _filter.Eq(RevokedField, false));
+        var ids = (await Sessions.Find(open, _findOptions).Project(Builders<BsonDocument>.Projection.Include(IdField)).ToListAsync(cancellationToken))
+            .Select(document => document[IdField].AsObjectId)
+            .ToList();
+        if (ids.Count == 0)
+        {
+            return [];
+        }
+
+        await Sessions.UpdateManyAsync(
+            _filter.And(_filter.In(IdField, ids), _filter.Eq(RevokedField, false)),
+            Builders<BsonDocument>.Update.Set(RevokedField, true),
+            cancellationToken: cancellationToken);
+        return [.. ids.Select(objectId => objectId.ToString())];
+    }
+
+    public async Task<bool> RevokeAsync(string sessionId, string sub, CancellationToken cancellationToken)
+    {
+        if (!ObjectId.TryParse(sessionId, out var id))
+        {
+            return false;
+        }
+
+        var result = await Sessions.UpdateOneAsync(
+            _filter.And(_filter.Eq(IdField, id), _filter.Eq(SubField, sub)),
+            Builders<BsonDocument>.Update.Set(RevokedField, true),
+            cancellationToken: cancellationToken);
+        return result.MatchedCount == 1;
+    }
+
     internal static bool IsDuplicateKey(Exception exception) => exception switch
     {
         MongoWriteException write => write.WriteError.Category == ServerErrorCategory.DuplicateKey,
@@ -258,4 +348,14 @@ internal sealed class SesionesStore(
                 document[StateField].AsString,
                 document[ProfileCompleteField].AsBoolean,
                 document[PhoneHashField].AsBsonBinaryData.Bytes);
+
+    private static StoredSession? ToSession(BsonDocument? document) =>
+        document is null
+            ? null
+            : new StoredSession(
+                document[IdField].AsObjectId.ToString(),
+                document[UserIdField].AsObjectId.ToString(),
+                document[SubField].AsString,
+                document[RevokedField].AsBoolean,
+                document[ExpiresAtField].ToUniversalTime());
 }
