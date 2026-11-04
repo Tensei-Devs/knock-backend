@@ -25,7 +25,8 @@ Definir los controles de seguridad comunes a todos los servicios y cómo se mane
 - **R-05:** El JWT de acceso dura 15 minutos y se valida con un solo algoritmo (HMAC-SHA256) y una clave de al menos 32 bytes; todo recurso valida la autorización en el servidor.
 - **R-06:** Los registros no incluyen celulares, correos, direcciones ni documentos.
 - **R-07:** Los datos personales sensibles (celular, dirección, documentos de identidad) se guardan cifrados a nivel de campo con AES-256-GCM; para buscarlos se usa un HMAC-SHA256 con una llave distinta de la de cifrado, y las dos llaves viven en Key Vault.
-- **R-08:** Cerrar sesión cancela el token: el identificador del token cancelado se guarda en Redis hasta que vence y el gateway rechaza con 401 todo token cancelado. El token de renovación se guarda solo como huella.
+- **R-08:** Cerrar sesión cancela la sesión: su identificador (`sid`, incluido en cada JWT) se guarda en Redis (`sesion-cancelada:{sid}`) hasta que vence el JWT más largo (15 minutos) y el gateway rechaza con 401 todo JWT de una sesión cancelada. El token de renovación se guarda solo como huella.
+- **R-09:** Toda respuesta 429 (límite de peticiones) lleva el encabezado `Retry-After` con los segundos de espera y un ProblemDetails; el cliente no debe reintentar antes.
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dada una petición sin token a una ruta protegida, cuando se hace, entonces responde 401.
@@ -33,7 +34,8 @@ Definir los controles de seguridad comunes a todos los servicios y cómo se mane
 - **CA-03:** Dado un registro con un celular, cuando se escribe, entonces el dato no aparece en la salida.
 - **CA-04:** Dado un token firmado con otro algoritmo, cuando se presenta, entonces se rechaza.
 - **CA-05:** Dado un campo de celular guardado, cuando se lee directo de la base, entonces no aparece en claro y la búsqueda por HMAC lo encuentra.
-- **CA-06:** Dado un token cancelado que aún no vence, cuando se presenta al gateway, entonces responde 401.
+- **CA-06:** Dado un JWT de una sesión cancelada que aún no vence, cuando se presenta al gateway, entonces responde 401.
+- **CA-07:** Dada una petición que supera el límite, cuando se rechaza, entonces responde 429 con `Retry-After` en segundos.
 
 ## 5. Contrato
 Fija las cabeceras de seguridad de toda respuesta, el esquema de autenticación con JWT en `Authorization: Bearer` y la forma de los errores 401 y 403 (ProblemDetails).
@@ -60,10 +62,12 @@ Fija las cabeceras de seguridad de toda respuesta, el esquema de autenticación 
 - **Una sola entrada:** la seguridad, el límite de peticiones y el registro se aplican en un único punto.
 - **Secretos fuera del código:** protege al repositorio aunque se haga público.
 
-## 9. Riesgos y dudas abiertas
-- ¿Se cancela por el identificador del token (`jti`, como dice la constitución del equipo) o por el de la sesión (`sid`, como usan las specs 016 y 018)? Decide José Julián con Guillermo; las specs 016 y 018 se alinean con lo que se decida.
-- Qué debe hacer la app cuando recibe 429 (límite de peticiones): si el servidor envía `Retry-After` y cómo reacciona el cliente. Hoy ninguna spec lo fija.
-- Si Redis se reinicia, un token cancelado vale hasta 15 minutos más; el riesgo está aceptado (spec 003), la renovación cancelada sigue bloqueada porque su huella se guarda en MongoDB.
+## 9. Decisiones de la revisión, riesgos y dudas
+Decisiones tomadas en la revisión del 2026-11-04. Quien aprueba la spec las acepta; si alguna no convence, se cambia aquí antes de aprobar.
+
+- **Cancelar por `sid` y no por `jti` (decidido).** Cada renovación emite un JWT nuevo con otro `jti`; cancelar un `jti` solo cierra el último token, y cerrar la sesión de otro dispositivo (spec 018) es imposible sin conocer su `jti`. Con `sid`, una sola clave en Redis cierra toda la sesión, sea cual sea el JWT que lleve el dispositivo. Esto reemplaza lo que decía la constitución del equipo (`jti`); se corrige al fusionar las constituciones.
+- **429 con `Retry-After` (decidido).** El límite de la matriz de peticiones ya existe; faltaba que el cliente supiera cuánto esperar.
+- **Riesgo aceptado:** si Redis se reinicia, un JWT cancelado vale hasta 15 minutos más (spec 003); la renovación cancelada sigue bloqueada porque su huella vive en MongoDB.
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: ________ fecha: ________

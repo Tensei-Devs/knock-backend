@@ -71,10 +71,12 @@ Mantener la sesión viva mientras la persona use la app, sin pedirle otro códig
 - **Rotación con detección de reuso:** si un atacante y la persona usan el mismo token, se descubre y se cierran las sesiones.
 - **La cancelación vive en Redis:** el JWT dura solo 15 minutos, así que la lista nunca crece más de lo que se emite en ese tiempo.
 
-## 9. Riesgos y dudas abiertas
-- Si una renovación se pierde por la señal después de que el servidor ya rotó el token, el reintento de la app se vería como reuso y cerraría todas las sesiones. ¿Se acepta, o se agrega una tolerancia de unos segundos que devuelva la misma respuesta? Propuesta: aceptar el riesgo en esta versión y medirlo.
-- ¿El logout debe cerrar también las demás sesiones si la app lo pide («cerrar en todos los dispositivos»)? No está en el Excel; quedaría para otra spec.
-- El gateway consulta Redis en cada petición con token: confirmar con las pruebas de carga que el costo sea aceptable.
+## 9. Decisiones de la revisión, riesgos y dudas
+Decisiones tomadas en la revisión del 2026-11-04. Quien aprueba la spec las acepta; si alguna no convence, se cambia aquí antes de aprobar.
+
+- **Renovación perdida por la señal (decidido): se acepta el riesgo y se mide.** Si el servidor ya rotó el token y la respuesta no llegó, el reintento cuenta como reuso y cierra las sesiones. Es raro y seguro; una tolerancia de segundos se agrega solo si las pruebas muestran que ocurre.
+- **Cerrar en todos los dispositivos (decidido): fuera de esta spec.** No está en el Excel; se escribe como spec aparte si se pide.
+- **Riesgo:** el gateway consulta Redis en cada petición con token; el costo se confirma con las pruebas de carga.
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: ________ fecha: ________

@@ -82,12 +82,14 @@ Permitir que una persona entre a Knock con su celular: el teléfono verifica el 
 - **Token de renovación opaco y con huella:** permite revocarlo y detectar su reuso (spec 016).
 - **Sin SMS propio:** lo envía Firebase; el backend nunca ve el código.
 
-## 9. Riesgos y dudas abiertas
-- HU-001 guarda la huella del token en una colección `refresh_tokens` con `familiaId` y `dispositivoId`; el Excel usa `sesiones`. ¿Son la misma colección? Propuesta: `sesiones` con los campos de ambas (agregar `deviceId` y la familia de rotación). Decide el equipo antes de implementar.
-- Los SMS reales de Firebase requieren el plan de pago por uso (Blaze). Para la evaluación del 3 y 4 de noviembre hay que decidir si se usan números de prueba de Firebase.
-- Versiones iniciales de `aviso_privacidad` y `terminos` (en HU-001 son una constante por confirmar).
-- ¿Qué librería verifica el token de Firebase? En el repositorio histórico ya se eligió una: reutilizarla si pasa la evaluación de dependencias (`Memoria.md`).
-- Valor concreto del límite de peticiones de autenticación por IP.
+## 9. Decisiones de la revisión, riesgos y dudas
+Decisiones tomadas en la revisión del 2026-11-04. Quien aprueba la spec las acepta; si alguna no convence, se cambia aquí antes de aprobar.
+
+- **`sesiones` y no `refresh_tokens` (decidido).** Es una sola colección: un documento por dispositivo con la huella vigente del token de renovación, `huellasUsadas`, `deviceId` y `venceEn`. La «familia de rotación» de HU-001 equivale a la sesión: `familiaId` = `sid`. Mantiene una sola fuente para renovar (016) y listar o cerrar sesiones (018).
+- **SMS (decidido).** Para la evaluación se usa el emulador de Firebase y números de prueba; los SMS reales esperan al plan de pago, que no se activa por el costo cero.
+- **Versiones de `aviso_privacidad` y `terminos` (decidido).** Se guardan como la constante `1.0` en configuración hasta que el texto legal esté vigente; cambiarla exige una spec.
+- **Librería de verificación de Firebase (decidido).** Se reutiliza `FirebaseAdmin` (ya usada en el repositorio del equipo), previa evaluación de la dependencia en `Memoria.md`.
+- **Límite por IP en autenticación (decidido).** 10 peticiones por minuto por IP en `/auth/*`, como fija la matriz de límites; con dos réplicas el efectivo es 20.
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: ________ fecha: ________

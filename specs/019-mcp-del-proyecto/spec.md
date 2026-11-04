@@ -60,10 +60,12 @@ No aplica a la API. Interfaces que fija: el nombre del archivo de configuración
 - **`gh` en lugar de un MCP de GitHub:** ya funciona y no agrega superficie.
 - **Solo lectura por defecto:** una escritura equivocada en Jira es difícil de revertir.
 
-## 9. Riesgos y dudas abiertas
-- La dirección oficial del servidor MCP de Atlassian y el nombre exacto de sus herramientas se confirman al implementar; pueden cambiar.
-- ¿Se activa el MCP de MongoDB? Hoy es opcional: se decide al implementar.
-- Cada agente guarda su configuración en un archivo distinto; se evalúa si se genera desde una sola fuente con `scripts/sync_agents.py`.
+## 9. Decisiones de la revisión, riesgos y dudas
+Decisiones tomadas en la revisión del 2026-11-04. Quien aprueba la spec las acepta; si alguna no convence, se cambia aquí antes de aprobar.
+
+- **Dirección y herramientas del servidor de Atlassian (decidido): se confirman con la documentación oficial al implementar.** No bloquea la aprobación porque la spec fija las reglas (OAuth, sin secretos, solo lectura), no la dirección.
+- **MCP de MongoDB (decidido): no se activa en esta etapa.** Si se agrega, cumple R-03.
+- **Una sola fuente de configuración (decidido): por ahora un archivo por agente;** se evalúa generarlos con `sync_agents.py` cuando haya más de tres.
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: ________ fecha: ________

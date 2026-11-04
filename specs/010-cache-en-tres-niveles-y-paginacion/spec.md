@@ -60,9 +60,11 @@ Fija el uso de `ETag`/`If-None-Match` y 304, el encabezado `Cache-Control` por t
 - **Paginación por cursor y no por número de página:** contar desde el principio se vuelve más lento mientras más profundo se pagina.
 - **No cachear lo personal que cambia al crear algo:** una lista cacheada mostraría datos viejos justo después de crear.
 
-## 9. Riesgos y dudas abiertas
-- Las vigencias iniciales pueden no ser las óptimas; se ajustan con las pruebas de carga.
-- La spec 010 del frontend consume el encabezado `Idempotency-Key`, pero ninguna spec del backend lo define. Hay que decidir si el backend lo implementa (qué endpoints, cuánto tiempo guarda la clave) o si el frontend deja de usarlo.
+## 9. Decisiones de la revisión, riesgos y dudas
+Decisiones tomadas en la revisión del 2026-11-04. Quien aprueba la spec las acepta; si alguna no convence, se cambia aquí antes de aprobar.
+
+- **`Idempotency-Key` (decidido): no se implementa en esta etapa.** Ningún endpoint de las specs 015 a 018 lo necesita; se define en la spec del primer endpoint que cree recursos con riesgo de duplicado (por ejemplo, crear una solicitud). El frontend deja de consumirlo (spec 010 del frontend).
+- **Riesgo:** las vigencias iniciales de la caché pueden no ser las óptimas; se ajustan con las pruebas de carga.
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: ________ fecha: ________

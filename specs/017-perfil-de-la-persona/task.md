@@ -10,7 +10,7 @@
 | T-04 | Crear el servicio de perfil (búsqueda por `sub`, `perfilCompleto`) | R-01, R-09 · CA-01, CA-09, CA-11 | pendiente |
 | T-05 | Crear el controller con `ETag`, `Cache-Control` y 304 | R-03 · CA-03, CA-04 | pendiente |
 | T-06 | Filtrar el celular y el nombre en los registros | R-10 · CA-10 | pendiente |
-| T-07 | Escribir las pruebas unitarias, de integración y de seguridad negativa | R-01 a R-10 · CA-01 a CA-11 | pendiente |
+| T-07 | Escribir las pruebas unitarias, de integración y de seguridad negativa | R-01 a R-12 · CA-01 a CA-13 | pendiente |
 | T-08 | Publicar el OpenAPI actualizado y registrar la decisión en `Memoria.md` | R-03 | pendiente |
 
 ## Definición de terminado
