@@ -1,6 +1,6 @@
 # Mapa de código
 
-> Generado por `scripts/codemap.py` el 2026-11-04T18:11:42Z. No editar a mano.
+> Generado por `scripts/codemap.py` el 2026-11-04T21:17:58Z. No editar a mano.
 > **Antes de crear una clase, método o archivo, busca aquí o corre `python scripts/codemap.py --query "<qué necesitas>"`.**
 
 ## Resumen
@@ -8,7 +8,8 @@
 | Módulo | Capas | Archivos | Tipos | Métodos públicos |
 |---|---|---|---|---|
 | `Catalog` | -, controllers, data, domain, dtos, services, validators | 21 | 23 | 30 |
-| `Knock.Gateway` | -, hosting | 4 | 6 | 6 |
+| `Knock.Contracts` | - | 2 | 3 | 6 |
+| `Knock.Gateway` | -, hosting | 4 | 7 | 6 |
 | `Knock.Identity.Api` | -, hosting | 5 | 10 | 12 |
 | `Knock.Market.Api` | -, common, hosting | 26 | 55 | 69 |
 | `Knock.Messaging.Api` | -, hosting | 4 | 6 | 8 |
@@ -29,6 +30,8 @@
 
 ## Tipos con el mismo nombre en varios lugares
 
+- `CorrelationId`: `src/Knock.Contracts/Correlation/CorrelationId.cs:9`, `src/Knock.Market.Api/Hosting/CorrelationIdMiddleware.cs:7`
+- `CorrelationIdMiddleware`: `src/Knock.Contracts/Correlation/CorrelationIdMiddleware.cs:11`, `src/Knock.Market.Api/Hosting/CorrelationIdMiddleware.cs:30`
 - `DataExtensions`: `src/Knock.Gateway/Hosting/DataExtensions.cs:7`, `src/Knock.Identity.Api/Hosting/DataExtensions.cs:7`, `src/Knock.Messaging.Api/Hosting/DataExtensions.cs:7`
 - `HealthExtensions`: `src/Knock.Gateway/Hosting/HealthExtensions.cs:10`, `src/Knock.Identity.Api/Hosting/HealthExtensions.cs:10`, `src/Knock.Market.Api/Hosting/HealthExtensions.cs:5`, `src/Knock.Messaging.Api/Hosting/HealthExtensions.cs:10`
 - `KnockMongoOptions`: `src/Knock.Identity.Api/Hosting/MongoExtensions.cs:16`, `src/Knock.Market.Api/Hosting/MongoExtensions.cs:14`, `src/Knock.Messaging.Api/Hosting/MongoExtensions.cs:16`
@@ -100,11 +103,20 @@
 - `src/Knock.Market.Api/Modules/Catalog/Validators/NeighborhoodAtPointQueryValidator.cs` — class `NeighborhoodAtPointQueryValidator`
   - `Parse()`:31
 
+### Knock.Contracts
+
+**-**
+
+- `src/Knock.Contracts/Correlation/CorrelationId.cs` — class `CorrelationId`
+  - `IsValid()`:24, `Create()`:44, `Current()`:47
+- `src/Knock.Contracts/Correlation/CorrelationIdMiddleware.cs` — class `CorrelationIdMiddleware`, class `CorrelationIdApplicationBuilderExtensions`
+  - `CorrelationIdMiddleware()`:11, `InvokeAsync()`:14, `UseKnockCorrelationId()`:43
+
 ### Knock.Gateway
 
 **-**
 
-- `src/Knock.Gateway/Program.cs` — —
+- `src/Knock.Gateway/Program.cs` — class `Program`
 
 **hosting**
 
@@ -153,7 +165,7 @@
 - `src/Knock.Market.Api/Hosting/AuthenticationExtensions.cs` — class `AuthenticationExtensions`, class `InternalControllerFeatureProvider`, class `AuthenticationStartupCheck`
   - `AddKnockAuthentication()`:14, `AddInternalControllers()`:55, `IsController()`:73, `StartAsync()`:90, `StopAsync()`:108
 - `src/Knock.Market.Api/Hosting/CorrelationIdMiddleware.cs` — class `CorrelationId`, class `CorrelationIdMiddleware`
-  - `IsValid()`:14, `Create()`:33, `Current()`:36, `CorrelationIdMiddleware()`:47, `InvokeAsync()`:49
+  - `IsValid()`:14, `Create()`:16, `Current()`:19, `CorrelationIdMiddleware()`:30, `InvokeAsync()`:32
 - `src/Knock.Market.Api/Hosting/CorsMiddleware.cs` — class `CorsMiddleware`
   - `CorsMiddleware()`:13, `InvokeAsync()`:24
 - `src/Knock.Market.Api/Hosting/DomainExceptionHandler.cs` — class `DomainExceptionHandler`

@@ -16,4 +16,8 @@
     <InternalsVisibleTo Include="Knock.UnitTest" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Knock.Contracts\Knock.Contracts.csproj" />
+  </ItemGroup>
+
 </Project>
