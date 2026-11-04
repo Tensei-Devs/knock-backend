@@ -24,4 +24,7 @@
     <InternalsVisibleTo Include="Knock.SecurityTest" />
     <InternalsVisibleTo Include="Knock.DatabaseTest" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Knock.Contracts\Knock.Contracts.csproj" />
+  </ItemGroup>
 </Project>
