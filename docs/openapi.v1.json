@@ -10,7 +10,7 @@
         "tags": [
           "Colonias"
         ],
-        "summary": "Colonia del punto o «fuera de cobertura» (200 en ambos casos). Las coordenadas se convierten en colonia y se descartan: no se\r\nguardan, no se registran, no se cachean y no vuelven en la respuesta. El 422 lo da `ValidationFilter` antes de esta acción.",
+        "summary": "Colonia del punto o «fuera de cobertura» (200 en ambos casos). Las coordenadas se convierten en colonia y se descartan: no se\nguardan, no se registran, no se cachean y no vuelven en la respuesta. El 422 lo da `ValidationFilter` antes de esta acción.",
         "parameters": [
           {
             "name": "lat",
@@ -102,7 +102,7 @@
         "tags": [
           "Oficios"
         ],
-        "summary": "Oficios activos como arreglo sin paginar: excepción documentada a la constitución §11 (catálogo acotado, D9).\r\n`[AllowAnonymous]` explícito para que siga público aunque se agregue una política de autorización global (D3).",
+        "summary": "Oficios activos como arreglo sin paginar: excepción documentada a la constitución §11 (catálogo acotado, D9).\n`[AllowAnonymous]` explícito para que siga público aunque se agregue una política de autorización global (D3).",
         "parameters": [
           {
             "name": "version",
