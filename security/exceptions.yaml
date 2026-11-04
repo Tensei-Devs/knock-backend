@@ -31,7 +31,7 @@ excepciones:
   - id: EXC-002
     herramienta: checkov
     regla: CKV_DOCKER_2
-    alcance: src/Knock.Market.Api/Dockerfile
+    alcance: src/Knock.Gateway/Dockerfile, src/Knock.Identity.Api/Dockerfile, src/Knock.Messaging.Api/Dockerfile, src/Knock.Market.Api/Dockerfile
     justificacion: >-
       El Dockerfile no define HEALTHCHECK. La API se despliega en Azure Container Apps, que define sus sondas
       (liveness y readiness sobre /health y /health/ready) fuera de la imagen, por lo que la instrucción no se usaría;
