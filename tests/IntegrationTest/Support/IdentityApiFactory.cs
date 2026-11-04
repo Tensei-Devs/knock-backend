@@ -47,6 +47,9 @@ internal sealed class IdentityApiFactory(IReadOnlyDictionary<string, string?> se
         var values = new Dictionary<string, string?>
         {
             ["ConnectionStrings:KnockMongo"] = mongo.ConnectionString,
+            // Identity valida su cadena de Redis al arrancar (spec 003); estas pruebas aún no usan Redis, solo necesitan que sea válida.
+            // La contraseña se arma en cada ejecución: no hay ninguna literal en el repositorio.
+            ["ConnectionStrings:KnockRedis"] = "127.0.0.1:6379,password=" + Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16)),
             ["Mongo:Databases:Identity"] = "identity_it_" + Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(6)),
         };
         foreach (var (key, value) in overrides ?? new Dictionary<string, string?>())

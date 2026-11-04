@@ -50,6 +50,9 @@ public sealed class GatewayRoutingTests : IAsyncLifetime, IDisposable
         _baseFactory = new WebApplicationFactory<Program>();
         _factory = _baseFactory.WithWebHostBuilder(builder =>
         {
+            // El gateway valida su cadena de Redis al arrancar (spec 003); estas pruebas no usan Redis, solo necesitan que sea válida.
+            // La contraseña se arma en tiempo de ejecución: no hay ninguna literal en el repositorio.
+            builder.UseSetting("ConnectionStrings:KnockRedis", "127.0.0.1:6379,password=" + Guid.NewGuid().ToString("N"));
             foreach (var (name, address) in _addresses)
             {
                 builder.UseSetting($"ReverseProxy:Clusters:{name}:Destinations:principal:Address", address);

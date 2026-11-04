@@ -1,4 +1,4 @@
-// jscpd:ignore-start -- EXC-015
+// jscpd:ignore-start -- EXC-007: copia de src/Knock.Market.Api/Hosting/LoggingExtensions.cs (spec 011); se unifica en una biblioteca técnica.
 using System.Text;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Routing.Patterns;
@@ -14,7 +14,7 @@ internal static class LoggingExtensions
 {
 
     /// <summary>
-    /// Serilog a consola en JSON (una línea por evento), configurable desde appsettings. Los mismos eventos, ya filtrados y enriquecidos,
+    /// Serilog a consola en JSON (una línea por evento, redactada con <see cref="RedactingJsonFormatter"/>), configurable desde appsettings. Los mismos eventos, ya filtrados y enriquecidos,
     /// van a OpenTelemetry (TT-OBS-01) con <see cref="OpenTelemetryLogSink"/>.
     /// </summary>
     public static IServiceCollection AddKnockLogging(this IServiceCollection services, IConfiguration configuration)
@@ -23,7 +23,7 @@ internal static class LoggingExtensions
             .ReadFrom.Configuration(configuration)
             .Enrich.FromLogContext()
             .Enrich.With<ScopeRequestPathEnricher>()
-            .WriteTo.Console(new RenderedCompactJsonFormatter())
+            .WriteTo.Console(new RedactingJsonFormatter(new RenderedCompactJsonFormatter()))
             .WriteTo.Sink(new OpenTelemetryLogSink(provider)));
         return services;
     }
@@ -126,4 +126,4 @@ internal sealed class ScopeRequestPathEnricher : ILogEventEnricher
         }
     }
 }
-// jscpd:ignore-end
+// jscpd:ignore-end -- EXC-007
