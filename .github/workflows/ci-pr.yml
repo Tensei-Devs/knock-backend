@@ -136,6 +136,8 @@ jobs:
         run: dotnet format Knock.slnx --verify-no-changes --no-restore
       - name: Unitarias y arquitectura
         run: dotnet test tests/UnitTest -c Release --no-build --collect:"XPlat Code Coverage" --results-directory reports/unit --logger trx
+      - name: Arquitectura (fronteras entre servicios)
+        run: dotnet test tests/ArchitectureTest -c Release --no-build --logger trx --results-directory reports/architecture
       # TT-CI-03 (KNOCK-139): emulador de Firebase Auth para las pruebas de inicio de sesión. Sin Java ni credenciales:
       # solo el proyecto ficticio demo-knock. firebase-tools queda fijado a una versión exacta (15.34.0).
       - name: Emulador de Firebase Auth
