@@ -501,6 +501,11 @@
           "OpenTelemetry.PersistentStorage.Abstractions": "1.1.1"
         }
       },
+      "Pipelines.Sockets.Unofficial": {
+        "type": "Transitive",
+        "resolved": "2.2.16",
+        "contentHash": "nonu9l0YrZH6krVYbskBjE7uG0VMAnvOQ9PU+RmzUsy+++vHkqzzCkHRoP877OiA3iRTxJyNDLfpcU8hrJ3/YQ=="
+      },
       "Scalar.AspNetCore": {
         "type": "Transitive",
         "resolved": "2.18.0",
@@ -595,6 +600,15 @@
         "resolved": "1.3.1",
         "contentHash": "DOdDQiO8YZ5rBtVLY+6CmR1yp9WYoJRgEEktPBrR0tEj9QO2djA/zv0O3DX0OZpEAfosbY8pytQ9tQUogwQsEA=="
       },
+      "StackExchange.Redis": {
+        "type": "Transitive",
+        "resolved": "2.13.23",
+        "contentHash": "Au7NdOFFkYzQ89WpRCvERQLRebZDRFfuFVpXWX6RebOy8yZwt6x2n4rbup0WkLoaR9Rpzx/S39+BbRyuq8VVoQ==",
+        "dependencies": {
+          "Pipelines.Sockets.Unofficial": "2.2.16",
+          "System.IO.Hashing": "10.0.2"
+        }
+      },
       "System.ClientModel": {
         "type": "Transitive",
         "resolved": "1.16.0",
@@ -619,8 +633,8 @@
       },
       "System.IO.Hashing": {
         "type": "Transitive",
-        "resolved": "8.0.0",
-        "contentHash": "ne1843evDugl0md7Fjzy6QjJrzsjh46ZKbhf8GwBXb5f/gw97J4bxMs0NQKifDuThh/f0bZ0e62NPl1jzTuRqA=="
+        "resolved": "10.0.2",
+        "contentHash": "AKJknIFi9O3+rGExxTry188JPvUoZAPcCtS2qdqyFhIzsxQ1Ap94BeGDG0VzVEHakhmRxmJtVih6TsHoghIt/g=="
       },
       "System.Memory.Data": {
         "type": "Transitive",
@@ -693,6 +707,7 @@
         "dependencies": {
           "Knock.Contracts": "[1.0.0, )",
           "Microsoft.AspNetCore.OpenApi": "[11.0.0-rc.3.26522.148, )",
+          "StackExchange.Redis": "[2.13.23, )",
           "Yarp.ReverseProxy": "[2.3.0, )"
         }
       },
@@ -700,7 +715,9 @@
         "type": "Project",
         "dependencies": {
           "Knock.Contracts": "[1.0.0, )",
-          "Microsoft.AspNetCore.OpenApi": "[11.0.0-rc.3.26522.148, )"
+          "Microsoft.AspNetCore.OpenApi": "[11.0.0-rc.3.26522.148, )",
+          "MongoDB.Driver": "[3.12.0, )",
+          "StackExchange.Redis": "[2.13.23, )"
         }
       },
       "knock.market.api": {
@@ -718,14 +735,16 @@
           "OpenTelemetry.Instrumentation.AspNetCore": "[1.20.1, )",
           "OpenTelemetry.Instrumentation.Http": "[1.20.1, )",
           "Scalar.AspNetCore": "[2.18.0, )",
-          "Serilog.AspNetCore": "[10.0.0, )"
+          "Serilog.AspNetCore": "[10.0.0, )",
+          "StackExchange.Redis": "[2.13.23, )"
         }
       },
       "knock.messaging.api": {
         "type": "Project",
         "dependencies": {
           "Knock.Contracts": "[1.0.0, )",
-          "Microsoft.AspNetCore.OpenApi": "[11.0.0-rc.3.26522.148, )"
+          "Microsoft.AspNetCore.OpenApi": "[11.0.0-rc.3.26522.148, )",
+          "MongoDB.Driver": "[3.12.0, )"
         }
       }
     }
