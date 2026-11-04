@@ -1,6 +1,6 @@
 # Spec 004 — Estructura del repositorio y flujo de trabajo
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 
 ## 1. Objetivo
 Fijar cómo está organizado el repositorio, cómo se nombran las ramas y los commits y cómo se revisa un cambio, para que el equipo y los agentes de IA trabajen igual.
@@ -60,6 +60,6 @@ No aplica. Interfaces que fija: el formato `tipo(alcance): descripcion` de los c
 - Ninguna duda abierta por ahora; se agregan aquí las que surjan al revisar la spec.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-04
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

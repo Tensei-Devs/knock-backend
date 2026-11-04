@@ -1,6 +1,6 @@
 # Spec 016 — Renovación y cierre de sesión
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Servicio:** Identidad y confianza · **Endpoints del Excel:** SES-02 (`POST /api/v1/auth/refresh`) y SES-03 (`POST /api/v1/auth/logout`) · **Colección:** `sesiones`
 
 ## 1. Objetivo
@@ -79,6 +79,6 @@ Decisiones tomadas en la revisión del 2026-11-04. Quien aprueba la spec las ace
 - **Riesgo:** el gateway consulta Redis en cada petición con token; el costo se confirma con las pruebas de carga.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-04
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

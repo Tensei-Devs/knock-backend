@@ -1,6 +1,6 @@
 # Spec 009 — Seguridad base y configuración
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 
 ## 1. Objetivo
 Definir los controles de seguridad comunes a todos los servicios y cómo se maneja la configuración y los secretos, sin implementar flujos de negocio.
@@ -70,6 +70,6 @@ Decisiones tomadas en la revisión del 2026-11-04. Quien aprueba la spec las ace
 - **Riesgo aceptado:** si Redis se reinicia, un JWT cancelado vale hasta 15 minutos más (spec 003); la renovación cancelada sigue bloqueada porque su huella vive en MongoDB.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-04
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

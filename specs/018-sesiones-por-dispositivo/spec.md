@@ -1,6 +1,6 @@
 # Spec 018 — Sesiones por dispositivo
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Servicio:** Identidad y confianza · **Endpoints del Excel:** SES-04 (`GET /api/v1/me/sesiones`) y SES-05 (`DELETE /api/v1/me/sesiones/{id}`) · **Colección:** `sesiones`
 
 ## 1. Objetivo
@@ -70,6 +70,6 @@ Decisiones tomadas en la revisión del 2026-11-04. Quien aprueba la spec las ace
 - **Nombre del dispositivo (decidido):** no es un dato personal sensible, pero no se escribe en los registros.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-04
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

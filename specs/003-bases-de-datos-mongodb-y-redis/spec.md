@@ -1,6 +1,6 @@
 # Spec 003 — Bases de datos: MongoDB y Redis
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 
 ## 1. Objetivo
 Definir qué bases de datos usa el backend, por qué, cómo se conecta cada servicio y cómo se organizan colecciones, índices y scripts, sin crear aún colecciones de negocio.
@@ -68,6 +68,6 @@ Define la forma de los datos: colecciones en `snake_case` plural, campos en `cam
 - Ninguna duda abierta por ahora; se agregan aquí las que surjan al revisar la spec.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-04
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

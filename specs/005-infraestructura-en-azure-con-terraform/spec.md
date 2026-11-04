@@ -1,6 +1,6 @@
 # Spec 005 — Infraestructura en Azure con Terraform
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 
 ## 1. Objetivo
 Definir en qué nube corre el backend, qué servicios usa y cómo se crea y se borra toda la infraestructura con comandos.
@@ -63,6 +63,6 @@ No expone endpoints. Interfaces que fija: variables de Terraform (réplicas, tam
 - Ninguna duda abierta por ahora; se agregan aquí las que surjan al revisar la spec.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-04
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

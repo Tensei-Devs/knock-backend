@@ -1,6 +1,6 @@
 # Spec 019 — MCP del proyecto (backend)
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Requisito del profesor:** RP-72 (establecer MCP al final, en backend y en móvil) y RP-16 (usar MCP donde el servicio externo lo ofrezca). Va al final de la secuencia de specs, como pidió.
 
 ## 1. Objetivo
@@ -68,6 +68,6 @@ Decisiones tomadas en la revisión del 2026-11-04. Quien aprueba la spec las ace
 - **Una sola fuente de configuración (decidido): por ahora un archivo por agente;** se evalúa generarlos con `sync_agents.py` cuando haya más de tres.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-04
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

@@ -1,6 +1,6 @@
 # Spec 015 — Registro e inicio de sesión
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Servicio:** Identidad y confianza · **Endpoints del Excel:** SES-01 (`POST /api/v1/auth/firebase`) · **Colecciones:** `usuarios`, `sesiones`
 > **Alineada con:** HU-001 (KNOCK-43) y TT-API-12 (KNOCK-187) del repositorio histórico del equipo, ya aprobadas. Donde difieren, aquí manda lo decidido en ellas (ver sección 8).
 
@@ -92,6 +92,6 @@ Decisiones tomadas en la revisión del 2026-11-04. Quien aprueba la spec las ace
 - **Límite por IP en autenticación (decidido).** 10 peticiones por minuto por IP en `/auth/*`, como fija la matriz de límites; con dos réplicas el efectivo es 20.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-04
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)
