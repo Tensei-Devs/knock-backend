@@ -16,7 +16,7 @@ Esquema (Sprint Planning · Nomenclatura):
           líneas «Generated with…»); un Co-Authored-By de una persona del equipo sí se permite.
           Excepción para bots (sin clave KNOCK-N): chore(main|release|deps) de release-please, Dependabot y contract-publish,
           y build(deps) de Dependabot; ver EXEMPT_COMMIT.
-  PR:     KNOCK-N · <ID> <título>   con la sección «Uso de IA» completa
+  PR:     KNOCK-N · [<ID> ]<título>   (ID opcional: HU-, TT-, BUG-, B-NNN o F-NNN) con la sección «Uso de IA» completa
 
 Uso:
   python scripts/ci/branch_rules.py branch --head feature/KNOCK-45-request-quote --base sprint-02
@@ -36,7 +36,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG = json.loads((ROOT / ".agents" / "knock.json").read_text(encoding="utf-8")) if (ROOT / ".agents" / "knock.json").exists() else {}
-SCOPES = CONFIG.get("scopes", ["identity", "catalog", "requests", "messaging", "reputation", "trust", "notifications", "assistant", "app", "panel", "ci", "infra", "docs"])
+SCOPES = CONFIG.get("scopes", ["identity", "catalog", "requests", "messaging", "reputation", "trust", "notifications", "assistant", "media", "app", "panel", "ci", "infra", "docs", "gateway", "contracts", "deploy", "docker", "container", "scripts", "architecture", "security", "db"])
 SLUG = r"[a-z0-9]+(?:-[a-z0-9]+)*"
 PERSONAL = re.compile(rf"^(feature|fix|docs|refactor|test|chore)/KNOCK-(\d+)-{SLUG}$")
 HOTFIX = re.compile(rf"^hotfix/KNOCK-(\d+)-{SLUG}$")
@@ -54,7 +54,7 @@ AI_ATTRIBUTION = re.compile(
 # Bots y generados que no llevan clave KNOCK-N: release-please (chore(main|release)), Dependabot (build(deps)) y el commit
 # automático de contract-publish.yml (chore(deps)). Los trailers prohibidos se revisan igual en todos los commits.
 EXEMPT_COMMIT = re.compile(r"^(Merge |Revert \"|fixup! |squash! |chore\((main|release|deps)\)|build\(deps(-dev)?\))")
-PR_TITLE = re.compile(r"^(KNOCK-\d+) · (HU-\d{3}|TT-[A-Z]+-\d{2}|BUG-\d{3}) .{3,}$")
+PR_TITLE = re.compile(r"^(KNOCK-\d+) · (?:(?:HU-\d{3}|TT-[A-Z]+-\d{2}|BUG-\d{3}|B-\d{3}|F-\d{3}) )?\S.{2,}$")
 
 
 def allowed(base: str, head: str) -> bool:
@@ -129,7 +129,7 @@ def check_pr(head: str, title: str, body: str) -> list[str]:
     errors = []
     m = PR_TITLE.match(title.strip())
     if not m:
-        errors.append(f"Título de PR inválido: «{title}». Formato: «KNOCK-45 · HU-024 Pedir una cotización».")
+        errors.append(f"Título de PR inválido: «{title}». Formato: «KNOCK-45 · Pedir una cotización» (o con el ID de la spec: «KNOCK-45 · HU-024 Pedir una cotización»).")
     branch_key = (PERSONAL.match(head) or HOTFIX.match(head)).group(2 if PERSONAL.match(head) else 1)
     if m and m.group(1) != f"KNOCK-{branch_key}":
         errors.append(f"El título dice {m.group(1)} pero la rama es KNOCK-{branch_key}.")
