@@ -17,7 +17,7 @@ namespace Knock.DatabaseTest.Redis;
 public sealed class Spec003RedisTests
 {
     [Fact]
-    public async Task AddKnockRedis_AgainstRealContainer_IsHealthyAndRoundTrips_CA_03()
+    public async Task AddKnockRedis_AgainstRealContainer_IsHealthyAndRoundTrips_CA_003_03()
     {
         var redis = await RedisFixture.SharedAsync();
         await using var provider = Build(redis.ConnectionString);
@@ -33,7 +33,7 @@ public sealed class Spec003RedisTests
     }
 
     [Fact]
-    public async Task RealContainer_RequiresPassword_AndHasNoPersistence_CA_03()
+    public async Task RealContainer_RequiresPassword_AndHasNoPersistence_CA_003_03()
     {
         var redis = await RedisFixture.SharedAsync();
 
@@ -47,7 +47,7 @@ public sealed class Spec003RedisTests
     }
 
     [Fact]
-    public async Task ConnectionStringWithoutPassword_FailsStartupWithoutRevealingIt_CA_03()
+    public async Task ConnectionStringWithoutPassword_FailsStartupWithoutRevealingIt_CA_003_03()
     {
         var redis = await RedisFixture.SharedAsync();
         var withoutPassword = string.Join(',', redis.ConnectionString.Split(',').Where(part => !part.StartsWith("password=", StringComparison.Ordinal)));

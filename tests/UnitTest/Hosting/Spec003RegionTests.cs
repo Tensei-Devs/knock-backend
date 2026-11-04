@@ -12,7 +12,7 @@ namespace Knock.UnitTest.Hosting;
 public sealed class Spec003RegionTests
 {
     [Fact]
-    public void RepositoryAppSettings_DeclaresWestUs_AndStartupAcceptsIt_CA_05()
+    public void RepositoryAppSettings_DeclaresWestUs_AndStartupAcceptsIt_CA_003_05()
     {
         var configuration = new ConfigurationBuilder().AddJsonFile(MongoTestServices.RepositoryAppSettings(), optional: false).Build();
         using var provider = MongoTestServices.Build(
@@ -30,7 +30,7 @@ public sealed class Spec003RegionTests
     [InlineData("WestUS")]
     [InlineData("westus2")]
     [InlineData("")]
-    public void OtherRegion_FailsStartupNamingTheKey_CA_05(string region)
+    public void OtherRegion_FailsStartupNamingTheKey_CA_003_05(string region)
     {
         var connectionString = MongoTestServices.SyntheticConnectionString();
         using var provider = MongoTestServices.Build(new Dictionary<string, string?>

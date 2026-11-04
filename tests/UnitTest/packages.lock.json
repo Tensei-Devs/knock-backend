@@ -691,6 +691,21 @@
         "resolved": "0.7.3",
         "contentHash": "U9Ix4l4cl58Kzz1rJzj5hoVTjmbx1qGMwzAcbv1j/d3NzrFaESIurQyg+ow4mivCgkE3S413y+U9k4WdnEIkRA=="
       },
+      "knock.gateway": {
+        "type": "Project",
+        "dependencies": {
+          "Microsoft.AspNetCore.OpenApi": "[11.0.0-rc.3.26522.148, )",
+          "StackExchange.Redis": "[2.13.23, )"
+        }
+      },
+      "knock.identity.api": {
+        "type": "Project",
+        "dependencies": {
+          "Microsoft.AspNetCore.OpenApi": "[11.0.0-rc.3.26522.148, )",
+          "MongoDB.Driver": "[3.12.0, )",
+          "StackExchange.Redis": "[2.13.23, )"
+        }
+      },
       "knock.market.api": {
         "type": "Project",
         "dependencies": {
@@ -707,6 +722,13 @@
           "Scalar.AspNetCore": "[2.18.0, )",
           "Serilog.AspNetCore": "[10.0.0, )",
           "StackExchange.Redis": "[2.13.23, )"
+        }
+      },
+      "knock.messaging.api": {
+        "type": "Project",
+        "dependencies": {
+          "Microsoft.AspNetCore.OpenApi": "[11.0.0-rc.3.26522.148, )",
+          "MongoDB.Driver": "[3.12.0, )"
         }
       }
     }
