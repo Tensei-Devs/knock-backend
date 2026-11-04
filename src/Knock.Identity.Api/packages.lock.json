@@ -21,6 +21,9 @@
         "type": "Transitive",
         "resolved": "3.10.2",
         "contentHash": "qzg4a3WmgQm28Azaporbnsu+KHA+vq5sgpQQFLiJgB06Rra2S+kzGAU7pzUB8/UIwZJCSCY2JEE/M5e0hQ2K8w=="
+      },
+      "knock.contracts": {
+        "type": "Project"
       }
     }
   }
