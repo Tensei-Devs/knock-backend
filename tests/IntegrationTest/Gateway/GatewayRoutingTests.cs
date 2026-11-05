@@ -1,6 +1,8 @@
 using System.Net;
 using AwesomeAssertions;
 using Knock.Contracts.Correlation;
+using Knock.Gateway.Hosting;
+using Knock.IntegrationTest.Support;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -50,15 +52,21 @@ public sealed class GatewayRoutingTests : IAsyncLifetime, IDisposable
         _baseFactory = new WebApplicationFactory<Program>();
         _factory = _baseFactory.WithWebHostBuilder(builder =>
         {
-            // El gateway valida su cadena de Redis al arrancar (spec 003); estas pruebas no usan Redis, solo necesitan que sea válida.
-            // La contraseña se arma en tiempo de ejecución: no hay ninguna literal en el repositorio.
-            builder.UseSetting("ConnectionStrings:KnockRedis", "127.0.0.1:6379,password=" + Guid.NewGuid().ToString("N"));
+            // El gateway exige sesión (spec 009): la clave y Redis son sintéticos y Redis se sustituye por dobles, porque aquí solo se prueba el enrutamiento.
+            builder.UseSetting("Jwt:SigningKey", GatewayTestSupport.SigningKeyBase64);
+            builder.UseSetting("ConnectionStrings:KnockRedis", GatewayTestSupport.DummyRedisConnectionString);
+            builder.ConfigureServices(services =>
+            {
+                services.AddSingleton<IRevokedSessions>(new NoRevokedSessions());
+                services.AddSingleton<IRequestCounter>(new NoLimitCounter());
+            });
             foreach (var (name, address) in _addresses)
             {
                 builder.UseSetting($"ReverseProxy:Clusters:{name}:Destinations:principal:Address", address);
             }
         });
         _client = _factory.CreateClient();
+        _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", GatewayTestSupport.IssueToken());
     }
 
     public async Task DisposeAsync()
