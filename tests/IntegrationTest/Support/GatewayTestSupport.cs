@@ -16,8 +16,8 @@ internal static class GatewayTestSupport
 
     public static string SigningKeyBase64 => Convert.ToBase64String(SigningKey);
 
-    /// <summary>Cadena sintética válida para el arranque (con contraseña); las pruebas que no usan Redis nunca llegan a conectar.</summary>
-    public const string DummyRedisConnectionString = "127.0.0.1:6390,password=sintetica";
+    /// <summary>Cadena sintética válida para el arranque (con contraseña armada al azar en cada ejecución); las pruebas que no usan Redis nunca llegan a conectar.</summary>
+    public static readonly string DummyRedisConnectionString = "127.0.0.1:6390,password=Kn0ck" + Convert.ToHexString(RandomNumberGenerator.GetBytes(12));
 
     public static string IssueToken(
         string? sub = null,

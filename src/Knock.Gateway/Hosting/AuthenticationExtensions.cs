@@ -53,6 +53,7 @@ internal static class AuthenticationExtensions
             .Configure<GatewayJwtSettings>((options, settings) =>
             {
                 options.MapInboundClaims = false;
+                // jscpd:ignore-start -- EXC-016
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
@@ -67,6 +68,7 @@ internal static class AuthenticationExtensions
                     ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
                     ClockSkew = TimeSpan.Zero,
                 };
+                // jscpd:ignore-end
                 options.Events = new JwtBearerEvents
                 {
                     OnTokenValidated = RejectCancelledSessionAsync,
