@@ -31,4 +31,19 @@ internal static class RefreshTokenFingerprint
 
         return SHA256.HashData(raw);
     }
+
+    /// <summary>Como <see cref="Compute"/>, pero un token mal formado no lanza: la renovación lo rechaza con el mismo 401 que a cualquier otro.</summary>
+    public static bool TryCompute(string? refreshToken, out byte[] fingerprint)
+    {
+        try
+        {
+            fingerprint = Compute(refreshToken ?? string.Empty);
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            fingerprint = [];
+            return false;
+        }
+    }
 }
