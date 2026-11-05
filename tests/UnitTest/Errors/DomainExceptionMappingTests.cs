@@ -47,7 +47,7 @@ public class DomainExceptionMappingTests
     public void SynchronousControllerActions_HaveNoTryCatch_TC_TT_API_03_13()
     {
         // Los métodos async llevan try/catch generado por el compilador en su máquina de estados; aquí se revisan los síncronos.
-        var controllers = typeof(Program).Assembly.GetTypes()
+        var controllers = typeof(DomainErrors).Assembly.GetTypes()
             .Where(t => typeof(ControllerBase).IsAssignableFrom(t) && !t.IsAbstract)
             .ToList();
         controllers.Should().NotBeEmpty();

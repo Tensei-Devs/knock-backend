@@ -18,6 +18,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Alias: Identity.Api y Gateway declaran un Program global; el alias evita la ambigüedad en este proyecto. -->
+    <ProjectReference Include="..\..\src\Knock.Identity.Api\Knock.Identity.Api.csproj" Aliases="IdentityApi" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- documentdb-local compartido con DatabaseTest: un solo archivo, sin duplicar la imagen fijada por digest. -->
+    <Compile Include="..\DatabaseTest\Support\DocumentDbFixture.cs" Link="Support\DocumentDbFixture.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
 
