@@ -132,7 +132,11 @@ def active_spec() -> tuple[str, Path | None]:
     """(clave de Jira o ID, carpeta de spec). Rama: <tipo>/KNOCK-<N>-<english-description>."""
     wanted = os.environ.get("KNOCK_SPEC", "")
     if wanted:
-        found = next((d for d in spec_dirs() if d.name.startswith(wanted)), None)
+        # Un ID numérico exige tres dígitos exactos (`KNOCK_SPEC=015`): `01` o `0` resolverían en silencio otra spec.
+        if wanted.isdigit():
+            found = next((d for d in spec_dirs() if re.fullmatch(r"\d{3}", wanted) and d.name.startswith(f"{wanted}-")), None)
+        else:
+            found = next((d for d in spec_dirs() if d.name.startswith(wanted)), None)
         return wanted, found
     m = re.search(r"KNOCK-(\d+)", git("branch", "--show-current"))
     if not m:

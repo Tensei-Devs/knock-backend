@@ -86,3 +86,10 @@
 - **Decisión:** cada PR necesita una revisión de otra persona y la segunda es opcional; el Tech Lead puede aprobar sus propios PR, y su revisión es opcional si es urgente o no hay nadie disponible (anota el motivo). Los rulesets dejan de descartar aprobaciones por commits nuevos y de exigir hilos resueltos.
 - **Porqué:** dos revisiones frenaban el flujo con cuatro personas; el profesor tampoco las exige en su ruleset.
 - **A evitar:** que un agente apruebe o fusione: sigue prohibido.
+
+## 2026-11-04 — El trazado de specs numeradas exige el número de spec (KNOCK-196)
+- **Decisión:** `sdd_lint --trace` y `KNOCK_SPEC` aceptan una spec numerada solo con tres dígitos exactos (`015`), y una prueba la cubre solo si lleva el número en el nombre (`CA_015_01`); el `CA_01` suelto ya no vale.
+- **Porqué:** la revisión del PR mostró que con `CA_01` suelto `--trace 006`, `007`, `008` y `010` daban «todos los casos tienen prueba» sin tener ninguna, porque el texto aparece en las pruebas de otra spec; y `--trace 01` resolvía la spec 010 sin avisar.
+- **Pendiente:** las pruebas de la spec 001 se llaman `..._CA_02`, así que `--trace 001` marcará FALTA hasta renombrarlas a `..._CA_001_02`; la cabecera `> **Jira:** KNOCK-N` en las specs.
+- **A evitar:** nombrar una prueba solo con el número del criterio.
+

@@ -39,9 +39,27 @@ class NumberedSpecTests(unittest.TestCase):
         text = "## 4. Criterios de aceptación\n- **CA-01:** Dado A.\n- **CA-02:** Dado B.\nTexto con **CA-09:** en medio.\n"
         self.assertEqual(["CA-01", "CA-02"], sdd_lint.numbered_cases(text))
 
-    def test_a_test_may_cite_the_case_with_or_without_the_spec_number(self) -> None:
-        self.assertEqual(["CA_003_01", "CA_01"], sdd_lint.needles("CA-01", "003"))
+    def test_a_test_must_cite_the_case_with_the_spec_number(self) -> None:
+        self.assertEqual(["CA_003_01"], sdd_lint.needles("CA-01", "003"))
         self.assertEqual(["TC_HU_001_01"], sdd_lint.needles("TC-HU-001-01", None))
+
+    def test_a_bare_case_name_does_not_cover_a_numbered_spec(self) -> None:
+        # Antes `CA_01` suelto daba por cubierta cualquier spec con un CA-01: falso verde.
+        corpus = "def test_x_CA_01(): ...".replace("-", "_")
+        self.assertFalse(any(n in corpus for n in sdd_lint.needles("CA-01", "006")))
+        self.assertTrue(any(n in "def test_x_CA_006_01(): ..." for n in sdd_lint.needles("CA-01", "006")))
+
+
+class FindSpecTests(unittest.TestCase):
+    DIRS = [Path("001-arquitectura"), Path("010-cache"), Path("015-registro")]
+
+    def test_a_numeric_id_needs_exactly_three_digits(self) -> None:
+        self.assertEqual("015-registro", sdd_lint.find_spec(self.DIRS, "015").name)
+        for ambiguous in ("0", "00", "01", "1", "15", "0151"):
+            self.assertIsNone(sdd_lint.find_spec(self.DIRS, ambiguous), ambiguous)
+
+    def test_a_non_numeric_id_still_matches_by_prefix(self) -> None:
+        self.assertEqual(Path("HU-001-login"), sdd_lint.find_spec([Path("HU-001-login")], "HU-001"))
 
 
 if __name__ == "__main__":
