@@ -119,6 +119,24 @@
 - **Pendiente:** validar el token y limitar peticiones en el gateway (spec 009); unificar el middleware de correlación de `Knock.Market.Api` con el de `Knock.Contracts`; Dockerfiles (KNOCK-232); CA-04 (servicio interno inaccesible desde fuera) se comprueba en el despliegue.
 - **A evitar:** agregar lógica de negocio a `Knock.Contracts` o referencias directas entre servicios.
 
+## 2026-11-04 — Dockerfiles de los servicios (KNOCK-232)
+- **Decisión:** un Dockerfile por servicio (`Knock.Gateway`, `Knock.Identity.Api`, `Knock.Messaging.Api` y el de `Knock.Market.Api` actualizado) con imágenes `sdk:11.0` y `aspnet:11.0`, restauración bloqueada, usuario sin privilegios (`APP_UID`, 1654) y puerto 8080; todos copian `Knock.Contracts`. El job `container` del CI ahora construye, escanea (Trivy) y revisa (Dockle) cada imagen con una matriz. EXC-002 (sin HEALTHCHECK, las sondas las define Container Apps) amplía su alcance a los cuatro Dockerfiles.
+- **Porqué:** la spec 001 (R-06) pide construir y desplegar cada servicio por separado; el Dockerfile de Market apuntaba a .NET 10 y no copiaba `Knock.Contracts`, así que habría fallado al construirse.
+- **Verificado:** las cuatro imágenes construyen con Docker y el gateway responde `/health` con `X-Correlation-Id` en un contenedor.
+- **A evitar:** poner credenciales en la imagen o ejecutar como root.
+
+## 2026-11-04 — El trazado de specs numeradas exige el número de spec (KNOCK-196)
+- **Decisión:** `sdd_lint --trace` y `KNOCK_SPEC` aceptan una spec numerada solo con tres dígitos exactos (`015`), y una prueba la cubre solo si lleva el número en el nombre (`CA_015_01`); el `CA_01` suelto ya no vale.
+- **Porqué:** la revisión del PR mostró que con `CA_01` suelto `--trace 006`, `007`, `008` y `010` daban «todos los casos tienen prueba» sin tener ninguna, porque el texto aparece en las pruebas de otra spec; y `--trace 01` resolvía la spec 010 sin avisar.
+- **Pendiente:** las pruebas de la spec 001 se llaman `..._CA_02`, así que `--trace 001` marcará FALTA hasta renombrarlas a `..._CA_001_02`; la cabecera `> **Jira:** KNOCK-N` en las specs.
+- **A evitar:** nombrar una prueba solo con el número del criterio.
+
+## 2026-11-04 — El Terraform se alinea con lo que los servicios exigen al arrancar (KNOCK-200)
+- **Decisión:** Identity recibe `Identity__PhoneProtection__EncryptionKeys__1`, `__HmacKeys__1` y las dos versiones (antes `Pii__*`, que ningún código lee); gateway, Identity y Market reciben `ForwardedHeaders__KnownNetworks__0` con la subred del entorno; los servicios llevan sondas de arranque y de disponibilidad (`/health/ready`) y se crean después de Redis; Market deja de recibir la cadena de Redis, que no usa.
+- **Porqué:** la revisión de par de Guillermo y una comprobación contra el código mostraron que, tal como estaba, el primer canje de sesión habría fallado y los límites por IP habrían sido globales para todos los clientes.
+- **Pendiente:** comprobar en el primer despliegue la IP real que ve el gateway, y que las llamadas internas por `http://` no se redirijan a HTTPS; acotar los permisos de `bootstrap.sh` (rol de administración de roles con condición) cuando se amplíe el equipo.
+- **A evitar:** declarar variables de entorno sin comprobar el nombre exacto que lee el código (doble guion bajo por cada `:`).
+
 
 ## 2026-11-05 — Spec 019: MCP del proyecto (KNOCK-214)
 - **Estado:** `docs/mcp.md` con el único servidor aprobado (el MCP oficial de Atlassian, solo lectura), la configuración de OpenCode (`opencode.json`), Codex (`.codex/config.toml`), Claude Code (`.mcp.json`) y VS Code (`.vscode/mcp.json`), y la regla de uso de MCP en `AGENTS.md`. Las 11 herramientas de lectura y las 14 de escritura son las mismas del frontend (spec 013).
