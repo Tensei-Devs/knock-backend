@@ -119,3 +119,8 @@
 - **Pendiente:** validar el token y limitar peticiones en el gateway (spec 009); unificar el middleware de correlación de `Knock.Market.Api` con el de `Knock.Contracts`; Dockerfiles (KNOCK-232); CA-04 (servicio interno inaccesible desde fuera) se comprueba en el despliegue.
 - **A evitar:** agregar lógica de negocio a `Knock.Contracts` o referencias directas entre servicios.
 
+## 2026-11-04 — Dockerfiles de los servicios (KNOCK-232)
+- **Decisión:** un Dockerfile por servicio (`Knock.Gateway`, `Knock.Identity.Api`, `Knock.Messaging.Api` y el de `Knock.Market.Api` actualizado) con imágenes `sdk:11.0` y `aspnet:11.0`, restauración bloqueada, usuario sin privilegios (`APP_UID`, 1654) y puerto 8080; todos copian `Knock.Contracts`. El job `container` del CI ahora construye, escanea (Trivy) y revisa (Dockle) cada imagen con una matriz. EXC-002 (sin HEALTHCHECK, las sondas las define Container Apps) amplía su alcance a los cuatro Dockerfiles.
+- **Porqué:** la spec 001 (R-06) pide construir y desplegar cada servicio por separado; el Dockerfile de Market apuntaba a .NET 10 y no copiaba `Knock.Contracts`, así que habría fallado al construirse.
+- **Verificado:** las cuatro imágenes construyen con Docker y el gateway responde `/health` con `X-Correlation-Id` en un contenedor.
+- **A evitar:** poner credenciales en la imagen o ejecutar como root.

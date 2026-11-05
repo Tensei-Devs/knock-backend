@@ -54,7 +54,7 @@ jobs:
         run: |
           {
             echo "api=$([ -f Knock.slnx ] && echo true || echo false)"
-            echo "docker=$([ -f src/Knock.Gateway/Dockerfile ] && echo true || echo false)"
+            echo "docker=$(ls src/*/Dockerfile >/dev/null 2>&1 && echo true || echo false)"
             echo "sql=$(ls db/**/*.sql db/*.sql >/dev/null 2>&1 && echo true || echo false)"
             echo "iac=$([ -d deploy/bicep ] && echo true || echo false)"
             echo "dast=$([ -f deploy/docker-compose.ci.yml ] && [ -f tests/smoke/smoke.sh ] && echo true || echo false)"
@@ -350,6 +350,15 @@ jobs:
     if: needs.detect.outputs.docker == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    # Un Dockerfile por servicio (spec 001, R-06: cada servicio se construye y se despliega por separado).
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { proyecto: Knock.Gateway, imagen: knock-gateway }
+          - { proyecto: Knock.Identity.Api, imagen: knock-identidad }
+          - { proyecto: Knock.Messaging.Api, imagen: knock-mensajeria }
+          - { proyecto: Knock.Market.Api, imagen: knock-mercado }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -358,26 +367,25 @@ jobs:
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: .
-          file: src/Knock.Gateway/Dockerfile
+          file: src/${{ matrix.proyecto }}/Dockerfile
           load: true
-          tags: knock-api:ci
+          tags: ${{ matrix.imagen }}:ci
+      # Trivy como contenedor oficial: el instalador de la acción (aquasecurity/setup-trivy) falla con
+      # «exit code 6» en los runners sin caché del binario (KNOCK-232). Mismos umbrales que antes.
       - name: Trivy (críticas y altas con corrección bloquean)
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        with:
-          image-ref: knock-api:ci
-          severity: CRITICAL,HIGH
-          exit-code: "1"
-          ignore-unfixed: true
-          trivyignores: .trivyignore
+        env:
+          IMAGEN: ${{ matrix.imagen }}:ci
+        run: |
+          docker run --rm             -v /var/run/docker.sock:/var/run/docker.sock             -v "$PWD:/work" -w /work             ghcr.io/aquasecurity/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c             image --severity CRITICAL,HIGH --exit-code 1 --ignore-unfixed             --ignorefile .trivyignore --quiet "$IMAGEN"
       - name: Dockle (buenas prácticas de imagen)
         uses: goodwithtech/dockle-action@e30e6af832aad6ea7dca2a248d31a85eab6dbd68 # v0.4.15
         with:
-          image: knock-api:ci
+          image: ${{ matrix.imagen }}:ci
           exit-code: "1"
           exit-level: warn
           # EXC-003 (security/exceptions.yaml): falsos positivos de CIS-DI-0010 en variables de la imagen base.
           # Solo estas claves; cualquier otra variable o archivo sospechoso sigue fallando.
-          accept-key: DOTNET_VERSION,ASPNET_VERSION,ASPNETCORE_URLS,ASPNETCORE_ENVIRONMENT,ASPNETCORE_HTTP_PORTS,DOTNET_RUNNING_IN_CONTAINER,DOTNET_EnableDiagnostics,APP_UID,org.opencontainers.image.version,--gid,--uid
+          accept-key: DOTNET_VERSION,ASPNET_VERSION,ASPNETCORE_URLS,ASPNETCORE_ENVIRONMENT,ASPNETCORE_HTTP_PORTS,DOTNET_RUNNING_IN_CONTAINER,DOTNET_EnableDiagnostics,APP_UID,org.opencontainers.image.version,org.opencontainers.image.title,org.opencontainers.image.description,org.opencontainers.image.created,--gid,--uid,--clear,PATH
 
   dast:
     name: Smoke + DAST (ZAP baseline)
