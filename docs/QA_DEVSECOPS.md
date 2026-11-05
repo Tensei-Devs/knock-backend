@@ -32,7 +32,7 @@
 | Integración | Endpoints reales contra base y caché reales | WebApplicationFactory + Testcontainers | `tests/IntegrationTest` | PR | Sí |
 | Seguridad negativa | 401/403/404 ajenos, roles, 429, entradas maliciosas, headers | xUnit + WAF | `tests/SecurityTest` | PR | Sí |
 | Base de datos | Migraciones, semillas idempotentes, restricciones, PostGIS, respaldo | Testcontainers `postgis/postgis` | `tests/DatabaseTest` | PR | Sí |
-| Contrato | JSON real, OpenAPI al día, sin cambios incompatibles | Captura + `export_openapi.py` + oasdiff | `tests/ContractTest`, `docs/openapi.v1.json` | PR | Sí |
+| Contrato | JSON real, OpenAPI al día, sin cambios incompatibles | Captura + `export_openapi.py` + oasdiff | `tests/ContractTest`, `docs/openapi.v1.json` (Market), `docs/openapi.identity.v1.json` (Identity) | PR | Sí |
 | Aceptación | Un caso `TC-<ID>-KK` por criterio | Suites de arriba + `sdd_lint --trace` | specs | PR | Sí |
 | Smoke | Salud, auth exigida, headers | `tests/smoke/smoke.sh` | PR (pila CI) + Deploy | Sí |
 | Mutación | Que las pruebas detecten errores | Stryker.NET | `stryker-config.json` | PR (informativo) · Nightly (Identity ≥ 80 %, negocio ≥ 70 %) | Nightly |
