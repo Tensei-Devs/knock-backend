@@ -33,24 +33,32 @@ locals {
   kv           = { redis = "redis-password", redis_cs = "redis-connection-string" }
   redis_secret = { ConnectionStrings__KnockRedis = local.kv.redis_cs }
 
+  # Red de confianza para X-Forwarded-For (gateway, Identity y Market limitan por IP; spec 009, R-04).
+  forwarded = { ForwardedHeaders__KnownNetworks__0 = var.container_apps_subnet_cidr }
+
   services = {
     gateway = {
       external = true
-      env = {
+      env = merge(local.forwarded, {
         ReverseProxy__Clusters__identidad__Destinations__principal__Address  = local.cluster_address.identity
         ReverseProxy__Clusters__mercado__Destinations__principal__Address    = local.cluster_address.market
         ReverseProxy__Clusters__mensajeria__Destinations__principal__Address = local.cluster_address.messaging
-      }
+      })
       secret_env = merge(local.redis_secret, { Jwt__SigningKey = "jwt-signing-key" })
     }
     identity = {
       external = false
-      env      = {}
+      # Identity lee la sección Identity:PhoneProtection (PhoneProtectionOptions): llaves numeradas y su versión vigente.
+      # Firebase:ProjectId ya trae su valor en appsettings.json (knock-0).
+      env = merge(local.forwarded, {
+        Identity__PhoneProtection__EncryptionKeyVersion = "1"
+        Identity__PhoneProtection__HmacKeyVersion       = "1"
+      })
       secret_env = merge(local.redis_secret, {
-        ConnectionStrings__KnockMongo = "mongo-identity"
-        Jwt__SigningKey               = "jwt-signing-key"
-        Pii__EncryptionKey            = "pii-encryption-key"
-        Pii__HmacKey                  = "pii-hmac-key"
+        ConnectionStrings__KnockMongo                = "mongo-identity"
+        Jwt__SigningKey                              = "jwt-signing-key"
+        Identity__PhoneProtection__EncryptionKeys__1 = "pii-encryption-key"
+        Identity__PhoneProtection__HmacKeys__1       = "pii-hmac-key"
       })
     }
     messaging = {
@@ -60,11 +68,12 @@ locals {
     }
     market = {
       external = false
-      env      = {}
-      secret_env = merge(local.redis_secret, {
+      env      = local.forwarded
+      # Market no usa Redis todavía (el cliente solo se registra cuando un módulo lo pide, spec 010): sin ese secreto.
+      secret_env = {
         ConnectionStrings__KnockMongo = "mongo-market"
         Jwt__SigningKey               = "jwt-signing-key"
-      })
+      }
     }
   }
 }
@@ -83,6 +92,7 @@ module "redis" {
   ingress_transport   = "tcp"
   target_port         = 6379
   health_path         = null
+  ready_path          = null
   min_replicas        = 1
   max_replicas        = 1
   command             = ["sh", "-c"]
@@ -113,4 +123,7 @@ module "service" {
   enable_app_insights            = true
   app_insights_connection_string = local.infra.application_insights_connection_string
   tags                           = local.tags
+
+  # Con la sonda de disponibilidad, un servicio que usa Redis no pasa a «listo» hasta que Redis responde: Redis primero.
+  depends_on = [module.redis]
 }

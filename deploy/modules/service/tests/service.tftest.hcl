@@ -64,3 +64,30 @@ run "replicas_fuera_de_rango" {
   }
   expect_failures = [var.max_replicas]
 }
+
+run "sondas_de_vida_arranque_y_disponibilidad" {
+  command = plan
+
+  assert {
+    condition     = length(azurerm_container_app.this.template[0].container[0].readiness_probe) == 1
+    error_message = "Un servicio con datos debe declarar la sonda de disponibilidad (/health/ready)."
+  }
+
+  assert {
+    condition     = length(azurerm_container_app.this.template[0].container[0].startup_probe) == 1
+    error_message = "Debe declarar la sonda de arranque para el arranque en frío de .NET."
+  }
+}
+
+run "redis_sin_sondas_http" {
+  command = plan
+  variables {
+    health_path = null
+    ready_path  = null
+  }
+
+  assert {
+    condition     = length(azurerm_container_app.this.template[0].container[0].readiness_probe) == 0 && length(azurerm_container_app.this.template[0].container[0].startup_probe) == 0 && length(azurerm_container_app.this.template[0].container[0].liveness_probe) == 0
+    error_message = "Redis usa TCP: no lleva sondas HTTP."
+  }
+}

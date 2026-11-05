@@ -80,6 +80,12 @@ variable "health_path" {
   default     = "/health"
 }
 
+variable "ready_path" {
+  description = "Ruta de la prueba de disponibilidad (readiness): las dependencias de datos responden. null la desactiva (Redis)."
+  type        = string
+  default     = "/health/ready"
+}
+
 variable "min_replicas" {
   type    = number
   default = 1
