@@ -31,7 +31,7 @@ excepciones:
   - id: EXC-002
     herramienta: checkov
     regla: CKV_DOCKER_2
-    alcance: src/Knock.Market.Api/Dockerfile
+    alcance: src/Knock.Gateway/Dockerfile, src/Knock.Identity.Api/Dockerfile, src/Knock.Messaging.Api/Dockerfile, src/Knock.Market.Api/Dockerfile
     justificacion: >-
       El Dockerfile no define HEALTHCHECK. La API se despliega en Azure Container Apps, que define sus sondas
       (liveness y readiness sobre /health y /health/ready) fuera de la imagen, por lo que la instrucción no se usaría;
@@ -44,11 +44,11 @@ excepciones:
   - id: EXC-003
     herramienta: dockle
     regla: CIS-DI-0010
-    alcance: knock-api (imagen construida desde src/Knock.Market.Api/Dockerfile); workflow ci-pr.yml, paso de Dockle (accept-key)
+    alcance: imágenes de los cuatro servicios (src/*/Dockerfile); workflow ci-pr.yml, paso de Dockle (accept-key)
     justificacion: >-
       Falso positivo. Dockle marca como «credenciales» variables de la imagen base de Microsoft y del propio
-      Dockerfile (DOTNET_VERSION, ASPNET_VERSION, ASPNETCORE_URLS, ASPNETCORE_ENVIRONMENT, ASPNETCORE_HTTP_PORTS, DOTNET_RUNNING_IN_CONTAINER, DOTNET_EnableDiagnostics, APP_UID, la etiqueta org.opencontainers.image.version y los argumentos --gid y --uid del `groupadd` de la imagen base);
-      sus valores son versiones, puertos, el nombre del entorno, indicadores booleanos y un identificador de usuario, no secretos. Solo se aceptan esas claves
+      Dockerfile (DOTNET_VERSION, ASPNET_VERSION, ASPNETCORE_URLS, ASPNETCORE_ENVIRONMENT, ASPNETCORE_HTTP_PORTS, DOTNET_RUNNING_IN_CONTAINER, DOTNET_EnableDiagnostics, APP_UID, las etiquetas org.opencontainers.image.version, .title, .description y .created, los argumentos --gid y --uid del `groupadd` de la imagen base, y desde .NET 11 (base Ubuntu 26.04) el argumento --clear y la variable PATH que aparecen en los comandos `umoci config` con que se construyó la imagen base);
+      sus valores son versiones, puertos, el nombre del entorno, indicadores booleanos, un identificador de usuario y la ruta de búsqueda de programas, no secretos. Solo se aceptan esas claves
       con nombre: la regla sigue activa para cualquier otra variable o archivo. Evidencia: salida de Dockle en el CI del PR #17.
     responsable: José Julián Hernández Hernández
     creada: 2026-10-15
@@ -90,6 +90,58 @@ excepciones:
     creada: 2026-11-03
     vence: 2026-12-02
     plan: portar esas pruebas a IAsyncStartupValidator y retirar el NoWarn antes de vencer.
+  - id: EXC-015
+    herramienta: jscpd
+    regla: duplicación textual (y huella estructural de codemap)
+    alcance: src/Knock.Identity.Api/Common/** y src/Knock.Identity.Api/Hosting/** (marcadores jscpd:ignore-start/end con EXC-015)
+    justificacion: >-
+      Identity.Api nace con la misma base técnica que Market (seguridad, versionado, validación, límites, CORS, respuestas de error, correlación),
+      copiada para que cada servicio sea desplegable por separado (spec 001). La duplicación es intencional y temporal; los archivos de Mongo, salud,
+      registros y observabilidad se descartan al entrar los PR #8 y #10. Evidencia: PR #12 y la lista de duplicados de `codemap.py --check`.
+    responsable: José Guillermo Rangel Hernández
+    creada: 2026-11-04
+    vence: 2026-12-04
+    plan: unificar en una biblioteca técnica compartida (Knock.Contracts o una nueva) y retirar los marcadores y la excepción antes de vencer.
+  - id: EXC-011
+    herramienta: checkov
+    regla: CKV_AZURE_233, CKV_AZURE_237, CKV_AZURE_167, CKV_AZURE_166, CKV_AZURE_165, CKV_AZURE_164, CKV_AZURE_163, CKV_AZURE_139
+    alcance: deploy/modules/shared/main.tf, recurso azurerm_container_registry.this
+    justificacion: >-
+      Los controles piden ACR Premium (zonas, geo-replicación, cuarentena, firma, red privada, retención). La suscripción es Azure for Students y el costo de Premium no cabe en el crédito (ADR-006). La compensación es el escaneo de cada imagen con Trivy y Dockle en el CI (spec 007) y que el registro no tiene usuario administrador (CKV_AZURE_137 pasa). Evidencia: salida de Checkov sobre deploy/.
+    responsable: José Julián Hernández Hernández
+    creada: 2026-11-04
+    vence: 2027-01-31
+    plan: reevaluar si el proyecto pasa a una suscripción de pago y retirar las supresiones que ya se puedan cumplir.
+  - id: EXC-012
+    herramienta: checkov
+    regla: CKV_AZURE_109, CKV_AZURE_189, CKV_AZURE_110, CKV_AZURE_42, CKV2_AZURE_32
+    alcance: deploy/modules/shared/main.tf, recurso azurerm_key_vault.this
+    justificacion: >-
+      Container Apps no es un servicio de confianza del firewall de Key Vault, así que cerrar la red pública rompería la lectura de secretos; los endpoints privados cuestan. Sin protección contra purga para poder destruir y recrear el entorno dentro de la ventana de evaluación (ADR-006, punto 6); sí tiene borrado suave de 7 días. Compensación: RBAC, un permiso por secreto y por servicio (spec 005, R-05). Evidencia: pruebas de módulo en deploy/modules/service/tests.
+    responsable: José Julián Hernández Hernández
+    creada: 2026-11-04
+    vence: 2027-01-31
+    plan: activar purge protection y restringir la red al terminar la evaluación (5-dic-2026) o si se agrega una red privada.
+  - id: EXC-013
+    herramienta: checkov
+    regla: CKV_AZURE_206, CKV_AZURE_33, CKV2_AZURE_21, CKV_AZURE_59, CKV2_AZURE_33, CKV2_AZURE_1
+    alcance: deploy/modules/shared/main.tf, recursos azurerm_storage_account.files y azurerm_storage_container.private
+    justificacion: >-
+      Replicación geográfica, endpoints privados, llaves administradas por el cliente y registro de lecturas tienen costo o requieren una red privada que el crédito de estudiante no cubre. La cuenta no usa colas, no permite acceso público a blobs, tiene llaves compartidas desactivadas, TLS 1.2, borrado suave y SAS con vencimiento. Evidencia: salida de Checkov sobre deploy/.
+    responsable: José Julián Hernández Hernández
+    creada: 2026-11-04
+    vence: 2027-01-31
+    plan: reevaluar con los respaldos de MongoDB (spec 003, R-08) y retirar lo que ya se pueda cumplir.
+  - id: EXC-014
+    herramienta: checkov
+    regla: CKV2_AZURE_31
+    alcance: deploy/modules/shared/main.tf, recurso azurerm_subnet.container_apps
+    justificacion: >-
+      La subred está delegada a Container Apps, que administra su propio tráfico; un grupo de seguridad de red escrito a mano puede bloquear el plano de control del entorno. El único ingreso externo es el del gateway (spec 001, R-02). Evidencia: documentación de Container Apps sobre subredes delegadas.
+    responsable: José Julián Hernández Hernández
+    creada: 2026-11-04
+    vence: 2027-01-31
+    plan: agregar un NSG con las reglas que exige Container Apps cuando la spec 006 defina la política de red.
   - id: EXC-007
     herramienta: jscpd
     regla: duplicación de código (clones)
