@@ -10,8 +10,9 @@ Revisa cada carpeta specs/<ID>-<slug>/ (ID = HU-NNN, TT-ÁREA-NN o BUG-NNN):
 
 Con --trace <ID> busca en el código de pruebas un test por cada caso:
   C#: TC_HU_001_01 en el nombre · Dart/TS: 'TC-HU-001-01' en la descripción.
-  Specs numeradas (--trace 003): los casos son los criterios «CA-NN» de spec.md; la prueba lleva en el nombre
-  CA_003_01 (preferido: dice de qué spec es) o CA_01 (válido, pero no distingue una spec de otra).
+  Specs numeradas (--trace 003, siempre con tres dígitos): los casos son los criterios «CA-NN» de spec.md; la prueba
+  lleva en el nombre CA_003_01 (el número de la spec es obligatorio: un CA_01 suelto no distingue una spec de otra
+  y daba por cubierta una spec sin pruebas).
 
 Uso:
   python scripts/sdd_lint.py
@@ -126,14 +127,21 @@ def needles(case: str, spec_number: str | None) -> list[str]:
     base = case.replace("-", "_")
     if spec_number is None:
         return [base]
-    return [f"CA_{spec_number}_{base.rsplit('_', 1)[1]}", base]
+    return [f"CA_{spec_number}_{base.rsplit('_', 1)[1]}"]
+
+
+def find_spec(dirs: list[Path], spec_id: str) -> Path | None:
+    """Carpeta de una spec por su ID. Un ID numérico exige tres dígitos exactos (`015`, no `01` ni `0`); los demás por prefijo."""
+    if spec_id.isdigit():
+        return next((d for d in dirs if re.fullmatch(r"\d{3}", spec_id) and d.name.startswith(f"{spec_id}-")), None)
+    return next((d for d in dirs if d.name.startswith(spec_id)), None)
 
 
 def trace(spec_id: str) -> int:
-    folder = next((d for d in spec_dirs() if d.name.startswith(spec_id)), None)
+    folder = find_spec(spec_dirs(), spec_id)
     number = None
     if not folder:
-        folder = next((d for d in numbered_dirs() if d.name.startswith(spec_id)), None)
+        folder = find_spec(numbered_dirs(), spec_id)
         number = NUMBERED.match(folder.name).group(1) if folder else None
     if not folder:
         print(f"ERROR: no existe specs/{spec_id}* ni specs/_legacy/{spec_id}*")
