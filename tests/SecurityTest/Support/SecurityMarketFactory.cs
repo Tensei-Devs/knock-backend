@@ -96,21 +96,7 @@ internal sealed class SecurityMarketFactory(IReadOnlyDictionary<string, string?>
         builder.UseEnvironment(environment);
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
-            var values = new Dictionary<string, string?>
-            {
-                ["Firebase:ProjectId"] = "demo-knock",
-                ["Jwt:Issuer"] = TokenForge.Issuer,
-                ["Jwt:Audience"] = TokenForge.Audience,
-                ["Jwt:SigningKey"] = Convert.ToBase64String(TokenForge.SigningKey),
-                ["RateLimiting:Global:PermitLimit"] = _highLimit,
-                ["RateLimiting:Auth:PermitLimit"] = _highLimit,
-            };
-            foreach (var (key, value) in settings)
-            {
-                values[key] = value;
-            }
-
-            configuration.AddInMemoryCollection(values);
+            SecurityHostConfiguration.Apply(configuration, _highLimit, settings);
         });
         builder.ConfigureServices(services =>
         {
