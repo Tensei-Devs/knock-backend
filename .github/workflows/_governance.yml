@@ -42,6 +42,9 @@ jobs:
       - name: Pruebas del script de pre-revisión con IA (servidores falsos, sin red ni llaves)
         if: hashFiles('scripts/ci/test_ai_review.py') != ''
         run: python scripts/ci/test_ai_review.py
+      - name: Pruebas del versionamiento por puntos (spec 012)
+        if: hashFiles('scripts/ci/test_version.py') != ''
+        run: python scripts/ci/test_version.py
       - name: Arquitectura y código duplicado (mapa de código)
         run: python scripts/codemap.py --check
       - name: Mapa de código actualizado en el commit
