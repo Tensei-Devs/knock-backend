@@ -93,9 +93,9 @@ excepciones:
   - id: EXC-016
     herramienta: jscpd
     regla: duplicación textual (y huella estructural de codemap)
-    alcance: src/Knock.Gateway/Hosting/ProblemResponses.cs y src/Knock.Gateway/Hosting/CorsExtensions.cs (marcadores jscpd:ignore-start/end con EXC-016)
+    alcance: src/Knock.Gateway/Hosting/ProblemResponses.cs, src/Knock.Gateway/Hosting/CorsExtensions.cs y los parámetros de validación del JWT de src/Knock.Gateway/Hosting/AuthenticationExtensions.cs (marcadores jscpd:ignore-start/end con EXC-016)
     justificacion: >-
-      El gateway necesita la misma respuesta ProblemDetails de error y la misma lectura de los proxies de confianza que Market (spec 009); cada servicio es
+      El gateway necesita la misma respuesta ProblemDetails de error, la misma lectura de los proxies de confianza y los mismos parámetros de validación del JWT que Market (spec 009); cada servicio es
       desplegable por separado (spec 001) y no comparten código técnico todavía. La duplicación es intencional y temporal. Evidencia: PR de KNOCK-204 y la lista
       de duplicados de `codemap.py --check`.
     responsable: José Guillermo Rangel Hernández
