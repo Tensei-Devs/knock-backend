@@ -20,7 +20,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS final
 # listas de paquetes. QUITAR este bloque cuando Microsoft publique una imagen aspnet:11.0 reconstruida con apt >= 3.2.1ubuntu0.1.
 # Corre como root (el usuario no-root se fija al final, con USER).
 RUN apt-get update \
-    && apt-get install --only-upgrade -y --no-install-recommends apt \
+    && apt-get install --only-upgrade -y --no-install-recommends apt=3.2.1ubuntu0.1 \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 ENV ASPNETCORE_URLS=http://+:8080 \
