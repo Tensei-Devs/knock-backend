@@ -300,6 +300,185 @@
         }
       }
     },
+    "/api/v{version}/me/sesiones": {
+      "get": {
+        "tags": [
+          "MeSesiones"
+        ],
+        "summary": "Lista las sesiones no revocadas ni vencidas de la cuenta autenticada, sin exponer tokens ni huellas.",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "Cache-Control": {
+                "description": "Cache policy for the personal sessions response.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SessionListItemResponse"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SessionListItemResponse"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SessionListItemResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v{version}/me/sesiones/{id}": {
+      "delete": {
+        "tags": [
+          "MeSesiones"
+        ],
+        "summary": "Revoca una sesión propia distinta de la actual y bloquea su `sid` en Redis hasta que venza el JWT.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v{version}/auth/refresh": {
       "post": {
         "tags": [
@@ -568,6 +747,31 @@
         },
         "description": "Par nuevo de la renovación (spec 016, contrato). `ExpiresIn` son los segundos de vigencia del JWT de acceso."
       },
+      "SessionListItemResponse": {
+        "required": [
+          "id",
+          "dispositivo",
+          "ultimaActividad",
+          "actual"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "dispositivo": {
+            "type": "string"
+          },
+          "ultimaActividad": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actual": {
+            "type": "boolean"
+          }
+        },
+        "description": "Datos públicos de una sesión del usuario. No contiene huellas ni tokens."
+      },
       "SessionResponse": {
         "required": [
           "accessToken",
@@ -603,6 +807,9 @@
     },
     {
       "name": "Logout"
+    },
+    {
+      "name": "MeSesiones"
     },
     {
       "name": "Refresh"
