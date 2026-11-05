@@ -283,21 +283,6 @@ public class RefreshAndLogoutTests
     [Fact]
     public async Task MoreRequestsThanTheAuthLimit_Returns429_CA_016_10()
     {
-        using var factory = await IdentityApiFactory.CreateAsync(new Dictionary<string, string?>
-        {
-            ["RateLimiting:Auth:PermitLimit"] = "3",
-            ["RateLimiting:Auth:Window"] = "00:01:00",
-        });
-        using var client = factory.CreateClient();
-        var statuses = new List<HttpStatusCode>();
-
-        for (var i = 0; i < 4; i++)
-        {
-            using var response = await RefreshAsync(client, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "203.0.113.16");
-            statuses.Add(response.StatusCode);
-        }
-
-        statuses.Take(3).Should().OnlyContain(status => status == HttpStatusCode.Unauthorized);
-        statuses[3].Should().Be(HttpStatusCode.TooManyRequests);
+        await AuthRateLimitCheck.AssertFourthRequestIsLimitedAsync(client => RefreshAsync(client, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "203.0.113.16"));
     }
 }
