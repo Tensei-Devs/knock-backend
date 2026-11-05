@@ -33,6 +33,9 @@ internal sealed record UserAccount(string Id, string Sub, string State, bool Pro
 /// <param name="CreatedAt">Fecha UTC de creación; vence 30 días después.</param>
 internal sealed record NewSession(string Id, string UserId, string Sub, string DeviceId, string DeviceName, byte[] Fingerprint, DateTime CreatedAt)
 {
+    /// <summary>Sin datos: un registro de la sesión imprimiría la huella, el <c>deviceId</c> y el nombre del teléfono.</summary>
+    public sealed override string ToString() => nameof(NewSession);
+
     public static readonly TimeSpan Lifetime = TimeSpan.FromDays(30);
 
     /// <summary>Sesiones abiertas por cuenta; al abrir una más se revoca la más antigua (R-10).</summary>
@@ -52,7 +55,11 @@ internal sealed record NewAccount(
     string PrivacyNoticeVersion,
     string TermsVersion,
     DateTime CreatedAt,
-    NewSession Session);
+    NewSession Session)
+{
+    /// <summary>Sin datos: un registro de la cuenta imprimiría el celular cifrado y su hash.</summary>
+    public sealed override string ToString() => nameof(NewAccount);
+}
 
 /// <summary>Resultado del alta: si ya existía el <c>sub</c> o el celular, un índice único lo rechazó y no se guardó nada.</summary>
 internal enum AccountCreation

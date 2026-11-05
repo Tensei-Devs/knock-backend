@@ -1,6 +1,6 @@
 # Mapa de código
 
-> Generado por `scripts/codemap.py` el 2026-11-05T00:10:17Z. No editar a mano.
+> Generado por `scripts/codemap.py` el 2026-11-05T01:29:54Z. No editar a mano.
 > **Antes de crear una clase, método o archivo, busca aquí o corre `python scripts/codemap.py --query "<qué necesitas>"`.**
 
 ## Resumen
@@ -13,7 +13,7 @@
 | `Knock.Identity.Api` | -, common, hosting | 27 | 57 | 70 |
 | `Knock.Market.Api` | -, common, hosting | 26 | 55 | 69 |
 | `Knock.Messaging.Api` | -, hosting | 7 | 21 | 29 |
-| `Sesiones` | -, controllers, data, domain, dtos, services, validators | 23 | 43 | 42 |
+| `Sesiones` | -, controllers, data, domain, dtos, services, validators | 23 | 43 | 45 |
 
 ## ⚠️ Código duplicado (misma estructura)
 
@@ -402,14 +402,14 @@
 - `src/Knock.Identity.Api/Modules/Sesiones/Data/SesionesDataExtensions.cs` — class `SesionesDataExtensions`
   - `AddSesionesData()`:11
 - `src/Knock.Identity.Api/Modules/Sesiones/Data/SesionesStore.cs` — class `SesionesStore`
-  - `EnsureIndexesAsync()`:78, `FindBySubAsync()`:96, `FindByPhoneHashAsync()`:101, `CreateAccountAsync()`:109, `AddSessionAsync()`:150, `FindByIdAsync()`:203, `FindSessionByFingerprintAsync()`:214, `FindSessionByUsedFingerprintAsync()`:218, `RotateAsync()`:223, `RevokeAllAsync()`:247, `RevokeAsync()`:270, `IsDuplicateKey()`:284
+  - `EnsureIndexesAsync()`:79, `FindBySubAsync()`:97, `FindByPhoneHashAsync()`:102, `CreateAccountAsync()`:110, `AddSessionAsync()`:151, `FindByIdAsync()`:211, `FindSessionByFingerprintAsync()`:222, `FindSessionByUsedFingerprintAsync()`:226, `RotateAsync()`:231, `RevokeAllAsync()`:255, `RevokeAsync()`:278, `IsDuplicateKey()`:292
 
 **domain**
 
 - `src/Knock.Identity.Api/Modules/Sesiones/Domain/PhoneNumberPolicy.cs` — class `PhoneNumberPolicy`
   - `IsValid()`:12
 - `src/Knock.Identity.Api/Modules/Sesiones/Domain/SesionesDomain.cs` — class `AccountState`, class `ConsentDocuments`, record `UserAccount`, record `NewSession`, record `NewAccount`, enum `AccountCreation`, record `StoredSession`
-  - `NewSession()`:34
+  - `NewSession()`:34, `ToString()`:37, `NewAccount()`:48, `ToString()`:61
 
 **dtos**
 
