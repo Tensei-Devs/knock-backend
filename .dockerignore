@@ -12,6 +12,8 @@
 .opencode/
 .specify/
 docs/
+deploy/
+legacy/
 specs/
 tests/
 security/
