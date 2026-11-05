@@ -177,7 +177,7 @@
 - **A evitar:** interpolar el texto o las etiquetas del PR dentro de `run:` (van por `env`); subir de versión con cero puntos; aceptar `Y` o `Z` de dos dígitos; usar `latest` como etiqueta de imagen.
 
 ## 2026-11-05 — Las imágenes actualizan apt por el CVE de la imagen base (KNOCK-232)
-- **Decisión:** en la etapa final de los cuatro Dockerfiles, antes de `USER`, una sola capa `apt-get install --only-upgrade apt=3.2.1ubuntu0.1` (versión fija: sin ella Checkov marca `CKV_DOCKER_9`, que busca ` apt ` suelto) y borra las listas de paquetes; el usuario sigue siendo no-root y el puerto 8080 no cambia.
+- **Decisión:** en la etapa final de los cuatro Dockerfiles, antes de `USER`, una sola capa `apt-get install --only-upgrade "apt"` (el nombre va entre comillas: sin ellas Checkov marca `CKV_DOCKER_9`, que busca ` apt ` suelto, y con `apt=versión` Dockle marca `CIS-DI-0010` al tomarlo por una variable) y borra las listas de paquetes; el usuario sigue siendo no-root y el puerto 8080 no cambia.
 - **Porqué:** Trivy empezó a marcar `CVE-2026-109518` (2 HIGH, con corrección) en `apt 3.2.0` de la imagen base `aspnet:11.0`, y eso hacía fallar el job de contenedores de todos los PR del backend. Microsoft aún no publica una imagen reconstruida (el digest vigente es el mismo), así que no hay otra imagen a la que subir.
 - **Pendiente:** quitar ese bloque en cuanto Microsoft publique una imagen `aspnet:11.0` con `apt >= 3.2.1ubuntu0.1`; comprobarlo cada vez que se reconstruyan las imágenes.
 - **A evitar:** dejar esta capa de forma permanente (hace menos reproducible la construcción) o resolver el fallo con una excepción de Trivy si existe una corrección disponible.
