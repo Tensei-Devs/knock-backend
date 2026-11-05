@@ -8,3 +8,9 @@ internal sealed record FirebaseExchangeRequest(string? FirebaseIdToken = null, s
 
 /// <summary>Sesión emitida. <c>EsNuevo</c> distingue el 201 (cuenta creada) del 200 (cuenta existente).</summary>
 internal sealed record SessionResponse(string AccessToken, string RefreshToken, bool EsNuevo, bool PerfilCompleto);
+
+/// <summary>Petición de renovación (spec 016, R-01). El campo es anulable a propósito: si falta, el validador responde 422 en su campo.</summary>
+internal sealed record RefreshRequest(string? RefreshToken = null);
+
+/// <summary>Par nuevo de la renovación (spec 016, contrato). <c>ExpiresIn</c> son los segundos de vigencia del JWT de acceso.</summary>
+internal sealed record RefreshResponse(string AccessToken, int ExpiresIn, string RefreshToken);
