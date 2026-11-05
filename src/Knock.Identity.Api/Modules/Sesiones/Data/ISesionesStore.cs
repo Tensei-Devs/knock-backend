@@ -33,4 +33,10 @@ internal interface ISesionesStore
 
     /// <summary>Revoca la sesión <paramref name="sessionId"/> si pertenece al <paramref name="sub"/>; <c>false</c> si no existe o es de otra cuenta.</summary>
     Task<bool> RevokeAsync(string sessionId, string sub, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<StoredSession>> FindOpenSessionsAsync(string userId, DateTime now, CancellationToken cancellationToken);
+
+    Task<StoredSession?> FindSessionByOwnerAsync(string id, string userId, CancellationToken cancellationToken);
+
+    Task<bool> MarkSessionRevokedAsync(string id, string userId, CancellationToken cancellationToken);
 }
