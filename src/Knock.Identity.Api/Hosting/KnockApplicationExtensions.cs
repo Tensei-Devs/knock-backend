@@ -21,8 +21,7 @@ internal static class KnockApplicationExtensions
             .AddKnockApiVersioning()
             .AddKnockAuthentication()
             .AddKnockOpenApi()
-            .AddKnockHealth()
-            .AddKnockMongo()
+            .AddKnockData()
             .AddKnockModules()
             .AddKnockObservability(builder.Configuration, builder.Environment);
         return builder;
@@ -51,7 +50,9 @@ internal static class KnockApplicationExtensions
         app.UseMiddleware<RequestBodyLimitMiddleware>();
         app.UseAuthentication();
         app.UseAuthorization();
-        app.MapKnockHealth();
+        // /health: vida (spec 001, igual que el gateway y Messaging); /health/ready: dependencias de datos (spec 003).
+        app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "identidad" }));
+        app.MapKnockReadiness();
         app.MapKnockOpenApi(app.Environment);
         app.MapControllers();
         return app;

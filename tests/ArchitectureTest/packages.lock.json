@@ -776,8 +776,14 @@
       "knock.gateway": {
         "type": "Project",
         "dependencies": {
+          "Azure.Monitor.OpenTelemetry.Exporter": "[1.10.0, )",
           "Knock.Contracts": "[1.0.0, )",
           "Microsoft.AspNetCore.OpenApi": "[11.0.0-rc.3.26522.148, )",
+          "OpenTelemetry.Extensions.Hosting": "[1.20.1, )",
+          "OpenTelemetry.Instrumentation.AspNetCore": "[1.20.1, )",
+          "OpenTelemetry.Instrumentation.Http": "[1.20.1, )",
+          "Serilog.AspNetCore": "[10.0.0, )",
+          "StackExchange.Redis": "[2.13.23, )",
           "Yarp.ReverseProxy": "[2.3.0, )"
         }
       },
@@ -816,14 +822,21 @@
           "OpenTelemetry.Instrumentation.AspNetCore": "[1.20.1, )",
           "OpenTelemetry.Instrumentation.Http": "[1.20.1, )",
           "Scalar.AspNetCore": "[2.18.0, )",
-          "Serilog.AspNetCore": "[10.0.0, )"
+          "Serilog.AspNetCore": "[10.0.0, )",
+          "StackExchange.Redis": "[2.13.23, )"
         }
       },
       "knock.messaging.api": {
         "type": "Project",
         "dependencies": {
+          "Azure.Monitor.OpenTelemetry.Exporter": "[1.10.0, )",
           "Knock.Contracts": "[1.0.0, )",
-          "Microsoft.AspNetCore.OpenApi": "[11.0.0-rc.3.26522.148, )"
+          "Microsoft.AspNetCore.OpenApi": "[11.0.0-rc.3.26522.148, )",
+          "MongoDB.Driver": "[3.12.0, )",
+          "OpenTelemetry.Extensions.Hosting": "[1.20.1, )",
+          "OpenTelemetry.Instrumentation.AspNetCore": "[1.20.1, )",
+          "OpenTelemetry.Instrumentation.Http": "[1.20.1, )",
+          "Serilog.AspNetCore": "[10.0.0, )"
         }
       }
     }
