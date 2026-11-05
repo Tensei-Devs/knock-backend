@@ -19,7 +19,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Knock.Market.Api\Knock.Market.Api.csproj" />
-    <ProjectReference Include="..\..\src\Knock.Identity.Api\Knock.Identity.Api.csproj" Aliases="identity" />
+    <ProjectReference Include="..\..\src\Knock.Identity.Api\Knock.Identity.Api.csproj" Aliases="global,identity" />
     <ProjectReference Include="..\..\src\Knock.Messaging.Api\Knock.Messaging.Api.csproj" Aliases="messaging" />
     <ProjectReference Include="..\..\src\Knock.Gateway\Knock.Gateway.csproj" Aliases="gateway" />
     <ProjectReference Include="..\..\src\Knock.Contracts\Knock.Contracts.csproj" />
