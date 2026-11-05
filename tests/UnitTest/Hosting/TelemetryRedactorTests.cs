@@ -125,6 +125,7 @@ public class TelemetryRedactorTests
     [InlineData("XEXX0101")]
     [InlineData("authorization")]
     [InlineData("eyJ+5 1.11111 bearer token=XEXX0101 ")]
+    [Trait("Category", "Performance")] // mide tiempo: corre aparte y sin cobertura (la instrumentación lo distorsiona)
     public void Redact_LongAdversarialInput_TakesUnderOneMillisecondPer4KB_TC_TT_OBS_01_12(string unit)
     {
         var input = string.Concat(Enumerable.Repeat(unit, 4096 / unit.Length + 1))[..4096];

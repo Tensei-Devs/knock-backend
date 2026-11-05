@@ -1,23 +1,30 @@
+using Knock.Contracts.Correlation;
+using Knock.Messaging.Api.Hosting;
+using Serilog;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+// Más información sobre OpenAPI: https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+// Spec 011: Serilog estructurado y OpenTelemetry con redacción; Azure Monitor solo si hay APPLICATIONINSIGHTS_CONNECTION_STRING.
+builder.Services.AddKnockLogging(builder.Configuration);
+builder.Services.AddKnockObservability(builder.Configuration, builder.Environment);
+builder.Services.AddKnockData();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+app.UseKnockCorrelationId();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+app.UseSerilogRequestLogging(LoggingExtensions.ConfigureRequestLogging);
 
-app.UseAuthorization();
-
+app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "mensajeria" }));
 app.MapControllers();
+app.MapKnockReadiness();
 
 await app.RunAsync();
