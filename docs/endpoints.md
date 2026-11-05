@@ -1,6 +1,6 @@
 # Endpoints de la API
 
-> AGENTS.md §5. Una fila por operación HTTP de negocio, con su spec. El contrato completo se genera del código (`GET /openapi/v1.json`, solo en Development); la exportación a `docs/openapi.v1.json` llega con TT-CI-02.
+> AGENTS.md §5. Una fila por operación HTTP de negocio, con su spec. El contrato completo se genera del código (`GET /openapi/v1.json`, solo en Development); cada servicio se exporta a `docs/` (sección «Contrato OpenAPI por servicio» al final).
 > Límites de peticiones: `docs/rate-limit-matrix.md` (la política global aplica a todas las filas salvo que se diga otra cosa).
 > Rastreo (todas las filas): cada respuesta lleva el encabezado `X-Correlation-Id` y cada error ProblemDetails, los campos `correlationId` (mismo valor) y `traceId` (W3C, `<trace-id>` de 32 hex). Formatos y respuestas en la §4 de la spec TT-OBS-01 y en `docs/MIDDLEWARES.md`.
 
@@ -13,3 +13,18 @@
 | `POST /api/v1/auth/logout` | Identity (Sesiones) | JWT Bearer | 204 sin cuerpo; 401, 429 y 500 en ProblemDetails | sin caché (`Cache-Control: no-store`) | 016 | Sin cuerpo. Revoca la sesión del `sid` del JWT y escribe `sesion-cancelada:{sid}` en Redis con el resto de vigencia del JWT (1 s a 15 min). El rechazo de JWT cancelados lo hace el gateway (spec 009). KNOCK-211. |
 | `GET /api/v1/me` | Identity (Usuarios) | JWT Bearer | 200 `application/json`: `{ id, nombre, fotoUrl, colonia, codigoPostal, esTecnico, estado, perfilCompleto, creadoEn }`; 304 sin cuerpo; 401, 429 y 500 en ProblemDetails | `ETag` débil y `Cache-Control: private, no-cache`; caché en Redis `perfil:{sub}` 60 s | 017 | La persona es siempre la del `sub` del token (la ruta no lleva identificador). Nunca devuelve el celular. El ETag cambia con cada escritura y es distinto entre personas. KNOCK-212. |
 | `PUT /api/v1/me` | Identity (Usuarios) | JWT Bearer | 200 con el perfil; 400 (`errors` por campo), 401, 409 `deletion_scheduled`, 413, 422 `colonia_not_found`, 429, 503 `market_unavailable` en ProblemDetails | sin caché | 017 | Cuerpo `{ nombre, fotoUrl?, colonia?, codigoPostal? }`; omitir o mandar vacío un opcional lo borra; los demás campos se ignoran. `nombre` 2 a 80 letras, `codigoPostal` 5 dígitos, `fotoUrl` solo https de `Perfil:HostsFoto`. La colonia se valida contra Mercado (`IColoniaCatalog`). Borra la caché antes de responder. Los campos inválidos responden 400 por la spec 017 (CA-06). KNOCK-212. |
+
+## Contrato OpenAPI por servicio
+
+Cada servicio con API publica su contrato en `docs/` (spec 002, R-07). Los archivos se generan, nunca se editan a mano:
+
+| Servicio | Archivo | Regenerar |
+|---|---|---|
+| Market | `docs/openapi.v1.json` | `python scripts/export_openapi.py` |
+| Identity | `docs/openapi.identity.v1.json` | `python scripts/export_openapi.py --service identity` |
+
+- El script arranca el servicio en Development en un puerto libre, lee `/openapi/v1.json`, quita `servers` y guarda JSON estable con saltos LF. Con `--no-build` usa la compilación Release existente (así lo llama el CI); con `--output ruta.json` guarda en otra ruta.
+- No necesita bases de datos ni credenciales: usa cadenas inalcanzables y, para Identity, claves y contraseñas sintéticas que se generan al azar en cada ejecución y solo viven en el proceso (nada se escribe en disco).
+- El CI regenera ambos y falla si `git diff --exit-code` ve cambios en alguno. Si cambias un endpoint, un DTO o un comentario XML que llegue al contrato, regenera el archivo del servicio y súbelo en el mismo commit.
+- `oasdiff` compara cada contrato contra el de la rama base y falla ante cambios incompatibles. El nombre de Market se conserva para no romper la publicación al frontend.
+- Pruebas del script: `python scripts/test_export_openapi.py`.

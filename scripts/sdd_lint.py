@@ -10,6 +10,9 @@ Revisa cada carpeta specs/<ID>-<slug>/ (ID = HU-NNN, TT-ÁREA-NN o BUG-NNN):
 
 Con --trace <ID> busca en el código de pruebas un test por cada caso:
   C#: TC_HU_001_01 en el nombre · Dart/TS: 'TC-HU-001-01' en la descripción.
+  Specs numeradas (--trace 003, siempre con tres dígitos): los casos son los criterios «CA-NN» de spec.md; la prueba
+  lleva en el nombre CA_003_01 (el número de la spec es obligatorio: un CA_01 suelto no distingue una spec de otra
+  y daba por cubierta una spec sin pruebas).
 
 Uso:
   python scripts/sdd_lint.py
@@ -33,6 +36,8 @@ CASE_ROW = re.compile(r"^\|\s*(TC-(HU-\d{3}|TT-[A-Z]+-\d{2}|BUG-\d{3})-(\d{2}))\
 STATES = ("Borrador", "Aprobada", "Firmada")
 # «Reemplazada» exige el formato exacto de la constitución §11: «Reemplazada (por <ID>)» (el «por» es opcional)
 REPLACED = re.compile(r"Reemplazada(?: \(por (?:HU-\d{3}|TT-[A-Z]+-\d{2}|BUG-\d{3})\))?")
+NUMBERED = re.compile(r"^(\d{3})-[a-z0-9]")
+NUMBERED_CASE = re.compile(r"^- \*\*(CA-\d{2}):\*\*", re.M)
 STATE_LINE = re.compile(r"\*\*Estado:\*\*\s*([^\n]+)")
 
 
@@ -108,16 +113,44 @@ def marked(spec_text: str, case: str, tag: str) -> bool:
     return bool(re.search(rf"\|\s*{re.escape(case)}\s*\|[^\n]*\({re.escape(tag)}\)", spec_text))
 
 
+def numbered_dirs() -> list[Path]:
+    """Specs numeradas (specs/NNN-tema), las vigentes de Demo Base; las HU/TT viven en specs/_legacy."""
+    return sorted(p for p in (ROOT / "specs").glob("*") if p.is_dir() and NUMBERED.match(p.name))
+
+
+def numbered_cases(text: str) -> list[str]:
+    return NUMBERED_CASE.findall(text)
+
+
+def needles(case: str, spec_number: str | None) -> list[str]:
+    """Nombres con los que una prueba puede citar el caso (guiones como guiones bajos)."""
+    base = case.replace("-", "_")
+    if spec_number is None:
+        return [base]
+    return [f"CA_{spec_number}_{base.rsplit('_', 1)[1]}"]
+
+
+def find_spec(dirs: list[Path], spec_id: str) -> Path | None:
+    """Carpeta de una spec por su ID. Un ID numérico exige tres dígitos exactos (`015`, no `01` ni `0`); los demás por prefijo."""
+    if spec_id.isdigit():
+        return next((d for d in dirs if re.fullmatch(r"\d{3}", spec_id) and d.name.startswith(f"{spec_id}-")), None)
+    return next((d for d in dirs if d.name.startswith(spec_id)), None)
+
+
 def trace(spec_id: str) -> int:
-    folder = next((d for d in spec_dirs() if d.name.startswith(spec_id)), None)
+    folder = find_spec(spec_dirs(), spec_id)
+    number = None
     if not folder:
-        print(f"ERROR: no existe specs/{spec_id}*")
+        folder = find_spec(numbered_dirs(), spec_id)
+        number = NUMBERED.match(folder.name).group(1) if folder else None
+    if not folder:
+        print(f"ERROR: no existe specs/{spec_id}* ni specs/_legacy/{spec_id}*")
         return 1
     spec_text = (folder / "spec.md").read_text(encoding="utf-8")
     if is_replaced(spec_state(spec_text)):
         print(f"AVISO: {folder.name} está Reemplazada por otra spec; sus casos ya no se verifican")
         return 0
-    cases = cases_of(spec_text)
+    cases = numbered_cases(spec_text) if number else cases_of(spec_text)
     files = {f for g in TEST_GLOBS for f in ROOT.glob(g) if f.is_file() and "node_modules" not in f.parts}
     if not files:
         print(f"AVISO: aún no hay pruebas; {len(cases)} casos de {folder.name} sin verificar")
@@ -126,7 +159,7 @@ def trace(spec_id: str) -> int:
     missing = []
     print("| Caso | Prueba |\n|---|---|")
     for case in cases:
-        found = case.replace("-", "_") in corpus
+        found = any(n in corpus for n in needles(case, number))
         by_command = not found and marked(spec_text, case, "comando")
         print(f"| {case} | {'OK' if found else 'COMANDO (evidencia en el PR)' if by_command else 'FALTA'} |")
         if not found and not by_command:
