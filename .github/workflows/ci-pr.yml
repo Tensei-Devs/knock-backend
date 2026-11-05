@@ -184,7 +184,8 @@ jobs:
         if: hashFiles('scripts/export_openapi.py') != ''
         run: |
           python3 scripts/export_openapi.py --no-build
-          git diff --exit-code -- docs/openapi.v1.json || { echo "::error::docs/openapi.v1.json cambió: regénéralo y súbelo con el código."; exit 1; }
+          python3 scripts/export_openapi.py --no-build --service identity
+          git diff --exit-code -- docs/openapi.v1.json docs/openapi.identity.v1.json || { echo "::error::El contrato (docs/openapi.v1.json o docs/openapi.identity.v1.json) cambió: regénéralo con scripts/export_openapi.py y súbelo con el código."; exit 1; }
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
@@ -312,6 +313,13 @@ jobs:
           git show "$BASE_SHA:docs/openapi.v1.json" > base.json 2>/dev/null || { echo "Contrato nuevo: nada que comparar"; exit 0; }
           [ -f docs/openapi.v1.json ] || exit 0
           docker run --rm -v "$PWD":/w -w /w tufin/oasdiff breaking base.json docs/openapi.v1.json --fail-on ERR
+      - name: Contrato de Identity base vs PR
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git show "$BASE_SHA:docs/openapi.identity.v1.json" > base.identity.json 2>/dev/null || { echo "Contrato de Identity nuevo: nada que comparar"; exit 0; }
+          [ -f docs/openapi.identity.v1.json ] || exit 0
+          docker run --rm -v "$PWD":/w -w /w tufin/oasdiff breaking base.identity.json docs/openapi.identity.v1.json --fail-on ERR
 
   sql-lint:
     name: Scripts SQL (sqlfluff)
