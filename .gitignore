@@ -52,3 +52,12 @@ venv/
 # Configuracion local de agentes (cada persona la suya)
 .claude/settings.local.json
 *-debug.log
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+*.auto.tfvars
+override.tf
+override.tf.json

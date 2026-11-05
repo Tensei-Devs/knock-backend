@@ -56,7 +56,7 @@ jobs:
             echo "api=$([ -f Knock.slnx ] && echo true || echo false)"
             echo "docker=$(ls src/*/Dockerfile >/dev/null 2>&1 && echo true || echo false)"
             echo "sql=$(ls db/**/*.sql db/*.sql >/dev/null 2>&1 && echo true || echo false)"
-            echo "iac=$([ -d deploy/bicep ] && echo true || echo false)"
+            echo "iac=$([ -d deploy/infra ] && echo true || echo false)"
             echo "dast=$([ -f deploy/docker-compose.ci.yml ] && [ -f tests/smoke/smoke.sh ] && echo true || echo false)"
           } >> "$GITHUB_OUTPUT"
           KEY=$(echo "$HEAD_REF" | grep -oE 'KNOCK-[0-9]+' || true)
@@ -341,8 +341,8 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install --quiet checkov
-      - name: Checkov (Bicep, Dockerfile, GitHub Actions)
-        run: checkov -d . --framework bicep dockerfile github_actions --quiet --compact --skip-path node_modules
+      - name: Checkov (Terraform, Bicep, Dockerfile, GitHub Actions)
+        run: checkov -d . --framework terraform bicep dockerfile github_actions --quiet --compact --skip-path node_modules --skip-path .terraform
 
   container:
     name: Contenedor (build, Trivy, Dockle)
