@@ -1,0 +1,26 @@
+# Imagen de la puerta de entrada (multi-etapa). Contexto de compilación: raíz del repositorio.
+#   docker build -f src/Knock.Gateway/Dockerfile -t knock-gateway:local .
+# Sin credenciales ni valores reales: la configuración llega por variables de entorno en tiempo de ejecución.
+
+# ---- Compilación ----
+FROM mcr.microsoft.com/dotnet/sdk:11.0 AS build
+WORKDIR /src
+COPY global.json Directory.Build.props .editorconfig ./
+COPY src/Knock.Contracts/Knock.Contracts.csproj src/Knock.Contracts/packages.lock.json src/Knock.Contracts/
+COPY src/Knock.Gateway/Knock.Gateway.csproj src/Knock.Gateway/packages.lock.json src/Knock.Gateway/
+RUN dotnet restore src/Knock.Gateway/Knock.Gateway.csproj --locked-mode
+COPY src/Knock.Contracts/ src/Knock.Contracts/
+COPY src/Knock.Gateway/ src/Knock.Gateway/
+RUN dotnet publish src/Knock.Gateway/Knock.Gateway.csproj -c Release --no-restore -o /app/publish /p:UseAppHost=false
+
+# ---- Ejecución ----
+# checkov:skip=CKV_DOCKER_2: EXC-002
+FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS final
+WORKDIR /app
+ENV ASPNETCORE_URLS=http://+:8080 \
+    ASPNETCORE_ENVIRONMENT=Production \
+    DOTNET_EnableDiagnostics=0
+COPY --from=build /app/publish .
+EXPOSE 8080
+USER $APP_UID
+ENTRYPOINT ["dotnet", "Knock.Gateway.dll"]
