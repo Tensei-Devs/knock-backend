@@ -43,8 +43,8 @@ public sealed class Spec014DeliveryScriptTests
             first.Output.Should().Contain("Entrega de la base lista").And.NotContain("Kn0ck", "la salida nunca muestra la contraseña");
             (await market.GetCollection<BsonDocument>("oficios").CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(_oficios);
             (await market.GetCollection<BsonDocument>("colonias").CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(_colonias);
-            (await MongoIndexes.DescribeAsync(market, "oficios")).Should().Contain("clave_1 clave:1 unique");
-            (await MongoIndexes.DescribeAsync(market, "colonias")).Should().Contain("municipio_1_cp_1_nombre_1 municipio:1,cp:1,nombre:1 unique");
+            (await MongoIndexes.DescribeAsync(market, "oficios")).Should().Contain("clave_1 clave:1 unique ttl:-");
+            (await MongoIndexes.DescribeAsync(market, "colonias")).Should().Contain("municipio_1_cp_1_nombre_1 municipio:1,cp:1,nombre:1 unique ttl:-");
             foreach (var database in new[] { names["KNOCK_DB_IDENTITY"], names["KNOCK_DB_MESSAGING"] })
             {
                 var collections = await (await client.GetDatabase(database).ListCollectionNamesAsync()).ToListAsync();
