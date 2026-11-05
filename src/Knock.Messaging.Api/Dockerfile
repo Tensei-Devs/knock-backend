@@ -1,4 +1,4 @@
-# Imagen de el servicio de Mensajería (multi-etapa). Contexto de compilación: raíz del repositorio.
+# Imagen del servicio de Mensajería (multi-etapa). Contexto de compilación: raíz del repositorio.
 #   docker build -f src/Knock.Messaging.Api/Dockerfile -t knock-mensajeria:local .
 # Sin credenciales ni valores reales: la configuración llega por variables de entorno en tiempo de ejecución.
 

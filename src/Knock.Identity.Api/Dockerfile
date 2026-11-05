@@ -1,4 +1,4 @@
-# Imagen de el servicio de Identidad (multi-etapa). Contexto de compilación: raíz del repositorio.
+# Imagen del servicio de Identidad (multi-etapa). Contexto de compilación: raíz del repositorio.
 #   docker build -f src/Knock.Identity.Api/Dockerfile -t knock-identidad:local .
 # Sin credenciales ni valores reales: la configuración llega por variables de entorno en tiempo de ejecución.
 

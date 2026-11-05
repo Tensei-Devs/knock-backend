@@ -1,4 +1,4 @@
-# Imagen de el servicio de Mercado (multi-etapa). Contexto de compilación: raíz del repositorio.
+# Imagen del servicio de Mercado (multi-etapa). Contexto de compilación: raíz del repositorio.
 #   docker build -f src/Knock.Market.Api/Dockerfile -t knock-mercado:local .
 # Sin credenciales ni valores reales: la configuración llega por variables de entorno en tiempo de ejecución.
 
