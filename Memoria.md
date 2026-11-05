@@ -119,3 +119,9 @@
 - **Pendiente:** validar el token y limitar peticiones en el gateway (spec 009); unificar el middleware de correlación de `Knock.Market.Api` con el de `Knock.Contracts`; Dockerfiles (KNOCK-232); CA-04 (servicio interno inaccesible desde fuera) se comprueba en el despliegue.
 - **A evitar:** agregar lógica de negocio a `Knock.Contracts` o referencias directas entre servicios.
 
+
+## 2026-11-05 — Spec 019: MCP del proyecto (KNOCK-214)
+- **Estado:** `docs/mcp.md` con el único servidor aprobado (el MCP oficial de Atlassian, solo lectura), la configuración de OpenCode (`opencode.json`), Codex (`.codex/config.toml`), Claude Code (`.mcp.json`) y VS Code (`.vscode/mcp.json`), y la regla de uso de MCP en `AGENTS.md`. Las 11 herramientas de lectura y las 14 de escritura son las mismas del frontend (spec 013).
+- **Decisiones:** OpenCode usa `atlassian_*: ask` antes de las reglas por herramienta, así una herramienta de escritura nueva del servidor nunca queda permitida por omisión (la lista del frontend solo niega las 14 conocidas); GitHub se sigue usando con `gh`; no hay MCP de MongoDB.
+- **Pendiente:** la restricción de escritura en **Claude Code** (`.claude/settings.json`) y **Gemini CLI** (`.gemini/settings.json`) necesita cambiar `scripts/sync_agents.py`, que es zona protegida; requiere la autorización del líder (CA-03 queda parcial). La prueba con y sin sesión (T-04, OAuth interactivo) y confirmar la dirección `.../v1/mcp/authv2` con la documentación oficial son manuales. VS Code no filtra herramientas por archivo: el control es manual.
+- **A evitar:** guardar tokens en la configuración, usar el MCP de Atlassian con Claude Code o Gemini para escribir mientras falte la restricción, y agregar un servidor que no esté en `docs/mcp.md`.
