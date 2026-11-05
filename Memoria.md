@@ -199,3 +199,9 @@
 - **Porqué:** Trivy empezó a marcar `CVE-2026-109518` (2 HIGH, con corrección) en `apt 3.2.0` de la imagen base `aspnet:11.0`, y eso hacía fallar el job de contenedores de todos los PR del backend. Microsoft aún no publica una imagen reconstruida (el digest vigente es el mismo), así que no hay otra imagen a la que subir.
 - **Pendiente:** quitar ese bloque en cuanto Microsoft publique una imagen `aspnet:11.0` con `apt >= 3.2.1ubuntu0.1`; comprobarlo cada vez que se reconstruyan las imágenes.
 - **A evitar:** dejar esta capa de forma permanente (hace menos reproducible la construcción) o resolver el fallo con una excepción de Trivy si existe una corrección disponible.
+
+## 2026-11-05 — Defectos H-1, H-2 y H-3 de las pruebas de seguridad (KNOCK-203)
+- **Estado:** corregidos los tres defectos de baja gravedad que encontró el PR #23. H-1: `LogoutService` solo cancela en Redis la sesión si `RevokeAsync` la encontró como de esa cuenta (antes, un JWT bien firmado con el `sid` de otra persona la cancelaba). H-2: el 400 automático de `[ApiController]` en Identity sale con el motivo genérico y el campo (`ModelStateProblems`), sin el texto de .NET. H-3: una `fotoUrl` con espacios o caracteres de control (CR/LF, tabulador, NUL) se rechaza.
+- **Decisión:** el 400 del perfil se queda como está (spec 017, CA-06); el 422 es solo para «la colonia no existe» (CA-07). Cambiarlo obligaría a editar la spec y el contrato que ya consume el frontend.
+- **Pendiente:** las pruebas omitidas del #23 (`SEC_016_06`, `SEC_017_16`, `SEC_017_06`) hay que activarlas cuando se fusione ese PR; aquí quedaron pruebas equivalentes (`..._CA_016_05`, `..._CA_017_06`).
+- **A evitar:** escribir caracteres de control crudos en un archivo de pruebas (usar escapes de C#); responder el 400 con `ModelState` sin sanear.
