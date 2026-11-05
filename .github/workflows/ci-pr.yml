@@ -13,6 +13,8 @@ name: ci-pr
 on:
   pull_request:
     branches: [main, release, develop, "sprint-*"]
+    # labeled y unlabeled: la comprobación de puntos (spec 012) debe reevaluarse al poner o quitar la etiqueta.
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   push:
     branches: [main, release, develop, "sprint-*"]
   workflow_dispatch:
@@ -106,6 +108,27 @@ jobs:
         run: |
           printf '%s' "$PR_BODY" > pr_body.md
           python scripts/ci/branch_rules.py pr --head "$HEAD_REF" --title "$PR_TITLE" --body-file pr_body.md
+
+  pr-points:
+    name: Etiqueta de puntos del PR (spec 012)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      # Las etiquetas salen del evento (no hay llamadas a la API ni token); llegan por entorno, nunca dentro del script.
+      - name: Etiqueta puntos-<componente>-N
+        env:
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: python scripts/ci/version.py check-labels
 
   governance:
     needs: detect
@@ -430,7 +453,7 @@ jobs:
   gate:
     name: gate
     if: always()
-    needs: [detect, pr-meta, governance, build-test, sast, sca, secrets, openapi-diff, sql-lint, iac, container, dast]
+    needs: [detect, pr-meta, pr-points, governance, build-test, sast, sca, secrets, openapi-diff, sql-lint, iac, container, dast]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
