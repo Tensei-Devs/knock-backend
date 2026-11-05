@@ -199,3 +199,15 @@
 - **Porqué:** Trivy empezó a marcar `CVE-2026-109518` (2 HIGH, con corrección) en `apt 3.2.0` de la imagen base `aspnet:11.0`, y eso hacía fallar el job de contenedores de todos los PR del backend. Microsoft aún no publica una imagen reconstruida (el digest vigente es el mismo), así que no hay otra imagen a la que subir.
 - **Pendiente:** quitar ese bloque en cuanto Microsoft publique una imagen `aspnet:11.0` con `apt >= 3.2.1ubuntu0.1`; comprobarlo cada vez que se reconstruyan las imágenes.
 - **A evitar:** dejar esta capa de forma permanente (hace menos reproducible la construcción) o resolver el fallo con una excepción de Trivy si existe una corrección disponible.
+
+### 2026-11-05 · Pruebas de seguridad y huecos unitarios de los 7 endpoints de negocio
+- **Decisión:** `tests/SecurityTest` deja de estar vacío: 264 pruebas (261 verdes, 3 omitidas como evidencia de hallazgos) contra los hosts reales de Identidad y Mercado en `Production`, con MongoDB (documentdb-local) y Redis de Testcontainers; los únicos dobles son el verificador de Firebase (`FakeFirebaseVerifier`) y el localizador y catálogo de colonias. Se enlazan `DocumentDbFixture`, `RedisTestFixture` y `ConsoleCapture` de las otras suites en vez de copiarlos. En `tests/UnitTest` se agregan 61 pruebas (configuración y validación del JWT, guardia de arranque, límite de cuerpo, clave del limitador, controllers de logout, refresh y colonias, reglas hostiles del perfil). Nombres: `SEC_<spec>_<NN>` (`SEC_TT_PRU_01_NN` y `SEC_TT_API_07_NN` para Mercado); no tocan `CA_NNN_KK` y `sdd_lint` sigue igual.
+- **Por qué:** había integración por criterio pero ninguna prueba negativa por endpoint (OWASP API1, API2, API3, API4, API8); correr en Production evita que el `stackTrace` de Development oculte fugas, y sin emulador de Firebase las pruebas de seguridad no dependen de él.
+- **Pendiente:** corregir H-1 (cancelar en Redis solo si la sesión es del `sub`), H-2 (400 automático con nombres de tipos .NET) y H-3 (`fotoUrl` con CR/LF) y quitar el `Skip` de `SEC_016_06`, `SEC_017_16` y `SEC_017_06`; Mercado no tiene integración de `GET /oficios` ni de `GET /colonias/en-punto`; `--trace 009` sigue con CA-05 sin prueba (ya ocurría antes); la validación real del ID token de Firebase solo la cubre la integración con emulador.
+- **A evitar:** forjar un JWT sin `exp` con la librería (agrega uno por defecto: hay que armarlo a mano); usar `IdentityApiFactory` para medir fugas (corre en Development); compartir el `X-Test-Remote-Ip` entre pruebas del limitador; commitear `packages.lock.json` con CRLF.
+
+## Mutacion (Stryker.NET) configurada
+- .config/dotnet-tools.json: dotnet-stryker 5.0.0 fijo.
+- stryker-config.json en la raiz (solucion Knock.slnx, pruebas solo tests/UnitTest con test-case-filter, mutate acotado a Sesiones, Usuarios, Catalog y Gateway).
+- docs/MUTACION.md: guia en espanol.
+- Verificacion local acotada: 47.17 por ciento. El job mutation-pr ya corre de verdad.
