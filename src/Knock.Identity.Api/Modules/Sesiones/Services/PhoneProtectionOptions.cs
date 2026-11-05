@@ -4,7 +4,7 @@ namespace Knock.Identity.Api.Modules.Sesiones.Services;
 
 /// <summary>
 /// Llaves de protección del celular (<c>Identity:PhoneProtection:*</c>). Las llaves solo llegan por variable de entorno o user-secrets
-/// (Key Vault después, TT-SEC-01): nunca van en <c>appsettings*.json</c>. Sin una configuración válida la API no arranca, tampoco en Development.
+/// (Key Vault después, TT-SEC-01): nunca van en <c>appsettings*.json</c>. Las llaves se validan al crear el protector, en el primer canje (no hay <c>ValidateOnStart</c>): sin una configuración válida la API arranca, pero cada canje responde 500; tampoco hay llaves por defecto en Development.
 /// </summary>
 internal sealed class PhoneProtectionOptions
 {

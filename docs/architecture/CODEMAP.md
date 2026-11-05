@@ -1,6 +1,6 @@
 # Mapa de código
 
-> Generado por `scripts/codemap.py` el 2026-11-04T21:57:37Z. No editar a mano.
+> Generado por `scripts/codemap.py` el 2026-11-05T01:29:07Z. No editar a mano.
 > **Antes de crear una clase, método o archivo, busca aquí o corre `python scripts/codemap.py --query "<qué necesitas>"`.**
 
 ## Resumen
@@ -13,7 +13,7 @@
 | `Knock.Identity.Api` | -, common, hosting | 27 | 57 | 70 |
 | `Knock.Market.Api` | -, common, hosting | 26 | 55 | 69 |
 | `Knock.Messaging.Api` | -, hosting | 7 | 21 | 29 |
-| `Sesiones` | -, controllers, data, domain, dtos, services, validators | 17 | 32 | 27 |
+| `Sesiones` | -, controllers, data, domain, dtos, services, validators | 17 | 32 | 30 |
 
 ## ⚠️ Código duplicado (misma estructura)
 
@@ -396,14 +396,14 @@
 - `src/Knock.Identity.Api/Modules/Sesiones/Data/SesionesDataExtensions.cs` — class `SesionesDataExtensions`
   - `AddSesionesData()`:11
 - `src/Knock.Identity.Api/Modules/Sesiones/Data/SesionesStore.cs` — class `SesionesStore`
-  - `EnsureIndexesAsync()`:69, `FindBySubAsync()`:87, `FindByPhoneHashAsync()`:92, `CreateAccountAsync()`:100, `AddSessionAsync()`:141, `IsDuplicateKey()`:194
+  - `EnsureIndexesAsync()`:70, `FindBySubAsync()`:88, `FindByPhoneHashAsync()`:93, `CreateAccountAsync()`:101, `AddSessionAsync()`:142, `IsDuplicateKey()`:202
 
 **domain**
 
 - `src/Knock.Identity.Api/Modules/Sesiones/Domain/PhoneNumberPolicy.cs` — class `PhoneNumberPolicy`
   - `IsValid()`:12
 - `src/Knock.Identity.Api/Modules/Sesiones/Domain/SesionesDomain.cs` — class `AccountState`, class `ConsentDocuments`, record `UserAccount`, record `NewSession`, record `NewAccount`, enum `AccountCreation`
-  - `NewSession()`:34
+  - `NewSession()`:34, `ToString()`:37, `NewAccount()`:48, `ToString()`:61
 
 **dtos**
 
