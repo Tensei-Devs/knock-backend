@@ -130,3 +130,35 @@
 - **Decisiones:** la rotación es un solo `updateOne` condicionado a la huella vigente, a que no esté revocada y a que no haya vencido; un token ya usado (entre las últimas 5 huellas) revoca todas las sesiones de la cuenta y cancela sus `sid` en Redis 15 min; el logout solo cierra la sesión si el `sub` del JWT es su dueño. Los rechazos devuelven un 401 uniforme. El tiempo de vida de la clave de cancelación es lo que le queda al JWT, entre 1 s y 15 min. Los controllers son tres (`AuthController`, `RefreshController`, `LogoutController`) porque S6960 pide no mezclar responsabilidades.
 - **Pendiente:** la conexión a Redis de producción (`AddKnockRedis`) llega con el PR #8; hasta entonces solo las pruebas registran `IConnectionMultiplexer`. El rechazo de JWT cancelados en el gateway es de la spec 009 (KNOCK-204). Riesgo aceptado de la spec: una renovación cuya respuesta se pierde cuenta como reuso.
 - **A evitar:** registrar tokens, huellas o `sid` en los registros; devolver el motivo del 401.
+
+## 2026-11-04 — Dockerfiles de los servicios (KNOCK-232)
+- **Decisión:** un Dockerfile por servicio (`Knock.Gateway`, `Knock.Identity.Api`, `Knock.Messaging.Api` y el de `Knock.Market.Api` actualizado) con imágenes `sdk:11.0` y `aspnet:11.0`, restauración bloqueada, usuario sin privilegios (`APP_UID`, 1654) y puerto 8080; todos copian `Knock.Contracts`. El job `container` del CI ahora construye, escanea (Trivy) y revisa (Dockle) cada imagen con una matriz. EXC-002 (sin HEALTHCHECK, las sondas las define Container Apps) amplía su alcance a los cuatro Dockerfiles.
+- **Porqué:** la spec 001 (R-06) pide construir y desplegar cada servicio por separado; el Dockerfile de Market apuntaba a .NET 10 y no copiaba `Knock.Contracts`, así que habría fallado al construirse.
+- **Verificado:** las cuatro imágenes construyen con Docker y el gateway responde `/health` con `X-Correlation-Id` en un contenedor.
+- **A evitar:** poner credenciales en la imagen o ejecutar como root.
+
+## 2026-11-04 — El trazado de specs numeradas exige el número de spec (KNOCK-196)
+- **Decisión:** `sdd_lint --trace` y `KNOCK_SPEC` aceptan una spec numerada solo con tres dígitos exactos (`015`), y una prueba la cubre solo si lleva el número en el nombre (`CA_015_01`); el `CA_01` suelto ya no vale.
+- **Porqué:** la revisión del PR mostró que con `CA_01` suelto `--trace 006`, `007`, `008` y `010` daban «todos los casos tienen prueba» sin tener ninguna, porque el texto aparece en las pruebas de otra spec; y `--trace 01` resolvía la spec 010 sin avisar.
+- **Pendiente:** las pruebas de la spec 001 se llaman `..._CA_02`, así que `--trace 001` marcará FALTA hasta renombrarlas a `..._CA_001_02`; la cabecera `> **Jira:** KNOCK-N` en las specs.
+- **A evitar:** nombrar una prueba solo con el número del criterio.
+
+## 2026-11-04 — El Terraform se alinea con lo que los servicios exigen al arrancar (KNOCK-200)
+- **Decisión:** Identity recibe `Identity__PhoneProtection__EncryptionKeys__1`, `__HmacKeys__1` y las dos versiones (antes `Pii__*`, que ningún código lee); gateway, Identity y Market reciben `ForwardedHeaders__KnownNetworks__0` con la subred del entorno; los servicios llevan sondas de arranque y de disponibilidad (`/health/ready`) y se crean después de Redis; Market deja de recibir la cadena de Redis, que no usa.
+- **Porqué:** la revisión de par de Guillermo y una comprobación contra el código mostraron que, tal como estaba, el primer canje de sesión habría fallado y los límites por IP habrían sido globales para todos los clientes.
+- **Pendiente:** comprobar en el primer despliegue la IP real que ve el gateway, y que las llamadas internas por `http://` no se redirijan a HTTPS; acotar los permisos de `bootstrap.sh` (rol de administración de roles con condición) cuando se amplíe el equipo.
+- **A evitar:** declarar variables de entorno sin comprobar el nombre exacto que lee el código (doble guion bajo por cada `:`).
+
+
+## 2026-11-05 — Spec 019: MCP del proyecto (KNOCK-214)
+- **Estado:** `docs/mcp.md` con el único servidor aprobado (el MCP oficial de Atlassian, solo lectura), la configuración de OpenCode (`opencode.json`), Codex (`.codex/config.toml`), Claude Code (`.mcp.json`) y VS Code (`.vscode/mcp.json`), y la regla de uso de MCP en `AGENTS.md`. Las 11 herramientas de lectura y las 14 de escritura son las mismas del frontend (spec 013).
+- **Decisiones:** OpenCode usa `atlassian_*: ask` antes de las reglas por herramienta, así una herramienta de escritura nueva del servidor nunca queda permitida por omisión (la lista del frontend solo niega las 14 conocidas); GitHub se sigue usando con `gh`; no hay MCP de MongoDB.
+- **Pendiente:** la restricción de escritura en **Claude Code** (`.claude/settings.json`) y **Gemini CLI** (`.gemini/settings.json`) necesita cambiar `scripts/sync_agents.py`, que es zona protegida; requiere la autorización del líder (CA-03 queda parcial). La prueba con y sin sesión (T-04, OAuth interactivo) y confirmar la dirección `.../v1/mcp/authv2` con la documentación oficial son manuales. VS Code no filtra herramientas por archivo: el control es manual.
+- **A evitar:** guardar tokens en la configuración, usar el MCP de Atlassian con Claude Code o Gemini para escribir mientras falte la restricción, y agregar un servidor que no esté en `docs/mcp.md`.
+
+
+## 2026-11-04 — OpenAPI por servicio: contrato de Identity (KNOCK-197, spec 002)
+- **Decisión:** `scripts/export_openapi.py` acepta `--service market|identity` (por defecto `market`, sin cambios). Identity se exporta a `docs/openapi.identity.v1.json`; Market conserva `docs/openapi.v1.json`. Identity arranca con configuración sintética generada al azar en cada ejecución (Redis, `Jwt:SigningKey`, llaves de `Identity:PhoneProtection`, Firebase de demostración, Mongo inalcanzable). El paso del CI regenera y compara los dos archivos, y el job `oasdiff` revisa también el de Identity. Los saltos CRLF de los comentarios XML se unifican a LF para que el contrato salga igual en Windows y en Linux. Pruebas en `scripts/test_export_openapi.py`.
+- **Porqué:** el frontend (F-006) genera su cliente Dart desde el contrato y Identity solo tenía el endpoint de inicio de sesión sin contrato publicado. Se dejó el nombre de Market para no romper a quien ya lo consume.
+- **Pendiente:** publicar el contrato de Identity al frontend (cuando exista el flujo de publicación, hoy no hay `contract-publish.yml` en el repositorio); regenerarlo si cambia la API de Identity antes de fusionar el PR #12; cambiar la base de este PR a `sprint-03` al fusionar el #12; que `ProblemDetails` declare `correlationId`/`traceId` y que las respuestas declaren el encabezado `X-Correlation-Id` (hoy no salen en el contrato).
+- **A evitar:** editar a mano cualquier `docs/openapi*.json`; poner claves o contraseñas literales en el script (se generan en tiempo de ejecución); renombrar `docs/openapi.v1.json` sin coordinarlo con el frontend.
