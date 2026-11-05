@@ -30,6 +30,7 @@ internal sealed class SesionesStore(
     public const string IsTechnicianField = "esTecnico";
     public const string ProfileCompleteField = "perfilCompleto";
     public const string ConsentsField = "consentimientos";
+    public const string SessionsVersionField = "versionSesiones";
     public const string DocumentField = "documento";
     public const string VersionField = "version";
     public const string AcceptedAtField = "aceptadoEn";
@@ -64,7 +65,7 @@ internal sealed class SesionesStore(
 
     /// <summary>
     /// Índices de la spec 015 (R-05, R-08). Es idempotente: crearlos otra vez con la misma definición no cambia nada. Los invocan las pruebas y el
-    /// script de <c>db/</c> (<c>002-identidad-usuarios-sesiones.js</c>), igual que el cargador del catálogo.
+    /// script de <c>db/</c> (<c>002_identidad_usuarios_sesiones.js</c>), igual que el cargador del catálogo.
     /// </summary>
     public async Task EnsureIndexesAsync(CancellationToken cancellationToken)
     {
@@ -152,6 +153,13 @@ internal sealed class SesionesStore(
                 await mongoSession.WithTransactionAsync(
                     async (transaction, token) =>
                     {
+                        // Dos canjes de la misma cuenta insertan documentos distintos y no chocan solos: ambos verían 9 abiertas y dejarían 11.
+                        // Tocar el mismo documento del usuario fuerza el conflicto de escritura (112) y los serializa; el reintento ya cuenta la nueva.
+                        await Users.UpdateOneAsync(
+                            transaction,
+                            _filter.Eq(IdField, userId),
+                            Builders<BsonDocument>.Update.Inc(SessionsVersionField, 1),
+                            cancellationToken: token);
                         await Sessions.InsertOneAsync(transaction, SessionDocument(session), cancellationToken: token);
                         await RevokeOldestBeyondTheLimitAsync(transaction, userId, token);
                         return true;

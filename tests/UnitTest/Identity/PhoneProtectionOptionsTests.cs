@@ -32,7 +32,7 @@ public class PhoneProtectionOptionsTests
 
     [Theory]
     [MemberData(nameof(InvalidConfigurationIndexes))]
-    public void InvalidKeyConfigurationFailsStartupNamingTheKey_TC_HU_001_15(int index)
+    public void InvalidKeyConfigurationFailsValidationNamingTheKey_TC_HU_001_15(int index)
     {
         var (scenario, breakIt, expectedName) = _invalidConfigurations[index];
         var options = PhoneProtectionTestKeys.Options(breakIt);
