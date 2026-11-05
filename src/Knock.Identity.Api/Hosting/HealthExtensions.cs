@@ -1,27 +1,23 @@
-// jscpd:ignore-start -- EXC-015
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 namespace Knock.Identity.Api.Hosting;
 
+// jscpd:ignore-start -- EXC-008: igual en Identity, Messaging y Gateway (spec 003); se unifica en una biblioteca técnica.
+/// <summary>
+/// Readiness de las dependencias de datos del servicio (spec 003): cada una registra su comprobación con <see cref="ReadyTag"/> y
+/// <c>/health/ready</c> responde con ellas. La ruta <c>/health</c> de vida es de la spec 001.
+/// </summary>
 internal static class HealthExtensions
 {
     public const string ReadyTag = "ready";
 
-    /// <summary>Raíz de las rutas de salud (<c>/health</c> y <c>/health/ready</c>); no generan spans (TT-OBS-01).</summary>
-    public const string LivenessPath = "/health";
+    public const string ReadyPath = "/health/ready";
 
-    /// <summary>Las comprobaciones de readiness las registra cada dependencia: MongoDB (<c>AddKnockMongo</c>) y Blob (Media).</summary>
-    public static IServiceCollection AddKnockHealth(this IServiceCollection services)
+    public static IEndpointRouteBuilder MapKnockReadiness(this IEndpointRouteBuilder endpoints)
     {
-        services.AddHealthChecks();
-        return services;
-    }
-
-    public static IEndpointRouteBuilder MapKnockHealth(this IEndpointRouteBuilder endpoints)
-    {
-        endpoints.MapHealthChecks(LivenessPath, new HealthCheckOptions { Predicate = _ => false });
-        endpoints.MapHealthChecks($"{LivenessPath}/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains(ReadyTag) });
+        ArgumentNullException.ThrowIfNull(endpoints);
+        endpoints.MapHealthChecks(ReadyPath, new HealthCheckOptions { Predicate = check => check.Tags.Contains(ReadyTag) });
         return endpoints;
     }
 }
-// jscpd:ignore-end
+// jscpd:ignore-end -- EXC-008

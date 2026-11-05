@@ -1,4 +1,4 @@
-// jscpd:ignore-start -- EXC-015
+// jscpd:ignore-start -- EXC-007: copia de src/Knock.Market.Api/Hosting/ObservabilityExtensions.cs (spec 011); se unifica en una biblioteca técnica.
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -55,6 +55,9 @@ internal static class ObservabilityExtensions
 
     /// <summary>Variable que lee el exportador de Azure Monitor para no enviar Statsbeat (estadísticas internas del SDK a Microsoft).</summary>
     public const string StatsbeatDisabledKey = "APPLICATIONINSIGHTS_STATSBEAT_DISABLED";
+
+    /// <summary>Raíz de las rutas de salud (<c>/health</c> y <c>/health/ready</c>, specs 001 y 003): no generan spans.</summary>
+    private const string _healthPath = "/health";
 
     public const string CorrelationIdAttribute = "knock.correlation_id";
     public const string TracesSignal = "traces";
@@ -150,7 +153,7 @@ internal static class ObservabilityExtensions
     /// </summary>
     private static void ConfigureServerSpans(AspNetCoreTraceInstrumentationOptions server)
     {
-        server.Filter = context => !context.Request.Path.StartsWithSegments(HealthExtensions.LivenessPath, StringComparison.OrdinalIgnoreCase);
+        server.Filter = context => !context.Request.Path.StartsWithSegments(_healthPath, StringComparison.OrdinalIgnoreCase);
         server.RecordException = false;
         server.EnrichWithHttpResponse = (activity, response) =>
         {
@@ -167,7 +170,7 @@ internal static class ObservabilityExtensions
 
 /// <summary>
 /// Anota en el span de la petición la excepción no controlada (tipo, mensaje y pila redactados) y no la maneja: la respuesta sigue
-/// siendo la de <see cref="ProblemDetailsExtensions"/>. La instrumentación no ve las excepciones que atiende <c>UseExceptionHandler</c>.
+/// siendo la de ProblemDetailsExtensions. La instrumentación no ve las excepciones que atiende <c>UseExceptionHandler</c>.
 /// </summary>
 internal sealed class TelemetryExceptionRecorder : IExceptionHandler
 {
@@ -283,4 +286,4 @@ internal sealed class SerilogLogState : IReadOnlyList<KeyValuePair<string, objec
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }
-// jscpd:ignore-end
+// jscpd:ignore-end -- EXC-007

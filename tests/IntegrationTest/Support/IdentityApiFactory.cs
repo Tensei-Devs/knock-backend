@@ -33,8 +33,6 @@ internal sealed class IdentityApiFactory(IReadOnlyDictionary<string, string?> se
     private static readonly byte[] _phoneEncryptionKey = RandomNumberGenerator.GetBytes(32);
     private static readonly byte[] _phoneHmacKey = RandomNumberGenerator.GetBytes(32);
 
-    private RedisTestFixture? _redis;
-
     public string DatabaseName => settings["Mongo:Databases:Identity"]!;
 
     public IMongoDatabase Database => Services.GetRequiredService<IMongoClient>().GetDatabase(DatabaseName);
@@ -54,6 +52,9 @@ internal sealed class IdentityApiFactory(IReadOnlyDictionary<string, string?> se
         var values = new Dictionary<string, string?>
         {
             ["ConnectionStrings:KnockMongo"] = mongo.ConnectionString,
+            // Redis real del contenedor de pruebas (con la contraseña de un solo uso que arma el fixture): Identity la valida al arrancar (spec 003)
+            // y la lista de sesiones canceladas (spec 016) se escribe y se lee aquí.
+            ["ConnectionStrings:KnockRedis"] = redis.ConnectionString,
             ["Mongo:Databases:Identity"] = "identity_it_" + Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(6)),
         };
         foreach (var (key, value) in overrides ?? new Dictionary<string, string?>())
@@ -61,7 +62,7 @@ internal sealed class IdentityApiFactory(IReadOnlyDictionary<string, string?> se
             values[key] = value;
         }
 
-        var factory = new IdentityApiFactory(values) { _redis = redis };
+        var factory = new IdentityApiFactory(values);
         await factory.Services.GetRequiredService<SesionesStore>().EnsureIndexesAsync(CancellationToken.None);
         return factory;
     }
@@ -92,12 +93,7 @@ internal sealed class IdentityApiFactory(IReadOnlyDictionary<string, string?> se
 
             configuration.AddInMemoryCollection(values);
         });
-        builder.ConfigureServices(services =>
-        {
-            services.AddSingleton<IStartupFilter>(new RemoteIpStartupFilter());
-            // La conexión a Redis de producción llega con la spec 003 (AddKnockRedis); aquí se usa la del contenedor de pruebas.
-            services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(_redis!.ConnectionString));
-        });
+        builder.ConfigureServices(services => services.AddSingleton<IStartupFilter>(new RemoteIpStartupFilter()));
     }
 }
 

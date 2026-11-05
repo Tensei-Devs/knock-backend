@@ -21,6 +21,10 @@ internal sealed class KnockMongoOptions
     public const string ConnectTimeoutKey = "Mongo:ConnectTimeoutSeconds";
     public const string SocketTimeoutKey = "Mongo:SocketTimeoutSeconds";
     public const string QueryMaxTimeKey = "Mongo:QueryMaxTimeSeconds";
+    public const string RegionKey = "Mongo:Region";
+
+    /// <summary>Región de Azure de los datos (spec 003, R-09; fijada en la spec 005). Cambiarla exige una spec nueva.</summary>
+    public const string RequiredRegion = "westus";
     public const int MaxPoolSizeLimit = 100;
     public const int TimeoutLimitSeconds = 60;
     public const int DefaultServerSelectionTimeoutSeconds = 5;
@@ -45,6 +49,9 @@ internal sealed class KnockMongoOptions
 
     /// <summary><c>maxTimeMS</c> de cada consulta de los módulos: el servidor la corta aunque el socket siga vivo.</summary>
     public int? QueryMaxTimeSeconds { get; set; } = DefaultQueryMaxTimeSeconds;
+
+    /// <summary>Región declarada en <c>Mongo:Region</c>; si falta, la fijada por la spec. Otro valor impide arrancar (CA-05).</summary>
+    public string? Region { get; set; } = RequiredRegion;
 
     public TimeSpan QueryMaxTime => Seconds(QueryMaxTimeSeconds, QueryMaxTimeKey);
 
@@ -86,6 +93,11 @@ internal sealed partial class KnockMongoOptionsValidator : IValidateOptions<Knoc
         ValidateTimeout(failures, options.ConnectTimeoutSeconds, KnockMongoOptions.ConnectTimeoutKey);
         ValidateTimeout(failures, options.SocketTimeoutSeconds, KnockMongoOptions.SocketTimeoutKey);
         ValidateTimeout(failures, options.QueryMaxTimeSeconds, KnockMongoOptions.QueryMaxTimeKey);
+
+        if (!string.Equals(options.Region, KnockMongoOptions.RequiredRegion, StringComparison.Ordinal))
+        {
+            failures.Add($"{KnockMongoOptions.RegionKey} must be '{KnockMongoOptions.RequiredRegion}' (spec 003, R-09).");
+        }
 
         foreach (var module in options.Modules.Order(StringComparer.Ordinal))
         {
@@ -191,6 +203,7 @@ internal static class MongoExtensions
             configuration, KnockMongoOptions.SocketTimeoutKey, KnockMongoOptions.DefaultSocketTimeoutSeconds);
         options.QueryMaxTimeSeconds = ParseSeconds(
             configuration, KnockMongoOptions.QueryMaxTimeKey, KnockMongoOptions.DefaultQueryMaxTimeSeconds);
+        options.Region = configuration[KnockMongoOptions.RegionKey] ?? KnockMongoOptions.RequiredRegion;
         foreach (var database in configuration.GetSection(KnockMongoOptions.DatabasesSection).GetChildren())
         {
             options.Databases[database.Key] = database.Value;
