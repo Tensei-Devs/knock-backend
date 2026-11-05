@@ -49,7 +49,7 @@ internal sealed class DocumentDbFixture : IAsyncDisposable
 
     /// <summary>
     /// Misma cadena, pero con la IP del contenedor en la red de Docker: para otro contenedor (por ejemplo, las herramientas de
-    /// respaldo de TC-003-04), que no ve el puerto publicado en el anfitrión.
+    /// respaldo de CA_003_04), que no ve el puerto publicado en el anfitrión.
     /// </summary>
     public string ContainerNetworkConnectionString => new MongoUrlBuilder
     {

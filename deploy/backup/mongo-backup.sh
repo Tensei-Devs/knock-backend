@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Respaldo y restauración de una base lógica de MongoDB con mongodump/mongorestore (spec 003, R-08 · TC-003-04).
+# Respaldo y restauración de una base lógica de MongoDB con mongodump/mongorestore (spec 003, R-08 · CA_003_04).
 #
 # Uso:
 #   mongo-backup.sh dump    <archivo>   copia la base KNOCK_BACKUP_SOURCE_DB a <archivo> (gzip, formato archive)
