@@ -119,3 +119,9 @@
 - **Pendiente:** validar el token y limitar peticiones en el gateway (spec 009); unificar el middleware de correlación de `Knock.Market.Api` con el de `Knock.Contracts`; Dockerfiles (KNOCK-232); CA-04 (servicio interno inaccesible desde fuera) se comprueba en el despliegue.
 - **A evitar:** agregar lógica de negocio a `Knock.Contracts` o referencias directas entre servicios.
 
+## 2026-11-04 — El Terraform se alinea con lo que los servicios exigen al arrancar (KNOCK-200)
+- **Decisión:** Identity recibe `Identity__PhoneProtection__EncryptionKeys__1`, `__HmacKeys__1` y las dos versiones (antes `Pii__*`, que ningún código lee); gateway, Identity y Market reciben `ForwardedHeaders__KnownNetworks__0` con la subred del entorno; los servicios llevan sondas de arranque y de disponibilidad (`/health/ready`) y se crean después de Redis; Market deja de recibir la cadena de Redis, que no usa.
+- **Porqué:** la revisión de par de Guillermo y una comprobación contra el código mostraron que, tal como estaba, el primer canje de sesión habría fallado y los límites por IP habrían sido globales para todos los clientes.
+- **Pendiente:** comprobar en el primer despliegue la IP real que ve el gateway, y que las llamadas internas por `http://` no se redirijan a HTTPS; acotar los permisos de `bootstrap.sh` (rol de administración de roles con condición) cuando se amplíe el equipo.
+- **A evitar:** declarar variables de entorno sin comprobar el nombre exacto que lee el código (doble guion bajo por cada `:`).
+

@@ -53,3 +53,13 @@ variable "redis_image" {
   type        = string
   default     = "docker.io/library/redis:7.2-alpine@sha256:2c933526722b4126a61d5c170f766dc159adf97682f0b1cbbc27b1666ba96d84"
 }
+
+variable "container_apps_subnet_cidr" {
+  description = <<-EOT
+    Subred del entorno de Container Apps (la misma que `container_apps_subnet_cidr` del módulo compartido). Los servicios
+    la declaran como red de confianza para leer `X-Forwarded-For`: sin ella, todos los clientes llegarían con la IP del
+    ingreso y compartirían un solo cubo del límite de peticiones por IP. Nunca pongas 0.0.0.0/0: permitiría suplantar la IP.
+  EOT
+  type        = string
+  default     = "10.20.0.0/23"
+}

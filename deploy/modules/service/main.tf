@@ -105,6 +105,32 @@ resource "azurerm_container_app" "this" {
         }
       }
 
+      # Arranque en frío de .NET: da margen antes de que la sonda de vida pueda reiniciar el contenedor.
+      dynamic "startup_probe" {
+        for_each = var.health_path == null ? [] : [var.health_path]
+        content {
+          transport               = "HTTP"
+          path                    = startup_probe.value
+          port                    = var.target_port
+          interval_seconds        = 5
+          timeout                 = 3
+          failure_count_threshold = 10
+        }
+      }
+
+      dynamic "readiness_probe" {
+        for_each = var.ready_path == null ? [] : [var.ready_path]
+        content {
+          transport               = "HTTP"
+          path                    = readiness_probe.value
+          port                    = var.target_port
+          interval_seconds        = 10
+          timeout                 = 3
+          failure_count_threshold = 3
+          success_count_threshold = 1
+        }
+      }
+
       dynamic "liveness_probe" {
         for_each = var.health_path == null ? [] : [var.health_path]
         content {

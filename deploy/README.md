@@ -36,12 +36,21 @@ Los valores no pasan por Terraform ni por el repositorio (CA-04). Nombres fijos 
 az keyvault secret set --vault-name <kv> --name redis-password --value "<valor>"
 ```
 
+### Formato que exige el código (si no, falla en el primer inicio de sesión)
+- `jwt-signing-key`: Base64 de **al menos 32 bytes**.
+- `pii-encryption-key`: Base64 de **exactamente 32 bytes** (AES-256-GCM).
+- `pii-hmac-key`: Base64 de **al menos 32 bytes** y **distinta** de la de cifrado.
+- `redis-connection-string`: `knock-redis:6379,password=<la misma de redis-password>`.
+Una forma de generarlas: `python -c "import os,base64;print(base64.b64encode(os.urandom(32)).decode())"`. Los valores nunca se pegan en un chat ni en el repositorio.
+
 ## Paso 2 — desplegar
 Las imágenes deben estar en el ACR (las publica el pipeline, spec 007).
 ```
 cd deploy/apps
 terraform apply -var-file=envs/dev.tfvars -var subscription_id=<ID> -var resource_group_name=<RG> -var image_tag=<sha>
 ```
+El gateway, Identity y Market confían en `X-Forwarded-For` solo desde la subred del entorno (`container_apps_subnet_cidr`, por defecto `10.20.0.0/23`; debe ser igual a la del módulo compartido). En el primer despliegue comprueba que la IP que ve el gateway sea la del cliente y no la del ingreso.
+
 Para la ventana de evaluación (25-nov al 5-dic) usar `envs/evaluacion.tfvars`. Si el primer apply falla por permisos
 sobre un secreto, espera unos minutos a que se propague el rol y repite.
 
