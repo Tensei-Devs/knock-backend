@@ -9,6 +9,7 @@ public enum DomainErrorKind
     NotFound,
     Conflict,
     Unprocessable,
+    ServiceUnavailable,
 }
 
 /// <summary>
@@ -61,6 +62,7 @@ internal static class DomainErrors
         DomainErrorKind.NotFound => StatusCodes.Status404NotFound,
         DomainErrorKind.Conflict => StatusCodes.Status409Conflict,
         DomainErrorKind.Unprocessable => StatusCodes.Status422UnprocessableEntity,
+        DomainErrorKind.ServiceUnavailable => StatusCodes.Status503ServiceUnavailable,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown domain error kind."),
     };
 }
