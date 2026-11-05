@@ -1,9 +1,11 @@
 // Spec 015 (KNOCK-210): colecciones `usuarios` y `sesiones` del servicio de Identidad y sus índices.
-// Uso: mongosh "<cadena de conexión>" --file db/002_identidad_usuarios_sesiones.js
-// La base se toma de la variable de entorno KNOCK_IDENTITY_DB (por defecto «identity»). Es idempotente: volver a correrlo con las mismas
+// Uso (igual que 001_indices.js, y como lo aplica db/entrega.js):
+//   KNOCK_DB_URI=... mongosh --nodb --quiet --file db/002_identidad_usuarios_sesiones.js
+// Con `mongosh "<cadena>" --file …` (sin KNOCK_DB_URI) usa la conexión abierta.
+// La base se toma de KNOCK_DB_IDENTITY (por defecto «identity»; KNOCK_IDENTITY_DB sigue valiendo). Es idempotente: volver a correrlo con las mismas
 // definiciones no cambia nada. Las definiciones deben coincidir con SesionesStore.EnsureIndexesAsync.
-const dbName = process.env.KNOCK_IDENTITY_DB || "identity";
-const identity = db.getSiblingDB(dbName);
+const dbName = process.env.KNOCK_DB_IDENTITY || process.env.KNOCK_IDENTITY_DB || "identity";
+const identity = process.env.KNOCK_DB_URI ? new Mongo(process.env.KNOCK_DB_URI).getDB(dbName) : db.getSiblingDB(dbName);
 
 for (const name of ["usuarios", "sesiones"]) {
   if (!identity.getCollectionNames().includes(name)) {

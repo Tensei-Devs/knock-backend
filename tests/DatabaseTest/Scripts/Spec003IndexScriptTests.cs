@@ -5,6 +5,7 @@ using Knock.IntegrationTest.Support;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Catalog.Data;
 using Microsoft.Extensions.Options;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using Xunit;
 
@@ -42,9 +43,9 @@ public sealed class Spec003IndexScriptTests
             foreach (var database in names.Values)
             {
                 var db = client.GetDatabase(database);
-                (await MongoIndexes.DescribeAsync(db, "outbox")).Should().Equal("_id_ _id:1 -", "estado_1_creadoEn_1 estado:1,creadoEn:1 -");
+                (await MongoIndexes.DescribeAsync(db, "outbox")).Should().Equal("_id_ _id:1 - ttl:-", "estado_1_creadoEn_1 estado:1,creadoEn:1 - ttl:-");
                 (await MongoIndexes.DescribeAsync(db, "tareas_programadas"))
-                    .Should().Equal("_id_ _id:1 -", "estado_1_programadaPara_1 estado:1,programadaPara:1 -");
+                    .Should().Equal("_id_ _id:1 - ttl:-", "estado_1_programadaPara_1 estado:1,programadaPara:1 - ttl:-");
             }
 
             // El catálogo declarado en db/ es el mismo que crea CatalogStore, y crearlo desde el código sobre la base del script no falla.
@@ -61,6 +62,43 @@ public sealed class Spec003IndexScriptTests
             {
                 await client.DropDatabaseAsync(database);
             }
+        }
+    }
+
+    /// <summary>
+    /// CA-01: la comparación de índices incluye <c>expireAfterSeconds</c>; si un índice TTL lo pierde o lo cambia, la descripción
+    /// cambia y la comparación falla. Hoy <c>db/001_indices.js</c> no crea TTL; el índice de esta prueba es sintético.
+    /// </summary>
+    [Fact]
+    public async Task IndexDescription_WhenTtlIsLostOrChanged_Differs_CA_003_01()
+    {
+        var documentDb = await DocumentDbFixture.SharedAsync();
+        var name = "s003_ttl_" + Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(6));
+        using var client = new MongoClient(documentDb.ConnectionString);
+        try
+        {
+            var db = client.GetDatabase(name);
+            await db.CreateCollectionAsync("vencibles");
+            var indexes = db.GetCollection<BsonDocument>("vencibles").Indexes;
+            var key = Builders<BsonDocument>.IndexKeys.Ascending("venceEn");
+
+            await indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(key, new CreateIndexOptions { ExpireAfter = TimeSpan.FromSeconds(3600) }));
+            var withTtl = await MongoIndexes.DescribeAsync(db, "vencibles");
+            withTtl.Should().Equal("_id_ _id:1 - ttl:-", "venceEn_1 venceEn:1 - ttl:3600");
+
+            await indexes.DropOneAsync("venceEn_1");
+            await indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(key, new CreateIndexOptions { ExpireAfter = TimeSpan.FromSeconds(60) }));
+            var changed = await MongoIndexes.DescribeAsync(db, "vencibles");
+            changed.Should().NotEqual(withTtl, "un TTL distinto se detecta").And.Contain("venceEn_1 venceEn:1 - ttl:60");
+
+            await indexes.DropOneAsync("venceEn_1");
+            await indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(key));
+            var lost = await MongoIndexes.DescribeAsync(db, "vencibles");
+            lost.Should().NotEqual(withTtl, "un TTL perdido se detecta").And.Contain("venceEn_1 venceEn:1 - ttl:-");
+        }
+        finally
+        {
+            await client.DropDatabaseAsync(name);
         }
     }
 
