@@ -69,3 +69,18 @@ La llave nunca va en el código, un issue, un PR ni un chat. Los PR de forks y l
 
 Si el repositorio es privado y no tiene GitHub Advanced Security, la revisión de dependencias y la subida de SARIF se omiten; para activarlas, crea la variable `GHAS_ENABLED=true`.
 
+## 9. Versionamiento por puntos (spec 012)
+Cada componente (`gateway`, `identity`, `messaging`, `market`, `assistant`, `contracts`, `infra`, `app`, `panel`, `landing`) lleva su propia versión `X.Y.Z`; la primera publicada es `1.0.0`. Cada PR declara cuántos puntos suma a cada componente que toca con una etiqueta `puntos-<componente>-N` (p. ej. `puntos-gateway-4`); si no suma, `puntos-<componente>-0`. Sin etiqueta válida, el job `pr-points` del CI falla. Una persona del equipo con permiso la crea en GitHub la primera vez que la usa.
+
+| Tipo de cambio | Puntos |
+|---|---|
+| Corrección, ajuste o índice | 1 |
+| Campo nuevo o cambio de regla | 2 |
+| Endpoint o pantalla nueva | 3 |
+| Colección nueva o función completa | 5 |
+| Servicio, integración externa o permiso nuevo | 10 |
+
+- Al desplegar se suman los puntos de los cambios incluidos y se aplican a `Z`; al llegar a 10, `Z` vuelve a cero y `Y` sube, y lo mismo entre `Y` y `X` (`1.0.0` + 1 + 3 puntos = `1.0.4`; `1.0.4` + 8 = `1.1.2`).
+- Un cambio que rompe compatibilidad sube `X` y deja `Y` y `Z` en cero. Un despliegue con cero puntos no cambia la versión.
+- Cuenta el tipo de cambio, no el tamaño del código. Quien revisa el PR comprueba que la etiqueta corresponde al tipo de cambio (declarar de menos para no subir de versión es el riesgo).
+- Cálculo: `python scripts/ci/version.py bump --current 1.0.4 --points 8`. Registro de lo desplegado: [`docs/VERSIONES_DESPLEGADAS.md`](docs/VERSIONES_DESPLEGADAS.md).
