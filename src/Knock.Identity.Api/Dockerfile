@@ -16,6 +16,12 @@ RUN dotnet publish src/Knock.Identity.Api/Knock.Identity.Api.csproj -c Release -
 # ---- Ejecución ----
 # checkov:skip=CKV_DOCKER_2: EXC-002
 FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS final
+# Parche temporal: la imagen base de .NET trae apt 3.2.0, con CVE-2026-109518 (HIGH). Se actualiza solo apt, en una sola capa y sin
+# listas de paquetes. QUITAR este bloque cuando Microsoft publique una imagen aspnet:11.0 reconstruida con apt >= 3.2.1ubuntu0.1.
+# Corre como root (el usuario no-root se fija al final, con USER).
+RUN apt-get update \
+    && apt-get install --only-upgrade -y --no-install-recommends apt \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 ENV ASPNETCORE_URLS=http://+:8080 \
     ASPNETCORE_ENVIRONMENT=Production \
