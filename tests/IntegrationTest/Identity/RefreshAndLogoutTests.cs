@@ -6,6 +6,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using AwesomeAssertions;
 using IdentityApi::Knock.Identity.Api.Modules.Sesiones.Data;
+using Knock.Gateway.Hosting;
 using Knock.IntegrationTest.Support;
 using Microsoft.IdentityModel.JsonWebTokens;
 using MongoDB.Bson;
@@ -179,6 +180,23 @@ public class RefreshAndLogoutTests
         (await factory.Redis.KeyExistsAsync(key)).Should().BeTrue();
         var ttl = (await factory.Redis.KeyTimeToLiveAsync(key))!.Value;
         ttl.Should().BePositive().And.BeLessThanOrEqualTo(TimeSpan.FromMinutes(15), "como máximo lo que le queda al JWT");
+    }
+
+    [Fact]
+    public async Task SessionClosedByLogout_IsSeenAsRevokedByTheGatewayChecker_CA_016_06()
+    {
+        using var factory = await IdentityApiFactory.CreateAsync();
+        using var client = factory.CreateClient();
+        var (access, _, sessionId) = await SignInAsync(client);
+        var (_, _, otherSessionId) = await SignInAsync(client);
+        var gatewayChecker = new RedisRevokedSessions(factory.Redis.Multiplexer);
+        (await gatewayChecker.IsRevokedAsync(sessionId, CancellationToken.None)).Should().BeFalse("antes del logout la sesión vive");
+
+        using var response = await LogoutAsync(client, access);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await gatewayChecker.IsRevokedAsync(sessionId, CancellationToken.None)).Should().BeTrue("el gateway lee la misma clave que escribe Identity");
+        (await gatewayChecker.IsRevokedAsync(otherSessionId, CancellationToken.None)).Should().BeFalse();
     }
 
     [Fact]
