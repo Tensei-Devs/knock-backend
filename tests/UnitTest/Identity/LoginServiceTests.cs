@@ -35,60 +35,9 @@ public class LoginServiceTests
         public Task<FirebaseIdentity?> VerifyAsync(string idToken, CancellationToken cancellationToken) => Task.FromResult(identity);
     }
 
-    /// <summary>Doble de la base: guarda en listas lo que el servicio escribe y deja simular la carrera de creación.</summary>
-    private sealed class FakeStore : ISesionesStore
+    private static (LoginService Service, FakeSesionesStore Store, PhoneProtector Phones, JwtSettings Jwt) Build(FirebaseIdentity? identity = null, bool rejected = false)
     {
-        public List<UserAccount> Users { get; } = [];
-
-        public List<NewAccount> Created { get; } = [];
-
-        public List<NewSession> Sessions { get; } = [];
-
-        /// <summary>Si se asigna, el siguiente alta la rechaza (otro canje ganó) y deja esta cuenta guardada.</summary>
-        public UserAccount? WinnerOfRace { get; set; }
-
-        /// <summary>Si es verdadero, la primera lectura por <c>sub</c> no ve la cuenta (otro canje la confirma entre las dos lecturas).</summary>
-        public bool HideSubOnFirstRead { get; set; }
-
-        public Task<UserAccount?> FindBySubAsync(string sub, CancellationToken cancellationToken)
-        {
-            if (HideSubOnFirstRead)
-            {
-                HideSubOnFirstRead = false;
-                return Task.FromResult<UserAccount?>(null);
-            }
-
-            return Task.FromResult(Users.FirstOrDefault(a => a.Sub == sub));
-        }
-
-        public Task<UserAccount?> FindByPhoneHashAsync(byte[] phoneHash, CancellationToken cancellationToken) =>
-            Task.FromResult(Users.FirstOrDefault(a => a.PhoneHash.AsSpan().SequenceEqual(phoneHash)));
-
-        public Task<AccountCreation> CreateAccountAsync(NewAccount account, CancellationToken cancellationToken)
-        {
-            if (WinnerOfRace is { } winner)
-            {
-                Users.Add(winner);
-                WinnerOfRace = null;
-                return Task.FromResult(AccountCreation.AlreadyExists);
-            }
-
-            Created.Add(account);
-            Sessions.Add(account.Session);
-            Users.Add(new UserAccount(account.Id, account.Sub, AccountState.Active, false, account.PhoneHash));
-            return Task.FromResult(AccountCreation.Created);
-        }
-
-        public Task AddSessionAsync(NewSession session, CancellationToken cancellationToken)
-        {
-            Sessions.Add(session);
-            return Task.CompletedTask;
-        }
-    }
-
-    private static (LoginService Service, FakeStore Store, PhoneProtector Phones, JwtSettings Jwt) Build(FirebaseIdentity? identity = null, bool rejected = false)
-    {
-        var store = new FakeStore();
+        var store = new FakeSesionesStore();
         var phones = new PhoneProtector(PhoneProtectionTestKeys.Keys());
         var time = new FixedTimeProvider(_now);
         var jwt = new JwtSettings("knock-api", "knock-app", new SymmetricSecurityKey(RandomNumberGenerator.GetBytes(32)));
