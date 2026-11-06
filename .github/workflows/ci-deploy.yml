@@ -86,9 +86,9 @@ jobs:
       matrix:
         include:
           - { proyecto: Knock.Gateway, imagen: knock-gateway, salida: gateway }
-          - { proyecto: Knock.Identity.Api, imagen: knock-identidad, salida: identity }
-          - { proyecto: Knock.Messaging.Api, imagen: knock-mensajeria, salida: messaging }
-          - { proyecto: Knock.Market.Api, imagen: knock-mercado, salida: market }
+          - { proyecto: Knock.Identity.Api, imagen: knock-identity, salida: identity }
+          - { proyecto: Knock.Messaging.Api, imagen: knock-messaging, salida: messaging }
+          - { proyecto: Knock.Market.Api, imagen: knock-market, salida: market }
     env:
       IMAGEN: acrknockdevtn01.azurecr.io/${{ matrix.imagen }}:${{ github.event.workflow_run.head_sha }}
     steps:
