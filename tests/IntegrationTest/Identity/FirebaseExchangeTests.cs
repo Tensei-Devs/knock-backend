@@ -277,22 +277,7 @@ public class FirebaseExchangeTests
     [Fact]
     public async Task MoreRequestsThanTheAuthLimit_Returns429_CA_015_11()
     {
-        using var factory = await IdentityApiFactory.CreateAsync(new Dictionary<string, string?>
-        {
-            ["RateLimiting:Auth:PermitLimit"] = "3",
-            ["RateLimiting:Auth:Window"] = "00:01:00",
-        });
-        using var client = factory.CreateClient();
-        var statuses = new List<HttpStatusCode>();
-
-        for (var i = 0; i < 4; i++)
-        {
-            using var response = await AuthHttp.ExchangeAsync(client, "esto-no-es-un-token", remoteIp: "203.0.113.15");
-            statuses.Add(response.StatusCode);
-        }
-
-        statuses.Take(3).Should().OnlyContain(status => status == HttpStatusCode.Unauthorized);
-        statuses[3].Should().Be(HttpStatusCode.TooManyRequests);
+        await AuthRateLimitCheck.AssertFourthRequestIsLimitedAsync(client => AuthHttp.ExchangeAsync(client, "esto-no-es-un-token", remoteIp: "203.0.113.15"));
     }
 
     [Fact]
