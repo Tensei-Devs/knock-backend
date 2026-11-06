@@ -33,6 +33,8 @@ internal static class KnockApplicationExtensions
         app.UseMiddleware<CorrelationIdMiddleware>();
         app.UseMiddleware<SecurityHeadersMiddleware>();
         app.UseExceptionHandler();
+        // Una respuesta de error sin cuerpo (404 de una ruta inexistente, 405…) sale como ProblemDetails igual que las excepciones (spec 002, R-03).
+        app.UseStatusCodePages();
         app.UseSerilogRequestLogging(LoggingExtensions.ConfigureRequestLogging);
         var securedTransport = !app.Environment.IsDevelopment();
         if (securedTransport)

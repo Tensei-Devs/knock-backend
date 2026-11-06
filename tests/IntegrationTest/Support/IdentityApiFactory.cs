@@ -33,6 +33,9 @@ internal sealed class IdentityApiFactory(IReadOnlyDictionary<string, string?> se
     private static readonly byte[] _phoneEncryptionKey = RandomNumberGenerator.GetBytes(32);
     private static readonly byte[] _phoneHmacKey = RandomNumberGenerator.GetBytes(32);
 
+    /// <summary>Servicios que la prueba sustituye en el host (por ejemplo, el catálogo de colonias de Mercado).</summary>
+    public Action<IServiceCollection>? ExtraServices { get; private init; }
+
     public string DatabaseName => settings["Mongo:Databases:Identity"]!;
 
     public static string SigningKeyBase64 => Convert.ToBase64String(_signingKey);
@@ -47,7 +50,7 @@ internal sealed class IdentityApiFactory(IReadOnlyDictionary<string, string?> se
     public IMongoCollection<BsonDocument> Sessions => Database.GetCollection<BsonDocument>(SesionesStore.SessionsCollection);
 
     /// <summary>Crea el host con una base propia y sus índices. <paramref name="overrides"/> reemplaza cualquier valor de configuración.</summary>
-    public static async Task<IdentityApiFactory> CreateAsync(IReadOnlyDictionary<string, string?>? overrides = null)
+    public static async Task<IdentityApiFactory> CreateAsync(IReadOnlyDictionary<string, string?>? overrides = null, Action<IServiceCollection>? configureServices = null)
     {
         var mongo = await DocumentDbFixture.SharedAsync();
         var redis = await RedisTestFixture.SharedAsync();
@@ -64,7 +67,7 @@ internal sealed class IdentityApiFactory(IReadOnlyDictionary<string, string?> se
             values[key] = value;
         }
 
-        var factory = new IdentityApiFactory(values);
+        var factory = new IdentityApiFactory(values) { ExtraServices = configureServices };
         await factory.Services.GetRequiredService<SesionesStore>().EnsureIndexesAsync(CancellationToken.None);
         return factory;
     }
@@ -95,7 +98,11 @@ internal sealed class IdentityApiFactory(IReadOnlyDictionary<string, string?> se
 
             configuration.AddInMemoryCollection(values);
         });
-        builder.ConfigureServices(services => services.AddSingleton<IStartupFilter>(new RemoteIpStartupFilter()));
+        builder.ConfigureServices(services =>
+        {
+            services.AddSingleton<IStartupFilter>(new RemoteIpStartupFilter());
+            ExtraServices?.Invoke(services);
+        });
     }
 }
 
