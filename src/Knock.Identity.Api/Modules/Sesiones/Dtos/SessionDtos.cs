@@ -14,3 +14,6 @@ internal sealed record RefreshRequest(string? RefreshToken = null);
 
 /// <summary>Par nuevo de la renovación (spec 016, contrato). <c>ExpiresIn</c> son los segundos de vigencia del JWT de acceso.</summary>
 internal sealed record RefreshResponse(string AccessToken, int ExpiresIn, string RefreshToken);
+
+/// <summary>Datos públicos de una sesión del usuario. No contiene huellas ni tokens.</summary>
+internal sealed record SessionListItemResponse(string Id, string Dispositivo, DateTime UltimaActividad, bool Actual);

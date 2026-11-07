@@ -1,6 +1,7 @@
 # Spec 018 — Sesiones por dispositivo
 
 > **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Clave de trabajo vinculada:** KNOCK-213
 > **Servicio:** Identidad y confianza · **Endpoints del Excel:** SES-04 (`GET /api/v1/me/sesiones`) y SES-05 (`DELETE /api/v1/me/sesiones/{id}`) · **Colección:** `sesiones`
 
 ## 1. Objetivo
