@@ -90,6 +90,17 @@ internal sealed class SecurityMarketFactory(IReadOnlyDictionary<string, string?>
             [CatalogStore.VersionField] = 1,
         });
 
+    /// <summary>Inserta una colonia del catálogo con lo mínimo que consulta «¿existe esta colonia?»: nombre, nombre normalizado, código postal y municipio.</summary>
+    public Task AddColoniaAsync(string nombre, string cp, string municipio) =>
+        Database.GetCollection<BsonDocument>(CatalogStore.ColoniasCollection).InsertOneAsync(new BsonDocument
+        {
+            [CatalogStore.NombreField] = nombre,
+            [CatalogStore.NombreBusquedaField] = SearchNameNormalizer.Normalize(nombre),
+            [CatalogStore.CpField] = cp,
+            [CatalogStore.MunicipioField] = municipio,
+            [CatalogStore.VersionField] = 1,
+        });
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
