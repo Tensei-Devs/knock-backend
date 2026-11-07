@@ -20,6 +20,22 @@ Terraform >= 1.9, Azure CLI con `az login`, y la región `westus` (las otras per
 `bootstrap/bootstrap.sh` crea el almacenamiento del estado y la identidad federada del pipeline. Lo corre una
 persona; no guarda contraseñas. Luego, en cada directorio: `terraform init -backend-config=backend.hcl`.
 
+## Todo en un comando (`up.sh`)
+`deploy/up.sh` recorre `infra` → `database` → `apps` con `terraform init -backend-config=backend.hcl` y `plan` en cada uno. Por defecto **solo hace `plan`** (modo seguro, no cambia nada en Azure); aplica únicamente con `--apply`.
+```
+az login
+./deploy/up.sh --image-tag <sha> --name-suffix <sufijo>               # solo plan
+./deploy/up.sh --image-tag <sha> --name-suffix <sufijo> --no-lock     # plan de solo lectura, sin bloquear el estado
+./deploy/up.sh --image-tag <sha> --name-suffix <sufijo> --apply       # aplica en orden infra, database y apps
+```
+- Prerrequisitos que valida: Terraform >= 1.9, Azure CLI con sesión iniciada, que exista el grupo de recursos (`--resource-group`, por defecto `rg-knock-dev`; Terraform no lo crea), una `--image-tag` distinta de `latest` y el `--name-suffix` del entorno. La suscripción sale de `az account show` (o `--subscription-id`) y los administradores de secretos, de tu sesión (o `--secret-admin-ids`).
+- No imprime secretos: pasa solo valores no secretos a Terraform y de Key Vault únicamente lista los **nombres** de los secretos. Con `--apply` exige que existan los ocho (`jwt-signing-key`, `redis-password`, `redis-connection-string`, `pii-encryption-key`, `pii-hmac-key`, `mongo-identity`, `mongo-market`, `mongo-messaging`), que una persona escribe a mano.
+- Respeta `prevent_destroy` y la importación de `knock-docdb`: `database/` solo importa el clúster (en un entorno nuevo el plan dice «1 to import»; después, «No changes»). Si el plan de cualquiera de los tres directorios destruye o reemplaza algún recurso, el script se detiene aunque tenga `--apply`.
+- Con `--apply` aplica exactamente el plan guardado de cada directorio, en orden, y se detiene en el primer error. `--no-lock` no se permite con `--apply`.
+- En un entorno que todavía no existe, el plan de `apps` no se puede calcular (lee las salidas del estado de `infra`): el script lo omite y avisa. Con `--apply` crea `infra` y planea `apps` enseguida.
+- Un plan de un entorno ya desplegado puede mostrar cambios de forma sin efecto real sobre `workload_profile` («Consumption» → null) en el entorno y en las Container Apps; es una diferencia entre lo que devuelve Azure y lo que declara el proveedor.
+- Con `--help` se ven todas las opciones.
+
 ## Paso 1 — crear
 ```
 cd deploy/infra
