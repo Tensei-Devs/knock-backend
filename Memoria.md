@@ -207,6 +207,12 @@
 - **Pendiente:** Market no tiene host de integración, así que su `UseStatusCodePages()` (idéntico) no tiene prueba propia; el ProblemDetails trae `correlationId` y el `traceId` que pide R-03 lo decide quien abra el PR de correlación; la paginación aún no la usa ningún listado (llega con la spec 010).
 - **A evitar:** pruebas de arquitectura que pasan en vacío (comprobar siempre que el conjunto evaluado no esté vacío); la palabra «todo» en un comentario (el analizador S1135 la toma por TODO).
 
+## 2026-11-06 — ADR-007: CDN de las imágenes públicas (KNOCK-182)
+- **Decisión (propuesta, pendiente de aprobación del Tech Lead):** no se crea ningún perfil de CDN de pago. Azure CDN Standard from Microsoft (classic) ya no admite perfiles nuevos y se retira el 30-09-2027; Front Door Standard cuesta 35 USD al mes de base sin nivel gratuito. Decisión del Tech Lead: opción D, imágenes públicas desde un contenedor de Blob de lectura anónima con `Cache-Control` largo e inmutable y dirección base configurable. Cloudflare no se adopta; queda como alternativa futura. El punto 15c queda parcial: no hay CDN.
+- **Por qué:** sin cuota fija: solo se paga el almacenamiento y la salida por encima de 100 GB al mes. Las fotos de verificación viven en otra cuenta de almacenamiento con `allowBlobPublicAccess = false`, porque la lectura anónima es un ajuste de la cuenta y el de la cuenta manda sobre el del contenedor.
+- **Pendiente:** el Tech Lead aprueba el ADR al fusionar; el riesgo académico del punto 15c (sin CDN) se explica al docente con el costo de 35 USD al mes de Front Door; Terraform define dos cuentas de almacenamiento.
+- **A evitar:** habilitar lectura anónima en la misma cuenta que guarda las fotos privadas.
+
 ## 2026-11-05 — Las imágenes actualizan apt por el CVE de la imagen base (KNOCK-232)
 - **Decisión:** en la etapa final de los cuatro Dockerfiles, antes de `USER`, una sola capa `apt-get install --only-upgrade "apt"` (el nombre va entre comillas: sin ellas Checkov marca `CKV_DOCKER_9`, que busca ` apt ` suelto, y con `apt=versión` Dockle marca `CIS-DI-0010` al tomarlo por una variable) y borra las listas de paquetes; el usuario sigue siendo no-root y el puerto 8080 no cambia.
 - **Porqué:** Trivy empezó a marcar `CVE-2026-109518` (2 HIGH, con corrección) en `apt 3.2.0` de la imagen base `aspnet:11.0`, y eso hacía fallar el job de contenedores de todos los PR del backend. Microsoft aún no publica una imagen reconstruida (el digest vigente es el mismo), así que no hay otra imagen a la que subir.
