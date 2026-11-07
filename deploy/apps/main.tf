@@ -53,6 +53,8 @@ locals {
       env = merge(local.forwarded, {
         Identity__PhoneProtection__EncryptionKeyVersion = "1"
         Identity__PhoneProtection__HmacKeyVersion       = "1"
+        # Dirección interna de Mercado: Identity valida la colonia del perfil con GET /api/v1/colonias/existe (spec 017, R-06). Sin esto, PUT /me con colonia da 503.
+        Services__Market__BaseUrl = local.cluster_address.market
       })
       secret_env = merge(local.redis_secret, {
         ConnectionStrings__KnockMongo                = "mongo-identity"
