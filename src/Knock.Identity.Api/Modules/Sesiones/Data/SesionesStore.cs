@@ -61,8 +61,11 @@ internal sealed class SesionesStore(
     public const int MaxUsedFingerprints = 5;
 
     private static readonly ProjectionDefinition<BsonDocument> _sessionProjection = Builders<BsonDocument>.Projection
+        .Include(IdField)
         .Include(UserIdField)
         .Include(SubField)
+        .Include(DeviceNameField)
+        .Include(LastActivityField)
         .Include(RevokedField)
         .Include(ExpiresAtField);
 
@@ -181,6 +184,44 @@ internal sealed class SesionesStore(
                 await Task.Delay(WriteConflictBackoff(attempt), cancellationToken);
             }
         }
+    }
+
+    public async Task<IReadOnlyList<StoredSession>> FindOpenSessionsAsync(string userId, DateTime now, CancellationToken cancellationToken)
+    {
+        var userObjectId = ObjectId.Parse(userId);
+        var filter = _filter.And(
+            _filter.Eq(UserIdField, userObjectId),
+            _filter.Eq(RevokedField, false),
+            _filter.Gt(ExpiresAtField, new BsonDateTime(now)));
+        var documents = await Sessions.Find(filter, _findOptions)
+            .Project(_sessionProjection)
+            .Sort(Builders<BsonDocument>.Sort.Descending(LastActivityField).Descending(IdField))
+            .ToListAsync(cancellationToken);
+        return documents.Select(ToStoredSession).ToArray();
+    }
+
+    public async Task<StoredSession?> FindSessionByOwnerAsync(string id, string userId, CancellationToken cancellationToken)
+    {
+        var filter = _filter.And(
+            _filter.Eq(IdField, ObjectId.Parse(id)),
+            _filter.Eq(UserIdField, ObjectId.Parse(userId)));
+        var document = await Sessions.Find(filter, _findOptions)
+            .Project(_sessionProjection)
+            .Limit(1)
+            .FirstOrDefaultAsync(cancellationToken);
+        return document is null ? null : ToStoredSession(document);
+    }
+
+    public async Task<bool> MarkSessionRevokedAsync(string id, string userId, CancellationToken cancellationToken)
+    {
+        var filter = _filter.And(
+            _filter.Eq(IdField, ObjectId.Parse(id)),
+            _filter.Eq(UserIdField, ObjectId.Parse(userId)));
+        var result = await Sessions.UpdateOneAsync(
+            filter,
+            Builders<BsonDocument>.Update.Set(RevokedField, true),
+            cancellationToken: cancellationToken);
+        return result.MatchedCount == 1;
     }
 
     private async Task RevokeOldestBeyondTheLimitAsync(IClientSessionHandle transaction, ObjectId userId, CancellationToken cancellationToken)
@@ -364,6 +405,18 @@ internal sealed class SesionesStore(
                 document[IdField].AsObjectId.ToString(),
                 document[UserIdField].AsObjectId.ToString(),
                 document[SubField].AsString,
+                document[DeviceNameField].AsString,
+                document[LastActivityField].ToUniversalTime(),
                 document[RevokedField].AsBoolean,
                 document[ExpiresAtField].ToUniversalTime());
+
+    private static StoredSession ToStoredSession(BsonDocument document) =>
+        new(
+            document[IdField].AsObjectId.ToString(),
+            document[UserIdField].AsObjectId.ToString(),
+            document[SubField].AsString,
+            document[DeviceNameField].AsString,
+            document[LastActivityField].ToUniversalTime(),
+            document[RevokedField].AsBoolean,
+            document[ExpiresAtField].ToUniversalTime());
 }

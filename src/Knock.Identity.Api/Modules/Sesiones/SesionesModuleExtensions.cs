@@ -29,6 +29,7 @@ public static class SesionesModuleExtensions
         services.AddSingleton<ISesionCancelada, RedisSesionCancelada>();
         services.AddSingleton<SessionRefreshService>();
         services.AddSingleton<LogoutService>();
+        services.AddSingleton<SessionManagementService>();
         return services;
     }
 
