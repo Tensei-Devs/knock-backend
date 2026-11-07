@@ -209,7 +209,7 @@
 
 ## 2026-11-06 — ADR-007: CDN de las imágenes públicas (KNOCK-182)
 - **Decisión (propuesta, pendiente de aprobación del Tech Lead):** no se crea ningún perfil de CDN de pago. Azure CDN Standard from Microsoft (classic) ya no admite perfiles nuevos y se retira el 30-09-2027; Front Door Standard cuesta 35 USD al mes de base sin nivel gratuito. Las imágenes públicas salen de un contenedor de Blob de lectura anónima con `Cache-Control` largo y dirección base configurable; Cloudflare Free queda como camino sin costo hacia una CDN real.
-- **Por qué:** costo cero. Las fotos de verificación viven en otra cuenta de almacenamiento con `allowBlobPublicAccess = false`, porque la lectura anónima es un ajuste de la cuenta y el de la cuenta manda sobre el del contenedor.
+- **Por qué:** sin cuota fija: solo se paga el almacenamiento y la salida por encima de 100 GB al mes. Las fotos de verificación viven en otra cuenta de almacenamiento con `allowBlobPublicAccess = false`, porque la lectura anónima es un ajuste de la cuenta y el de la cuenta manda sobre el del contenedor.
 - **Pendiente:** el Tech Lead decide si autoriza Front Door con el crédito (unos 12.8 USD de base en la ventana de evaluación) o acepta el punto 15c sin cumplir a la letra; leer las condiciones del plan Free de Cloudflare antes de adoptarlo; Terraform define dos cuentas de almacenamiento.
 - **A evitar:** habilitar lectura anónima en la misma cuenta que guarda las fotos privadas.
 
