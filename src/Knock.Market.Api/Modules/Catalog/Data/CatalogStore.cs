@@ -109,6 +109,10 @@ internal sealed class CatalogStore(
         return documents.Select(document => document[NombreField].AsString).ToList();
     }
 
+    /// <summary>Indica si hay alguna colonia con ese <c>nombreBusqueda</c> (nombre ya normalizado con <c>SearchNameNormalizer</c>).</summary>
+    public async Task<bool> ColoniaNameExistsAsync(string normalizedName, CancellationToken cancellationToken) =>
+        await ColoniaNameExistsQuery(normalizedName).FirstOrDefaultAsync(cancellationToken) is not null;
+
     public async Task<bool> ColoniaExistsAsync(ObjectId id, string postalCode, CancellationToken cancellationToken) =>
         await ColoniaExistsQuery(id, postalCode).FirstOrDefaultAsync(cancellationToken) is not null;
 
@@ -137,6 +141,12 @@ internal sealed class CatalogStore(
             .Find(_filter.Eq(CpField, postalCode), _findOptions)
             .Project(Builders<BsonDocument>.Projection.Include(NombreField).Exclude(IdField))
             .Sort(Builders<BsonDocument>.Sort.Ascending(NombreBusquedaField).Ascending(NombreField));
+
+    internal IFindFluent<BsonDocument, BsonDocument> ColoniaNameExistsQuery(string normalizedName) =>
+        Colonias
+            .Find(_filter.Eq(NombreBusquedaField, normalizedName), _findOptions)
+            .Project(Builders<BsonDocument>.Projection.Include(IdField))
+            .Limit(1);
 
     internal IFindFluent<BsonDocument, BsonDocument> ColoniaExistsQuery(ObjectId id, string postalCode) =>
         Colonias
