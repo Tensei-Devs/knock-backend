@@ -137,6 +137,12 @@
 - **Pendiente:** Mercado no expone la consulta «¿existe esta colonia?» que pide R-06 (solo `GET /colonias/en-punto` por coordenadas); mientras no exista, `IColoniaCatalog` está registrado como no disponible, así que un `PUT` con colonia responde 503 y uno sin colonia funciona. `Perfil:HostsFoto` queda vacío (ninguna foto se acepta) hasta que el despliegue ponga el dominio del almacenamiento o la CDN. El rechazo de JWT con `sid` cancelado de CA-04 es del gateway (PR #13).
 - **A evitar:** loguear el nombre, el celular o el `sub`; aceptar una colonia sin validarla; usar el mismo ETag para dos personas.
 
+## 2026-11-06 — Cómo se valida `up.sh` desde cero (KNOCK-34)
+- **Decisión:** `deploy/tests/up_test.sh` prueba el `up.sh` real con `terraform` y `az` falsos en un `PATH` temporal (bash puro, sin credenciales ni red); se corre a mano con `bash deploy/tests/up_test.sh` y no se agregó al CI. `deploy/README.md` («Cómo validar `up.sh` desde cero») ordena la validación en seis etapas, de la estática al apply real.
+- **Por qué:** crear el entorno desde cero cuesta crédito y solo puede autorizarlo el líder técnico; lo que sí se puede probar sin gastar es la lógica del script (modo seguro, rechazos, destrucciones, orden, plan guardado, secretos e interrupción).
+- **Verificación:** 44 comprobaciones OK; al quitar a propósito la detección de destrucciones y el rechazo de `--no-lock` con `--apply`, 8 fallan. ShellCheck y `bash -n` sin hallazgos; `terraform fmt -check` sin diferencias y `terraform validate` válido en infra, apps y database (Terraform 1.17.1).
+- **A evitar:** dar por probada una creación real con las pruebas simuladas (no demuestran cuotas, nombres usados ni permisos); correr `--apply` sin autorización del líder.
+
 ## 2026-11-04 — Dockerfiles de los servicios (KNOCK-232)
 - **Decisión:** un Dockerfile por servicio (`Knock.Gateway`, `Knock.Identity.Api`, `Knock.Messaging.Api` y el de `Knock.Market.Api` actualizado) con imágenes `sdk:11.0` y `aspnet:11.0`, restauración bloqueada, usuario sin privilegios (`APP_UID`, 1654) y puerto 8080; todos copian `Knock.Contracts`. El job `container` del CI ahora construye, escanea (Trivy) y revisa (Dockle) cada imagen con una matriz. EXC-002 (sin HEALTHCHECK, las sondas las define Container Apps) amplía su alcance a los cuatro Dockerfiles.
 - **Porqué:** la spec 001 (R-06) pide construir y desplegar cada servicio por separado; el Dockerfile de Market apuntaba a .NET 10 y no copiaba `Knock.Contracts`, así que habría fallado al construirse.
@@ -224,3 +230,9 @@
 - stryker-config.json en la raiz (solucion Knock.slnx, pruebas solo tests/UnitTest con test-case-filter, mutate acotado a Sesiones, Usuarios, Catalog y Gateway).
 - docs/MUTACION.md: guia en espanol.
 - Verificacion local acotada: 47.17 por ciento. El job mutation-pr ya corre de verdad.
+
+## 2026-11-06 — Despliegue completo con un comando (KNOCK-34)
+- **Decisión:** `deploy/up.sh` ejecuta infra, database y apps en ese orden con `terraform init -backend-config=backend.hcl` y `plan`; por defecto solo hace plan y aplica únicamente con `--apply`, usando el plan guardado de cada directorio. Se detiene si algún plan destruye o reemplaza recursos, exige que existan los ocho secretos de Key Vault antes de desplegar las apps (solo lee sus nombres) y no imprime valores. Procedimiento en `deploy/README.md`.
+- **Por qué:** el entorno debía poder crearse desde cero con un solo comando sin arriesgar la base de datos (`prevent_destroy`) ni aplicar por accidente.
+- **Verificación:** `bash -n` y ShellCheck sin hallazgos; ejecutado en modo plan contra `rg-knock-dev` con `-lock=false`: infra 0 por agregar, 1 por cambiar, 0 por destruir; database sin cambios; apps 0 por agregar, 5 por cambiar, 0 por destruir (todos por `workload_profile`, sin efecto real). No se aplicó nada.
+- **A evitar:** usar `--no-lock` con `--apply`; crear el grupo de recursos desde Terraform (lo crea una persona); pasar secretos al script.
