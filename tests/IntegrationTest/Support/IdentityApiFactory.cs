@@ -38,6 +38,8 @@ internal sealed class IdentityApiFactory(IReadOnlyDictionary<string, string?> se
 
     public string DatabaseName => settings["Mongo:Databases:Identity"]!;
 
+    public static string SigningKeyBase64 => Convert.ToBase64String(_signingKey);
+
     public IMongoDatabase Database => Services.GetRequiredService<IMongoClient>().GetDatabase(DatabaseName);
 
     public IMongoCollection<BsonDocument> Users => Database.GetCollection<BsonDocument>(SesionesStore.UsersCollection);
