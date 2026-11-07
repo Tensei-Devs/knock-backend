@@ -1,3 +1,4 @@
+using Knock.Contracts.Sessions;
 using StackExchange.Redis;
 
 namespace Knock.Gateway.Hosting;
@@ -14,7 +15,7 @@ internal interface IRevokedSessions
 /// <summary>Consulta <c>sesion-cancelada:{sid}</c> en Redis, la misma clave que escribe Identidad.</summary>
 internal sealed class RedisRevokedSessions(IConnectionMultiplexer redis) : IRevokedSessions
 {
-    public const string KeyPrefix = "sesion-cancelada:";
+    public const string KeyPrefix = SessionRevocationKey.Prefix;
 
     public async Task<bool> IsRevokedAsync(string sessionId, CancellationToken cancellationToken)
     {

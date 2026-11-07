@@ -1,6 +1,6 @@
 # Mapa de código
 
-> Generado por `scripts/codemap.py` el 2026-11-05T20:16:18Z. No editar a mano.
+> Generado por `scripts/codemap.py` el 2026-11-06T17:38:38Z. No editar a mano.
 > **Antes de crear una clase, método o archivo, busca aquí o corre `python scripts/codemap.py --query "<qué necesitas>"`.**
 
 ## Resumen
@@ -8,12 +8,12 @@
 | Módulo | Capas | Archivos | Tipos | Métodos públicos |
 |---|---|---|---|---|
 | `Catalog` | -, controllers, data, domain, dtos, services, validators | 21 | 23 | 30 |
-| `Knock.Contracts` | - | 4 | 6 | 7 |
+| `Knock.Contracts` | - | 5 | 7 | 7 |
 | `Knock.Gateway` | -, hosting | 13 | 37 | 46 |
 | `Knock.Identity.Api` | -, common, hosting | 27 | 57 | 70 |
 | `Knock.Market.Api` | -, common, hosting | 26 | 55 | 69 |
 | `Knock.Messaging.Api` | -, hosting | 7 | 21 | 29 |
-| `Sesiones` | -, controllers, data, domain, dtos, services, validators | 23 | 43 | 45 |
+| `Sesiones` | -, controllers, data, domain, dtos, services, validators | 25 | 46 | 53 |
 | `Usuarios` | -, controllers, data, domain, dtos, services | 8 | 17 | 22 |
 
 ## ⚠️ Código duplicado (misma estructura)
@@ -121,7 +121,7 @@
 - `MongoReadinessHealthCheck`: `src/Knock.Identity.Api/Hosting/MongoExtensions.cs:227`, `src/Knock.Market.Api/Hosting/MongoExtensions.cs:225`, `src/Knock.Messaging.Api/Hosting/MongoExtensions.cs:227`
 - `ObservabilityExtensions`: `src/Knock.Gateway/Hosting/ObservabilityExtensions.cs:51`, `src/Knock.Identity.Api/Hosting/ObservabilityExtensions.cs:51`, `src/Knock.Market.Api/Hosting/ObservabilityExtensions.cs:50`, `src/Knock.Messaging.Api/Hosting/ObservabilityExtensions.cs:51`
 - `ObservabilityOptions`: `src/Knock.Gateway/Hosting/ObservabilityExtensions.cs:22`, `src/Knock.Identity.Api/Hosting/ObservabilityExtensions.cs:22`, `src/Knock.Market.Api/Hosting/ObservabilityExtensions.cs:21`, `src/Knock.Messaging.Api/Hosting/ObservabilityExtensions.cs:22`
-- `OpenApiExtensions`: `src/Knock.Identity.Api/Hosting/OpenApiExtensions.cs:6`, `src/Knock.Market.Api/Hosting/OpenApiExtensions.cs:5`
+- `OpenApiExtensions`: `src/Knock.Identity.Api/Hosting/OpenApiExtensions.cs:7`, `src/Knock.Market.Api/Hosting/OpenApiExtensions.cs:5`
 - `OpenTelemetryLogSink`: `src/Knock.Gateway/Hosting/ObservabilityExtensions.cs:215`, `src/Knock.Identity.Api/Hosting/ObservabilityExtensions.cs:215`, `src/Knock.Market.Api/Hosting/ObservabilityExtensions.cs:211`, `src/Knock.Messaging.Api/Hosting/ObservabilityExtensions.cs:215`
 - `ProblemDetailsExtensions`: `src/Knock.Identity.Api/Hosting/ProblemDetailsExtensions.cs:6`, `src/Knock.Market.Api/Hosting/ProblemDetailsExtensions.cs:5`
 - `ProblemResponses`: `src/Knock.Gateway/Hosting/ProblemResponses.cs:7`, `src/Knock.Identity.Api/Hosting/RequestBodyLimitMiddleware.cs:8`, `src/Knock.Market.Api/Hosting/RequestBodyLimitMiddleware.cs:7`
@@ -215,6 +215,7 @@
   - `CorrelationIdMiddleware()`:11, `InvokeAsync()`:14, `UseKnockCorrelationId()`:43
 - `src/Knock.Contracts/Pagination/CursorPage.cs` — class `PageLimit`, record `CursorPage`
   - `Resolve()`:11
+- `src/Knock.Contracts/Sessions/SessionRevocationKey.cs` — class `SessionRevocationKey`
 
 ### Knock.Gateway
 
@@ -243,7 +244,7 @@
 - `src/Knock.Gateway/Hosting/RedisExtensions.cs` — class `KnockRedisOptions`, class `KnockRedisOptionsValidator`, class `RedisExtensions`, class `RedisReadinessHealthCheck`
   - `Validate()`:41, `AddKnockRedis()`:105, `CreateConfiguration()`:123, `CheckHealthAsync()`:162
 - `src/Knock.Gateway/Hosting/RevokedSessions.cs` — interface `IRevokedSessions`, class `RedisRevokedSessions`
-  - `IsRevokedAsync()`:19
+  - `IsRevokedAsync()`:20
 - `src/Knock.Gateway/Hosting/SecurityHeadersMiddleware.cs` — class `SecurityHeadersMiddleware`
   - `SecurityHeadersMiddleware()`:10, `InvokeAsync()`:16
 - `src/Knock.Gateway/Hosting/TelemetryRedactor.cs` — class `TelemetryRedactor`, class `CoordinatePairs`, class `TelemetryRedactionProcessor`, class `LogRedactionProcessor`, class `RedactingJsonFormatter`
@@ -292,7 +293,7 @@
 - `src/Knock.Identity.Api/Hosting/ObservabilityExtensions.cs` — class `ObservabilityOptions`, record `AzureMonitorSignalSettings`, class `AzureMonitorExportStatus`, class `ObservabilityExtensions`, class `TelemetryExceptionRecorder`, class `IgnoreIncomingTraceContextPropagator`, class `OpenTelemetryLogSink`, class `SerilogLogState`
   - `Record()`:47, `AddKnockObservability()`:71, `TryHandleAsync()`:177, `Inject()`:200, `ExtractTraceIdAndState()`:202, `ExtractBaggage()`:208, `Emit()`:224, `GetEnumerator()`:285
 - `src/Knock.Identity.Api/Hosting/OpenApiExtensions.cs` — class `OpenApiExtensions`
-  - `AddKnockOpenApi()`:8, `MapKnockOpenApi()`:15
+  - `AddKnockOpenApi()`:9, `MapKnockOpenApi()`:41
 - `src/Knock.Identity.Api/Hosting/ProblemDetailsExtensions.cs` — class `ProblemDetailsExtensions`
   - `AddKnockProblemDetails()`:9
 - `src/Knock.Identity.Api/Hosting/RateLimitingExtensions.cs` — class `RateLimitPolicySettings`, class `RateLimitSettings`, class `RateLimitingExtensions`
@@ -407,6 +408,8 @@
   - `ExchangeFirebaseToken()`:30
 - `src/Knock.Identity.Api/Modules/Sesiones/Controllers/V1/LogoutController.cs` — class `LogoutController`
   - `Logout()`:20
+- `src/Knock.Identity.Api/Modules/Sesiones/Controllers/V1/MeSesionesController.cs` — class `MeSesionesController`
+  - `List()`:22, `Revoke()`:42
 - `src/Knock.Identity.Api/Modules/Sesiones/Controllers/V1/RefreshController.cs` — class `RefreshController`
   - `Refresh()`:27
 
@@ -418,18 +421,18 @@
 - `src/Knock.Identity.Api/Modules/Sesiones/Data/SesionesDataExtensions.cs` — class `SesionesDataExtensions`
   - `AddSesionesData()`:11
 - `src/Knock.Identity.Api/Modules/Sesiones/Data/SesionesStore.cs` — class `SesionesStore`
-  - `EnsureIndexesAsync()`:79, `FindBySubAsync()`:97, `FindByPhoneHashAsync()`:102, `CreateAccountAsync()`:110, `AddSessionAsync()`:151, `FindByIdAsync()`:211, `FindSessionByFingerprintAsync()`:222, `FindSessionByUsedFingerprintAsync()`:226, `RotateAsync()`:231, `RevokeAllAsync()`:255, `RevokeAsync()`:278, `IsDuplicateKey()`:292
+  - `EnsureIndexesAsync()`:82, `FindBySubAsync()`:100, `FindByPhoneHashAsync()`:105, `CreateAccountAsync()`:113, `AddSessionAsync()`:154, `FindOpenSessionsAsync()`:189, `FindSessionByOwnerAsync()`:203, `MarkSessionRevokedAsync()`:215, `FindByIdAsync()`:252, `FindSessionByFingerprintAsync()`:263, `FindSessionByUsedFingerprintAsync()`:267, `RotateAsync()`:272, `RevokeAllAsync()`:296, `RevokeAsync()`:319, `IsDuplicateKey()`:333
 
 **domain**
 
 - `src/Knock.Identity.Api/Modules/Sesiones/Domain/PhoneNumberPolicy.cs` — class `PhoneNumberPolicy`
   - `IsValid()`:12
-- `src/Knock.Identity.Api/Modules/Sesiones/Domain/SesionesDomain.cs` — class `AccountState`, class `ConsentDocuments`, record `UserAccount`, record `NewSession`, record `NewAccount`, enum `AccountCreation`, record `StoredSession`
-  - `NewSession()`:34, `ToString()`:37, `NewAccount()`:48, `ToString()`:61
+- `src/Knock.Identity.Api/Modules/Sesiones/Domain/SesionesDomain.cs` — class `AccountState`, class `ConsentDocuments`, record `UserAccount`, record `NewSession`, record `StoredSession`, record `NewAccount`, enum `AccountCreation`
+  - `NewSession()`:34, `ToString()`:37, `NewAccount()`:57, `ToString()`:70
 
 **dtos**
 
-- `src/Knock.Identity.Api/Modules/Sesiones/Dtos/SessionDtos.cs` — record `FirebaseExchangeRequest`, record `SessionResponse`, record `RefreshRequest`, record `RefreshResponse`
+- `src/Knock.Identity.Api/Modules/Sesiones/Dtos/SessionDtos.cs` — record `FirebaseExchangeRequest`, record `SessionResponse`, record `RefreshRequest`, record `RefreshResponse`, record `SessionListItemResponse`
 
 **services**
 
@@ -447,6 +450,8 @@
   - `PhoneProtector()`:19, `Protect()`:29, `Hash()`:53, `AssociatedData()`:60
 - `src/Knock.Identity.Api/Modules/Sesiones/Services/RefreshTokenFingerprint.cs` — class `RefreshTokenFingerprint`
   - `Compute()`:15, `TryCompute()`:36
+- `src/Knock.Identity.Api/Modules/Sesiones/Services/SessionManagementService.cs` — class `SessionManagementService`
+  - `SessionManagementService()`:9, `ListOpenSessionsAsync()`:15, `RevokeSessionAsync()`:37
 - `src/Knock.Identity.Api/Modules/Sesiones/Services/SessionRefreshService.cs` — record `RefreshResult`, class `SessionRefreshService`
   - `SessionRefreshService()`:13, `RefreshAsync()`:20
 - `src/Knock.Identity.Api/Modules/Sesiones/Services/SessionTokenIssuer.cs` — record `IssuedSession`, class `SessionTokenIssuer`

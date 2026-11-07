@@ -80,6 +80,7 @@ internal sealed class FakeSesionesStore : ISesionesStore
         session.Used.Add(session.Fingerprint);
         session.Used.RemoveRange(0, Math.Max(0, session.Used.Count - SesionesStore.MaxUsedFingerprints));
         session.Fingerprint = newFingerprint;
+        session.LastActivity = now;
         session.ExpiresAt = newExpiresAt;
         return Task.FromResult(true);
     }
@@ -107,6 +108,27 @@ internal sealed class FakeSesionesStore : ISesionesStore
         return Task.FromResult(true);
     }
 
+    public Task<IReadOnlyList<StoredSession>> FindOpenSessionsAsync(string userId, DateTime now, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<StoredSession>>(
+            Stored.Where(session => session.UserId == userId && !session.Revoked && session.ExpiresAt > now)
+                .Select(session => session.ToRecord())
+                .ToArray());
+
+    public Task<StoredSession?> FindSessionByOwnerAsync(string id, string userId, CancellationToken cancellationToken) =>
+        Task.FromResult(Stored.FirstOrDefault(session => session.Id == id && session.UserId == userId)?.ToRecord());
+
+    public Task<bool> MarkSessionRevokedAsync(string id, string userId, CancellationToken cancellationToken)
+    {
+        var session = Stored.FirstOrDefault(item => item.Id == id && item.UserId == userId);
+        if (session is null)
+        {
+            return Task.FromResult(false);
+        }
+
+        session.Revoked = true;
+        return Task.FromResult(true);
+    }
+
     private void Track(NewSession session)
     {
         Sessions.Add(session);
@@ -115,7 +137,9 @@ internal sealed class FakeSesionesStore : ISesionesStore
             Id = session.Id,
             UserId = session.UserId,
             Sub = session.Sub,
+            DeviceName = session.DeviceName,
             Fingerprint = session.Fingerprint,
+            LastActivity = session.CreatedAt,
             ExpiresAt = session.ExpiresAt,
         });
     }
@@ -130,13 +154,17 @@ internal sealed class FakeSession
 
     public required string Sub { get; init; }
 
+    public required string DeviceName { get; init; }
+
     public required byte[] Fingerprint { get; set; }
 
     public List<byte[]> Used { get; } = [];
+
+    public DateTime LastActivity { get; set; }
 
     public bool Revoked { get; set; }
 
     public DateTime ExpiresAt { get; set; }
 
-    public StoredSession ToRecord() => new(Id, UserId, Sub, Revoked, ExpiresAt);
+    public StoredSession ToRecord() => new(Id, UserId, Sub, DeviceName, LastActivity, Revoked, ExpiresAt);
 }
