@@ -9,6 +9,7 @@
 # con `az keyvault secret set` (CA-04) y este script solo comprueba que existan sus nombres. El clúster de
 # DocumentDB solo se importa y tiene `prevent_destroy`: si algún plan intentara borrarlo, el script se detiene.
 set -euo pipefail
+umask 077
 
 DEPLOY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -74,7 +75,8 @@ done
 command -v terraform > /dev/null 2>&1 || die "terraform no está en el PATH (se necesita >= 1.9)"
 command -v az > /dev/null 2>&1 || die "az (Azure CLI) no está en el PATH"
 
-TF_VERSION="$(terraform version | head -n 1 | sed -E 's/^Terraform v([0-9]+\.[0-9]+).*/\1/')"
+TF_VERSION_OUT="$(terraform version)" || die "no se pudo ejecutar terraform version"
+TF_VERSION="$(sed -nE '1s/^Terraform v([0-9]+\.[0-9]+).*/\1/p' <<< "$TF_VERSION_OUT")"
 TF_MAJOR="${TF_VERSION%%.*}"
 TF_MINOR="${TF_VERSION#*.}"
 if [[ ! "$TF_MAJOR" =~ ^[0-9]+$ || ! "$TF_MINOR" =~ ^[0-9]+$ ]] || ((TF_MAJOR < 1 || (TF_MAJOR == 1 && TF_MINOR < 9))); then
@@ -124,6 +126,7 @@ $NO_LOCK && LOCK_ARG=(-lock=false)
 
 PLAN_DIR="$(mktemp -d)"
 trap 'rm -rf "$PLAN_DIR"' EXIT
+trap 'exit 130' INT TERM
 
 if $APPLY; then
   info "Modo APPLY: se aplicará cada directorio en orden infra -> database -> apps"
@@ -150,7 +153,7 @@ tf_plan() {
     -var "subscription_id=$SUBSCRIPTION_ID" -var "resource_group_name=$RESOURCE_GROUP" "$@" \
     -out="$PLAN_DIR/$dir.tfplan" | tee "$PLAN_DIR/$dir.plan.txt" \
     || die "falló terraform plan en deploy/$dir"
-  if grep -Eq 'Plan: .*[1-9][0-9]* to destroy' "$PLAN_DIR/$dir.plan.txt"; then
+  if grep -Eq 'Plan: .*[1-9][0-9]* to destroy|will be destroyed|must be replaced|Terraform will destroy' "$PLAN_DIR/$dir.plan.txt"; then
     die "el plan de deploy/$dir destruye o reemplaza recursos (prevent_destroy y los datos no se tocan con este script). Revísalo a mano"
   fi
 }
@@ -167,7 +170,7 @@ check_secrets() {
   local vault="kv-knockdev${NAME_SUFFIX}"
   [[ "$APPS_ENV" == "dev" || "$APPS_ENV" == "evaluacion" ]] || return 0
   local found
-  found="$(az keyvault secret list --vault-name "$vault" --query '[].name' --output tsv 2> /dev/null || true)"
+  found="$(az keyvault secret list --vault-name "$vault" --subscription "$SUBSCRIPTION_ID" --query '[].name' --output tsv 2> /dev/null || true)"
   local missing=()
   local s
   for s in "${REQUIRED_SECRETS[@]}"; do
@@ -185,19 +188,25 @@ check_secrets() {
 
 tf_init infra
 tf_plan infra -var "name_suffix=$NAME_SUFFIX" -var "secret_admin_object_ids=$SECRET_ADMIN_HCL"
-$APPLY && tf_apply infra
 
 # ---- 2. database (solo importa el clúster gratuito, prevent_destroy) ----
 
 tf_init database
 tf_plan database -var "cluster_name=$CLUSTER_NAME"
-$APPLY && tf_apply database
+
+# Los planes de infra y database se revisan antes de aplicar cualquiera: si el de database destruye algo,
+# el script se detiene sin haber cambiado nada en Azure.
+if $APPLY; then
+  tf_apply infra
+  tf_apply database
+fi
 
 # ---- 3. apps ----
 
 tf_init apps
 INFRA_RESOURCES="$(terraform -chdir="$DEPLOY_DIR/infra" state list 2> /dev/null | wc -l | tr -d ' ')"
 if [[ "$INFRA_RESOURCES" == "0" ]]; then
+  $APPLY && die "con --apply, infra debe tener recursos en su estado antes de planear apps (no se pudo leer el estado)"
   # apps lee las salidas del estado de infra: sin infra creada no hay nada que planear.
   info "[apps] se omite el plan: infra todavía no existe (usa --apply para crearla y planear apps enseguida)"
   exit 0
