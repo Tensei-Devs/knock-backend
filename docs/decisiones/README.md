@@ -12,6 +12,7 @@ Cada decisión de arquitectura y de proceso que cambia lo escrito en `docs/DECIS
 | [004](ADR-004-firebase-con-backend-en-azure.md) | Firebase (Auth y FCM) con el backend en Azure; plan Blaze | 2026-10-20 | Decidida |
 | [005](ADR-005-roles-carga-y-revision.md) | Roles, asignación por carga y revisión de pares | 2026-10-20 | Decidida |
 | [006](ADR-006-costos-y-ventana-de-evaluacion.md) | Costos en Azure y ventana de evaluación | 2026-10-20 | Decidida |
+| [007](ADR-007-cdn-de-imagenes.md) | CDN de las imágenes públicas: sin perfil de pago; Blob público con caché | 2026-11-06 | Propuesta, pendiente de aprobación del Tech Lead |
 | [008](ADR-008-proveedor-de-ia-generativa-alterno.md) | IA generativa: Azure OpenAI con cuota y alterno de contingencia | 2026-11-06 | Propuesta, pendiente de aprobación del Tech Lead |
 
 Otros documentos relacionados: [`../PLAN_ADAPTACION.md`](../PLAN_ADAPTACION.md) · [`../VERSIONAMIENTO.md`](../VERSIONAMIENTO.md) · [`../CUMPLIMIENTO_LINEAMIENTOS.md`](../CUMPLIMIENTO_LINEAMIENTOS.md).
