@@ -1,6 +1,6 @@
 # Mapa de código
 
-> Generado por `scripts/codemap.py` el 2026-11-06T17:38:38Z. No editar a mano.
+> Generado por `scripts/codemap.py` el 2026-11-07T06:51:25Z. No editar a mano.
 > **Antes de crear una clase, método o archivo, busca aquí o corre `python scripts/codemap.py --query "<qué necesitas>"`.**
 
 ## Resumen
@@ -8,11 +8,12 @@
 | Módulo | Capas | Archivos | Tipos | Métodos públicos |
 |---|---|---|---|---|
 | `Catalog` | -, controllers, data, domain, dtos, services, validators | 21 | 23 | 30 |
-| `Knock.Contracts` | - | 5 | 7 | 7 |
+| `Knock.Contracts` | - | 6 | 10 | 7 |
 | `Knock.Gateway` | -, hosting | 13 | 37 | 46 |
 | `Knock.Identity.Api` | -, common, hosting | 27 | 57 | 70 |
 | `Knock.Market.Api` | -, common, hosting | 26 | 55 | 69 |
 | `Knock.Messaging.Api` | -, hosting | 7 | 21 | 29 |
+| `Media` | -, data, domain, dtos, validators | 7 | 13 | 18 |
 | `Sesiones` | -, controllers, data, domain, dtos, services, validators | 25 | 46 | 53 |
 | `Usuarios` | -, controllers, data, domain, dtos, services | 8 | 17 | 22 |
 
@@ -116,7 +117,7 @@
 - `KnockRedisOptionsValidator`: `src/Knock.Gateway/Hosting/RedisExtensions.cs:39`, `src/Knock.Identity.Api/Hosting/RedisExtensions.cs:39`, `src/Knock.Market.Api/Hosting/RedisExtensions.cs:37`
 - `LogRedactionProcessor`: `src/Knock.Gateway/Hosting/TelemetryRedactor.cs:315`, `src/Knock.Identity.Api/Hosting/TelemetryRedactor.cs:315`, `src/Knock.Market.Api/Hosting/TelemetryRedactor.cs:310`, `src/Knock.Messaging.Api/Hosting/TelemetryRedactor.cs:315`
 - `LoggingExtensions`: `src/Knock.Gateway/Hosting/LoggingExtensions.cs:13`, `src/Knock.Identity.Api/Hosting/LoggingExtensions.cs:13`, `src/Knock.Market.Api/Hosting/LoggingExtensions.cs:12`, `src/Knock.Messaging.Api/Hosting/LoggingExtensions.cs:13`
-- `ModulesExtensions`: `src/Knock.Identity.Api/Hosting/ModulesExtensions.cs:7`, `src/Knock.Market.Api/Hosting/ModulesExtensions.cs:5`
+- `ModulesExtensions`: `src/Knock.Identity.Api/Hosting/ModulesExtensions.cs:7`, `src/Knock.Market.Api/Hosting/ModulesExtensions.cs:6`
 - `MongoExtensions`: `src/Knock.Identity.Api/Hosting/MongoExtensions.cs:138`, `src/Knock.Market.Api/Hosting/MongoExtensions.cs:136`, `src/Knock.Messaging.Api/Hosting/MongoExtensions.cs:138`
 - `MongoReadinessHealthCheck`: `src/Knock.Identity.Api/Hosting/MongoExtensions.cs:227`, `src/Knock.Market.Api/Hosting/MongoExtensions.cs:225`, `src/Knock.Messaging.Api/Hosting/MongoExtensions.cs:227`
 - `ObservabilityExtensions`: `src/Knock.Gateway/Hosting/ObservabilityExtensions.cs:51`, `src/Knock.Identity.Api/Hosting/ObservabilityExtensions.cs:51`, `src/Knock.Market.Api/Hosting/ObservabilityExtensions.cs:50`, `src/Knock.Messaging.Api/Hosting/ObservabilityExtensions.cs:51`
@@ -213,6 +214,7 @@
   - `IsValid()`:24, `Create()`:44, `Current()`:47
 - `src/Knock.Contracts/Correlation/CorrelationIdMiddleware.cs` — class `CorrelationIdMiddleware`, class `CorrelationIdApplicationBuilderExtensions`
   - `CorrelationIdMiddleware()`:11, `InvokeAsync()`:14, `UseKnockCorrelationId()`:43
+- `src/Knock.Contracts/Moderation/IContentModerator.cs` — enum `ModerationOutcome`, record `ModerationResult`, interface `IContentModerator`
 - `src/Knock.Contracts/Pagination/CursorPage.cs` — class `PageLimit`, record `CursorPage`
   - `Resolve()`:11
 - `src/Knock.Contracts/Sessions/SessionRevocationKey.cs` — class `SessionRevocationKey`
@@ -348,7 +350,7 @@
 - `src/Knock.Market.Api/Hosting/LoggingExtensions.cs` — class `LoggingExtensions`, class `ScopeRequestPathEnricher`
   - `AddKnockLogging()`:19, `ConfigureRequestLogging()`:34, `RoutePath()`:52, `Enrich()`:117
 - `src/Knock.Market.Api/Hosting/ModulesExtensions.cs` — class `ModulesExtensions`
-  - `AddKnockModules()`:7
+  - `AddKnockModules()`:8
 - `src/Knock.Market.Api/Hosting/MongoExtensions.cs` — class `KnockMongoOptions`, class `KnockMongoOptionsValidator`, class `MongoExtensions`, class `MongoReadinessHealthCheck`
   - `Seconds()`:58, `Validate()`:74, `AddKnockMongo()`:147, `AddKnockMongoDatabase()`:169, `CreateSettings()`:183, `CheckHealthAsync()`:227
 - `src/Knock.Market.Api/Hosting/ObservabilityExtensions.cs` — class `ObservabilityOptions`, record `AzureMonitorSignalSettings`, class `AzureMonitorExportStatus`, class `ObservabilityExtensions`, class `TelemetryExceptionRecorder`, class `IgnoreIncomingTraceContextPropagator`, class `OpenTelemetryLogSink`, class `SerilogLogState`
@@ -394,6 +396,34 @@
   - `Record()`:47, `AddKnockObservability()`:71, `TryHandleAsync()`:177, `Inject()`:200, `ExtractTraceIdAndState()`:202, `ExtractBaggage()`:208, `Emit()`:224, `GetEnumerator()`:285
 - `src/Knock.Messaging.Api/Hosting/TelemetryRedactor.cs` — class `TelemetryRedactor`, class `CoordinatePairs`, class `TelemetryRedactionProcessor`, class `LogRedactionProcessor`, class `RedactingJsonFormatter`
   - `IsSensitiveKey()`:42, `Redact()`:44, `RedactAttribute()`:74, `RedactUrl()`:98, `ExceptionEvent()`:120, `Redact()`:166, `OnEnd()`:284, `OnEnd()`:317, `Format()`:348
+
+### Media
+
+**-**
+
+- `src/Knock.Market.Api/Modules/Media/MediaModuleExtensions.cs` — class `MediaModuleExtensions`
+  - `AddMediaModule()`:9
+
+**data**
+
+- `src/Knock.Market.Api/Modules/Media/Data/MediaOptions.cs` — class `MediaOptions`
+
+**domain**
+
+- `src/Knock.Market.Api/Modules/Media/Domain/MediaFile.cs` — enum `MediaUsage`, enum `MediaFileState`, enum `ImageFormat`, record `MediaFile`
+  - `MediaFile()`:11, `IsReadyFor()`:21, `CreatePending()`:22, `MarkReady()`:24, `MarkRejected()`:30
+- `src/Knock.Market.Api/Modules/Media/Domain/MediaOutcome.cs` — enum `MediaOutcomeStatus`, record `MediaOutcome`, class `MediaRejection`, record `ProcessedImage`
+  - `MediaOutcome()`:7, `Ok()`:9, `NotFound()`:10, `Conflict()`:11, `Unprocessable()`:12
+- `src/Knock.Market.Api/Modules/Media/Domain/MediaRules.cs` — class `MediaRules`
+  - `IsAllowedContentType()`:18, `IsAllowedSize()`:21, `AreAllowedDimensions()`:23, `DetectFormat()`:26, `ParseUsage()`:32, `ToContractValue()`:40, `ToContractValue()`:47
+
+**dtos**
+
+- `src/Knock.Market.Api/Modules/Media/Dtos/CreateUploadRequest.cs` — record `CreateUploadRequest`
+
+**validators**
+
+- `src/Knock.Market.Api/Modules/Media/Validators/CreateUploadRequestValidator.cs` — class `CreateUploadRequestValidator`
 
 ### Sesiones
 
