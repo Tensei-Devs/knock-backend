@@ -309,6 +309,10 @@ public class AuthenticationSecurityTests
         var store = new FakeSesionesStore();
         var cancelled = new RecordingCancelled();
         var now = new DateTimeOffset(2026, 11, 4, 12, 0, 0, TimeSpan.Zero);
+        // La sesión es de esa cuenta: desde KNOCK-203 (H-1) el logout solo cancela el sid de una sesión que le pertenece.
+        await store.AddSessionAsync(
+            new NewSession("665f1b2c3d4e5f6071829304", "user-1", "0f8e7d6c-5b4a-8392-a1b0-c9d8e7f6a5b4", "device-1", "Teléfono de prueba", SHA256.HashData(new byte[RefreshTokenFingerprint.TokenBytes]), now.UtcDateTime),
+            CancellationToken.None);
         var claims = new[]
         {
             new Claim("sid", "665f1b2c3d4e5f6071829304"),
