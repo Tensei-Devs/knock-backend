@@ -221,7 +221,7 @@
 
 ## 2026-11-06 — ADR-008: proveedor de IA generativa (KNOCK-183)
 - **Decisión (propuesta, pendiente de aprobación del Tech Lead):** Azure OpenAI sigue como proveedor principal porque la cuota de la suscripción no está en cero (consulta de solo lectura del 2026-11-06: `gpt-4o-mini`, `gpt-4.1-mini` y `gpt-5-mini` Global Standard con límite mayor que cero en West US, France Central, Norway East y North Central US); el modelo preferido es `gpt-5-mini`, porque `gpt-4o-mini` figura como `Deprecating` (ya no se ofrece a clientes nuevos) y `gpt-4.1-mini` como `Legacy`. Alterno de contingencia sin costo: Gemini API en su nivel gratuito, solo texto ya filtrado, sin fotos y sin el historial del chat.
-- **Por qué:** en el nivel gratuito Google usa el contenido para mejorar sus productos y revisores humanos pueden leerlo, así que el filtro de datos personales de TT-IA-01 es obligatorio antes de cualquier proveedor.
+- **Por qué:** en el nivel gratuito Google usa el contenido para mejorar sus productos y revisores humanos pueden leerlo, así que el filtro de datos personales de TT-IA-01 es obligatorio antes de cualquier proveedor. Verificado el 2026-11-06 en los términos de Google: exige 18 años o más, no indica periodo de retención, y el nivel de pago (con cuenta de facturación) no usa los datos para mejorar productos. Propuesta pendiente del Tech Lead: limitar la contingencia a datos genéricos y agregar el enmascarado de nombres al filtro.
 - **Pendiente:** la cuota no prueba que el despliegue se pueda crear (eso es TT-IA-01); repetir la consulta el 11 de noviembre; las tarifas de Azure OpenAI no se muestran en la página oficial y se fijan con la calculadora en TT-IA-01.
 - **A evitar:** enviar fotos, nombres o datos de verificación a un nivel gratuito.
 
