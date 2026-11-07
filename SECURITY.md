@@ -18,7 +18,7 @@ usa Staging y cuentas de prueba.
 Solo la versión más reciente de cada componente (`api-v*`, `app-v*`, `panel-v*`).
 
 ## Cómo gestionamos hallazgos
-- **Bloqueo:** una vulnerabilidad crítica o alta explotable en el contexto de ejecución bloquea el merge (CI: CodeQL, Semgrep, OSV-Scanner, dependency-review, Trivy, ZAP).
+- **Bloqueo:** una vulnerabilidad crítica o alta explotable en el contexto de ejecución bloquea el merge (CI: Semgrep, OSV-Scanner, dependency-review, Trivy, ZAP).
 - **Falsos positivos y riesgos aceptados:** solo con evidencia y registro en [`security/exceptions.yaml`](security/exceptions.yaml) (responsable, alcance, vencimiento ≤ 90 días, plan). El CI falla con excepciones vencidas o supresiones sin `EXC-NNN`.
 - **Datos sensibles:** INE, selfie, CURP, dirección y teléfono se tratan según la constitución §6. Un incidente con estos datos se escala de inmediato al Tech Lead.
 - Un escáner sin alertas no prueba que el sistema sea seguro: cada historia incluye su análisis de amenazas y pruebas de seguridad negativa.
