@@ -180,3 +180,20 @@ excepciones:
     creada: 2026-11-04
     vence: 2027-02-02
     plan: unificar después en una biblioteca técnica (con su spec y el cambio de la constitución que la permita), borrar las copias y retirar la excepción antes de vencer.
+  - id: EXC-017
+    herramienta: revisión de arquitectura (modelo de amenazas, KNOCK-78)
+    regla: acceso de red público del clúster de MongoDB (DB-5 y H-04 del modelo de amenazas)
+    alcance: deploy/database/main.tf, clúster knock-docdb (reglas de firewall administradas fuera de Terraform)
+    justificacion: >-
+      El clúster gratuito de Azure DocumentDB tiene el acceso de red público habilitado, con la regla azure-services (0.0.0.0)
+      que usan las Container Apps y reglas por IP individual de las personas del equipo que administran la base. Cerrarlo exige
+      red privada o Private Link, que cuestan, y el proyecto opera a costo cero (KNOCK-145). Las Container Apps no tienen una
+      lista corta de IP de salida que se pueda declarar en el firewall. Controles compensatorios: toda conexión exige usuario y
+      contraseña y viaja con TLS; hay una cadena de conexión distinta por servicio, guardada solo en Key Vault y nunca en el
+      repositorio; el acceso al Key Vault es por RBAC con un permiso por secreto y servicio (EXC-012); el firewall del clúster
+      solo admite la regla azure-services y las IP individuales de administración; el clúster tiene el candado no-borrar y
+      prevent_destroy. Evidencia: docs/evidencia/KNOCK-78-riesgo-mongodb-acceso-publico.md.
+    responsable: José Julián Hernández Hernández
+    creada: 2026-11-06
+    vence: 2027-02-04
+    plan: revisar el 2026-12-05 (fin de la ventana de evaluación) la lista de reglas y retirar las IP individuales que no se usen, según el procedimiento del documento de evidencia. Condición de salida - cerrar el acceso público cuando el proyecto tenga red privada o Private Link sin costo adicional, o pase a una suscripción de pago; si no ocurre, renovar la excepción con nueva revisión antes de vencer.
