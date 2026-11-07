@@ -22,7 +22,7 @@
 | 14 | Bases de datos NoSQL | ADR-002, TT-BD-05, TT-BD-06†, TT-BD-07† | MongoDB en Azure DocumentDB, una base por servicio. Spike TT-BD-05 completo (backend #48): P1 a P4 y P6 a P8 pasan en Azure; P5 (texto sin acentos) falla y se usa un campo normalizado. El catálogo sigue sin migrarse (TT-BD-06) | 🔶 (confirmada por el spike; sin implementar) |
 | 15a | Backend escalable en 2 instancias, en Azure, costo cero | TT-CD-02, ADR-006, TT-AZ-04 | 2 réplicas fijas en la ventana de evaluación para los 3 servicios y el gateway (8 réplicas, más Redis); estimación de costo en `docs/evidencia/KNOCK-145-costo-cero.md` (16 a 61 USD la ventana completa, 5.5 a 9.6 USD la corta, del crédito de estudiante); sin infraestructura ni medición real | 🔶 |
 | 15b | Endpoints eficientes | TT-API-08†, TT-API-09† | Caché, paginación, compresión, índices | ⬜ |
-| 15c | Imágenes en el CDN de la nube | TT-API-10† | CDN delante del almacenamiento | ⬜ |
+| 15c | Imágenes en el CDN de la nube | TT-API-10†, ADR-007 | Blob público con `Cache-Control` largo e inmutable y dirección base configurable. **Sin CDN delante:** la CDN de Azure cuesta 35 USD al mes y el proyecto opera con costo cero; el punto no se cumple por completo (ADR-007, propuesta pendiente del Tech Lead) | 🔶 parcial |
 | 15d | Observabilidad (eventos y errores) | TT-OBS-01 | Application Insights con trazas distribuidas | ⬜ |
 | 15e | JWT para autenticación | TT-API-02 | Servicio de Identidad emite y valida JWT | ✅ (PR #26 fusionado el 2026-10-20) |
 | 15f | Rendimiento: serializadores, caché, límite de tasa, middleware, paginación, índices, compresión | TT-API-03 (middlewares), TT-API-06 (límite de tasa y encabezados), TT-API-08†, TT-API-09† | Cada técnica con su prueba | 🔶 |
