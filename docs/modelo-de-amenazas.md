@@ -2,6 +2,8 @@
 
 > TT-SEC-03 (KNOCK-78). Fecha: 2026-11-06. Cubre los componentes que existen hoy en el backend y su entorno de Azure (`rg-knock-dev`). Cada amenaza tiene su mitigación existente (archivo, spec o prueba reales) o queda marcada como **Brecha**. Los hallazgos del escaneo ZAP y las brechas se concentran en la sección 3.
 
+> **Alcance del escaneo ZAP, leer antes de citar este documento.** El escaneo de la sección 3.1 fue un **baseline pasivo** de menos de diez peticiones. El rastreo solo alcanzó la raíz, `robots.txt` y `sitemap.xml`, porque todo lo demás responde 401. **No cubrió ninguna ruta protegida por autenticación** y **no constituye una validación completa de la seguridad del API**. Para esa validación falta un escaneo de API o activo, con el OpenAPI y un token de prueba, en infraestructura temporal creada y destruida con Terraform sin costo (ver sección 4). La parte de STRIDE de este documento es un análisis de diseño y de código; no depende de ese escaneo.
+
 ## 1. Alcance y método
 
 - STRIDE por componente: **S**uplantación, **M**anipulación (Tampering), **R**epudio, **D**ivulgación de información, **N**egación de servicio y **E**levación de privilegios.
@@ -85,7 +87,7 @@ Hoy no expone ningún controlador de negocio: solo `/health`, `/health/ready` y 
 |---|---|---|---|---|
 | DB-1 | S | Conexión con credenciales robadas | Cadena de conexión por servicio en Key Vault (`mongo-identity`, `mongo-market`, `mongo-messaging`), nunca en el repositorio; cada servicio solo lee la suya (`deploy/modules/service/main.tf`) | Cubierta |
 | DB-2 | M | Inyección en consultas | Controlador tipado y validación previa, sin concatenar (spec 003; `SEC_015_02`, `SEC_TT_API_07_01`) | Cubierta |
-| DB-3 | M | Borrar o recrear el clúster por accidente | `prevent_destroy` y estado separado en `deploy/database/`; el script `deploy/up.sh` se detiene si un plan destruye algo | Cubierta |
+| DB-3 | M | Borrar o recrear el clúster por accidente | `prevent_destroy` y estado separado en `deploy/database/`; el script `deploy/up.sh` (PR #30) se detiene si un plan destruye algo | Cubierta |
 | DB-4 | D | Fuga de datos personales en reposo | Celular cifrado (AES-256-GCM) y con HMAC para buscar (`PhoneProtector.cs`) | Parcial: solo el celular tiene cifrado por campo |
 | DB-5 | D | Acceso de red desde fuera | El clúster tiene acceso de red público y una regla `azure-services` (0.0.0.0) además de una IP de administración individual; la protección depende solo de usuario y contraseña con TLS | **Brecha** aceptada por costo cero (H-04) |
 | DB-6 | N | Pérdida de datos (nivel gratuito sin respaldo) | `deploy/backup/mongo-backup.sh` (`mongodump` a Blob) con restauración probada en `tests/DatabaseTest/Scripts/Spec003BackupRestoreTests.cs` | Cubierta |
@@ -98,7 +100,7 @@ Hoy no expone ningún controlador de negocio: solo `/health`, `/health/ready` y 
 | RD-1 | S | Acceso sin credenciales | `--requirepass` con la contraseña de Key Vault (`redis-password`) y ingreso TCP interno (`external_enabled = false`) | Cubierta |
 | RD-2 | M | Alterar contadores o revocaciones desde un contenedor ajeno | Solo se protege con la contraseña; todos los servicios con acceso comparten la misma | Parcial |
 | RD-3 | D | Sniffing del tráfico dentro del entorno | El tráfico a Redis es TCP sin TLS dentro de la red del entorno de Container Apps | **Brecha** aceptada (H-05) |
-| RD-4 | N | Reinicio de Redis pierde las revocaciones | Sin persistencia por diseño (spec 003, R-07): un token cerrado vale hasta 15 minutos. Riesgo aceptado en la constitución §12 | Parcial |
+| RD-4 | N | Reinicio de Redis pierde las revocaciones | Sin persistencia por diseño (spec 003, R-07): un token cerrado vale hasta 15 minutos. Riesgo aceptado en la spec 003 (sección de decisiones) | Parcial |
 | RD-5 | N | Redis es punto único de falla | 1 réplica; el gateway responde 503 en vez de abrir el paso (`CA_009_06`) | Parcial |
 | RD-6 | E | Instalar una versión con licencia no permitida o con CVE | Imagen fijada por digest (`redis:7.2-alpine@sha256:…` en `deploy/apps/variables.tf`) | Cubierta |
 
@@ -140,6 +142,7 @@ Hoy no expone ningún controlador de negocio: solo `/health`, `/health/ready` y 
 
 - Objetivo: `https://knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io` (gateway desplegado), 2026-11-06, ZAP 2.17.0 (`ghcr.io/zaproxy/zaproxy:stable`), `zap-baseline.py -m 1 -T 5`, sin escaneo activo, sin fuzzing, sin carga, sin credenciales.
 - Alcance real: el rastreo solo pudo pedir la raíz, `robots.txt` y `sitemap.xml` (todas responden 401 porque el gateway exige sesión), en menos de diez peticiones. Ninguna ruta del API se probó con sesión ni se creó ningún dato: el escaneo no genera SMS ni acciones con efectos reales. La cobertura de los endpoints del API requiere el escaneo de API en infraestructura temporal que pide la ficha de la tarea.
+- Qué falta para validar el API: un escaneo de API o activo con el OpenAPI y un token de prueba, solo en infraestructura temporal (creada y destruida con Terraform, sin costo) y con autorización del Tech Lead. Hasta entonces, los resultados de este baseline no dicen nada sobre las rutas protegidas.
 - Resultado: 66 reglas pasivas sin alerta, 0 altas, 0 medias, 1 baja, 1 informativa.
 - Informes: `docs/evidencia/KNOCK-78-zap-baseline.html`, `.json` y `.md`.
 
@@ -153,12 +156,12 @@ Hoy no expone ningún controlador de negocio: solo `/health`, `/health/ready` y 
 
 | ID | Gravedad | Brecha | Qué se hace |
 |---|---|---|---|
-| H-01 | Baja | El gateway desplegado no emite `Strict-Transport-Security` aunque `Program.cs` llama a `UseHsts()` y `docs/security-headers.md` lo describe. El ingreso ya redirige HTTP a HTTPS con 301 y el certificado es válido, por lo que el riesgo es un primer acceso por HTTP sin protección contra downgrade | Abrir BUG-NNN: el gateway solo emite HSTS si ve la petición como HTTPS; diagnosticar si el esquema reenviado por el ingreso se está procesando, corregir y agregar una prueba que lo exija |
-| H-02 | Baja | El gateway desplegado responde `server: Kestrel`; `docs/security-headers.md` dice que ese encabezado está ausente. Identidad y Mercado fijan `AddServerHeader = false`; el gateway y Mensajería no | Abrir BUG-NNN: `AddServerHeader = false` en el gateway y en Mensajería, con prueba |
-| H-03 | Media | Mensajería no valida JWT, no tiene encabezados de seguridad ni límite de peticiones; hoy solo la protege el ingreso interno y no tiene rutas de negocio | Abrir BUG-NNN o dejarlo como requisito de la spec de mensajería: JWT, autorización por recurso, encabezados y límite antes de exponer la primera ruta |
+| H-01 | Baja | El gateway desplegado no emite `Strict-Transport-Security` aunque `Program.cs` llama a `UseHsts()` y `docs/security-headers.md` lo describe. El ingreso ya redirige HTTP a HTTPS con 301 y el certificado es válido, por lo que el riesgo es un primer acceso por HTTP sin protección contra downgrade | Registrado como KNOCK-239 (BUG-002): el gateway solo emite HSTS si ve la petición como HTTPS; diagnosticar si el esquema reenviado por el ingreso se está procesando, corregir y agregar una prueba que lo exija |
+| H-02 | Baja | El gateway desplegado responde `server: Kestrel`; `docs/security-headers.md` dice que ese encabezado está ausente. Identidad y Mercado fijan `AddServerHeader = false`; el gateway y Mensajería no | Registrado como KNOCK-240 (BUG-003): `AddServerHeader = false` en el gateway y en Mensajería, con prueba |
+| H-03 | Media | Mensajería no valida JWT, no tiene encabezados de seguridad ni límite de peticiones; hoy solo la protege el ingreso interno y no tiene rutas de negocio | Registrado como KNOCK-241 (BUG-004), que a la vez es requisito de la spec de mensajería: JWT, autorización por recurso, encabezados y límite antes de exponer la primera ruta |
 | H-04 | Media | MongoDB con acceso de red público y regla `azure-services` (0.0.0.0) | Aceptada por costo cero (el nivel gratuito no admite red privada). Quitar la IP individual de administración al terminar de operar y revisar la lista de reglas cada sprint; registrar la aceptación como excepción en `security/exceptions.yaml` |
 | H-05 | Baja | Tráfico a Redis sin TLS dentro del entorno | Aceptada: red interna del entorno y Redis con contraseña; reevaluar si cambia el proveedor. Registrar en `security/exceptions.yaml` |
-| H-06 | Media | El job `dast` del CI nunca corre (faltan sus tres archivos) y el escaneo baseline semanal de la ficha no está programado | Abrir BUG-NNN para agregar `deploy/docker-compose.ci.yml`, `tests/smoke/smoke.sh` y `security/zap-rules.tsv`, o ajustar el trabajo; programar el baseline semanal fuera de la ventana de evaluación (25-nov a 5-dic) con la autorización del Tech Lead |
+| H-06 | Media | El job `dast` del CI nunca corre (su condición exige `deploy/docker-compose.ci.yml` y `tests/smoke/smoke.sh`, que no existen; el job usaría además `security/zap-rules.tsv`, que tampoco existe) y el escaneo baseline semanal de la ficha no está programado | Registrado como KNOCK-238 (BUG-001, prioridad alta) para agregar `deploy/docker-compose.ci.yml`, `tests/smoke/smoke.sh` y `security/zap-rules.tsv`, o ajustar el trabajo; programar el baseline semanal fuera de la ventana de evaluación (25-nov a 5-dic) con la autorización del Tech Lead |
 | H-07 | Baja | Sin bitácora de auditoría dedicada de sesiones ni de cambios de datos (ID-6, DB-7) | Evaluar al definir observabilidad de seguridad; sin acción inmediata |
 | H-08 | Media | Tres defectos de Identidad ya conocidos (H-1 sesión ajena en Redis, H-2 tipos de .NET en el 400, H-3 CR/LF en `fotoUrl`), con sus pruebas `SEC_016_06`, `SEC_017_16` y `SEC_017_06` omitidas hasta que se fusione el PR #25 | Seguimiento en el PR #25 (KNOCK-203); al fusionarlo, quitar los `Skip` y pasar ID-5, ID-8 e ID-11 a «Cubierta» |
 
@@ -166,6 +169,6 @@ Hoy no expone ningún controlador de negocio: solo `/health`, `/health/ready` y 
 
 ## 4. Pendiente de la tarea KNOCK-78 fuera de este documento
 
-- Escaneo de API activo con el OpenAPI, solo en infraestructura temporal creada y destruida con Terraform.
+- Escaneo de API activo con el OpenAPI y un token de prueba, solo en infraestructura temporal creada y destruida con Terraform, sin costo. Sin él, las rutas protegidas no tienen validación dinámica.
 - Programar el baseline semanal, con tasa limitada, sin flujos que generen SMS ni acciones con efectos reales y fuera del 25-nov al 5-dic de 2026.
-- Convertir las brechas H-01, H-02, H-03 y H-06 en issues `BUG-NNN` con su clave de Jira.
+- Brechas ya registradas en Jira: H-06 → KNOCK-238 (BUG-001, prioridad alta), H-01 → KNOCK-239 (BUG-002), H-02 → KNOCK-240 (BUG-003) y H-03 → KNOCK-241 (BUG-004).
