@@ -224,3 +224,9 @@
 - stryker-config.json en la raiz (solucion Knock.slnx, pruebas solo tests/UnitTest con test-case-filter, mutate acotado a Sesiones, Usuarios, Catalog y Gateway).
 - docs/MUTACION.md: guia en espanol.
 - Verificacion local acotada: 47.17 por ciento. El job mutation-pr ya corre de verdad.
+
+## 2026-11-06 — Despliegue completo con un comando (KNOCK-34)
+- **Decisión:** `deploy/up.sh` ejecuta infra, database y apps en ese orden con `terraform init -backend-config=backend.hcl` y `plan`; por defecto solo hace plan y aplica únicamente con `--apply`, usando el plan guardado de cada directorio. Se detiene si algún plan destruye o reemplaza recursos, exige que existan los ocho secretos de Key Vault antes de desplegar las apps (solo lee sus nombres) y no imprime valores. Procedimiento en `deploy/README.md`.
+- **Por qué:** el entorno debía poder crearse desde cero con un solo comando sin arriesgar la base de datos (`prevent_destroy`) ni aplicar por accidente.
+- **Verificación:** `bash -n` y ShellCheck sin hallazgos; ejecutado en modo plan contra `rg-knock-dev` con `-lock=false`: infra 0 por agregar, 1 por cambiar, 0 por destruir; database sin cambios; apps 0 por agregar, 5 por cambiar, 0 por destruir (todos por `workload_profile`, sin efecto real). No se aplicó nada.
+- **A evitar:** usar `--no-lock` con `--apply`; crear el grupo de recursos desde Terraform (lo crea una persona); pasar secretos al script.
