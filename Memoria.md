@@ -255,6 +255,12 @@
 - docs/MUTACION.md: guia en espanol.
 - Verificacion local acotada: 47.17 por ciento. El job mutation-pr ya corre de verdad.
 
+## 2026-11-06 — Modelo de amenazas STRIDE y escaneo ZAP baseline del gateway desplegado (KNOCK-78)
+- **Decisión:** `docs/modelo-de-amenazas.md` modela por componente (gateway, Identidad, Mercado, Mensajería, MongoDB, Redis, Key Vault, app móvil y CI) cada amenaza con su mitigación real o su brecha; el informe del escaneo pasivo queda en `docs/evidencia/KNOCK-78-zap-baseline.{html,json,md}`.
+- **Resultado:** ZAP 2.17.0 baseline contra el gateway: 0 altas, 0 medias, 1 baja (HSTS ausente) y 1 informativa (contenido no almacenable, esperado). Además se comprobó con `curl` que el gateway responde `server: Kestrel`. El rastreo solo alcanzó la raíz, `robots.txt` y `sitemap.xml` (todo exige sesión): fue un baseline pasivo, no cubrió rutas autenticadas y no valida por completo la seguridad del API; eso requiere un escaneo de API o activo con token de prueba en infraestructura temporal sin costo.
+- **Pendiente:** BUG para HSTS y `Server` del gateway, requisitos de seguridad de Mensajería antes de exponer rutas, el job `dast` del CI que no corre por faltar `deploy/docker-compose.ci.yml` y `tests/smoke/smoke.sh` (y `security/zap-rules.tsv`, que usa el job), y programar el baseline semanal fuera del 25-nov al 5-dic.
+- **A evitar:** escanear de forma activa el entorno desplegado; correr el baseline dentro de la ventana de evaluación.
+
 ## 2026-11-06 — Despliegue completo con un comando (KNOCK-34)
 - **Decisión:** `deploy/up.sh` ejecuta infra, database y apps en ese orden con `terraform init -backend-config=backend.hcl` y `plan`; por defecto solo hace plan y aplica únicamente con `--apply`, usando el plan guardado de cada directorio. Se detiene si algún plan destruye o reemplaza recursos, exige que existan los ocho secretos de Key Vault antes de desplegar las apps (solo lee sus nombres) y no imprime valores. Procedimiento en `deploy/README.md`.
 - **Por qué:** el entorno debía poder crearse desde cero con un solo comando sin arriesgar la base de datos (`prevent_destroy`) ni aplicar por accidente.
