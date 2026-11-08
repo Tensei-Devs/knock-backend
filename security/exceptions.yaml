@@ -197,3 +197,16 @@ excepciones:
     creada: 2026-11-06
     vence: 2027-02-04
     plan: revisar el 2026-12-05 (fin de la ventana de evaluación) la lista de reglas y retirar las IP individuales que no se usen, según el procedimiento del documento de evidencia. Condición de salida - cerrar el acceso público cuando el proyecto tenga red privada o Private Link sin costo adicional, o pase a una suscripción de pago; si no ocurre, renovar la excepción con nueva revisión antes de vencer.
+  - id: EXC-018
+    herramienta: jscpd
+    regla: duplicación textual (y huella estructural de codemap)
+    alcance: spec 010 (KNOCK-205): JsonCompressionMiddleware de Identity.Api y de Market.Api, el método Matches de MeController y de OficiosController, y las validaciones de opciones ProfileCacheOptions y CatalogCacheOptions (con marcadores jscpd:ignore-start/end con EXC-018)
+    justificacion: >-
+      La caché, la compresión y los ETag de la spec 010 se implementan en cada servicio por separado porque un servicio no referencia a otro
+      y todavía no existe la biblioteca técnica compartida (misma situación de EXC-015, EXC-007 y EXC-008). Las copias cambian solo el espacio de nombres y
+      los nombres de las opciones, y se prueban por separado en cada servicio. Evidencia: los 8 pares nuevos que reporta `codemap.py --check`
+      (6 entre los middleware de compresión, 1 entre los Matches y 1 entre los validadores de opciones). Aprobada por el líder el 2026-11-08.
+    responsable: Ángel Alexis Blas Castillo
+    creada: 2026-11-08
+    vence: 2026-12-04
+    plan: unificar en la biblioteca técnica compartida (la misma de EXC-015), quitar los marcadores y retirar la excepción antes de vencer.
