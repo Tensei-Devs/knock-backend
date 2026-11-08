@@ -118,7 +118,7 @@ public class SessionSecurityTests
         (await hosts.Identity.Sessions.Find(new BsonDocument("_id", ObjectId.Parse(aSecondDevice.SessionId))).SingleAsync())["revocada"].AsBoolean.Should().BeFalse();
     }
 
-    [Fact(Skip = "Hallazgo H-1 (evidencia): LogoutService escribe sesion-cancelada:{sid} sin comprobar que la sesion es del sub del token; ver RESUMEN.md")]
+    [Fact]
     public async Task Logout_DoesNotCancelTheSidOfAnotherPersonInRedis_SEC_016_06()
     {
         var hosts = await SecurityHosts.SharedAsync();
