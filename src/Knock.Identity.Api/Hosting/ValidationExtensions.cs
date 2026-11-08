@@ -12,6 +12,7 @@ internal static class ValidationExtensions
     public static IServiceCollection AddKnockValidation(this IServiceCollection services)
     {
         services.AddValidatorsFromAssemblyContaining<ValidationFilter>(includeInternalTypes: true);
+        services.AddKnockModelStateProblems();
         return services;
     }
 }

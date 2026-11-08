@@ -148,4 +148,15 @@ public class ProfileRulesTests
     {
         FieldsWithErrors(new UpdateProfileRequest("A", "https://ejemplo.com/a.jpg", "<x>", "1")).Should().BeEquivalentTo("nombre", "fotoUrl", "colonia", "codigoPostal");
     }
+
+    [Theory]
+    [InlineData("https://cdn.knock.test/a.png\r\nX-Injected: 1")]
+    [InlineData("https://cdn.knock.test/a\n.png")]
+    [InlineData("https://cdn.knock.test/a\t.png")]
+    [InlineData("https://cdn.knock.test/a .png")]
+    [InlineData("https://cdn.knock.test/a\u0000.png")]
+    public void PhotoWithControlCharactersOrSpaces_IsRejected_CA_017_06(string photo)
+    {
+        FieldsWithErrors(new UpdateProfileRequest("Ana", FotoUrl: photo)).Should().Contain("fotoUrl", "no se guarda una dirección con saltos de línea (KNOCK-203, H-3)");
+    }
 }
