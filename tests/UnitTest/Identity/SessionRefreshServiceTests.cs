@@ -217,5 +217,6 @@ public class SessionRefreshServiceTests
         await f.Logout.LogoutAsync(sessionId, "00000000-0000-8000-8000-000000000000", TimeSpan.FromMinutes(10), CancellationToken.None);
 
         f.Store.Stored.Single().Revoked.Should().BeFalse("el sub del JWT no es el dueño de esa sesión");
+        f.Cancelled.Entries.Should().BeEmpty("el gateway no debe cancelar la sesión de otra persona (KNOCK-203, H-1)");
     }
 }
