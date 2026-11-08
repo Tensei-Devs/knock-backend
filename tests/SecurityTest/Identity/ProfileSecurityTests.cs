@@ -158,7 +158,7 @@ public class ProfileSecurityTests
         (await UserAsync(hosts, a.Sub)).ToJson().Should().Be(before.ToJson());
     }
 
-    [Fact(Skip = "Hallazgo H-3 (evidencia): ProfileRules acepta y guarda fotoUrl con CR/LF incrustados; ver RESUMEN.md")]
+    [Fact]
     public async Task PhotoFromTheConfiguredHost_IsStoredWithoutControlCharacters_SEC_017_06()
     {
         var hosts = await SecurityHosts.SharedAsync();
@@ -196,7 +196,7 @@ public class ProfileSecurityTests
         (await response.Content.ReadAsStringAsync()).Should().NotContain("$ne").And.NotContain("stackTrace");
     }
 
-    [Fact(Skip = "Hallazgo H-2 (evidencia): el 400 automatico por tipo JSON incorrecto nombra tipos internos de .NET (System.String); ver RESUMEN.md")]
+    [Fact]
     public async Task WrongJsonType_Returns400WithoutFrameworkTypeNames_SEC_017_16()
     {
         var hosts = await SecurityHosts.SharedAsync();
