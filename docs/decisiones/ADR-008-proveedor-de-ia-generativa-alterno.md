@@ -1,6 +1,6 @@
 # ADR-008 — Proveedor de IA generativa: Azure OpenAI con cuota y alterno de contingencia
 
-> **Estado:** propuesta, pendiente de aprobación del Tech Lead (constancia y consulta de documentación: 2026-11-06).
+> **Estado:** aceptada el 2026-11-07 por el Tech Lead, con la recomendación sobre Gemini adoptada (constancia y consulta de documentación: 2026-11-06). El gasto en tokens de Azure OpenAI no queda autorizado con este ADR: se decide en TT-IA-01.
 > **Complementa:** las secciones 1 y 12 de `docs/DECISION_TECNICA.md`, la skill `ai-features` y la tarea TT-IA-01.
 > **Tarea:** TT-GES-11 (KNOCK-183) · Impacto de implementación: TT-IA-01, HU-057, HU-058, HU-059.
 
@@ -73,7 +73,7 @@ Fuente principal: términos adicionales de la Gemini API, [aistudio.google.com/d
 - Si Knock puede ser usada por menores de 18 años: el repositorio solo anota validar la mayoría de edad en el registro de técnicos (`docs/referencia/FUNCIONES_Y_FLUJOS.md`) y no define una edad mínima para quien solicita un servicio.
 - La disponibilidad de cada modelo gratuito en la ventana de evaluación (25 de noviembre al 5 de diciembre de 2026): se vuelve a revisar al implementar.
 
-## Recomendación sobre Gemini (propuesta; la decisión es del Tech Lead)
+## Recomendación sobre Gemini (adoptada el 2026-11-07; prevalece sobre lo que permitía la decisión 3)
 Los hechos anteriores obligan a tratar todo lo que se envíe al nivel gratuito como **dato que Google puede conservar, usar para mejorar sus productos y mostrar a una persona**, sin periodo de retención conocido y sin forma de pagar por privacidad sin dejar el costo cero.
 
 1. **Sí conviene como contingencia, pero más estrecha que la decisión 3.** Debe activarse solo si Azure OpenAI no se puede desplegar y solo para funciones que no envíen datos de las personas usuarias.
@@ -95,5 +95,6 @@ Los hechos anteriores obligan a tratar todo lo que se envíe al nivel gratuito c
 
 ## Consecuencias
 - TT-IA-01 sigue siendo el único punto de acceso a la IA: el filtro de datos personales vive ahí y es previo a cualquier proveedor.
-- El Tech Lead decide si aprueba este ADR, si autoriza el gasto en tokens de Azure OpenAI con el crédito y si adopta la recomendación sobre Gemini, que restringe aún más lo que la decisión 3 permitía enviar.
+- El Tech Lead aprobó este ADR y adoptó la recomendación sobre Gemini, que restringe lo que la decisión 3 permitía enviar: sin colonia, sin historial de chat, sin fotos, con filtro de nombres previo y sin cuenta de facturación. El proveedor principal no cambia por ahora.
+- Sigue pendiente la decisión sobre el gasto en tokens de Azure OpenAI con el crédito; se toma en TT-IA-01.
 - Si la cuota cambia o Microsoft publica tarifas utilizables, se actualiza este ADR.
