@@ -19,11 +19,11 @@ ZAP by [Checkmarx](https://checkmarx.com/).
 
 | Level | Reason | Site | Description | Statistic |
 | --- | --- | --- | --- | --- |
-| Info | Informational | https://knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io | Percentage of responses with status code 4xx | 100 % |
-| Info | Informational | https://knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io | Percentage of endpoints with content type application/problem+json | 100 % |
-| Info | Informational | https://knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io | Percentage of endpoints with method GET | 100 % |
-| Info | Informational | https://knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io | Count of total endpoints | 2    |
-| Info | Informational | https://knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io | Percentage of slow responses | 100 % |
+| Info | Informational | https://gateway.ejemplo.invalid | Percentage of responses with status code 4xx | 100 % |
+| Info | Informational | https://gateway.ejemplo.invalid | Percentage of endpoints with content type application/problem+json | 100 % |
+| Info | Informational | https://gateway.ejemplo.invalid | Percentage of endpoints with method GET | 100 % |
+| Info | Informational | https://gateway.ejemplo.invalid | Count of total endpoints | 2    |
+| Info | Informational | https://gateway.ejemplo.invalid | Percentage of slow responses | 100 % |
 
 
 
@@ -55,8 +55,8 @@ ZAP by [Checkmarx](https://checkmarx.com/).
 
 HTTP Strict Transport Security (HSTS) is a web security policy mechanism whereby a web server declares that complying user agents (such as a web browser) are to interact with it using only secure HTTPS connections (i.e. HTTP layered over TLS/SSL). HSTS is an IETF standards track protocol and is specified in RFC 6797.
 
-* URL: https://knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io/sitemap.xml
-  * Node Name: `https://knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io/sitemap.xml`
+* URL: https://gateway.ejemplo.invalid/sitemap.xml
+  * Node Name: `https://gateway.ejemplo.invalid/sitemap.xml`
   * Method: `GET`
   * Parameter: ``
   * Attack: ``
@@ -97,22 +97,22 @@ Ensure that your web server, application server, load balancer, etc. is configur
 
 The response contents are not storable by caching components such as proxy servers. If the response does not contain sensitive, personal or user-specific information, it may benefit from being stored and cached, to improve performance.
 
-* URL: https://knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io
-  * Node Name: `https://knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io`
+* URL: https://gateway.ejemplo.invalid
+  * Node Name: `https://gateway.ejemplo.invalid`
   * Method: `GET`
   * Parameter: ``
   * Attack: ``
   * Evidence: `no-store`
   * Other Info: ``
-* URL: https://knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io/robots.txt
-  * Node Name: `https://knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io/robots.txt`
+* URL: https://gateway.ejemplo.invalid/robots.txt
+  * Node Name: `https://gateway.ejemplo.invalid/robots.txt`
   * Method: `GET`
   * Parameter: ``
   * Attack: ``
   * Evidence: `no-store`
   * Other Info: ``
-* URL: https://knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io/sitemap.xml
-  * Node Name: `https://knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io/sitemap.xml`
+* URL: https://gateway.ejemplo.invalid/sitemap.xml
+  * Node Name: `https://gateway.ejemplo.invalid/sitemap.xml`
   * Method: `GET`
   * Parameter: ``
   * Attack: ``

@@ -7,7 +7,7 @@
 		{
 			"level": "Info",
 			"reason": "Informational",
-			"site": "https://knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io",
+			"site": "https://gateway.ejemplo.invalid",
 			"key": "insight.code.4xx",
 			"description": "Percentage of responses with status code 4xx",
 			"statistic": "100"
@@ -15,7 +15,7 @@
 		{
 			"level": "Info",
 			"reason": "Informational",
-			"site": "https://knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io",
+			"site": "https://gateway.ejemplo.invalid",
 			"key": "insight.endpoint.ctype.application/problem+json",
 			"description": "Percentage of endpoints with content type application/problem+json",
 			"statistic": "100"
@@ -23,7 +23,7 @@
 		{
 			"level": "Info",
 			"reason": "Informational",
-			"site": "https://knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io",
+			"site": "https://gateway.ejemplo.invalid",
 			"key": "insight.endpoint.method.GET",
 			"description": "Percentage of endpoints with method GET",
 			"statistic": "100"
@@ -31,7 +31,7 @@
 		{
 			"level": "Info",
 			"reason": "Informational",
-			"site": "https://knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io",
+			"site": "https://gateway.ejemplo.invalid",
 			"key": "insight.endpoint.total",
 			"description": "Count of total endpoints",
 			"statistic": "2"
@@ -39,7 +39,7 @@
 		{
 			"level": "Info",
 			"reason": "Informational",
-			"site": "https://knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io",
+			"site": "https://gateway.ejemplo.invalid",
 			"key": "insight.response.slow",
 			"description": "Percentage of slow responses",
 			"statistic": "100"
@@ -47,8 +47,8 @@
 	],
 	"site":[ 
 		{
-			"@name": "https://knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io",
-			"@host": "knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io",
+			"@name": "https://gateway.ejemplo.invalid",
+			"@host": "gateway.ejemplo.invalid",
 			"@port": "443",
 			"@ssl": "true",
 			"alerts": [ 
@@ -64,8 +64,8 @@
 					"instances":[ 
 						{
 							"id": "3",
-							"uri": "https://knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io/sitemap.xml",
-							"nodeName": "https:\/\/knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io\/sitemap.xml",
+							"uri": "https://gateway.ejemplo.invalid/sitemap.xml",
+							"nodeName": "https:\/\/gateway.ejemplo.invalid\/sitemap.xml",
 							"method": "GET",
 							"param": "",
 							"attack": "",
@@ -94,8 +94,8 @@
 					"instances":[ 
 						{
 							"id": "4",
-							"uri": "https://knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io",
-							"nodeName": "https:\/\/knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io",
+							"uri": "https://gateway.ejemplo.invalid",
+							"nodeName": "https:\/\/gateway.ejemplo.invalid",
 							"method": "GET",
 							"param": "",
 							"attack": "",
@@ -104,8 +104,8 @@
 						},
 						{
 							"id": "6",
-							"uri": "https://knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io/robots.txt",
-							"nodeName": "https:\/\/knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io\/robots.txt",
+							"uri": "https://gateway.ejemplo.invalid/robots.txt",
+							"nodeName": "https:\/\/gateway.ejemplo.invalid\/robots.txt",
 							"method": "GET",
 							"param": "",
 							"attack": "",
@@ -114,8 +114,8 @@
 						},
 						{
 							"id": "7",
-							"uri": "https://knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io/sitemap.xml",
-							"nodeName": "https:\/\/knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io\/sitemap.xml",
+							"uri": "https://gateway.ejemplo.invalid/sitemap.xml",
+							"nodeName": "https:\/\/gateway.ejemplo.invalid\/sitemap.xml",
 							"method": "GET",
 							"param": "",
 							"attack": "",
