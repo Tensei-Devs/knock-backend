@@ -2,6 +2,7 @@ using Knock.Contracts.Colonias;
 using Knock.Identity.Api.Modules.Usuarios.Data;
 using Knock.Identity.Api.Modules.Usuarios.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Knock.Identity.Api.Modules.Usuarios;
 
@@ -15,9 +16,25 @@ public static class UsuariosModuleExtensions
         services.AddOptions<ProfileOptions>().BindConfiguration(ProfileOptions.SectionName);
         services.AddSingleton<IUsuariosStore, UsuariosStore>();
         services.AddSingleton<IProfileCache, RedisProfileCache>();
-        services.TryAddSingleton<IColoniaCatalog, UnavailableColoniaCatalog>();
+        services.AddHttpContextAccessor();
+        services.AddOptions<MarketCatalogOptions>()
+            .BindConfiguration(MarketCatalogOptions.SectionName)
+            .ValidateDataAnnotations()
+            .Validate(options => options.HasValidBaseUrl(), "Services:Market:BaseUrl must be an absolute http or https address without a path.")
+            .ValidateOnStart();
+        // Sin Services:Market:BaseUrl el cliente no tiene dirección y falla como «Mercado no responde» (503), igual que antes de existir el endpoint.
+        services.AddHttpClient<IColoniaCatalog, MarketColoniaCatalog>((provider, client) =>
+        {
+            var options = provider.GetRequiredService<IOptions<MarketCatalogOptions>>().Value;
+            if (!string.IsNullOrWhiteSpace(options.BaseUrl))
+            {
+                client.BaseAddress = new Uri(options.BaseUrl);
+            }
+
+            client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+        });
         services.AddSingleton<ProfileRules>();
-        services.AddSingleton<ProfileService>();
+        services.AddScoped<ProfileService>();
         return services;
     }
 }
