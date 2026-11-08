@@ -19,7 +19,13 @@ internal sealed partial class LogoutService(ISesionesStore store, ISesionCancela
     /// <param name="cancellationToken">Cancelación de la petición.</param>
     public async Task LogoutAsync(string sessionId, string sub, TimeSpan remainingLifetime, CancellationToken cancellationToken)
     {
-        await store.RevokeAsync(sessionId, sub, cancellationToken);
+        // Solo se cancela en Redis una sesión que de verdad es de esta cuenta: con otro sid el gateway cancelaría la sesión de otra persona.
+        if (!await store.RevokeAsync(sessionId, sub, cancellationToken))
+        {
+            LogIgnored(logger);
+            return;
+        }
+
         await cancelled.CancelAsync(sessionId, Clamp(remainingLifetime), cancellationToken);
         LogClosed(logger);
     }
@@ -36,4 +42,7 @@ internal sealed partial class LogoutService(ISesionesStore store, ISesionCancela
 
     [LoggerMessage(EventId = 2111, Level = LogLevel.Information, Message = "Session closed")]
     private static partial void LogClosed(ILogger logger);
+
+    [LoggerMessage(EventId = 2112, Level = LogLevel.Warning, Message = "Logout ignored: the session does not belong to the account")]
+    private static partial void LogIgnored(ILogger logger);
 }

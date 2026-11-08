@@ -104,7 +104,7 @@ Hoy no expone ningún controlador de negocio: solo `/health`, `/health/ready` y 
 | RD-5 | N | Redis es punto único de falla | 1 réplica; el gateway responde 503 en vez de abrir el paso (`CA_009_06`) | Parcial |
 | RD-6 | E | Instalar una versión con licencia no permitida o con CVE | Imagen fijada por digest (`redis:7.2-alpine@sha256:…` en `deploy/apps/variables.tf`) | Cubierta |
 
-### 2.7 Key Vault (`kv-knockdevtn01`)
+### 2.7 Key Vault (`<key-vault>`)
 
 | ID | STRIDE | Amenaza | Mitigación existente | Estado |
 |---|---|---|---|---|
@@ -140,7 +140,7 @@ Hoy no expone ningún controlador de negocio: solo `/health`, `/health/ready` y 
 
 ### 3.1 Escaneo ZAP baseline (pasivo)
 
-- Objetivo: `https://knock-gateway.happyground-f62473c9.westus.azurecontainerapps.io` (gateway desplegado), 2026-11-06, ZAP 2.17.0 (`ghcr.io/zaproxy/zaproxy:stable`), `zap-baseline.py -m 1 -T 5`, sin escaneo activo, sin fuzzing, sin carga, sin credenciales.
+- Objetivo: `https://gateway.ejemplo.invalid` (gateway desplegado), 2026-11-06, ZAP 2.17.0 (`ghcr.io/zaproxy/zaproxy:stable`), `zap-baseline.py -m 1 -T 5`, sin escaneo activo, sin fuzzing, sin carga, sin credenciales.
 - Alcance real: el rastreo solo pudo pedir la raíz, `robots.txt` y `sitemap.xml` (todas responden 401 porque el gateway exige sesión), en menos de diez peticiones. Ninguna ruta del API se probó con sesión ni se creó ningún dato: el escaneo no genera SMS ni acciones con efectos reales. La cobertura de los endpoints del API requiere el escaneo de API en infraestructura temporal que pide la ficha de la tarea.
 - Qué falta para validar el API: un escaneo de API o activo con el OpenAPI y un token de prueba, solo en infraestructura temporal (creada y destruida con Terraform, sin costo) y con autorización del Tech Lead. Hasta entonces, los resultados de este baseline no dicen nada sobre las rutas protegidas.
 - Resultado: 66 reglas pasivas sin alerta, 0 altas, 0 medias, 1 baja, 1 informativa.
