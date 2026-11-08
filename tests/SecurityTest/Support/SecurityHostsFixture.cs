@@ -33,6 +33,7 @@ internal sealed class SecurityHosts
         await market.AddOficioAsync("MEC", "Mecánica", "taller", activo: true);
         await market.AddOficioAsync("PLO", "Plomería", "domicilio", activo: true);
         await market.AddOficioAsync("OLD", "Oficio retirado", "taller", activo: false);
+        await market.AddColoniaAsync("Tultengo", "42800", "Tula de Allende");
         return new SecurityHosts(identity, market);
     }
 }

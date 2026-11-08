@@ -17,6 +17,7 @@ public static class CatalogModuleExtensions
         services.AddSingleton<CatalogStore>();
         services.AddSingleton<NeighborhoodLocator>();
         services.AddSingleton<INeighborhoodLocator>(sp => sp.GetRequiredService<NeighborhoodLocator>());
+        services.AddSingleton<INeighborhoodNames, NeighborhoodNames>();
         services.AddScoped<ICatalogApi, CatalogApi>();
         services.AddScoped<CatalogSeeder>();
         services.AddScoped<OficioQueries>();
