@@ -70,6 +70,7 @@ internal sealed partial class ProfileRules(IOptions<ProfileOptions> options)
 
     private bool IsAllowedPhoto(string value) =>
         value.Length <= PhotoUrlMaxLength
+        && !value.Any(character => char.IsControl(character) || char.IsWhiteSpace(character))
         && Uri.TryCreate(value, UriKind.Absolute, out var uri)
         && uri.Scheme == Uri.UriSchemeHttps
         && string.IsNullOrEmpty(uri.UserInfo)

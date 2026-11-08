@@ -82,6 +82,22 @@ public class MeEndpointTests
         factory.Users.Find(new BsonDocument(SesionesStore.SubField, sub)).SingleAsync();
 
     [Fact]
+    public async Task BodyWithAWrongJsonType_Returns400WithoutTheInternalDotNetMessage_CA_017_06()
+    {
+        var (factory, _) = await StartAsync();
+        using var _f = factory;
+        using var client = factory.CreateClient();
+        var (token, _) = await SignInAsync(client);
+
+        using var response = await SendAsync(client, HttpMethod.Put, token, new { nombre = 123 });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var raw = await response.Content.ReadAsStringAsync();
+        raw.Should().NotContain("System.").And.NotContain("JSON value").And.NotContain("LineNumber", "el 400 no revela detalles internos de .NET (KNOCK-203, H-2)");
+        JsonElement.Parse(raw).GetProperty("errors").TryGetProperty("nombre", out _).Should().BeTrue();
+    }
+
+    [Fact]
     public async Task NewAccount_Reads200WithItsOwnProfileAndNoPhone_CA_017_01()
     {
         var (factory, _) = await StartAsync();
