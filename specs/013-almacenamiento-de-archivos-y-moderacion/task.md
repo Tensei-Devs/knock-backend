@@ -27,6 +27,10 @@
 
 Las pruebas de OI-1 se nombran `*_OI1_NN` y no `*_CA_013_NN`, porque ninguna cubre todavía un criterio de aceptación completo.
 
+## Notas de revisión (OI-1)
+- **Excepción de «Media» en `ModuleSurfaceTests`:** la rama de `tests/UnitTest/Architecture/ModuleSurfaceTests.cs` que acepta una sola clase pública (`MediaModuleExtensions`) se quita cuando OI-2 agregue la interfaz del módulo (el test vuelve a exigir las dos superficies: clase de registro e interfaz). OI-1 no expone interfaz porque todavía no hay consumidor interno real del módulo.
+- **Origen de 12 000 px por lado y 24 MP totales:** TT-API-05 legacy (`specs/_legacy/TT-API-05-servicio-de-fotos-privadas-blob-sas/spec.md`, donde `MaxPixels` baja de 40 a 24 MP, y `docs/migracion/Memoria_origen.md`, decisión de Guillermo del 2026-10-23, punto 2; `MediaRules.MaxPixels` / `MediaRules.MaxSidePixels` en `src/Knock.Market.Api/Modules/Media/Domain/MediaRules.cs`). En OI-1 se reutilizan esos límites de TT-API-05 para rechazar antes de decodificar.
+
 ## Definición de terminado
 - Los criterios de aceptación de `spec.md` están cubiertos por pruebas en verde.
 
