@@ -11,6 +11,7 @@ internal static class KnockApplicationExtensions
             .AddKnockLogging(builder.Configuration)
             .AddControllers(options => options.Filters.Add<ValidationFilter>())
             .AddInternalControllers();
+        builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.TypeInfoResolverChain.Insert(0, MarketJsonSerializerContext.Default));
         builder.AddKnockSecurity();
         builder.Services
             .AddKnockProblemDetails()
@@ -50,6 +51,7 @@ internal static class KnockApplicationExtensions
         app.UseMiddleware<CorsMiddleware>();
         app.UseRateLimiter();
         app.UseMiddleware<RequestBodyLimitMiddleware>();
+        app.UseMiddleware<JsonCompressionMiddleware>();
         app.UseAuthentication();
         app.UseAuthorization();
         app.MapKnockHealth();
