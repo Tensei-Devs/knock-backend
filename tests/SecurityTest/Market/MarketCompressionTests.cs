@@ -1,9 +1,11 @@
+extern alias MarketApi;
+
 using System.IO.Compression;
 using System.Net;
 using AwesomeAssertions;
 using Knock.SecurityTest.Support;
+using MarketApi::Knock.Market.Api.Modules.Catalog.Data;
 using Microsoft.Extensions.DependencyInjection;
-using StackExchange.Redis;
 using Xunit;
 
 namespace Knock.SecurityTest.Market;
@@ -35,9 +37,9 @@ public class MarketCompressionTests
             await factory.AddOficioAsync($"oficio-{i:000}", "Oficio de prueba con nombre bastante largo para superar el umbral", "domicilio", activo: true);
         }
 
-        // La caché de oficios es compartida con otras fábricas en paralelo (bases Redis cíclicas): se vacía tras sembrar para que el GET lea los 120 de esta base y no una lista pequeña cacheada por otra.
-        var redis = factory.Services.GetRequiredService<IConnectionMultiplexer>();
-        await redis.GetDatabase().ExecuteAsync("FLUSHALL");
+        // La caché de oficios es compartida con otras fábricas en paralelo (bases Redis cíclicas): se invalida tras sembrar para que el GET lea los 120 de esta base y no una lista pequeña cacheada por otra.
+        // No se resuelve IConnectionMultiplexer directo: este host arranca la caché deshabilitada (sin cadena en el chequeo de AddCatalogModule) y el multiplexer no está registrado; ICatalogCache es el mismo contrato con o sin Redis.
+        await factory.Services.GetRequiredService<ICatalogCache>().RemoveOficiosAsync(CancellationToken.None);
 
         using var request = Request("gzip, deflate, br");
         using var response = await client.SendAsync(request);
