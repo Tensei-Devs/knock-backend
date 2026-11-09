@@ -8,6 +8,12 @@ namespace Knock.SecurityTest.Support;
 /// </summary>
 internal static class SecurityHostConfiguration
 {
+    /// <summary>
+    /// El CI define FIREBASE_AUTH_EMULATOR_HOST para las pruebas de integración y tanto Identidad como Mercado se niegan a arrancar fuera de Development con ella
+    /// (el emulador emite tokens sin firmar). Estas pruebas usan un verificador de Firebase falso: se quita antes de crear cualquier host, sin importar el orden de las pruebas.
+    /// </summary>
+    public static void ClearFirebaseEmulatorHost() => Environment.SetEnvironmentVariable("FIREBASE_AUTH_EMULATOR_HOST", null);
+
     public static void Apply(
         IConfigurationBuilder configuration,
         string highLimit,
