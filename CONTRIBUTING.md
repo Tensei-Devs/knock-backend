@@ -37,13 +37,13 @@ El job `pr-meta` del CI rechaza nombres y combinaciones fuera de este esquema.
 - Commit: mensaje **en inglés**, Conventional Commits: `type(scope): description in english, imperative, lowercase (KNOCK-N)`.
   Ejemplo: `feat(requests): upload up to 5 photos with the request (KNOCK-45)`.
   - Types: feat, fix, docs, refactor, test, chore, ci, build, perf.
-  - Scopes: identity, catalog, requests, messaging, reputation, trust, notifications, assistant, app, panel, ci, infra, docs (fuente: `.agents/knock.json`).
+  - Scopes: identity, catalog, requests, messaging, reputation, trust, notifications, assistant, media, app, panel, ci, infra, docs, gateway, contracts, deploy, docker, container, scripts, architecture, security, db (fuente: `.agents/knock.json`).
   - La clave `(KNOCK-N)` es obligatoria, va al final y debe coincidir con la de la rama.
   - Descripción en imperativo, empieza en minúscula, sin punto final; encabezado de hasta 100 caracteres.
   - **Prohibida** la atribución a IA en commits y PR: trailers `Co-Authored-By` de agentes (Claude, Copilot, Codex, Gemini, Cursor, opencode, `noreply@anthropic.com`) y líneas «Generated with…». El uso de IA se declara solo en la sección «Uso de IA» de la plantilla del PR. Un `Co-Authored-By` de una persona del equipo (trabajo en parejas) sí se permite.
   - Excepción para bots (sin clave KNOCK-N): release-please (`chore(main|release)`), Dependabot (`build(deps)`) y el commit automático del contrato de la API (`chore(deps): update api contract to <sha>`).
 - PR: título `KNOCK-N · <ID> <título>` y la plantilla completa (criterios, pruebas, amenazas, riesgos, **Uso de IA**, evidencia). Sin atribución a IA en la descripción salvo en esa sección.
-- **Revisión de pares obligatoria:** antes de la aprobación final, al menos otra persona (distinta de quien escribió el PR) deja su revisión como comentario en el PR (quién revisa a quién: `docs/FLUJO_EQUIPO.md` §3). **La aprobación final y el merge los hace el Tech Lead (`@JulianH2`)**; ninguna otra persona fusiona. Requisitos: check `gate` en verde y, en zonas sensibles, el Code Owner.
+- **Revisión de pares obligatoria:** antes de la aprobación final, al menos otra persona (distinta de quien escribió el PR) deja su revisión como comentario en el PR (quién revisa a quién: `docs/FLUJO_EQUIPO.md` §3). **La aprobación final y el merge los hace el Tech Lead (`@JulianH2`)**; ninguna otra persona fusiona. Requisitos: check `gate` en verde y, en zonas sensibles, el Code Owner. La revisión de otra persona es **una** y obligatoria; una segunda es opcional. Si el PR es del Tech Lead, él mismo lo puede aprobar y, cuando el cambio es urgente o no hay nadie disponible, la revisión es opcional: en ese caso anota el motivo en «Riesgos y pendientes» del PR (spec 004, R-04 y CA-06).
 
 ## 4. Definición de terminado
 Criterios de la spec cumplidos · pruebas del plan en verde (resultados reales) · PR revisado · CI en verde · «Uso de IA» completo · `Memoria.md` al día · spec firmada tras el merge.
@@ -69,3 +69,18 @@ La llave nunca va en el código, un issue, un PR ni un chat. Los PR de forks y l
 
 Si el repositorio es privado y no tiene GitHub Advanced Security, la revisión de dependencias y la subida de SARIF se omiten; para activarlas, crea la variable `GHAS_ENABLED=true`.
 
+## 9. Versionamiento por puntos (spec 012)
+Cada componente (`gateway`, `identity`, `messaging`, `market`, `assistant`, `contracts`, `infra`, `app`, `panel`, `landing`) lleva su propia versión `X.Y.Z`; la primera publicada es `1.0.0`. Cada PR declara cuántos puntos suma a cada componente que toca con una etiqueta `puntos-<componente>-N` (p. ej. `puntos-gateway-4`); si no suma, `puntos-<componente>-0`. Sin etiqueta válida, el job `pr-points` del CI falla. Una persona del equipo con permiso la crea en GitHub la primera vez que la usa.
+
+| Tipo de cambio | Puntos |
+|---|---|
+| Corrección, ajuste o índice | 1 |
+| Campo nuevo o cambio de regla | 2 |
+| Endpoint o pantalla nueva | 3 |
+| Colección nueva o función completa | 5 |
+| Servicio, integración externa o permiso nuevo | 10 |
+
+- Al desplegar se suman los puntos de los cambios incluidos y se aplican a `Z`; al llegar a 10, `Z` vuelve a cero y `Y` sube, y lo mismo entre `Y` y `X` (`1.0.0` + 1 + 3 puntos = `1.0.4`; `1.0.4` + 8 = `1.1.2`).
+- Un cambio que rompe compatibilidad sube `X` y deja `Y` y `Z` en cero. Un despliegue con cero puntos no cambia la versión.
+- Cuenta el tipo de cambio, no el tamaño del código. Quien revisa el PR comprueba que la etiqueta corresponde al tipo de cambio (declarar de menos para no subir de versión es el riesgo).
+- Cálculo: `python scripts/ci/version.py bump --current 1.0.4 --points 8`. Registro de lo desplegado: [`docs/VERSIONES_DESPLEGADAS.md`](docs/VERSIONES_DESPLEGADAS.md).

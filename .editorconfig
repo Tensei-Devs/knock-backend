@@ -51,6 +51,10 @@ dotnet_diagnostic.CA1515.severity = none
 # y Knock.Api es un ejecutable. Exención permanente, solo para este archivo.
 dotnet_diagnostic.CA1515.severity = none
 
+[src/Knock.Identity.Api/Common/Errors/DomainException.cs]
+# CA1515: igual que en Market, DomainException debe ser pública por S3871. Exención permanente, solo para este archivo (autorizada por el líder en el PR #12).
+dotnet_diagnostic.CA1515.severity = none
+
 [tests/UnitTest/Architecture/Fixtures/**.cs]
 # Los fixtures de arquitectura solo se analizan por reflexión (NetArchTest); nunca se instancian ni se ejecutan.
 dotnet_diagnostic.CA1812.severity = none
