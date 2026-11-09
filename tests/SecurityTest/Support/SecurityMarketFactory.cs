@@ -65,6 +65,7 @@ internal sealed class SecurityMarketFactory(IReadOnlyDictionary<string, string?>
 
     public static async Task<SecurityMarketFactory> CreateAsync(IReadOnlyDictionary<string, string?>? overrides = null, string environment = "Production")
     {
+        SecurityHostConfiguration.ClearFirebaseEmulatorHost();
         var mongo = await DocumentDbFixture.SharedAsync();
         var redis = await RedisTestFixture.SharedAsync();
         // Las claves del catálogo son fijas: cada fábrica usa su propia base lógica de Redis (la 1 a la 15, en ciclo) y la limpia al
@@ -75,7 +76,6 @@ internal sealed class SecurityMarketFactory(IReadOnlyDictionary<string, string?>
         {
             await multiplexer.GetServer(multiplexer.GetEndPoints()[0]).FlushDatabaseAsync();
         }
-
         var values = new Dictionary<string, string?>
         {
             ["ConnectionStrings:KnockMongo"] = mongo.ConnectionString,

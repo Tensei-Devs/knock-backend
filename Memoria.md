@@ -255,6 +255,12 @@
 - docs/MUTACION.md: guia en espanol.
 - Verificacion local acotada: 47.17 por ciento. El job mutation-pr ya corre de verdad.
 
+## 2026-11-08 — Prueba intermitente de seguridad con FIREBASE_AUTH_EMULATOR_HOST (KNOCK-195)
+- **Estado:** corregida; las pruebas de seguridad de Mercado ya no dependen del orden en que corran.
+- **Decisión:** `SecurityHostConfiguration.ClearFirebaseEmulatorHost()` quita la variable antes de crear cualquier host de seguridad; la llaman las fábricas de Identidad y de Mercado. Antes solo la de Identidad la quitaba.
+- **Por qué:** Mercado también se niega a arrancar fuera de Development con la variable puesta (el emulador emite tokens sin firmar). Si una prueba de Mercado corría antes que cualquiera de Identidad, fallaba; se vio 1 de cada 8 corridas y en el CI. Sola, `SEC_TT_API_07_04` falla siempre sin el arreglo y pasa con él. `ConsoleCapture` no era la causa.
+- **A evitar:** corregir una prueba intermitente cambiando tiempos o reintentando; buscar primero el estado compartido (variables de entorno) y el orden. Y no usar `--no-build` tras restaurar código: usa los binarios anteriores.
+
 ## 2026-11-07 — «La colonia existe» en Mercado y su cliente en Identidad (KNOCK-212)
 - **Estado:** `GET /api/v1/colonias/existe?nombre=…` en Mercado (con sesión, `{ existe }`, sin distinguir mayúsculas ni acentos) y `MarketColoniaCatalog` en Identidad, que lo consulta reenviando la sesión de quien edita su perfil. `PUT /me` con colonia ya puede validar contra Mercado (CA-07 y CA-12 de la spec 017).
 - **Decisiones:** (1) cualquier fallo del cliente —sin URL, sin sesión que reenviar, tiempo agotado (3 s), error de Mercado o cuerpo que no se entiende— sale como «Mercado no responde» y da 503: un 401 o 500 de Mercado nunca se toma por «la colonia existe». (2) La dirección es `Services:Market:BaseUrl` y debe ser solo el host (`http://knock-market`); con ruta, consulta o fragmento, el arranque falla. Sin ella el comportamiento es el de antes (503), así que desplegar el código no cambia nada hasta aplicar la variable. (3) `ProfileService` pasó a scoped porque el cliente HTTP tipado no debe quedar capturado por un singleton. (4) Controller aparte (`ColoniaExistsController`) por la regla S6960.
