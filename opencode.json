@@ -1,4 +1,42 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "instructions": ["constitution.md", "Memoria.md"]
+  "instructions": [
+    "constitution.md",
+    "Memoria.md"
+  ],
+  "mcp": {
+    "atlassian": {
+      "type": "remote",
+      "url": "https://mcp.atlassian.com/v1/mcp/authv2",
+      "enabled": true
+    }
+  },
+  "permission": {
+    "atlassian_*": "ask",
+    "atlassian_atlassianUserInfo": "allow",
+    "atlassian_getAccessibleAtlassianResources": "allow",
+    "atlassian_getVisibleJiraProjects": "allow",
+    "atlassian_getJiraIssue": "allow",
+    "atlassian_searchJiraIssuesUsingJql": "allow",
+    "atlassian_getJiraProjectIssueTypesMetadata": "allow",
+    "atlassian_getJiraIssueTypeMetaWithFields": "allow",
+    "atlassian_getTransitionsForJiraIssue": "allow",
+    "atlassian_getJiraIssueRemoteIssueLinks": "allow",
+    "atlassian_getIssueLinkTypes": "allow",
+    "atlassian_lookupJiraAccountId": "allow",
+    "atlassian_addCommentToJiraIssue": "deny",
+    "atlassian_addWorklogToJiraIssue": "deny",
+    "atlassian_createJiraIssue": "deny",
+    "atlassian_editJiraIssue": "deny",
+    "atlassian_transitionJiraIssue": "deny",
+    "atlassian_createIssueLink": "deny",
+    "atlassian_createConfluencePage": "deny",
+    "atlassian_createConfluenceFooterComment": "deny",
+    "atlassian_createConfluenceInlineComment": "deny",
+    "atlassian_updateConfluencePage": "deny",
+    "atlassian_createCompassComponent": "deny",
+    "atlassian_createCompassComponentRelationship": "deny",
+    "atlassian_createCompassCustomFieldDefinition": "deny",
+    "atlassian_addTeamworkGraphContext": "deny"
+  }
 }
