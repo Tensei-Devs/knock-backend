@@ -18,7 +18,7 @@ public class MongoAccessTests
     [Fact]
     public void MongoCollectionsOnlyInDataAndNoEfCoreOrNpgsql_TC_TT_BD_06_16()
     {
-        MongoCollectionsOnlyInModuleDataAndClientOnlyInHosting();
+        MongoCollectionsOnlyInModuleDataAndClientOnlyInHosting_CA_003_02();
         Catalog_ExposesOnlyAddCatalogModuleAndCatalogApi();
 
         ModuleCatalog.ApiAssembly.GetReferencedAssemblies().Select(reference => reference.Name)
@@ -27,7 +27,7 @@ public class MongoAccessTests
     }
 
     [Fact]
-    public void MongoCollectionsOnlyInModuleDataAndClientOnlyInHosting()
+    public void MongoCollectionsOnlyInModuleDataAndClientOnlyInHosting_CA_003_02()
     {
         Types.InAssembly(ModuleCatalog.ApiAssembly)
             .That().ResideInNamespace("Knock.Market.Api.Hosting")
@@ -42,7 +42,7 @@ public class MongoAccessTests
     }
 
     [Fact]
-    public void MongoAccessRule_WithViolatingFixture_Fails()
+    public void MongoAccessRule_WithViolatingFixture_Fails_CA_003_02()
     {
         var violating = MongoAccessRule.Evaluate(typeof(MongoAccessTests).Assembly, $"{_fixtureRoot}.Violating");
 

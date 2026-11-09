@@ -17,11 +17,15 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.20.1" />
     <PackageReference Include="Scalar.AspNetCore" Version="2.18.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+    <PackageReference Include="StackExchange.Redis" Version="2.13.23" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Knock.UnitTest" />
     <InternalsVisibleTo Include="Knock.IntegrationTest" />
     <InternalsVisibleTo Include="Knock.SecurityTest" />
     <InternalsVisibleTo Include="Knock.DatabaseTest" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Knock.Contracts\Knock.Contracts.csproj" />
   </ItemGroup>
 </Project>

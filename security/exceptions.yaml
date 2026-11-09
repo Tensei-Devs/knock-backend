@@ -31,7 +31,7 @@ excepciones:
   - id: EXC-002
     herramienta: checkov
     regla: CKV_DOCKER_2
-    alcance: src/Knock.Market.Api/Dockerfile
+    alcance: src/Knock.Gateway/Dockerfile, src/Knock.Identity.Api/Dockerfile, src/Knock.Messaging.Api/Dockerfile, src/Knock.Market.Api/Dockerfile
     justificacion: >-
       El Dockerfile no define HEALTHCHECK. La API se despliega en Azure Container Apps, que define sus sondas
       (liveness y readiness sobre /health y /health/ready) fuera de la imagen, por lo que la instrucción no se usaría;
@@ -44,11 +44,11 @@ excepciones:
   - id: EXC-003
     herramienta: dockle
     regla: CIS-DI-0010
-    alcance: knock-api (imagen construida desde src/Knock.Market.Api/Dockerfile); workflow ci-pr.yml, paso de Dockle (accept-key)
+    alcance: imágenes de los cuatro servicios (src/*/Dockerfile); workflow ci-pr.yml, paso de Dockle (accept-key)
     justificacion: >-
       Falso positivo. Dockle marca como «credenciales» variables de la imagen base de Microsoft y del propio
-      Dockerfile (DOTNET_VERSION, ASPNET_VERSION, ASPNETCORE_URLS, ASPNETCORE_ENVIRONMENT, ASPNETCORE_HTTP_PORTS, DOTNET_RUNNING_IN_CONTAINER, DOTNET_EnableDiagnostics, APP_UID, la etiqueta org.opencontainers.image.version y los argumentos --gid y --uid del `groupadd` de la imagen base);
-      sus valores son versiones, puertos, el nombre del entorno, indicadores booleanos y un identificador de usuario, no secretos. Solo se aceptan esas claves
+      Dockerfile (DOTNET_VERSION, ASPNET_VERSION, ASPNETCORE_URLS, ASPNETCORE_ENVIRONMENT, ASPNETCORE_HTTP_PORTS, DOTNET_RUNNING_IN_CONTAINER, DOTNET_EnableDiagnostics, APP_UID, las etiquetas org.opencontainers.image.version, .title, .description y .created, los argumentos --gid y --uid del `groupadd` de la imagen base, y desde .NET 11 (base Ubuntu 26.04) el argumento --clear y la variable PATH que aparecen en los comandos `umoci config` con que se construyó la imagen base);
+      sus valores son versiones, puertos, el nombre del entorno, indicadores booleanos, un identificador de usuario y la ruta de búsqueda de programas, no secretos. Solo se aceptan esas claves
       con nombre: la regla sigue activa para cualquier otra variable o archivo. Evidencia: salida de Dockle en el CI del PR #17.
     responsable: José Julián Hernández Hernández
     creada: 2026-10-15
@@ -90,3 +90,123 @@ excepciones:
     creada: 2026-11-03
     vence: 2026-12-02
     plan: portar esas pruebas a IAsyncStartupValidator y retirar el NoWarn antes de vencer.
+  - id: EXC-015
+    herramienta: jscpd
+    regla: duplicación textual (y huella estructural de codemap)
+    alcance: src/Knock.Identity.Api/Common/** y src/Knock.Identity.Api/Hosting/** (marcadores jscpd:ignore-start/end con EXC-015)
+    justificacion: >-
+      Identity.Api nace con la misma base técnica que Market (seguridad, versionado, validación, límites, CORS, respuestas de error, correlación),
+      copiada para que cada servicio sea desplegable por separado (spec 001). La duplicación es intencional y temporal; los archivos de Mongo, salud,
+      registros y observabilidad se descartan al entrar los PR #8 y #10. Evidencia: PR #12 y la lista de duplicados de `codemap.py --check`.
+    responsable: José Guillermo Rangel Hernández
+    creada: 2026-11-04
+    vence: 2026-12-04
+    plan: unificar en una biblioteca técnica compartida (Knock.Contracts o una nueva) y retirar los marcadores y la excepción antes de vencer.
+  - id: EXC-011
+    herramienta: checkov
+    regla: CKV_AZURE_233, CKV_AZURE_237, CKV_AZURE_167, CKV_AZURE_166, CKV_AZURE_165, CKV_AZURE_164, CKV_AZURE_163, CKV_AZURE_139
+    alcance: deploy/modules/shared/main.tf, recurso azurerm_container_registry.this
+    justificacion: >-
+      Los controles piden ACR Premium (zonas, geo-replicación, cuarentena, firma, red privada, retención). La suscripción es Azure for Students y el costo de Premium no cabe en el crédito (ADR-006). La compensación es el escaneo de cada imagen con Trivy y Dockle en el CI (spec 007) y que el registro no tiene usuario administrador (CKV_AZURE_137 pasa). Evidencia: salida de Checkov sobre deploy/.
+    responsable: José Julián Hernández Hernández
+    creada: 2026-11-04
+    vence: 2027-01-31
+    plan: reevaluar si el proyecto pasa a una suscripción de pago y retirar las supresiones que ya se puedan cumplir.
+  - id: EXC-012
+    herramienta: checkov
+    regla: CKV_AZURE_109, CKV_AZURE_189, CKV_AZURE_110, CKV_AZURE_42, CKV2_AZURE_32
+    alcance: deploy/modules/shared/main.tf, recurso azurerm_key_vault.this
+    justificacion: >-
+      Container Apps no es un servicio de confianza del firewall de Key Vault, así que cerrar la red pública rompería la lectura de secretos; los endpoints privados cuestan. Sin protección contra purga para poder destruir y recrear el entorno dentro de la ventana de evaluación (ADR-006, punto 6); sí tiene borrado suave de 7 días. Compensación: RBAC, un permiso por secreto y por servicio (spec 005, R-05). Evidencia: pruebas de módulo en deploy/modules/service/tests.
+    responsable: José Julián Hernández Hernández
+    creada: 2026-11-04
+    vence: 2027-01-31
+    plan: activar purge protection y restringir la red al terminar la evaluación (5-dic-2026) o si se agrega una red privada.
+  - id: EXC-013
+    herramienta: checkov
+    regla: CKV_AZURE_206, CKV_AZURE_33, CKV2_AZURE_21, CKV_AZURE_59, CKV2_AZURE_33, CKV2_AZURE_1
+    alcance: deploy/modules/shared/main.tf, recursos azurerm_storage_account.files y azurerm_storage_container.private
+    justificacion: >-
+      Replicación geográfica, endpoints privados, llaves administradas por el cliente y registro de lecturas tienen costo o requieren una red privada que el crédito de estudiante no cubre. La cuenta no usa colas, no permite acceso público a blobs, tiene llaves compartidas desactivadas, TLS 1.2, borrado suave y SAS con vencimiento. Evidencia: salida de Checkov sobre deploy/.
+    responsable: José Julián Hernández Hernández
+    creada: 2026-11-04
+    vence: 2027-01-31
+    plan: reevaluar con los respaldos de MongoDB (spec 003, R-08) y retirar lo que ya se pueda cumplir.
+  - id: EXC-014
+    herramienta: checkov
+    regla: CKV2_AZURE_31
+    alcance: deploy/modules/shared/main.tf, recurso azurerm_subnet.container_apps
+    justificacion: >-
+      La subred está delegada a Container Apps, que administra su propio tráfico; un grupo de seguridad de red escrito a mano puede bloquear el plano de control del entorno. El único ingreso externo es el del gateway (spec 001, R-02). Evidencia: documentación de Container Apps sobre subredes delegadas.
+    responsable: José Julián Hernández Hernández
+    creada: 2026-11-04
+    vence: 2027-01-31
+    plan: agregar un NSG con las reglas que exige Container Apps cuando la spec 006 defina la política de red.
+  - id: EXC-016
+    herramienta: jscpd
+    regla: duplicación textual (y huella estructural de codemap)
+    alcance: src/Knock.Gateway/Hosting/ProblemResponses.cs, src/Knock.Gateway/Hosting/CorsExtensions.cs y los parámetros de validación del JWT de src/Knock.Gateway/Hosting/AuthenticationExtensions.cs (marcadores jscpd:ignore-start/end con EXC-016)
+    justificacion: >-
+      El gateway necesita la misma respuesta ProblemDetails de error, la misma lectura de los proxies de confianza y los mismos parámetros de validación del JWT que Market (spec 009); cada servicio es
+      desplegable por separado (spec 001) y no comparten código técnico todavía. La duplicación es intencional y temporal. Evidencia: PR de KNOCK-204 y la lista
+      de duplicados de `codemap.py --check`.
+    responsable: José Guillermo Rangel Hernández
+    creada: 2026-11-04
+    vence: 2026-12-04
+    plan: unificar en la biblioteca técnica compartida (la misma de EXC-015) y retirar los marcadores y la excepción antes de vencer.
+  - id: EXC-007
+    herramienta: jscpd
+    regla: duplicación de código (clones)
+    alcance: src/Knock.Identity.Api/Hosting/{LoggingExtensions,ObservabilityExtensions,TelemetryRedactor}.cs, src/Knock.Messaging.Api/Hosting/{LoggingExtensions,ObservabilityExtensions,TelemetryRedactor}.cs y src/Knock.Gateway/Hosting/{LoggingExtensions,ObservabilityExtensions,TelemetryRedactor}.cs (9 archivos, entre «// jscpd:ignore-start -- EXC-007» y su cierre)
+    justificacion: >-
+      Spec 011 (KNOCK-206): los tres servicios y el gateway deben registrar con el mismo formato y la misma redacción de datos personales
+      que Market. Aún no existe una biblioteca técnica compartida y un servicio no referencia a otro, así que se copian las tres clases de
+      src/Knock.Market.Api/Hosting cambiando solo el espacio de nombres, la categoría por defecto del log y la ruta de salud. Las copias se
+      prueban por separado en tests/UnitTest/Hosting/Spec011ObservabilityTests.cs. Aprobada por el líder el 2026-11-04.
+    responsable: Ángel Alexis Blas Castillo
+    creada: 2026-11-04
+    vence: 2027-02-02
+    plan: unificar las tres clases en una biblioteca técnica compartida (junto con las copias de EXC-008), quitar los marcadores y retirar la excepción antes de vencer.
+  - id: EXC-008
+    herramienta: jscpd, codemap
+    regla: código duplicado (jscpd:ignore y línea base de clones de docs/architecture/clones-baseline.json)
+    alcance: src/Knock.Identity.Api/Hosting/MongoExtensions.cs, src/Knock.Identity.Api/Hosting/RedisExtensions.cs, src/Knock.Identity.Api/Hosting/HealthExtensions.cs, src/Knock.Messaging.Api/Hosting/MongoExtensions.cs, src/Knock.Messaging.Api/Hosting/HealthExtensions.cs, src/Knock.Gateway/Hosting/RedisExtensions.cs, src/Knock.Gateway/Hosting/HealthExtensions.cs
+    justificacion: >-
+      Spec 003 (KNOCK-198): cada servicio necesita su cliente de MongoDB y de Redis, y la constitución solo permite una biblioteca
+      compartida de tipos y contratos sin lógica (Knock.Contracts). Por decisión del líder del 2026-11-04 se aceptan por ahora copias
+      de src/Knock.Market.Api/Hosting/MongoExtensions.cs y RedisExtensions.cs, y un HealthExtensions igual en los tres servicios,
+      cada una marcada con «jscpd:ignore-start -- EXC-008». Evidencia: PR de KNOCK-198.
+    responsable: Ángel Alexis Blas Castillo
+    creada: 2026-11-04
+    vence: 2027-02-02
+    plan: unificar después en una biblioteca técnica (con su spec y el cambio de la constitución que la permita), borrar las copias y retirar la excepción antes de vencer.
+  - id: EXC-017
+    herramienta: revisión de arquitectura (modelo de amenazas, KNOCK-78)
+    regla: acceso de red público del clúster de MongoDB (DB-5 y H-04 del modelo de amenazas)
+    alcance: deploy/database/main.tf, clúster knock-docdb (reglas de firewall administradas fuera de Terraform)
+    justificacion: >-
+      El clúster gratuito de Azure DocumentDB tiene el acceso de red público habilitado, con la regla azure-services (0.0.0.0)
+      que usan las Container Apps y reglas por IP individual de las personas del equipo que administran la base. Cerrarlo exige
+      red privada o Private Link, que cuestan, y el proyecto opera a costo cero (KNOCK-145). Las Container Apps no tienen una
+      lista corta de IP de salida que se pueda declarar en el firewall. Controles compensatorios: toda conexión exige usuario y
+      contraseña y viaja con TLS; hay una cadena de conexión distinta por servicio, guardada solo en Key Vault y nunca en el
+      repositorio; el acceso al Key Vault es por RBAC con un permiso por secreto y servicio (EXC-012); el firewall del clúster
+      solo admite la regla azure-services y las IP individuales de administración; el clúster tiene el candado no-borrar y
+      prevent_destroy. Evidencia: docs/evidencia/KNOCK-78-riesgo-mongodb-acceso-publico.md.
+    responsable: José Julián Hernández Hernández
+    creada: 2026-11-06
+    vence: 2027-02-04
+    plan: revisar el 2026-12-05 (fin de la ventana de evaluación) la lista de reglas y retirar las IP individuales que no se usen, según el procedimiento del documento de evidencia. Condición de salida - cerrar el acceso público cuando el proyecto tenga red privada o Private Link sin costo adicional, o pase a una suscripción de pago; si no ocurre, renovar la excepción con nueva revisión antes de vencer.
+  - id: EXC-018
+    herramienta: jscpd
+    regla: duplicación textual (y huella estructural de codemap)
+    alcance: spec 010 (KNOCK-205): JsonCompressionMiddleware de Identity.Api y de Market.Api, el método Matches de MeController y de OficiosController, y las validaciones de opciones ProfileCacheOptions y CatalogCacheOptions (con marcadores jscpd:ignore-start/end con EXC-018)
+    justificacion: >-
+      La caché, la compresión y los ETag de la spec 010 se implementan en cada servicio por separado porque un servicio no referencia a otro
+      y todavía no existe la biblioteca técnica compartida (misma situación de EXC-015, EXC-007 y EXC-008). Las copias cambian solo el espacio de nombres y
+      los nombres de las opciones, y se prueban por separado en cada servicio. Evidencia: los 8 pares nuevos que reporta `codemap.py --check`
+      (6 entre los middleware de compresión, 1 entre los Matches y 1 entre los validadores de opciones). Aprobada por el líder el 2026-11-08.
+    responsable: Ángel Alexis Blas Castillo
+    creada: 2026-11-08
+    vence: 2026-12-04
+    plan: unificar en la biblioteca técnica compartida (la misma de EXC-015), quitar los marcadores y retirar la excepción antes de vencer.
