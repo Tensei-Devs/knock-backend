@@ -1,20 +1,20 @@
 # Mapa de código
 
-> Generado por `scripts/codemap.py` el 2026-11-08T19:39:58Z. No editar a mano.
+> Generado por `scripts/codemap.py` el 2026-11-09T17:00:42Z. No editar a mano.
 > **Antes de crear una clase, método o archivo, busca aquí o corre `python scripts/codemap.py --query "<qué necesitas>"`.**
 
 ## Resumen
 
 | Módulo | Capas | Archivos | Tipos | Métodos públicos |
 |---|---|---|---|---|
-| `Catalog` | -, controllers, data, domain, dtos, services, validators | 26 | 29 | 34 |
+| `Catalog` | -, controllers, data, domain, dtos, services, validators | 28 | 34 | 52 |
 | `Knock.Contracts` | - | 5 | 7 | 7 |
 | `Knock.Gateway` | -, hosting | 13 | 37 | 46 |
-| `Knock.Identity.Api` | -, common, hosting | 28 | 58 | 71 |
-| `Knock.Market.Api` | -, common, hosting | 26 | 55 | 69 |
+| `Knock.Identity.Api` | -, common, hosting | 29 | 61 | 84 |
+| `Knock.Market.Api` | -, common, hosting | 27 | 58 | 82 |
 | `Knock.Messaging.Api` | -, hosting | 7 | 21 | 29 |
 | `Sesiones` | -, controllers, data, domain, dtos, services, validators | 25 | 46 | 53 |
-| `Usuarios` | -, controllers, data, domain, dtos, services | 9 | 19 | 23 |
+| `Usuarios` | -, controllers, data, domain, dtos, services | 10 | 21 | 24 |
 
 ## ⚠️ Código duplicado (misma estructura)
 
@@ -57,11 +57,16 @@
 - `src/Knock.Identity.Api/Hosting/AuthenticationExtensions.cs:91 AuthenticationStartupCheck.StartAsync` · `src/Knock.Market.Api/Hosting/AuthenticationExtensions.cs:90 AuthenticationStartupCheck.StartAsync`
 - `src/Knock.Identity.Api/Hosting/CorrelationIdMiddleware.cs:31 CorrelationIdMiddleware` · `src/Knock.Market.Api/Hosting/CorrelationIdMiddleware.cs:30 CorrelationIdMiddleware`
 - `src/Knock.Identity.Api/Hosting/CorrelationIdMiddleware.cs:33 CorrelationIdMiddleware.InvokeAsync` · `src/Knock.Market.Api/Hosting/CorrelationIdMiddleware.cs:32 CorrelationIdMiddleware.InvokeAsync`
-- `src/Knock.Identity.Api/Hosting/CorsMiddleware.cs:14 CorsMiddleware` · `src/Knock.Market.Api/Hosting/CorsMiddleware.cs:13 CorsMiddleware`
 - `src/Knock.Identity.Api/Hosting/CorsMiddleware.cs:25 CorsMiddleware.InvokeAsync` · `src/Knock.Market.Api/Hosting/CorsMiddleware.cs:24 CorsMiddleware.InvokeAsync`
 - `src/Knock.Identity.Api/Hosting/CorsMiddleware.cs:51 CorsMiddleware.AnswerPreflightAsync` · `src/Knock.Market.Api/Hosting/CorsMiddleware.cs:50 CorsMiddleware.AnswerPreflightAsync`
 - `src/Knock.Identity.Api/Hosting/CorsMiddleware.cs:69 CorsMiddleware.IsGranted` · `src/Knock.Market.Api/Hosting/CorsMiddleware.cs:68 CorsMiddleware.IsGranted`
 - `src/Knock.Identity.Api/Hosting/CorsMiddleware.cs:96 CorsMiddleware.AddVaryOrigin` · `src/Knock.Market.Api/Hosting/CorsMiddleware.cs:95 CorsMiddleware.AddVaryOrigin`
+- `src/Knock.Identity.Api/Hosting/JsonCompressionMiddleware.cs:19 JsonCompressionMiddleware` · `src/Knock.Market.Api/Hosting/JsonCompressionMiddleware.cs:18 JsonCompressionMiddleware`
+- `src/Knock.Identity.Api/Hosting/JsonCompressionMiddleware.cs:26 JsonCompressionMiddleware.InvokeAsync` · `src/Knock.Market.Api/Hosting/JsonCompressionMiddleware.cs:25 JsonCompressionMiddleware.InvokeAsync`
+- `src/Knock.Identity.Api/Hosting/JsonCompressionMiddleware.cs:63 JsonCompressionMiddleware.ShouldSkipRequest` · `src/Knock.Market.Api/Hosting/JsonCompressionMiddleware.cs:62 JsonCompressionMiddleware.ShouldSkipRequest`
+- `src/Knock.Identity.Api/Hosting/JsonCompressionMiddleware.cs:100 JsonCompressionMiddleware.WriteBufferedAsync` · `src/Knock.Market.Api/Hosting/JsonCompressionMiddleware.cs:99 JsonCompressionMiddleware.WriteBufferedAsync`
+- `src/Knock.Identity.Api/Hosting/JsonCompressionMiddleware.cs:157 CappedBufferStream.WriteAsync` · `src/Knock.Market.Api/Hosting/JsonCompressionMiddleware.cs:156 CappedBufferStream.WriteAsync`
+- `src/Knock.Identity.Api/Hosting/JsonCompressionMiddleware.cs:176 CappedBufferStream.WriteCore` · `src/Knock.Market.Api/Hosting/JsonCompressionMiddleware.cs:175 CappedBufferStream.WriteCore`
 - `src/Knock.Identity.Api/Hosting/MongoExtensions.cs:76 KnockMongoOptionsValidator.Validate` · `src/Knock.Market.Api/Hosting/MongoExtensions.cs:74 KnockMongoOptionsValidator.Validate` · `src/Knock.Messaging.Api/Hosting/MongoExtensions.cs:76 KnockMongoOptionsValidator.Validate`
 - `src/Knock.Identity.Api/Hosting/MongoExtensions.cs:149 MongoExtensions.AddKnockMongo` · `src/Knock.Market.Api/Hosting/MongoExtensions.cs:147 MongoExtensions.AddKnockMongo` · `src/Knock.Messaging.Api/Hosting/MongoExtensions.cs:149 MongoExtensions.AddKnockMongo`
 - `src/Knock.Identity.Api/Hosting/MongoExtensions.cs:171 MongoExtensions.AddKnockMongoDatabase` · `src/Knock.Market.Api/Hosting/MongoExtensions.cs:169 MongoExtensions.AddKnockMongoDatabase` · `src/Knock.Messaging.Api/Hosting/MongoExtensions.cs:171 MongoExtensions.AddKnockMongoDatabase`
@@ -83,6 +88,8 @@
 - `src/Knock.Identity.Api/Hosting/ValidationExtensions.cs:29 ValidationFilter.OnActionExecutionAsync` · `src/Knock.Market.Api/Hosting/ValidationExtensions.cs:27 ValidationFilter.OnActionExecutionAsync`
 - `src/Knock.Identity.Api/Hosting/ValidationExtensions.cs:65 ValidationFilter.ToCamelCasePath` · `src/Knock.Market.Api/Hosting/ValidationExtensions.cs:63 ValidationFilter.ToCamelCasePath`
 - `src/Knock.Identity.Api/Hosting/ValidationExtensions.cs:69 ValidationFilter.Collect` · `src/Knock.Market.Api/Hosting/ValidationExtensions.cs:67 ValidationFilter.Collect`
+- `src/Knock.Identity.Api/Modules/Usuarios/Controllers/V1/MeController.cs:80 MeController.Matches` · `src/Knock.Market.Api/Modules/Catalog/Controllers/V1/OficiosController.cs:46 OficiosController.Matches`
+- `src/Knock.Identity.Api/Modules/Usuarios/Data/ProfileCacheOptions.cs:25 ProfileCacheOptionsValidator.Validate` · `src/Knock.Market.Api/Modules/Catalog/Data/CatalogCacheOptions.cs:25 CatalogCacheOptionsValidator.Validate`
 
 ## Tipos con el mismo nombre en varios lugares
 
@@ -107,6 +114,7 @@
 - `HttpsSettings`: `src/Knock.Identity.Api/Hosting/SecuritySettings.cs:15`, `src/Knock.Market.Api/Hosting/SecuritySettings.cs:14`
 - `IgnoreIncomingTraceContextPropagator`: `src/Knock.Gateway/Hosting/ObservabilityExtensions.cs:194`, `src/Knock.Identity.Api/Hosting/ObservabilityExtensions.cs:194`, `src/Knock.Market.Api/Hosting/ObservabilityExtensions.cs:190`, `src/Knock.Messaging.Api/Hosting/ObservabilityExtensions.cs:194`
 - `InternalControllerFeatureProvider`: `src/Knock.Identity.Api/Hosting/AuthenticationExtensions.cs:72`, `src/Knock.Market.Api/Hosting/AuthenticationExtensions.cs:71`
+- `JsonCompressionMiddleware`: `src/Knock.Identity.Api/Hosting/JsonCompressionMiddleware.cs:19`, `src/Knock.Market.Api/Hosting/JsonCompressionMiddleware.cs:18`
 - `JwtSettings`: `src/Knock.Identity.Api/Common/Security/JwtSettings.cs:7`, `src/Knock.Market.Api/Common/Security/JwtSettings.cs:6`
 - `JwtSettingsFactory`: `src/Knock.Identity.Api/Common/Security/JwtSettingsFactory.cs:11`, `src/Knock.Market.Api/Common/Security/JwtSettingsFactory.cs:10`
 - `KnockApplicationExtensions`: `src/Knock.Identity.Api/Hosting/KnockApplicationExtensions.cs:7`, `src/Knock.Market.Api/Hosting/KnockApplicationExtensions.cs:6`
@@ -151,7 +159,7 @@
 **-**
 
 - `src/Knock.Market.Api/Modules/Catalog/CatalogModuleExtensions.cs` — class `CatalogModuleExtensions`
-  - `AddCatalogModule()`:13
+  - `AddCatalogModule()`:14
 - `src/Knock.Market.Api/Modules/Catalog/ICatalogApi.cs` — interface `ICatalogApi`
 - `src/Knock.Market.Api/Modules/Catalog/ModelBinders/SingleValueQueryModelBinder.cs` — class `SingleValueQueryModelBinder`, class `SingleValueFromQueryAttribute`
   - `BindModelAsync()`:16
@@ -163,14 +171,18 @@
 - `src/Knock.Market.Api/Modules/Catalog/Controllers/V1/ColoniasController.cs` — class `ColoniasController`
   - `GetAtPoint()`:29
 - `src/Knock.Market.Api/Modules/Catalog/Controllers/V1/OficiosController.cs` — class `OficiosController`
-  - `List()`:22
+  - `ETag()`:38, `Matches()`:46
 
 **data**
 
-- `src/Knock.Market.Api/Modules/Catalog/Data/CatalogSeeder.cs` — class `CatalogSeeder`
+- `src/Knock.Market.Api/Modules/Catalog/Data/CatalogCache.cs` — interface `ICatalogCache`, class `RedisCatalogCache`
+  - `NeighborhoodNamesGenerationKey()`:67, `ColoniaExistsGenerationKey()`:69, `NeighborhoodNamesKey()`:94, `ColoniaExistsKey()`:96, `GetOficiosAsync()`:98, `RemoveOficiosAsync()`:113, `GetOficiosGenerationAsync()`:119, `SetOficiosIfGenerationAsync()`:122, `GetNeighborhoodNamesAsync()`:158, `RemoveNeighborhoodNamesAsync()`:174, `GetNeighborhoodNamesGenerationAsync()`:181, `SetNeighborhoodNamesIfGenerationAsync()`:187, `GetColoniaExistsAsync()`:207, `RemoveColoniaExistsAsync()`:223, `GetColoniaExistsGenerationAsync()`:230, `SetColoniaExistsIfGenerationAsync()`:236
+- `src/Knock.Market.Api/Modules/Catalog/Data/CatalogCacheOptions.cs` — class `CatalogCacheOptions`, class `CatalogCacheOptionsValidator`
+  - `Validate()`:25
+- `src/Knock.Market.Api/Modules/Catalog/Data/CatalogSeeder.cs` — class `CatalogSeeder`, record `ColoniasSnapshot`
   - `CatalogSeeder()`:13, `SeedAsync()`:19, `SeedAsync()`:29
 - `src/Knock.Market.Api/Modules/Catalog/Data/CatalogStore.cs` — class `CatalogStore`
-  - `EnsureIndexesAsync()`:66, `FindActiveOficiosAsync()`:89, `FindIntersectingAsync()`:99, `FindNearestCenterAsync()`:103, `FindNamesByPostalCodeAsync()`:106, `ColoniaNameExistsAsync()`:113, `ColoniaExistsAsync()`:116, `ActiveOficiosQuery()`:120, `IntersectingQuery()`:126, `NearestCenterQuery()`:133, `NamesByPostalCodeQuery()`:139, `ColoniaNameExistsQuery()`:145, `ColoniaExistsQuery()`:151
+  - `EnsureIndexesAsync()`:68, `FindActiveOficiosAsync()`:91, `FindIntersectingAsync()`:110, `FindNearestCenterAsync()`:114, `FindNamesByPostalCodeAsync()`:117, `ColoniaNameExistsAsync()`:132, `ColoniaExistsAsync()`:135, `ActiveOficiosQuery()`:149, `IntersectingQuery()`:155, `NearestCenterQuery()`:162, `NamesByPostalCodeQuery()`:168, `ColoniaNameExistsQuery()`:174, `ColoniaExistsQuery()`:180
 
 **domain**
 
@@ -289,8 +301,10 @@
   - `AddKnockForwardedHeaders()`:16
 - `src/Knock.Identity.Api/Hosting/HealthExtensions.cs` — class `HealthExtensions`
   - `MapKnockReadiness()`:16
+- `src/Knock.Identity.Api/Hosting/JsonCompressionMiddleware.cs` — class `JsonCompressionMiddleware`, class `CappedBufferStream`, class `IdentityJsonSerializerContext`
+  - `JsonCompressionMiddleware()`:19, `InvokeAsync()`:26, `ToMemoryStream()`:151, `Write()`:153, `Write()`:155, `WriteAsync()`:157, `FlushRemainingAsync()`:213, `Flush()`:236, `FlushAsync()`:244, `Read()`:247, `Seek()`:249, `SetLength()`:251, `Dispose()`:253
 - `src/Knock.Identity.Api/Hosting/KnockApplicationExtensions.cs` — class `KnockApplicationExtensions`
-  - `AddKnockApi()`:9, `UseKnockApi()`:30
+  - `AddKnockApi()`:9, `UseKnockApi()`:31
 - `src/Knock.Identity.Api/Hosting/LoggingExtensions.cs` — class `LoggingExtensions`, class `ScopeRequestPathEnricher`
   - `AddKnockLogging()`:20, `ConfigureRequestLogging()`:35, `RoutePath()`:53, `Enrich()`:118
 - `src/Knock.Identity.Api/Hosting/ModelStateProblems.cs` — class `ModelStateProblems`
@@ -352,8 +366,10 @@
   - `AddKnockForwardedHeaders()`:15
 - `src/Knock.Market.Api/Hosting/HealthExtensions.cs` — class `HealthExtensions`
   - `AddKnockHealth()`:13, `MapKnockHealth()`:19
+- `src/Knock.Market.Api/Hosting/JsonCompressionMiddleware.cs` — class `JsonCompressionMiddleware`, class `CappedBufferStream`, class `MarketJsonSerializerContext`
+  - `JsonCompressionMiddleware()`:18, `InvokeAsync()`:25, `ToMemoryStream()`:150, `Write()`:152, `Write()`:154, `WriteAsync()`:156, `FlushRemainingAsync()`:212, `Flush()`:235, `FlushAsync()`:243, `Read()`:246, `Seek()`:248, `SetLength()`:250, `Dispose()`:252
 - `src/Knock.Market.Api/Hosting/KnockApplicationExtensions.cs` — class `KnockApplicationExtensions`
-  - `AddKnockApi()`:8, `UseKnockApi()`:30
+  - `AddKnockApi()`:8, `UseKnockApi()`:31
 - `src/Knock.Market.Api/Hosting/LoggingExtensions.cs` — class `LoggingExtensions`, class `ScopeRequestPathEnricher`
   - `AddKnockLogging()`:19, `ConfigureRequestLogging()`:34, `RoutePath()`:52, `Enrich()`:117
 - `src/Knock.Market.Api/Hosting/ModulesExtensions.cs` — class `ModulesExtensions`
@@ -483,12 +499,14 @@
 **controllers**
 
 - `src/Knock.Identity.Api/Modules/Usuarios/Controllers/V1/MeController.cs` — class `MeController`
-  - `Get()`:30, `Put()`:54, `ETag()`:73, `Matches()`:79
+  - `Get()`:30, `Put()`:54, `ETag()`:73, `Matches()`:80
 
 **data**
 
 - `src/Knock.Identity.Api/Modules/Usuarios/Data/ProfileCache.cs` — interface `IProfileCache`, class `RedisProfileCache`
-  - `Key()`:25, `GetAsync()`:27, `SetAsync()`:42, `RemoveAsync()`:56
+  - `Key()`:26, `GetAsync()`:28, `SetAsync()`:43, `RemoveAsync()`:57
+- `src/Knock.Identity.Api/Modules/Usuarios/Data/ProfileCacheOptions.cs` — class `ProfileCacheOptions`, class `ProfileCacheOptionsValidator`
+  - `Validate()`:25
 - `src/Knock.Identity.Api/Modules/Usuarios/Data/UsuariosStore.cs` — interface `IUsuariosStore`, class `UsuariosStore`, class `BsonValueExtensions`
   - `FindProfileAsync()`:60, `UpdateProfileAsync()`:64, `AsNullableString()`:120
 

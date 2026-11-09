@@ -1,6 +1,7 @@
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Catalog.Data;
 using Knock.Market.Api.Modules.Catalog.Services;
+using Microsoft.Extensions.Options;
 
 namespace Knock.Market.Api.Modules.Catalog;
 
@@ -14,6 +15,10 @@ public static class CatalogModuleExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
         services.AddKnockMongoDatabase(ModuleKey);
+        services.AddKnockRedis();
+        services.AddOptions<CatalogCacheOptions>().BindConfiguration(CatalogCacheOptions.SectionName);
+        services.AddSingleton<IValidateOptions<CatalogCacheOptions>, CatalogCacheOptionsValidator>();
+        services.AddSingleton<ICatalogCache, RedisCatalogCache>();
         services.AddSingleton<CatalogStore>();
         services.AddSingleton<NeighborhoodLocator>();
         services.AddSingleton<INeighborhoodLocator>(sp => sp.GetRequiredService<NeighborhoodLocator>());
