@@ -74,6 +74,14 @@ resource "azurerm_container_app_environment" "this" {
   # Solo el gateway tiene ingreso externo; los demás servicios usan ingreso interno (spec 001, R-02).
   internal_load_balancer_enabled = false
   tags                           = local.tags
+
+  # Azure devuelve este perfil en los entornos existentes; se declara para que el plan no intente quitarlo (KNOCK-34, deploy/README.md).
+  workload_profile {
+    name                  = "Consumption"
+    workload_profile_type = "Consumption"
+    minimum_count         = 0
+    maximum_count         = 0
+  }
 }
 
 # ---- Imágenes ----
