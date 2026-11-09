@@ -282,3 +282,8 @@
 - **Por qué:** el entorno debía poder crearse desde cero con un solo comando sin arriesgar la base de datos (`prevent_destroy`) ni aplicar por accidente.
 - **Verificación:** `bash -n` y ShellCheck sin hallazgos; ejecutado en modo plan contra `rg-knock-dev` con `-lock=false`: infra 0 por agregar, 1 por cambiar, 0 por destruir; database sin cambios; apps 0 por agregar, 5 por cambiar, 0 por destruir (todos por `workload_profile`, sin efecto real). No se aplicó nada.
 - **A evitar:** usar `--no-lock` con `--apply`; crear el grupo de recursos desde Terraform (lo crea una persona); pasar secretos al script.
+
+## 2026-11-09 — EXC-019: huella de Gitleaks de una cadena sintética en la rama de KNOCK-205
+- **Decisión:** se registra la huella del commit 0b7a866 (`tests/perf/README.md`, línea 23) en `.gitleaksignore`, respaldada por EXC-019 hasta el 2026-12-04, sin reescribir el historial.
+- **Porqué:** el CI descarga todas las ramas, así que un commit con una cadena de conexión sintética en una rama de trabajo hacía fallar el chequeo de secretos de todos los PR del repositorio.
+- **A evitar:** poner ejemplos con credenciales, aunque sean del entorno local, en la documentación; escribirlas como `<usuario>:<contraseña>`. Retirar la huella y la excepción al fusionar la rama.
