@@ -23,3 +23,4 @@ Cada carpeta tiene `spec.md`, `plan.md` y `task.md`. Estados: Borrador → Aprob
 | 017 | Perfil de la persona (USR-01, USR-02) | Aprobada | [`017-perfil-de-la-persona`](017-perfil-de-la-persona/spec.md) |
 | 018 | Sesiones por dispositivo (SES-04, SES-05) | Aprobada | [`018-sesiones-por-dispositivo`](018-sesiones-por-dispositivo/spec.md) |
 | 019 | MCP del proyecto | Aprobada | [`019-mcp-del-proyecto`](019-mcp-del-proyecto/spec.md) |
+| BUG-001 | El job `dast` del CI nunca se ejecuta (KNOCK-238) | Borrador | [`BUG-001-job-dast-no-se-ejecuta`](BUG-001-job-dast-no-se-ejecuta/spec.md) |
