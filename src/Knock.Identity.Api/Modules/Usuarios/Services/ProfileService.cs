@@ -95,13 +95,3 @@ internal sealed partial class ProfileService(
     [LoggerMessage(EventId = 2203, Level = LogLevel.Warning, Message = "Colonia catalog unavailable: the profile was not saved")]
     private static partial void LogMarketUnavailable(ILogger logger);
 }
-
-/// <summary>
-/// Catálogo de colonias mientras Mercado no exponga la consulta «¿existe esta colonia?»: siempre falla como «Mercado no responde», así que un
-/// <c>PUT /me</c> con colonia responde 503 y no guarda nada (R-11); sin colonia funciona normal. Se sustituye por el cliente de Mercado.
-/// </summary>
-internal sealed class UnavailableColoniaCatalog : IColoniaCatalog
-{
-    public Task<bool> ExistsAsync(string colonia, CancellationToken cancellationToken) =>
-        throw new HttpRequestException("The colonia catalog client is not configured.");
-}

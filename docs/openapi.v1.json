@@ -5,6 +5,86 @@
     "version": "1.0.0"
   },
   "paths": {
+    "/api/v{version}/colonias/existe": {
+      "get": {
+        "tags": [
+          "ColoniaExists"
+        ],
+        "summary": "200 en ambos casos; el nombre se compara sin mayúsculas ni acentos y no se registra. El 422 lo da `ValidationFilter` antes de esta acción.",
+        "parameters": [
+          {
+            "name": "nombre",
+            "in": "query",
+            "description": "Name of the colonia. Letters, digits, spaces and . , ' ’ ( ) / # - ; up to 80 characters. Exactly one value. Case and accents are ignored.",
+            "required": true,
+            "schema": {
+              "maxLength": 80,
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/NeighborhoodExistsResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NeighborhoodExistsResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NeighborhoodExistsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v{version}/colonias/en-punto": {
       "get": {
         "tags": [
@@ -178,6 +258,17 @@
           }
         }
       },
+      "NeighborhoodExistsResponse": {
+        "required": [
+          "existe"
+        ],
+        "type": "object",
+        "properties": {
+          "existe": {
+            "type": "boolean"
+          }
+        }
+      },
       "OficioResponse": {
         "required": [
           "clave",
@@ -242,6 +333,9 @@
     }
   },
   "tags": [
+    {
+      "name": "ColoniaExists"
+    },
     {
       "name": "Colonias"
     },

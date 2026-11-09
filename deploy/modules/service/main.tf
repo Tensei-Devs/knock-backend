@@ -34,6 +34,8 @@ resource "azurerm_container_app" "this" {
   container_app_environment_id = var.environment_id
   revision_mode                = "Single"
   tags                         = var.tags
+  # Perfil que Azure asigna a las apps del entorno; declararlo evita un cambio sin efecto en cada plan (KNOCK-34, deploy/README.md).
+  workload_profile_name = "Consumption"
 
   identity {
     type         = "UserAssigned"
