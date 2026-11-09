@@ -49,7 +49,7 @@ internal sealed class CatalogDatabase : IAsyncDisposable
         var services = new ServiceCollection()
             .AddLogging()
             .AddSingleton<IConfiguration>(configuration)
-            .AddCatalogModule();
+            .AddCatalogModule(configuration);
         if (redisConnectionString is null)
         {
             // Las pruebas que no prueban la caché usan el doble (siempre falla): las lecturas van a MongoDB como antes.

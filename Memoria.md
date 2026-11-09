@@ -333,3 +333,10 @@
 - **Resultados:** UnitTest 770/770, DatabaseTest 64/64, SecurityTest 267 ejecutadas y 3 omitidas. Prueba k6 local satisfactoria.
 - **Pendientes del líder:** regeneración OpenAPI, codemap, sdd_lint y check_exceptions.
 - **Pendientes operativos:** secreto Redis en Key Vault y configuración de k6 nightly.
+
+## 2026-11-09 — KNOCK-205: Market arranca sin Redis (caché deshabilitada)
+
+- **Decisión:** si `ConnectionStrings:KnockRedis` no está configurada, `AddCatalogModule` no registra `AddKnockRedis()` ni su `ValidateOnStart`; registra `DisabledCatalogCache` (lecturas a MongoDB, generaciones en -1, nada se guarda), igual que cuando Redis falla. Con cadena configurada, todo sigue igual (con validación de contraseña). La decisión se pasa como `IConfiguration` por `AddKnockApi` → `AddKnockModules` → `AddCatalogModule`.
+- **Porqué:** la exportación del OpenAPI arranca la API sin cadena de Redis y el `ValidateOnStart` nuevo abortaba el proceso (código 134 en CI); además, desde la spec 003 Market arranca sin Redis cuando ningún módulo lo pide. Exigir la cadena solo porque el catálogo la usa rompía ese arranque.
+- **A evitar:** registrar Redis incondicional en un módulo que debe poder arrancar sin él; confundir «sin cadena» (caché deshabilitada) con «cadena sin contraseña» (sigue fallando la validación).
+- **Pruebas:** `MissingConnectionString_DisablesCatalogCache_CA_010_01` y `ConnectionStringWithoutPassword_StillFailsValidation_CA_010_01` en `tests/UnitTest/Catalog/CatalogCacheDisabledTests.cs`.
