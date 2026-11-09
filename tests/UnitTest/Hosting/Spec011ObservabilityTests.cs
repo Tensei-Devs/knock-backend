@@ -135,7 +135,7 @@ public sealed class Spec011ObservabilityTests
 
     [Theory]
     [MemberData(nameof(Services))]
-    public async Task Log_WrittenThroughServiceWiring_HasTimestampLevelServiceAndStructuredMessage_CA_011_01(string service)
+    public async Task Log_WrittenThroughServiceWiring_HasTimestampLevelServiceAndStructuredMessage_R_011_03(string service)
     {
         var records = await CaptureAsync(service, factory => _orderProcessed(factory.CreateLogger<Spec011ObservabilityTests>(), 3, null));
 
@@ -153,7 +153,7 @@ public sealed class Spec011ObservabilityTests
 
     [Theory]
     [MemberData(nameof(Services))]
-    public async Task Log_FrameworkInformation_IsFilteredByConfiguredLevel_CA_011_01(string service)
+    public async Task Log_FrameworkInformation_IsFilteredByConfiguredLevel_R_011_03(string service)
     {
         // appsettings.json: Serilog:MinimumLevel:Override:Microsoft.AspNetCore = Warning (evita llenar la cuota con el detalle del framework).
         var records = await CaptureAsync(service, factory =>
