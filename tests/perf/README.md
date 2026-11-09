@@ -20,9 +20,9 @@ Solo hace GET públicos: no necesita credenciales ni escribe datos.
 Cadena de MongoDB local (solo credenciales de mentira del contenedor, sin secretos reales):
 
 ```bash
-export KNOCK_DB_URI="mongodb://knock:local@localhost:10260/market?authSource=admin&directConnection=true&ssl=true&tlsInsecure=true"
+export KNOCK_DB_URI="<cadena local; ver deploy/docker-compose.local.yml>"
 export ConnectionStrings__KnockMongo="$KNOCK_DB_URI"
-export ConnectionStrings__KnockRedis="localhost:6379,password=local,defaultDatabase=0,allowAdmin=true"
+export ConnectionStrings__KnockRedis="<cadena local; ver deploy/docker-compose.local.yml>"
 export Mongo__Databases__Catalog=market
 mongosh --quiet "$KNOCK_DB_URI" db/entrega.js
 # Solo entorno local: el límite global por IP (100/min) contaría como error en el script y taparía el efecto de la caché.

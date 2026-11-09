@@ -4,8 +4,8 @@ namespace Knock.Market.Api.Hosting;
 
 internal static class ModulesExtensions
 {
-    public static IServiceCollection AddKnockModules(this IServiceCollection services)
+    public static IServiceCollection AddKnockModules(this IServiceCollection services, IConfiguration configuration)
     {
-        return services.AddCatalogModule();
+        return services.AddCatalogModule(configuration);
     }
 }

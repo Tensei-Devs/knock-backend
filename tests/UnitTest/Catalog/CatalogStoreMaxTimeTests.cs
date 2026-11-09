@@ -17,7 +17,7 @@ public sealed class CatalogStoreMaxTimeTests
     {
         // El cliente no se conecta: las consultas solo se arman, nunca se ejecutan.
         using var client = new MongoClient(MongoTestServices.SyntheticConnectionString());
-        var store = new CatalogStore(client.GetDatabase("market"), Options.Create(new KnockMongoOptions { QueryMaxTimeSeconds = 3 }), new FakeCatalogCache());
+        var store = new CatalogStore(client.GetDatabase("market"), Options.Create(new KnockMongoOptions { QueryMaxTimeSeconds = 3 }), new DisabledCatalogCache());
         var position = new GeoPosition(-99.3495, 20.0505);
 
         var queries = new[]
@@ -36,41 +36,8 @@ public sealed class CatalogStoreMaxTimeTests
     public void CatalogQueriesUseTheDefaultMaxTimeWhenNotConfigured_TC_TT_BD_06_13()
     {
         using var client = new MongoClient(MongoTestServices.SyntheticConnectionString());
-        var store = new CatalogStore(client.GetDatabase("market"), Options.Create(new KnockMongoOptions()), new FakeCatalogCache());
+        var store = new CatalogStore(client.GetDatabase("market"), Options.Create(new KnockMongoOptions()), new DisabledCatalogCache());
 
         store.NamesByPostalCodeQuery("42803").Options.MaxTime.Should().Be(TimeSpan.FromSeconds(5));
-    }
-
-    /// <summary>Doble que siempre falla: estas pruebas solo arman consultas y nunca ejecutan, así que la caché no interviene.</summary>
-    private sealed class FakeCatalogCache : ICatalogCache
-    {
-        public Task<IReadOnlyList<OficioListing>?> GetOficiosAsync(CancellationToken cancellationToken) =>
-            Task.FromResult<IReadOnlyList<OficioListing>?>(null);
-
-        public Task RemoveOficiosAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-        public Task<IReadOnlyList<string>?> GetNeighborhoodNamesAsync(string postalCode, CancellationToken cancellationToken) =>
-            Task.FromResult<IReadOnlyList<string>?>(null);
-
-        public Task RemoveNeighborhoodNamesAsync(string postalCode, CancellationToken cancellationToken) => Task.CompletedTask;
-
-        public Task<bool?> GetColoniaExistsAsync(ObjectId id, string postalCode, CancellationToken cancellationToken) =>
-            Task.FromResult<bool?>(null);
-
-
-
-        public Task RemoveColoniaExistsAsync(ObjectId id, string postalCode, CancellationToken cancellationToken) => Task.CompletedTask;
-
-        public Task<long> GetOficiosGenerationAsync(CancellationToken cancellationToken) => Task.FromResult(0L);
-
-        public Task<bool> SetOficiosIfGenerationAsync(IReadOnlyList<OficioListing> oficios, long expectedGeneration, CancellationToken cancellationToken) => Task.FromResult(true);
-
-        public Task<long> GetNeighborhoodNamesGenerationAsync(string postalCode, CancellationToken cancellationToken) => Task.FromResult(0L);
-
-        public Task<bool> SetNeighborhoodNamesIfGenerationAsync(string postalCode, IReadOnlyList<string> names, long expectedGeneration, CancellationToken cancellationToken) => Task.FromResult(true);
-
-        public Task<long> GetColoniaExistsGenerationAsync(ObjectId id, string postalCode, CancellationToken cancellationToken) => Task.FromResult(0L);
-
-        public Task<bool> SetColoniaExistsIfGenerationAsync(ObjectId id, string postalCode, bool exists, long expectedGeneration, CancellationToken cancellationToken) => Task.FromResult(true);
     }
 }

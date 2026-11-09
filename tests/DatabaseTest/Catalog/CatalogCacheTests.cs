@@ -255,18 +255,7 @@ public sealed class CatalogCacheTests
         (await database.Redis.KeyExistsAsync(RedisCatalogCache.NeighborhoodNamesKey("42800"))).Should().BeTrue();
         (await database.Redis.KeyExistsAsync(RedisCatalogCache.ColoniaExistsKey(centroId, "42800"))).Should().BeTrue();
 
-        var invalid = CatalogSeedData.Colonias.Select(document => document.DeepClone().AsBsonDocument).ToList();
-        var duplicateId = CatalogSeedData.Colonia("Centro")["_id"].DeepClone();
-        invalid.Add(new BsonDocument
-        {
-            { "_id", duplicateId },
-            { "nombre", "Centro Duplicada" },
-            { "nombreBusqueda", "CENTRO DUPLICADA" },
-            { "cp", "42800" },
-            { "municipio", "Tula de Allende" },
-            { "piloto", false },
-            { "aproximado", false },
-        }); // Segundo documento con el mismo _id y otra clave natural: el INSERT del segundo falla a mitad de la siembra.
+        var invalid = InvalidColoniasWithDuplicate();
 
         var act = () => database.InScopeAsync<CatalogSeeder>(seeder => seeder.SeedAsync(CatalogSeedData.Oficios, invalid, CancellationToken.None));
 
@@ -382,6 +371,19 @@ public sealed class CatalogCacheTests
         await store.FindNamesByPostalCodeAsync("42800", CancellationToken.None);
         var genBefore = (await database.Redis.StringGetAsync(RedisCatalogCache.NeighborhoodNamesGenerationKey("42800"))).ToString();
 
+        var invalid = InvalidColoniasWithDuplicate();
+
+        var act = () => database.InScopeAsync<CatalogSeeder>(seeder => seeder.SeedAsync(CatalogSeedData.Oficios, invalid, CancellationToken.None));
+        await act.Should().ThrowAsync<MongoWriteException>();
+
+        var genAfter = (await database.Redis.StringGetAsync(RedisCatalogCache.NeighborhoodNamesGenerationKey("42800"))).ToString();
+        (long.Parse(genAfter, System.Globalization.CultureInfo.InvariantCulture)).Should().BeGreaterThan(long.Parse(string.IsNullOrEmpty(genBefore) ? "0" : genBefore, System.Globalization.CultureInfo.InvariantCulture), "la siembra fallida también sube la generación");
+        (await database.Redis.KeyExistsAsync(RedisCatalogCache.NeighborhoodNamesKey("42800"))).Should().BeFalse();
+    }
+
+    /// <summary>Colonias semilla más un segundo documento con el mismo <c>_id</c> y otra clave natural: el INSERT del segundo falla a mitad de la siembra.</summary>
+    private static List<BsonDocument> InvalidColoniasWithDuplicate()
+    {
         var invalid = CatalogSeedData.Colonias.Select(document => document.DeepClone().AsBsonDocument).ToList();
         var duplicateId = CatalogSeedData.Colonia("Centro")["_id"].DeepClone();
         invalid.Add(new BsonDocument
@@ -394,12 +396,6 @@ public sealed class CatalogCacheTests
             { "piloto", false },
             { "aproximado", false },
         });
-
-        var act = () => database.InScopeAsync<CatalogSeeder>(seeder => seeder.SeedAsync(CatalogSeedData.Oficios, invalid, CancellationToken.None));
-        await act.Should().ThrowAsync<MongoWriteException>();
-
-        var genAfter = (await database.Redis.StringGetAsync(RedisCatalogCache.NeighborhoodNamesGenerationKey("42800"))).ToString();
-        (long.Parse(genAfter, System.Globalization.CultureInfo.InvariantCulture)).Should().BeGreaterThan(long.Parse(string.IsNullOrEmpty(genBefore) ? "0" : genBefore, System.Globalization.CultureInfo.InvariantCulture), "la siembra fallida también sube la generación");
-        (await database.Redis.KeyExistsAsync(RedisCatalogCache.NeighborhoodNamesKey("42800"))).Should().BeFalse();
+        return invalid;
     }
 }

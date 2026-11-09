@@ -264,3 +264,41 @@ internal sealed partial class RedisCatalogCache(IConnectionMultiplexer redis, IO
     [LoggerMessage(EventId = 2204, Level = LogLevel.Warning, Message = "Catalog cache unavailable: reading from the database")]
     private static partial void LogCacheUnavailable(ILogger logger);
 }
+
+/// <summary>
+/// Caché deshabilitada: se usa cuando no hay cadena de Redis configurada (<see cref="CatalogModuleExtensions"/>). Lee siempre de
+/// MongoDB, igual que cuando Redis no responde (las lecturas de <see cref="RedisCatalogCache"/> fallan abiertas y las generaciones
+/// quedan en -1, así que nada se guarda); invalidar no hace nada porque no hay nada que invalidar.
+/// </summary>
+internal sealed class DisabledCatalogCache : ICatalogCache
+{
+    public Task<IReadOnlyList<OficioListing>?> GetOficiosAsync(CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<OficioListing>?>(null);
+
+    public Task RemoveOficiosAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    public Task<long> GetOficiosGenerationAsync(CancellationToken cancellationToken) => Task.FromResult(-1L);
+
+    public Task<bool> SetOficiosIfGenerationAsync(IReadOnlyList<OficioListing> oficios, long expectedGeneration, CancellationToken cancellationToken) =>
+        Task.FromResult(false);
+
+    public Task<IReadOnlyList<string>?> GetNeighborhoodNamesAsync(string postalCode, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<string>?>(null);
+
+    public Task RemoveNeighborhoodNamesAsync(string postalCode, CancellationToken cancellationToken) => Task.CompletedTask;
+
+    public Task<long> GetNeighborhoodNamesGenerationAsync(string postalCode, CancellationToken cancellationToken) => Task.FromResult(-1L);
+
+    public Task<bool> SetNeighborhoodNamesIfGenerationAsync(string postalCode, IReadOnlyList<string> names, long expectedGeneration, CancellationToken cancellationToken) =>
+        Task.FromResult(false);
+
+    public Task<bool?> GetColoniaExistsAsync(ObjectId id, string postalCode, CancellationToken cancellationToken) =>
+        Task.FromResult<bool?>(null);
+
+    public Task RemoveColoniaExistsAsync(ObjectId id, string postalCode, CancellationToken cancellationToken) => Task.CompletedTask;
+
+    public Task<long> GetColoniaExistsGenerationAsync(ObjectId id, string postalCode, CancellationToken cancellationToken) => Task.FromResult(-1L);
+
+    public Task<bool> SetColoniaExistsIfGenerationAsync(ObjectId id, string postalCode, bool exists, long expectedGeneration, CancellationToken cancellationToken) =>
+        Task.FromResult(false);
+}
