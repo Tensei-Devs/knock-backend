@@ -1,11 +1,11 @@
 namespace Knock.Contracts.Moderation;
 
-/// <summary>Resultado de la revisión de contenido. <see cref="Unavailable"/> significa BLOQUEADO: nunca se permite publicar si el moderador no está disponible.</summary>
+/// <summary>Resultado de la revisión de contenido. <see cref="Unavailable"/> significa BLOQUEADO: nunca se permite publicar si el moderador no está disponible. Es 0 para que un valor sin asignar falle cerrado.</summary>
 public enum ModerationOutcome
 {
-    Allowed,
-    Rejected,
-    Unavailable,
+    Unavailable = 0,
+    Allowed = 1,
+    Rejected = 2,
 }
 
 /// <summary>Resultado de moderación con categoría opcional.</summary>
