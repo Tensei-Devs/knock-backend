@@ -1,0 +1,140 @@
+name: ci-deploy
+
+# KNOCK-202: tras un CI verde de ci-pr en main, construye cada imagen desde el runner, la
+# escanea con Trivy y la publica en acrknockdevtn01.azurecr.io etiquetada con el SHA completo
+# del commit. Solo corre si el CI terminó en éxito y el commit pertenece a main.
+# - workflow_run (no pull_request_target): el código que corre es el del commit fijado de main.
+# - Autenticación Azure por OIDC con azure/login: sin secretos permanentes; Client/Tenant/
+#   Subscription llegan por variables de repositorio (vars.AZURE_*). Permisos mínimos por job.
+# - Sin `az acr build` ni ACR Tasks: el build sale del runner (docker/build-push-action).
+# - Solo se construye el servicio que cambió en el commit (detect; Knock.Contracts afecta a todos).
+# - Sin etiqueta `latest`: la única etiqueta es el SHA completo.
+# - No despliega a Container Apps: queda fuera de KNOCK-202 (requiere autorización adicional).
+# - Acciones fijadas por SHA (scripts/ci/pin_actions.py).
+
+on:
+  workflow_run:
+    workflows: [ci-pr]
+    branches: [main]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-deploy-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
+
+env:
+  ACR_NAME: acrknockdevtn01
+  ACR_REGISTRY: acrknockdevtn01.azurecr.io
+
+jobs:
+  detect:
+    name: Detectar servicios del commit
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      gateway: ${{ steps.d.outputs.gateway }}
+      identity: ${{ steps.d.outputs.identity }}
+      messaging: ${{ steps.d.outputs.messaging }}
+      market: ${{ steps.d.outputs.market }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - id: d
+        run: |
+          # Detección equivalente a la de ci-pr (los outputs tienen el mismo significado).
+          # - Commit de merge (flujo normal de PRs a main): HEAD~1 es el primer padre y el diff
+          #   cubre enteros los cambios del PR, sin omitir commits anteriores del push.
+          # - Push lineal a main: sin el `before` del push no se puede delimitar cuántos commits
+          #   trajo; se reconstruye todo (dirección segura: nunca se omite un servicio cambiado).
+          NP=$(git rev-list --parents -n 1 HEAD 2>/dev/null | wc -w)
+          if [ "${NP:-0}" -ge 3 ]; then
+            CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "__ALL__")
+          else
+            CHANGED="__ALL__"
+          fi
+          # Un cambio en los contratos compartidos (Knock.Contracts) o en archivos compartidos
+          # de compilación (Directory.Build.*, Directory.Packages.props, global.json,
+          # NuGet.config, *.sln/*.slnx, *.props/*.targets) afecta a los cuatro servicios.
+          SHARED='^src/Knock\.Contracts/|^Directory\.|\.(slnx?|props|targets)$|^global\.json$|^[Nn]u[Gg]et\.config$'
+          hit() { [ "$CHANGED" = "__ALL__" ] || grep -qE "$1" <<<"$CHANGED"; }
+          {
+            echo "gateway=$(hit "^src/Knock\.Gateway/|$SHARED" && echo true || echo false)"
+            echo "identity=$(hit "^src/Knock\.Identity\.Api/|$SHARED" && echo true || echo false)"
+            echo "messaging=$(hit "^src/Knock\.Messaging\.Api/|$SHARED" && echo true || echo false)"
+            echo "market=$(hit "^src/Knock\.Market\.Api/|$SHARED" && echo true || echo false)"
+          } >> "$GITHUB_OUTPUT"
+
+  publish:
+    name: Build, Trivy y push a ACR
+    needs: detect
+    if: success()
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      id-token: write
+    # Un job por servicio (spec 001, R-06: cada servicio se construye y se publica por separado).
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { proyecto: Knock.Gateway, imagen: knock-gateway, salida: gateway }
+          - { proyecto: Knock.Identity.Api, imagen: knock-identity, salida: identity }
+          - { proyecto: Knock.Messaging.Api, imagen: knock-messaging, salida: messaging }
+          - { proyecto: Knock.Market.Api, imagen: knock-market, salida: market }
+    env:
+      IMAGEN: acrknockdevtn01.azurecr.io/${{ matrix.imagen }}:${{ github.event.workflow_run.head_sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+      - name: Servicio sin cambios (no se construye ni se publica)
+        if: needs.detect.outputs[matrix.salida] != 'true'
+        run: 'echo "::notice::${{ matrix.imagen }} sin cambios en el commit: se omite su build."'
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+        if: needs.detect.outputs[matrix.salida] == 'true'
+      # OIDC: la credencial federada vive en Azure; aquí solo variables, sin secretos permanentes.
+      - name: Login en Azure (OIDC)
+        if: needs.detect.outputs[matrix.salida] == 'true'
+        uses: Azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Login en el registro (sesión OIDC de Azure)
+        if: needs.detect.outputs[matrix.salida] == 'true'
+        run: az acr login --name "${ACR_NAME}" --output none
+      # load: true deja la imagen en el daemon para escanearla con Trivy y Dockle antes de publicarla.
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        if: needs.detect.outputs[matrix.salida] == 'true'
+        with:
+          context: .
+          file: src/${{ matrix.proyecto }}/Dockerfile
+          load: true
+          tags: ${{ env.IMAGEN }}
+      # Trivy como contenedor oficial (igual que en ci-pr; KNOCK-232): bloquea en altas/críticas con corrección.
+      - name: Trivy (críticas y altas con corrección bloquean)
+        if: needs.detect.outputs[matrix.salida] == 'true'
+        run: |
+          docker run --rm             -v /var/run/docker.sock:/var/run/docker.sock             -v "$PWD:/work" -w /work             ghcr.io/aquasecurity/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c             image --severity CRITICAL,HIGH --exit-code 1 --ignore-unfixed             --ignorefile .trivyignore --quiet "$IMAGEN"
+      - name: Dockle (buenas prácticas de imagen)
+        if: needs.detect.outputs[matrix.salida] == 'true'
+        uses: goodwithtech/dockle-action@e30e6af832aad6ea7dca2a248d31a85eab6dbd68 # v0.4.15
+        with:
+          image: ${{ env.IMAGEN }}
+          exit-code: "1"
+          exit-level: warn
+          # EXC-003 (security/exceptions.yaml): falsos positivos de CIS-DI-0010 en variables de la imagen base.
+          # Solo estas claves; cualquier otra variable o archivo sospechoso sigue fallando.
+          accept-key: DOTNET_VERSION,ASPNET_VERSION,ASPNETCORE_URLS,ASPNETCORE_ENVIRONMENT,ASPNETCORE_HTTP_PORTS,DOTNET_RUNNING_IN_CONTAINER,DOTNET_EnableDiagnostics,APP_UID,org.opencontainers.image.version,org.opencontainers.image.title,org.opencontainers.image.description,org.opencontainers.image.created,--gid,--uid,--clear,PATH
+      - name: "Push a ACR (etiqueta: SHA completo del commit)"
+        if: needs.detect.outputs[matrix.salida] == 'true'
+        run: docker push "${IMAGEN}"

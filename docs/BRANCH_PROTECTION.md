@@ -19,7 +19,7 @@ Activar:
   - [x] Require conversation resolution before merging
 - [x] **Require status checks to pass**
   - [x] Require branches to be up to date before merging
-  - Checks requeridos: **`gate`** (ci-pr) y **`CodeQL (actions)`**; en backend además `CodeQL (csharp)`, en frontend `CodeQL (javascript-typescript)` cuando exista el código.
+  - Check requerido: **`gate`** (ci-pr), que incluye el análisis estático con Semgrep (job `sast`). No se exige ningún check de CodeQL: no se contrata GitHub Advanced Security (KNOCK-64; ver `docs/QA_DEVSECOPS.md` §3.1).
 - [x] **Require signed commits** (recomendado)
 - Bypass list: **vacía** (nadie se salta las reglas, tampoco los admins).
 
@@ -35,7 +35,7 @@ Activar:
 - [x] Require approval for all outside collaborators.
 
 ## 4. Seguridad del código
-**Settings → Code security**: activar Dependency graph, Dependabot alerts, Dependabot security updates, **Secret scanning** y **Push protection**, Code scanning (CodeQL avanzado, ya hay workflow) y **Private vulnerability reporting**.
+**Settings → Code security**: activar Dependency graph, Dependabot alerts, Dependabot security updates, **Secret scanning** y **Push protection**, el envío del SARIF de Semgrep a Code scanning (solo mientras el repositorio sea público) y **Private vulnerability reporting**.
 
 ## 5. Secretos y variables (solo cuando se habiliten)
 | Nombre | Tipo | Repo | Para qué |
