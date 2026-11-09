@@ -7,6 +7,11 @@
 - 14 specs de la base (arquitectura, estructura del repositorio, infraestructura, rendimiento, observabilidad, versionamiento y seguridad) redactadas en **Borrador**; sus tareas **no se han ejecutado**.
 - Sin código de producto todavía.
 
+## 2026-11-08 — Despliegue de imágenes y credencial federada
+- **Decisión:** `id-knock-deploy` lleva dos credenciales federadas para `main` (`github-main` y `github-main-ids`), porque GitHub presenta el sujeto con dos formas; el perfil «Consumption» ya no produce diferencias en el plan.
+- **Porqué:** la primera corrida de `ci-deploy` en `main` falló con `AADSTS700213`; con la segunda credencial publicó las cuatro imágenes y el apply dejó las cuatro apps sanas.
+- **A evitar:** asumir que una credencial federada con el sujeto en forma corta basta; si el inicio de sesión falla, comparar el sujeto del error con el de la credencial.
+
 ## 2026-10-27 — Aclaración de «Uso de IA»
 - **Decisión:** la sección «Uso de IA» es del **pull request** (plantilla de PR), no de cada spec.
 - **Porqué:** `@constitution-reviewer` marcó FAIL a la spec 001 por leer «todo cambio» de forma literal; la redacción era ambigua.
