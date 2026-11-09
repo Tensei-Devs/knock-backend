@@ -63,6 +63,7 @@ internal sealed class SecurityMarketFactory(IReadOnlyDictionary<string, string?>
     public static async Task<SecurityMarketFactory> CreateAsync(IReadOnlyDictionary<string, string?>? overrides = null, string environment = "Production")
     {
         var mongo = await DocumentDbFixture.SharedAsync();
+        SecurityHostConfiguration.ClearFirebaseEmulatorHost();
         var values = new Dictionary<string, string?>
         {
             ["ConnectionStrings:KnockMongo"] = mongo.ConnectionString,
@@ -87,6 +88,17 @@ internal sealed class SecurityMarketFactory(IReadOnlyDictionary<string, string?>
             [CatalogStore.NombreBusquedaField] = nombre.ToUpperInvariant(),
             [CatalogStore.ModalidadField] = modalidad,
             [CatalogStore.ActivoField] = activo,
+            [CatalogStore.VersionField] = 1,
+        });
+
+    /// <summary>Inserta una colonia del catálogo con lo mínimo que consulta «¿existe esta colonia?»: nombre, nombre normalizado, código postal y municipio.</summary>
+    public Task AddColoniaAsync(string nombre, string cp, string municipio) =>
+        Database.GetCollection<BsonDocument>(CatalogStore.ColoniasCollection).InsertOneAsync(new BsonDocument
+        {
+            [CatalogStore.NombreField] = nombre,
+            [CatalogStore.NombreBusquedaField] = SearchNameNormalizer.Normalize(nombre),
+            [CatalogStore.CpField] = cp,
+            [CatalogStore.MunicipioField] = municipio,
             [CatalogStore.VersionField] = 1,
         });
 

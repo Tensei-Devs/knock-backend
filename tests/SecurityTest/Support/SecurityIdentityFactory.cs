@@ -57,9 +57,7 @@ internal sealed class SecurityIdentityFactory(IReadOnlyDictionary<string, string
     {
         var mongo = await DocumentDbFixture.SharedAsync();
         var redis = await RedisTestFixture.SharedAsync();
-        // El CI define FIREBASE_AUTH_EMULATOR_HOST para las pruebas de integración y Identidad se niega a arrancar fuera de Development con ella
-        // (el emulador emite tokens sin firmar). Estas pruebas usan un verificador de Firebase falso, así que no la necesitan.
-        Environment.SetEnvironmentVariable("FIREBASE_AUTH_EMULATOR_HOST", null);
+        SecurityHostConfiguration.ClearFirebaseEmulatorHost();
 
         var values = new Dictionary<string, string?>
         {
