@@ -277,3 +277,8 @@
 - **Por qué:** el entorno debía poder crearse desde cero con un solo comando sin arriesgar la base de datos (`prevent_destroy`) ni aplicar por accidente.
 - **Verificación:** `bash -n` y ShellCheck sin hallazgos; ejecutado en modo plan contra `rg-knock-dev` con `-lock=false`: infra 0 por agregar, 1 por cambiar, 0 por destruir; database sin cambios; apps 0 por agregar, 5 por cambiar, 0 por destruir (todos por `workload_profile`, sin efecto real). No se aplicó nada.
 - **A evitar:** usar `--no-lock` con `--apply`; crear el grupo de recursos desde Terraform (lo crea una persona); pasar secretos al script.
+
+## 2026-11-09 — Specs del Sprint 4 en borrador (KNOCK-243)
+- **Decisión:** se proponen las specs 020 a 037 (solicitudes y cotizaciones, comparar y elegir, visita segura con código, zona por ubicación, cliente de IA con Azure, verificación de identidad, mensajería en tiempo real, búsqueda de expertos, oleadas, cancelar y vencer, chat previo, moderación, CDN de imágenes, panel interno, escalado a dos réplicas, redacción de registros, resumen de trabajo del técnico y registro de dispositivos). Todas quedan en Borrador hasta que una persona las apruebe. Decisiones de revisión por confirmar: el código de la visita no viaja en el aviso; las fotos de una solicitud son privadas; el chat tiene un límite único de 30 mensajes por minuto; el cierre de una visita corta el chat al instante.
+- **Porqué:** con las specs aprobadas antes de implementar, el equipo puede tomar varias tareas en paralelo y solo esperar revisiones, y cada criterio de aceptación llega con su prueba prevista.
+- **A evitar:** empezar a implementar una spec en Borrador; cambiar un código de error o un límite en una spec sin alinear la otra que lo usa.
