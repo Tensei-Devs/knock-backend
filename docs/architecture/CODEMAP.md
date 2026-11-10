@@ -1,6 +1,6 @@
 # Mapa de código
 
-> Generado por `scripts/codemap.py` el 2026-11-09T17:47:26Z. No editar a mano.
+> Generado por `scripts/codemap.py` el 2026-11-10T20:46:55Z. No editar a mano.
 > **Antes de crear una clase, método o archivo, busca aquí o corre `python scripts/codemap.py --query "<qué necesitas>"`.**
 
 ## Resumen
@@ -13,7 +13,7 @@
 | `Knock.Identity.Api` | -, common, hosting | 28 | 58 | 71 |
 | `Knock.Market.Api` | -, common, hosting | 26 | 55 | 69 |
 | `Knock.Messaging.Api` | -, hosting | 7 | 21 | 29 |
-| `Media` | -, data, domain, dtos, validators | 7 | 13 | 18 |
+| `Media` | -, data, domain, dtos, validators | 7 | 13 | 19 |
 | `Sesiones` | -, controllers, data, domain, dtos, services, validators | 25 | 46 | 53 |
 | `Usuarios` | -, controllers, data, domain, dtos, services | 9 | 19 | 23 |
 
@@ -420,11 +420,11 @@
 **domain**
 
 - `src/Knock.Market.Api/Modules/Media/Domain/MediaFile.cs` — enum `MediaUsage`, enum `MediaFileState`, enum `ImageFormat`, record `MediaFile`
-  - `MediaFile()`:11, `IsReadyFor()`:21, `CreatePending()`:22, `MarkReady()`:24, `MarkRejected()`:30
+  - `MediaFile()`:14, `IsReadyFor()`:24, `CreatePending()`:25, `MarkReady()`:28, `MarkRejected()`:33
 - `src/Knock.Market.Api/Modules/Media/Domain/MediaOutcome.cs` — enum `MediaOutcomeStatus`, record `MediaOutcome`, class `MediaRejection`, record `ProcessedImage`
   - `MediaOutcome()`:7, `Ok()`:9, `NotFound()`:10, `Conflict()`:11, `Unprocessable()`:12
 - `src/Knock.Market.Api/Modules/Media/Domain/MediaRules.cs` — class `MediaRules`
-  - `IsAllowedContentType()`:18, `IsAllowedSize()`:21, `AreAllowedDimensions()`:23, `DetectFormat()`:26, `ParseUsage()`:32, `ToContractValue()`:40, `ToContractValue()`:47
+  - `IsAllowedContentType()`:24, `IsAllowedSize()`:27, `AreAllowedDimensions()`:29, `DetectFormat()`:32, `NewBlobKey()`:41, `ParseUsage()`:43, `ToContractValue()`:51, `ToContractValue()`:58
 
 **dtos**
 
