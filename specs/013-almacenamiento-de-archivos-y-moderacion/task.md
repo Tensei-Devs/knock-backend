@@ -1,35 +1,49 @@
 # Tareas 013 — Almacenamiento de archivos, CDN y moderación
 
-> **Estado:** OI-1 implementada (contratos/estructura) · OI-2 y OI-3 pendientes.
+> **Estado:** OI-1 y OI-2 implementadas · OI-3 pendiente.
 
 | Tarea | Qué se hace | Cubre | Fase | Estado |
 |---|---|---|---|---|
 | T-01 | Crear los contenedores y la CDN en Terraform | R-01, R-04 | OI-3 | pendiente |
 | T-02 | Implementar el servicio de enlaces firmados | R-02 · CA-02 | OI-3 | pendiente (OI-1 solo define la constante `SasLifetime` de 5 minutos, sin generar enlaces) |
-| T-03 | Implementar la limpieza de metadatos y la reducción de tamaño | R-03 · CA-01 | OI-2 | pendiente (OI-1 solo incluye reglas puras de formato y dimensiones, sin procesamiento) |
-| T-04 | Implementar el cliente de moderación compartido con falla cerrada | R-05, R-06, R-07 · CA-04, CA-05 | OI-1 (contrato) / OI-2 (falso) / OI-3 (real) | parcial: contrato `IContentModerator` con `Unavailable` como bloqueo en OI-1; implementación pendiente |
-| T-05 | Escribir las pruebas de seguridad negativa | R-04 · CA-03 | OI-2 / OI-3 | pendiente (OI-1 solo incluye pruebas unitarias de validación y reglas) |
+| T-03 | Implementar la limpieza de metadatos y la reducción de tamaño | R-03 · CA-01 | OI-2 | **hecha en OI-2** (`ImageProcessor` con SkiaSharp: firma y dimensiones antes de decodificar, orientación EXIF aplicada a píxeles y re-codificado sin metadatos) |
+| T-04 | Implementar el cliente de moderación compartido con falla cerrada | R-05, R-06, R-07 · CA-04, CA-05 | OI-1 (contrato) / OI-2 (falso) / OI-3 (real) | parcial: contrato `IContentModerator` en OI-1 y flujo con moderador falso en OI-2; falta el cliente real de Azure AI Content Safety en OI-3 |
+| T-05 | Escribir las pruebas de seguridad negativa | R-04 · CA-03 | OI-2 / OI-3 | parcial: OI-2 cubre archivo malicioso con firma falsa y falla cerrada de moderación; CA-03 (imagen privada por la CDN) es OI-3 |
 
 ## Fases de implementación
 
 | Fase | Alcance | Estado |
 |---|---|---|
 | **OI-1** | Contratos (`IContentModerator` con falla cerrada), estructura `Media`, dominio/reglas puras, validaciones tipo/tamaño, `MediaOptions`, `MediaModuleExtensions`, integración en `ModulesExtensions`, pruebas unitarias y arquitectura | **Hecha** |
-| **OI-2** | Procesamiento de imágenes y orquestación local con moderador falso (sin Azure, sin SAS, sin endpoints) | pendiente |
+| **OI-2** | Procesamiento de imágenes y orquestación local con moderador falso (sin Azure, sin SAS, sin endpoints) | **Hecha** |
 | **OI-3** | Blob Storage, User Delegation SAS, endpoints `archivos/*`, OpenAPI, Azurite/RBAC, moderación real con falla cerrada | pendiente |
 
 ## Criterios pendientes por fase
-- **CA-01** (limpieza de metadatos): OI-2. En OI-1 no hay procesamiento de imágenes.
+- **CA-01** (limpieza de metadatos): cubierto en OI-2 (`ImageProcessor` y prueba de integración con Azurite).
 - **CA-02** (enlace vencido a los 5 minutos): OI-3. En OI-1 solo existe la constante `SasLifetime`, sin servicio de enlaces.
 - **CA-03** (imagen privada por la CDN): OI-3 (T-05).
-- **CA-04** (contenido inapropiado rechazado): OI-2 con moderador falso; la moderación real llega en OI-3.
-- **CA-05** (moderación caída, no se publica): el contrato con `Unavailable` como bloqueo es OI-1; el comportamiento completo es OI-2/OI-3.
+- **CA-04** (contenido inapropiado rechazado): cubierto en OI-2 con moderador falso; la moderación real llega en OI-3.
+- **CA-05** (moderación caída, no se publica): cubierto en OI-2 con moderador falso (`Unavailable` bloquea); el cliente real es OI-3.
+
+## Dudas abiertas (rutas de subida y confirmación)
+- Ni `docs/endpoints.md` ni las specs 017 o 020 fijan rutas para subir o confirmar archivos (la spec 020 no existe en `specs/`). Por eso OI-2 **no expone controllers ni rutas**: solo servicios de aplicación (`MediaService`, `IMediaApi`) detrás de interfaces del módulo, como pide el alcance de la fase.
+- **Decide una persona en OI-3:** las rutas HTTP (`POST /api/v1/archivos/subidas` y `POST /api/v1/archivos/{id}/confirmar` son solo una propuesta del código legacy), las respuestas del contrato y su entrada en `docs/endpoints.md` y el OpenAPI. Hasta que se fijen, no se publica contrato de subida.
+
+## CDN (OI-3)
+- La CDN se propone con **Azure Front Door Standard, ~35 USD/mes**, **apagada por defecto** (variable de Terraform en `false`). No se crea en OI-2/OI-3 sin aprobación del líder; las imágenes públicas siguen servidas desde el contenedor público de Blob (ver ADR-007 y `Memoria.md`).
 
 Las pruebas de OI-1 se nombran `*_OI1_NN` y no `*_CA_013_NN`, porque ninguna cubre todavía un criterio de aceptación completo.
 
 ## Notas de revisión (OI-1)
 - **Excepción de «Media» en `ModuleSurfaceTests`:** la rama de `tests/UnitTest/Architecture/ModuleSurfaceTests.cs` que acepta una sola clase pública (`MediaModuleExtensions`) se quita cuando OI-2 agregue la interfaz del módulo (el test vuelve a exigir las dos superficies: clase de registro e interfaz). OI-1 no expone interfaz porque todavía no hay consumidor interno real del módulo.
 - **Origen de 12 000 px por lado y 24 MP totales:** TT-API-05 legacy (`specs/_legacy/TT-API-05-servicio-de-fotos-privadas-blob-sas/spec.md`, donde `MaxPixels` baja de 40 a 24 MP, y `docs/migracion/Memoria_origen.md`, decisión de Guillermo del 2026-10-23, punto 2; `MediaRules.MaxPixels` / `MediaRules.MaxSidePixels` en `src/Knock.Market.Api/Modules/Media/Domain/MediaRules.cs`). En OI-1 se reutilizan esos límites de TT-API-05 para rechazar antes de decodificar.
+
+## Notas de revisión (OI-2)
+- **Qué entró:** `ImageProcessor` (SkiaSharp), `MediaService` (cuarentena → procesar → moderar → contenedor final → borrar cuarentena), `IMediaBlobStore` con implementación de Azure (`AzureMediaBlobStore`) y en memoria (`InMemoryMediaBlobStore`), `IMediaFileStore` con `BlobMediaFileStore` (JSON por archivo en el contenedor de registros, temporal hasta TT-BD-06) e `InMemoryMediaFileStore`, y `IMediaApi`/`MediaApi` como frontera del módulo.
+- **Fuera de OI-2 (pasa a OI-3):** SAS de delegación, controllers/rutas, Terraform, moderación real de Azure AI Content Safety, CDN y prueba de CA-02/CA-03.
+- **Pruebas OI-2:** `ImageProcessorTests` (`..._CA_013_01` sin coordenadas tras procesar; reducción y firma falsa), `MediaServiceTests` (`_CA_013_04` rechazado y `_CA_013_05` moderación caída, con cuarentena borrada) y `tests/IntegrationTest/Media/MediaConfirmationBlobTests` con Azurite real (caso feliz y `.jpg` con firma PDF rechazado, contenedor final y cuarentena vacíos).
+- **Azurite de pruebas:** `mcr.microsoft.com/azure-storage/azurite:3.37.0` fijado por el digest de la lista de manifiestos (`sha256:830430c1...`), con `--skipApiVersionCheck` porque `Azure.Storage.Blobs` 12.30 envía una `x-ms-version` que 3.37 aún no reconoce.
+- **Docker de Market:** construye con `SkiaSharp.NativeAssets.Linux.NoDependencies`; la imagen contiene `libSkiaSharp.so` para linux-x64/arm64 y no necesita paquetes del sistema adicionales.
 
 ## Definición de terminado
 - Los criterios de aceptación de `spec.md` están cubiertos por pruebas en verde.
