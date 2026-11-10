@@ -6,7 +6,7 @@
 > **Relacionadas:** KNOCK-251 (extraerá después el redactor y `ForwardedHeadersExtensions` a una biblioteca compartida); spec 011.
 > **Fuentes:** `specs/011-observabilidad-y-registro/spec.md` · `src/Knock.Market.Api/Hosting/LoggingExtensions.cs` · `src/Knock.Market.Api/Hosting/TelemetryRedactor.cs` · equivalentes de Identity, Gateway y Messaging.
 > **Skills:** spec-first-writing, story-workflow, security-core, testing-strategy-backend, reuse-before-create
-> **Estado:** Borrador
+> **Estado:** Aprobada
 
 ## 1. Objetivo
 Evitar que datos sensibles aparezcan en los registros de consola de Market y recuperar el cumplimiento de CA-02 de la spec 011.
@@ -76,6 +76,6 @@ No aplica: no se crean colecciones ni se modifican datos persistidos.
 - ¿Basta una prueba de la configuración real sin host o se requiere además integración con el host de Market?
 
 ## Aprobación
-- [ ] Revisor 1 — Julián · fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-10
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Firmada (tras el merge)
