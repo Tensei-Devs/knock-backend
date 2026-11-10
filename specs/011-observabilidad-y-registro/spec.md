@@ -42,7 +42,7 @@ Fija el encabezado `X-Correlation-Id` y el formato de los registros: JSON de una
 | `correlationId` | propiedad `CorrelationId` | `customDimensions.CorrelationId` |
 | `message` | `@m` (mensaje ya renderizado) | cuerpo del registro |
 
-El formato compacto añade otros campos propios (`@mt`, plantilla del mensaje; `@x`, excepción); no son parte de este contrato.
+El formato compacto añade otros campos propios (`@i`, identificador del evento; `@x`, excepción); no son parte de este contrato.
 
 ## 6. Amenazas y controles
 | Amenaza | Control |
@@ -64,7 +64,7 @@ El formato compacto añade otros campos propios (`@mt`, plantilla del mensaje; `
 ## 8. Decisiones
 - **Registro central:** buscar un error en cada pieza sería lento; en un solo lugar se ve dónde falló.
 - **Identificador de correlación:** permite reconstruir el recorrido completo de una petición.
-- **Formato compacto de Serilog en lugar de campos con esos nombres literales:** es lo que ya emiten los servicios y lo que entiende Application Insights; escribir un formateador propio solo para renombrar `@t`, `@l` y `@m` agrega código sin aportar información. Lo que importa es que cada campo lógico tenga un lugar fijo, el de la tabla del contrato.
+- **Formato compacto de Serilog en lugar de campos con esos nombres literales:** es lo que ya emiten los servicios en consola; a Application Insights llegan los mismos eventos por OpenTelemetry; escribir un formateador propio solo para renombrar `@t`, `@l` y `@m` agrega código sin aportar información. Lo que importa es que cada campo lógico tenga un lugar fijo, el de la tabla del contrato.
 
 ## 9. Riesgos y dudas abiertas
 - La cuota gratuita de registros puede agotarse si se deja un nivel muy detallado.
