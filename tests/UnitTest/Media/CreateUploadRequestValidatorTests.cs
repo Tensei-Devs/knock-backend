@@ -13,7 +13,7 @@ public class CreateUploadRequestValidatorTests
     [Fact] public void InvalidUsage_Fails_OI1_01() { _validator.Validate(new CreateUploadRequest("otro", "image/jpeg", 1024)).IsValid.Should().BeFalse(); }
     [Fact] public void PngContentType_Passes_OI1_01() { _validator.Validate(new CreateUploadRequest("perfil", "image/png", 1024)).IsValid.Should().BeTrue(); }
     [Fact] public void GifContentType_Fails_OI1_01() { var r = _validator.Validate(new CreateUploadRequest("perfil", "image/gif", 1024)); r.IsValid.Should().BeFalse(); r.Errors.Should().Contain(e => e.PropertyName == "contentType"); }
-    [Fact] public void WebpContentType_Fails_OI1_01() { _validator.Validate(new CreateUploadRequest("perfil", "image/webp", 1024)).IsValid.Should().BeFalse(); }
+    [Fact] public void WebpContentType_Passes_OI1_01() { _validator.Validate(new CreateUploadRequest("perfil", "image/webp", 1024)).IsValid.Should().BeTrue(); }
     [Fact] public void OneByteSize_Passes_OI1_01() { _validator.Validate(new CreateUploadRequest("perfil", "image/jpeg", 1)).IsValid.Should().BeTrue(); }
     [Fact] public void ExactlyMaxSize_Passes_OI1_01() { _validator.Validate(new CreateUploadRequest("perfil", "image/jpeg", MediaRules.MaxFileBytes)).IsValid.Should().BeTrue(); }
     [Fact] public void MaxPlusOneSize_Fails_OI1_01() { var r = _validator.Validate(new CreateUploadRequest("perfil", "image/jpeg", MediaRules.MaxFileBytes + 1)); r.IsValid.Should().BeFalse(); r.Errors.Should().Contain(e => e.PropertyName == "tamanoBytes"); }
