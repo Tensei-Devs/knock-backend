@@ -306,3 +306,8 @@
 - **Decisión:** se agrega la colonia «El Carmen» (código postal 42830, por confirmar) con un polígono piloto aproximado de unos 800 metros de lado centrado en el campus de la UTTT, en `colonias_tula.geojson`, el extracto de SEPOMEX y `colonias.json`; las pruebas que cuentan colonias pasan de 12 a 13 y de 8 a 9 con polígono.
 - **Porqué:** las ocho colonias sembradas cubren el centro de Tula; desde el campus (carretera Tula-Tepeji) `GET /colonias/en-punto` respondía «fuera de cobertura» y la demo no mostraba la zona de quien la prueba allí.
 - **A evitar:** tomar el polígono como límite oficial (es aproximado y no oficial); olvidar cargar la semilla en la base de Azure (`db/entrega.js`) después de fusionar.
+
+## 2026-11-10 — EXC-020: copia de ForwardedHeadersExtensions en Messaging.Api para el job de duplicación (KNOCK-201)
+- **Decisión:** se registra `EXC-020` (jscpd, vence 2026-12-15) y se marca con `jscpd:ignore-start/end` la copia de `ForwardedHeadersExtensions` de Messaging.Api, que el PR 61 agrega y que duplica la de Market.Api (un clon de 42 líneas). El retiro es KNOCK-251: mover la clase a una biblioteca compartida.
+- **Porqué:** `.jscpd.json` tiene `exitCode: 1` y el job de gobierno falla con cualquier clon, aunque la duplicación sea del 0.22 % y esté bajo el umbral de 3 %. Un servicio no referencia a otro y aún no existe la biblioteca técnica compartida; es la misma situación de EXC-007, EXC-008, EXC-015 y EXC-018.
+- **A evitar:** dejar vencer la excepción sin haber hecho KNOCK-251, copiar la clase a un cuarto servicio sin registrar su excepción, o quitar los marcadores sin retirar antes la excepción.
