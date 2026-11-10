@@ -9,7 +9,7 @@ Disponer de diez clientes inventados para demostraciones locales, cargados desde
 ## 2. Alcance
 **Dentro:** JSON de clientes, cargador de Identidad, protección de celulares, guardas, pruebas, instrucciones de carga, conteo y borrado por `demo: true`. La evidencia de carga se obtiene en `documentdb-local`.
 
-**Fuera:** técnicos, solicitudes y mapa de técnicos (dependen de HU-017 y HU-024); Staging; datos reales o de producción; cuentas Firebase para estos usuarios (no inician sesión); Bogus y otras dependencias nuevas; fotos, direcciones, INE, selfie y verificación; cambios a semillas del catálogo, script de entrega y respaldos. El cargador no implementa caché propia.
+**Fuera:** técnicos y solicitudes (KNOCK-246, después de la spec 020), y mapa de técnicos; Staging; datos reales o de producción; cuentas Firebase para estos usuarios (no inician sesión); Bogus y otras dependencias nuevas; fotos, direcciones, INE, selfie y verificación; cambios a semillas del catálogo, script de entrega y respaldos. El cargador no implementa caché propia.
 
 ## 3. Requisitos
 - **R-01:** `db/seeds/demo/identity/usuarios.json` contiene exactamente diez clientes inventados, nombres escritos a mano y ningún técnico ni solicitud. Es un arreglo con `_id` fijo `{"$oid":"<24 hex>"}`, campos camelCase, `version: 1`, `demo: true` y fechas UTC ISO 8601; sus identificadores son únicos entre sí y frente a las semillas del catálogo.
@@ -18,12 +18,13 @@ Disponer de diez clientes inventados para demostraciones locales, cargados desde
 - **R-04:** El celular en claro solo está en el JSON de demostración; en `usuarios` se guarda únicamente como `celularCifrado` y `celularHash`, con sus versiones de clave, usando la protección y las llaves del entorno de la spec 015. No se registra el celular ni el `uid`.
 - **R-05:** La carga hace upsert por `_id` fijo a través del acceso a datos de Identidad y solo usa la base `identity`. Valida el archivo y los choques de `sub` y `celularHash` con otro `_id` antes de escribir; un conflicto informa el índice sin exponer celular ni hash y no deja escrituras parciales.
 - **R-06:** Una segunda carga conserva conteo, `_id`, `version` y `celularHash`. `version` sube solo si cambia el contenido, sin comparar `celularCifrado`, cuyo nonce es aleatorio; el cifrado debe seguir descifrándose al celular de origen.
-- **R-07:** El cargador se ejecuta al arrancar la API solo con `Seed:Demo = true`, fuera de `Production` y únicamente contra `documentdb-local`, nunca Azure. Invocado sin la marca o en `Production`, falla indicando la causa sin valores de configuración y no escribe.
-- **R-08:** Documentar en `db/seeds/README.md` el contenido, la carga local, el conteo y el borrado de la demo por `demo: true`; no incluir secretos ni cadenas de conexión en la evidencia.
+- **R-07:** El cargador se ejecuta al arrancar la API solo con `Seed:Demo = true`, fuera de `Production` y si el host de la conexión es `localhost`, `127.0.0.1` o el contenedor `documentdb-local`. Ante cualquier otro host aborta antes de escribir, sin opción para saltarse la guarda. Invocado sin la marca o en `Production`, falla indicando la causa sin valores de configuración y no escribe.
+- **R-08:** Documentar en `db/seeds/README.md` el contenido, la carga local, el conteo y el borrado de la demo por `demo: true`; la carga a Azure se realiza aparte y a mano con `db/entrega.js`. No incluir secretos ni cadenas de conexión en la evidencia.
 - **R-09:** No se agrega un endpoint ni evento. Si se definen códigos de error, se usa inglés y `snake_case`, conforme a la convención de la spec 002; no se fija aquí un código nuevo.
+- **R-10:** Las cuentas demo quedan activas, con perfil completo y consentimientos aceptados con la versión vigente, conforme al modelo de la spec 015; sus nombres son claramente ficticios.
 
 ## 4. Criterios de aceptación y verificación
-Los métodos son pruebas propuestas, aún no ejecutadas; cada sufijo conserva el número del caso heredado `TC-TT-BD-03-NN`.
+Los métodos son pruebas propuestas, aún no ejecutadas; CA-01 a CA-11 conservan el número del caso heredado `TC-TT-BD-03-NN`, y CA-12 y CA-13 cubren las decisiones nuevas.
 
 | Criterio | Dado / Cuando / Entonces | Verificación propuesta |
 |---|---|---|
@@ -38,10 +39,12 @@ Los métodos son pruebas propuestas, aún no ejecutadas; cada sufijo conserva el
 | **CA-09** | En `documentdb-local` con `identity` vacía, dos arranques no productivos de la API con la marca dejan `countDocuments({ demo: true }) = 10` tras cada uno. | (comando) conteos en el PR sin credenciales ni cadenas |
 | **CA-10** | Al compilar y verificar formato, `dotnet build Knock.slnx -c Release --no-restore` termina con cero errores y advertencias y `dotnet format Knock.slnx --verify-no-changes` sin cambios. | (comando) salida en el PR |
 | **CA-11** | Si un usuario existente tiene el mismo `sub` o `celularHash` con otro `_id`, la carga informa el índice sin celular ni hash, no crea documentos demo y no altera al existente. | `DatabaseTest/Demo/DemoSeedLoaderTests.UniqueConflict_CA_038_11` |
+| **CA-12** | Con un host de conexión distinto de `localhost`, `127.0.0.1` y `documentdb-local`, el cargador aborta antes de escribir, sin posibilidad de omitir la guarda. | `DatabaseTest/Demo/DemoSeedLoaderTests.NonLocalHost_CA_038_12` |
+| **CA-13** | Tras cargar, los diez usuarios están activos, tienen perfil completo y consentimientos aceptados con la versión vigente según la spec 015; sus nombres son claramente ficticios. | `DatabaseTest/Demo/DemoSeedLoaderTests.DemoAccountState_CA_038_13` y revisión humana de nombres |
 
 ## 5. Contrato y datos
 - Sin endpoints, eventos ni cambios en OpenAPI. `Seed:Demo` habilita la carga según R-07; las llaves de cifrado y HMAC son secretos del entorno y nunca se versionan.
-- El JSON de entrada incluye `_id`, `uid`, `celular`, `nombre`, `estado`, `perfilCompleto`, `creadoEn`, `version` y `demo`. La heredada propone `estado: "activo"` y `perfilCompleto: true`; la conciliación con el modelo 015 queda en §9.
+- El JSON de entrada incluye `_id`, `uid`, `celular`, `nombre`, `estado`, `perfilCompleto`, `creadoEn`, `version` y `demo`. El estado, perfil y consentimientos cargados cumplen R-10 y el modelo de la spec 015.
 - En `usuarios`, `sub` sustituye al `uid` y `celularCifrado` y `celularHash` al celular de entrada. Se usan los índices únicos existentes de `sub` y `celularHash`; no se agregan índices.
 
 ## 6. Amenazas y controles
@@ -49,7 +52,7 @@ Los métodos son pruebas propuestas, aún no ejecutadas; cada sufijo conserva el
 |---|---|
 | Datos reales o sensibles en la semilla | Datos inventados, rango ficticio y revisión humana de nombres; CA-02 y CA-03. |
 | Fuga de celular, uid, llaves o conexión | Protección de la spec 015, no registrar valores y evidencia sin secretos; CA-04, CA-06 y CA-09. |
-| Carga fuera del entorno o datos mezclados | Guarda de entorno y marca `demo`; CA-01 y CA-07; restricción local en R-07. |
+| Carga fuera del entorno o datos mezclados | Guarda de entorno y marca `demo`; CA-01, CA-07 y CA-12. |
 | Duplicados o conflictos con usuarios existentes | Upsert por `_id`, validación y ausencia de escritura parcial; CA-05 y CA-11. |
 | Acceso a otra base | Frontera del servicio y acceso a datos propio; CA-08. |
 | Suplantación | No crear cuentas Firebase para la demo; `uid` y teléfonos ficticios y `sub` derivado; CA-02 a CA-04. |
@@ -58,26 +61,26 @@ Los métodos son pruebas propuestas, aún no ejecutadas; cada sufijo conserva el
 ## 7. Plan de pruebas
 | Tipo | ¿Aplica? | Motivo |
 |---|---|---|
-| Base de datos e integración | Sí | JSON y cargador con `documentdb-local` y Testcontainers: CA-01 a CA-07 y CA-11. |
+| Base de datos e integración | Sí | JSON y cargador con `documentdb-local` y Testcontainers: CA-01 a CA-07 y CA-11 a CA-13. |
 | Arquitectura | Sí | Frontera de Identidad: CA-08. |
-| Seguridad negativa | Sí | Datos sensibles, guardas y conflicto: CA-03, CA-06, CA-07 y CA-11. |
+| Seguridad negativa | Sí | Datos sensibles, guardas y conflicto: CA-03, CA-06, CA-07, CA-11 y CA-12. |
 | Humo local | Sí | Dos arranques y conteos: CA-09. |
 | Build y formato | Sí | CA-10. |
 | Contrato HTTP, eventos, UI, rendimiento y mutación | No | No hay endpoint, evento ni lógica de negocio; sin meta de mutación específica heredada. |
 
 La heredada indica cobertura mínima de 60 % de líneas y 50 % de ramas, sin bajar umbrales. Ninguna prueba de esta migración se declara ejecutada.
 
-## 8. Decisiones heredadas
-Diez clientes, sin técnicos ni solicitudes; nombres manuales y números ficticios; carga dentro de la API, al arrancar con marca y fuera de producción, solo en `documentdb-local`; sin cuentas Firebase; upsert por `_id`, sin escritura parcial ante conflicto; comparar hash y no cifrado aleatorio. La aprobación anterior corresponde a TT-BD-03, no a esta spec.
+## 8. Decisiones
+Diez clientes, sin técnicos ni solicitudes; nombres manuales y números ficticios; carga dentro de la API, al arrancar con marca y fuera de producción; sin cuentas Firebase; upsert por `_id`, sin escritura parcial ante conflicto; comparar hash y no cifrado aleatorio. La aprobación anterior corresponde a TT-BD-03, no a esta spec.
+
+**Julián, 2026-11-10:** cuentas demo activas, con perfil completo, consentimientos aceptados con la versión vigente según la spec 015 y nombres claramente ficticios; el cargador solo escribe con host `localhost`, `127.0.0.1` o `documentdb-local`, sin excepción ni opción de omitir la guarda; Azure se carga aparte y a mano con `db/entrega.js`. Técnicos y solicitudes corresponden a KNOCK-246, después de la spec 020.
 
 ## 9. Riesgos y dudas abiertas
-- **Modelo:** la heredada propone `estado: "activo"` y `perfilCompleto: true`, mientras la 015 describe `estado = activa`, `perfilCompleto = false` y consentimientos para cuentas nuevas. ¿Qué valores y consentimientos deben tener las cuentas demo sin simular aceptación real?
 - **Frontera de datos:** la heredada usa `IdentityStore` y `Modules/Identity`; el servicio actual tiene `Modules/Sesiones`. ¿Qué acceso a datos concreto debe extenderse y cómo se mantiene la regla de arquitectura al adaptarlo?
-- **Solo local:** ¿cómo identificar de forma fiable `documentdb-local` y rechazar Azure, y qué prueba específica demuestra esa restricción además de CA-07?
-- **Atomicidad:** una comprobación previa no evita por sí sola una carrera con otras escrituras. ¿Qué mecanismo garantiza ausencia de escrituras parciales ante conflictos concurrentes?
-- **Caché:** la heredada excluye caché propia, pero la constitución exige invalidación al escribir. ¿Cómo se invalidan perfiles existentes si se actualiza una semilla?
-- **Errores:** ¿se necesitan códigos para fallos del cargador no HTTP y cuáles serían? Si se definen, aplicar R-09 sin incluir datos sensibles.
-- **Nombre:** la heredada lo propone en `usuarios`; confirmar su compatibilidad con el modelo de perfil vigente antes de implementar.
+- **Atomicidad:** una comprobación previa no evita por sí sola una carrera con otras escrituras. ¿Cómo se garantiza R-05 ante conflictos concurrentes? **Propuesta, pendiente de Julián:** basta un upsert por `_id`, porque el cargador corre una sola vez al arrancar; aún debe conciliarse con la ausencia de escrituras parciales.
+- **Caché:** la constitución exige invalidación al escribir. **Propuesta, pendiente de Julián:** no hay caché de usuarios que invalidar; confirmar frente a la caché de perfil existente.
+- **Errores:** ¿se necesitan códigos para fallos del cargador no HTTP? **Propuesta, pendiente de Julián:** no hacen falta, porque no expone HTTP; si falla, aborta el arranque con un log sin datos sensibles. Si se definen, aplicar R-09.
+- **Nombre:** ¿dónde se guarda? **Propuesta, pendiente de Julián:** en `usuarios`, como en la spec 017.
 
 ## Aprobación
 - [ ] Revisor — José Julián Hernández Hernández · fecha:

@@ -297,3 +297,7 @@
 - **Decisión:** la spec 038 traslada los once casos de semillas ficticias de clientes a Identidad y confianza; queda en Borrador para revisión de Julián. El plan y las tareas son propuestas, sin implementación.
 - **Pendiente:** conciliar estado, perfil y consentimientos con la 015; resolver acceso a datos actual, detección de entorno local, atomicidad ante concurrencia, caché, códigos de error y ubicación del nombre (spec 038 §9).
 - **Por qué:** la fuente heredada describe un módulo antiguo; se prevé reutilizar los componentes de Identidad existentes, sin crear duplicados por esta migración.
+
+## 2026-11-10 — Decisiones de Julián para la spec 038 (KNOCK-40)
+- **Decisión:** cuentas demo activas, con perfil completo, consentimientos vigentes y nombres ficticios; el cargador solo escribe con host `localhost`, `127.0.0.1` o `documentdb-local`, sin opción de omitir la guarda. Azure se carga aparte y a mano con `db/entrega.js`. Técnicos y solicitudes van en KNOCK-246, después de la spec 020.
+- **Pendiente:** resolver la frontera de datos y las propuestas sobre nombre, atomicidad, caché y errores con Julián; conciliar el upsert propuesto con la ausencia de escrituras parciales ante concurrencia. La spec continúa en Borrador.
