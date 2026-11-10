@@ -60,7 +60,7 @@ resource "azurerm_monitor_action_group" "this" {
 
 # Alerta de pico de errores (spec 011, R-05 y CA-03): peticiones fallidas del Application Insights
 # (requests/failed) por encima de var.alert_failed_requests_threshold en una ventana de 5 minutos, evaluada
-# cada minuto, severidad 2 (aviso), enlazada al grupo de acciones. La agregación Total cuenta las peticiones
+# cada minuto, severidad 2 (aviso), enlazada al grupo de acciones. La agregación Count cuenta las peticiones
 # fallidas de la ventana. Costo aproximado: 0.10 USD al mes por regla de alerta de métricas; los correos que
 # envía el grupo de acciones no se cobran.
 resource "azurerm_monitor_metric_alert" "failed_requests" {
@@ -75,7 +75,7 @@ resource "azurerm_monitor_metric_alert" "failed_requests" {
   criteria {
     metric_namespace = "Microsoft.Insights/components"
     metric_name      = "requests/failed"
-    aggregation      = "Total"
+    aggregation      = "Count"
     operator         = "GreaterThan"
     threshold        = var.alert_failed_requests_threshold
   }

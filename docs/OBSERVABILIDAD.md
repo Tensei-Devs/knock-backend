@@ -55,6 +55,8 @@ requests
 
 ## Alertas
 
+**Spec 011, CA-03:** la alerta de métricas de Terraform usa `requests/failed` con agregación `Count`. Según la [tabla de métricas de Microsoft](https://learn.microsoft.com/azure/azure-monitor/reference/supported-metrics/microsoft-insights-components-metrics), normalmente cuenta respuestas HTTP ≥ 400, excepto 401. Por tanto, un pico de 404 o 422 también puede superar el umbral y dispararla. La decisión de filtrar por `request/resultCode` queda pendiente de Julián; la regla actual no filtra por código.
+
 Las crea el líder a mano en el portal cuando el código esté listo (decisión P4). TT-AZ-02 las pasa a Terraform después. **El costo de cada regla se confirma con la tarifa vigente antes de crearlas** (decisión P3, principio 16).
 
 | Alerta | Consulta (alerta de búsqueda de logs) | Umbral | Ventana / frecuencia | Severidad |

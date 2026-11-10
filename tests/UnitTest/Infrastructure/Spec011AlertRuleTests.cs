@@ -25,7 +25,8 @@ public sealed class Spec011AlertRuleTests
             .BeTrue("la regla se define sobre el Application Insights del módulo compartido");
         HasAttribute(alert, "window_size", "\"PT5M\"").Should().BeTrue("la ventana es de 5 minutos");
         HasAttribute(alert, "frequency", "\"PT1M\"").Should().BeTrue("se evalúa cada minuto");
-        HasAttribute(alert, "aggregation", "\"Total\"").Should().BeTrue("la agregación cuenta las peticiones fallidas de la ventana");
+        HasAttribute(alert, "aggregation", "\"Count\"").Should().BeTrue(
+            "la tabla de métricas de Microsoft.Insights/components admite solo Count para requests/failed: https://learn.microsoft.com/azure/azure-monitor/reference/supported-metrics/microsoft-insights-components-metrics");
         HasAttribute(alert, "operator", "\"GreaterThan\"").Should().BeTrue("dispara por encima del umbral");
         HasAttribute(alert, "severity", "2").Should().BeTrue("es severidad 2 (aviso)");
         HasAttribute(alert, "threshold", "var.alert_failed_requests_threshold").Should()
@@ -71,6 +72,11 @@ public sealed class Spec011AlertRuleTests
 
         receiver.Should().NotBeEmpty("la raíz infra expone la variable del correo");
         HasAttribute(receiver, "default", "\"\"").Should().BeTrue("en infra tampoco hay correo por defecto");
+        var sharedVariables = await ReadTerraformAsync("deploy", "modules", "shared", "variables.tf");
+        var sharedReceiver = ExtractBlock(sharedVariables, "variable \"alert_email_receiver\"");
+        var validation = ExtractBlock(receiver, "validation");
+        validation.Should().NotBeEmpty("infra valida el correo antes de pasarlo al módulo");
+        validation.Should().Be(ExtractBlock(sharedReceiver, "validation"), "la validación debe coincidir con la del módulo");
         threshold.Should().NotBeEmpty("la raíz infra expone la variable del umbral");
         HasAttribute(threshold, "default", "10").Should().BeTrue("el umbral por defecto de infra coincide con el del módulo");
     }
