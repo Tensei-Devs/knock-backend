@@ -32,7 +32,17 @@ Definir cómo se registran los eventos y errores de todos los servicios en un lu
 - **CA-03:** Dado un pico de errores, cuando supera el umbral, entonces se dispara la alerta.
 
 ## 5. Contrato
-Fija el encabezado `X-Correlation-Id` y el formato de los registros (campos `timestamp`, `level`, `service`, `correlationId`, `message`).
+Fija el encabezado `X-Correlation-Id` y el formato de los registros: JSON de una línea por evento con el formato compacto de Serilog (`RenderedCompactJsonFormatter`). Los cinco campos lógicos (`timestamp`, `level`, `service`, `correlationId`, `message`) se entregan así:
+
+| Campo lógico | En la línea de consola (Serilog compacto) | En Application Insights (OpenTelemetry) |
+|---|---|---|
+| `timestamp` | `@t` (fecha y hora UTC, ISO 8601) | marca de tiempo del registro |
+| `level` | `@l`; el formato compacto la omite cuando el nivel es `Information`, y su ausencia significa `Information` | severidad del registro |
+| `service` | no va en la línea: lo da el recurso | `service.name` del recurso (`Observability:ServiceName`), el *cloud role* |
+| `correlationId` | propiedad `CorrelationId` | `customDimensions.CorrelationId` |
+| `message` | `@m` (mensaje ya renderizado) | cuerpo del registro |
+
+El formato compacto añade otros campos propios (`@mt`, plantilla del mensaje; `@x`, excepción); no son parte de este contrato.
 
 ## 6. Amenazas y controles
 | Amenaza | Control |
@@ -54,6 +64,7 @@ Fija el encabezado `X-Correlation-Id` y el formato de los registros (campos `tim
 ## 8. Decisiones
 - **Registro central:** buscar un error en cada pieza sería lento; en un solo lugar se ve dónde falló.
 - **Identificador de correlación:** permite reconstruir el recorrido completo de una petición.
+- **Formato compacto de Serilog en lugar de campos con esos nombres literales:** es lo que ya emiten los servicios y lo que entiende Application Insights; escribir un formateador propio solo para renombrar `@t`, `@l` y `@m` agrega código sin aportar información. Lo que importa es que cada campo lógico tenga un lugar fijo, el de la tabla del contrato.
 
 ## 9. Riesgos y dudas abiertas
 - La cuota gratuita de registros puede agotarse si se deja un nivel muy detallado.
