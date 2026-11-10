@@ -1,16 +1,13 @@
 using System.Collections.Concurrent;
 using System.Net;
-using System.Net.Http.Headers;
 using AwesomeAssertions;
 using Knock.Contracts.Correlation;
-using Knock.Gateway.Hosting;
-using Knock.IntegrationTest.Support;
+using Knock.IntegrationTest.Gateway.Support;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -38,8 +35,7 @@ public sealed class CorrelationAcrossServicesTests : IAsyncLifetime, IDisposable
     private readonly CapturingLogProcessor _gatewayLogs = new();
     private readonly LogCaptureProvider _serviceLogs = new();
     private WebApplication? _service;
-    private WebApplicationFactory<Program>? _baseFactory;
-    private WebApplicationFactory<Program>? _factory;
+    private GatewayTestHost? _gateway;
     private HttpClient? _client;
 
     public async Task InitializeAsync()
@@ -62,36 +58,17 @@ public sealed class CorrelationAcrossServicesTests : IAsyncLifetime, IDisposable
         _service = app;
         var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First() + "/";
 
-        _baseFactory = new WebApplicationFactory<Program>();
-        _factory = _baseFactory.WithWebHostBuilder(webHost =>
-        {
-            webHost.UseSetting("Jwt:SigningKey", GatewayTestSupport.SigningKeyBase64);
-            webHost.UseSetting("ConnectionStrings:KnockRedis", GatewayTestSupport.DummyRedisConnectionString);
-            webHost.UseSetting("ReverseProxy:Clusters:mercado:Destinations:principal:Address", address);
-            webHost.UseSetting("ReverseProxy:Clusters:identidad:Destinations:principal:Address", address);
-            webHost.UseSetting("ReverseProxy:Clusters:mensajeria:Destinations:principal:Address", address);
-            webHost.ConfigureServices(services =>
-            {
-                services.AddSingleton<IRevokedSessions>(new NoRevokedSessions());
-                services.AddSingleton<IRequestCounter>(new NoLimitCounter());
-                services.ConfigureOpenTelemetryLoggerProvider(logging => logging.AddProcessor(_gatewayLogs));
-            });
-        });
-        _client = _factory.CreateClient();
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", GatewayTestSupport.IssueToken());
+        _gateway = GatewayTestHost.Start(
+            new Dictionary<string, string> { ["identidad"] = address, ["mercado"] = address, ["mensajeria"] = address },
+            services => services.ConfigureOpenTelemetryLoggerProvider(logging => logging.AddProcessor(_gatewayLogs)));
+        _client = _gateway.Client;
     }
 
     public async Task DisposeAsync()
     {
-        _client?.Dispose();
-        if (_factory is not null)
+        if (_gateway is not null)
         {
-            await _factory.DisposeAsync();
-        }
-
-        if (_baseFactory is not null)
-        {
-            await _baseFactory.DisposeAsync();
+            await _gateway.DisposeAsync();
         }
 
         if (_service is not null)
@@ -103,9 +80,7 @@ public sealed class CorrelationAcrossServicesTests : IAsyncLifetime, IDisposable
 
     public void Dispose()
     {
-        _client?.Dispose();
-        _factory?.Dispose();
-        _baseFactory?.Dispose();
+        _gateway?.Dispose();
         _gatewayLogs.Dispose();
         _serviceLogs.Dispose();
     }

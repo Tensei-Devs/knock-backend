@@ -23,7 +23,8 @@ namespace Knock.UnitTest.Hosting;
 /// Spec 011 en Identity, Messaging y el Gateway, con el mismo cableado que su <c>Program.cs</c> (<c>AddKnockLogging</c> y
 /// <c>AddKnockObservability</c>) y su <c>appsettings.json</c> del repositorio. Se mira lo que sale hacia OpenTelemetry (Application
 /// Insights) y lo que Serilog escribe en la consola, ya pasados por la redacción. El <c>correlationId</c> del contrato no se prueba aquí:
-/// llega con <c>Knock.Contracts</c> (PR #3). CA-03 (alerta) se verifica a mano en el PR, con la infraestructura de KNOCK-200.
+/// llega con <c>Knock.Contracts</c> (PR #3). CA-03 (alerta) se prueba estáticamente en <see cref="Infrastructure.Spec011AlertRuleTests"/>;
+/// el disparo real se comprueba tras desplegar.
 /// Las pruebas de esta clase corren en serie (una colección propia) porque la de consola cambia <see cref="Console.Out"/>; solo se revisa
 /// la línea del evento de la prueba, así que lo que escriban otras pruebas en paralelo no la afecta.
 /// </summary>
