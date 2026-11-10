@@ -7,6 +7,11 @@
 - 14 specs de la base (arquitectura, estructura del repositorio, infraestructura, rendimiento, observabilidad, versionamiento y seguridad) redactadas en **Borrador**; sus tareas **no se han ejecutado**.
 - Sin código de producto todavía.
 
+## 2026-11-10 — KNOCK-240 (BUG-003): el gateway y Mensajería ya no envían `Server: Kestrel`
+- **Decisión:** `builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false)` en `Knock.Gateway` y `Knock.Messaging.Api`, igual que Identidad y Mercado. El middleware del gateway ya quitaba `Server` en `OnStarting`, pero Kestrel lo agrega después.
+- **Porqué se prueba la opción y no solo la respuesta:** `TestServer` no usa Kestrel y nunca escribe `Server`; una prueba de encabezado pasa con o sin el arreglo. `ServerHeaderTests` (SecurityTest/Gateway y Messaging) lee `KestrelServerOptions.AddServerHeader`: falla sin el arreglo y pasa con él. Se agregó `InternalsVisibleTo Knock.SecurityTest` y la referencia a ambos proyectos.
+- **A evitar:** dar por probado un encabezado con `TestServer`. Falta la evidencia en vivo (`curl -D` tras el despliegue, TC-BUG-003-04); el H-02 se cierra con ella.
+
 ## 2026-11-08 — Despliegue de imágenes y credencial federada
 - **Decisión:** `id-knock-deploy` lleva dos credenciales federadas para `main` (`github-main` y `github-main-ids`), porque GitHub presenta el sujeto con dos formas; el perfil «Consumption» ya no produce diferencias en el plan.
 - **Porqué:** la primera corrida de `ci-deploy` en `main` falló con `AADSTS700213`; con la segunda credencial publicó las cuatro imágenes y el apply dejó las cuatro apps sanas.

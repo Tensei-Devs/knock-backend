@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Knock.UnitTest" />
+    <InternalsVisibleTo Include="Knock.SecurityTest" />
   </ItemGroup>
 
   <ItemGroup>

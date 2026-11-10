@@ -4,6 +4,9 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// BUG-003: Kestrel agrega «Server: Kestrel» al final de la respuesta, después de cualquier middleware; solo se apaga aquí.
+builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
+
 builder.Services.AddControllers();
 // Más información sobre OpenAPI: https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
