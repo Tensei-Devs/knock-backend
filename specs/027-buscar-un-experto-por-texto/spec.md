@@ -30,7 +30,7 @@ Que una persona que no sabe qué oficio elegir escriba con sus palabras («boile
 ## 3. Requisitos
 - **R-01:** `GET /api/v1/busqueda` exige JWT de persona y acepta en la consulta `q` (obligatorio), `coloniaId` (obligatorio, `ObjectId`), `oficio` (opcional, clave del catálogo), `soloVerificados` (opcional, `true` o `false`, por omisión `false`), `cursor` (opcional) y `limit` (opcional, de 1 a 20, por omisión 20). Un parámetro repetido o desconocido no cambia el resultado: los repetidos responden 422 y los desconocidos se ignoran.
 - **R-02:** `q` se normaliza antes de validar: se recorta, se pasa a minúsculas, se quitan acentos y diéresis (la «ñ» se conserva), se reemplazan los signos por espacios y se juntan los espacios repetidos. El texto normalizado debe medir de 2 a 80 caracteres y contener solo letras, dígitos y espacios; si no, responde 422 con `errors.q`. El texto original no se guarda ni se registra.
-- **R-03:** `coloniaId` debe existir y estar activa en `colonias`; si no, responde 422 `colonia_no_encontrada`. `oficio`, si viene, debe existir y estar activo; si no, 422 `oficio_no_valido`. Las dos validaciones usan la caché del catálogo (24 h, spec 010).
+- **R-03:** `coloniaId` debe existir y estar activa en `colonias`; si no, responde 422 `colonia_not_found`. `oficio`, si viene, debe existir y estar activo; si no, 422 `trade_invalid`. Las dos validaciones usan la caché del catálogo (24 h, spec 010).
 - **R-04:** La detección del oficio divide `q` en palabras y compara cada palabra y cada par de palabras seguidas con `sinonimos.termino` y con el nombre normalizado de cada oficio activo. Primero busca la coincidencia exacta; si no hay, acepta una distancia de edición de Damerau-Levenshtein de 1 para palabras de 4 a 7 letras y de 2 para palabras de 8 letras o más (las de 3 letras o menos solo cuentan exactas). El oficio con más palabras coincidentes gana; un empate entre oficios distintos se informa como ambiguo.
 - **R-05:** La respuesta incluye `interpretacion` con `estado`: `detectado` (un oficio, con `oficioDetectado { clave, nombre }`), `ambiguo` (dos o más, con `oficiosSugeridos[]` de hasta 3) o `no_entendido` (ninguno). Con `oficio` en la consulta, el filtro manda y `interpretacion.estado` es `elegido`. En `ambiguo` y `no_entendido` la lista de técnicos solo trae las coincidencias por nombre de R-06, y la app ofrece elegir el oficio.
 - **R-06:** Además del oficio, `q` se compara con `tecnicos.palabrasBusqueda` (palabras normalizadas del nombre público y del nombre del negocio): una palabra de `q` de 3 letras o más coincide si es prefijo de alguna de esas palabras. Un técnico que coincide por nombre aparece aunque su oficio no sea el detectado, siempre que cumpla R-07 y atienda la colonia.
@@ -38,12 +38,12 @@ Que una persona que no sabe qué oficio elegir escriba con sus palabras («boile
 - **R-08:** Un técnico «atiende la colonia» si la distancia entre su `ubicacionBase` (centro de su colonia base, nunca su domicilio) y el `centro` de la colonia consultada es menor o igual que su `radioAtencionKm`. Si la colonia consultada no tiene `centro`, solo atienden los técnicos cuya colonia base es esa misma colonia. Los técnicos que no atienden la colonia no aparecen, salvo los de coincidencia por nombre, que aparecen al final con `atiendeTuColonia = false`.
 - **R-09:** El orden es determinista: 1) coincidencia por nombre que además atiende la colonia; 2) técnicos del oficio que atienden la colonia; 3) coincidencias por nombre que no la atienden. Dentro de cada grupo: verificados primero, luego `calificacion` de mayor a menor, luego distancia de menor a mayor y al final el `_id` como desempate.
 - **R-10:** Cada elemento trae solo datos públicos: `{ id, nombre, oficios: [{ clave, nombre }], calificacion, totalResenas, verificado, nivelVerificacion, coloniaBase, distanciaKm, atiendeTuColonia, fotoUrl }`. `distanciaKm` es un entero aproximado entre los centros de las dos colonias (mínimo 1). Nunca se devuelven el `usuarioId` (`sub`), el teléfono, el contacto público, la dirección, la ubicación ni el radio de atención.
-- **R-11:** La paginación es por cursor (spec 010): la respuesta trae `nextCursor` cuando hay más resultados. El cursor es opaco (base64url) y contiene la última clave de orden y una huella de la consulta normalizada (`q`, `coloniaId`, `oficio`, `soloVerificados`); un cursor mal formado, alterado o de otra consulta responde 400 `cursor_invalido`. Una misma consulta devuelve como máximo 100 técnicos en total (5 páginas de 20); después, `nextCursor` es nulo.
+- **R-11:** La paginación es por cursor (spec 010): la respuesta trae `nextCursor` cuando hay más resultados. El cursor es opaco (base64url) y contiene la última clave de orden y una huella de la consulta normalizada (`q`, `coloniaId`, `oficio`, `soloVerificados`); un cursor mal formado, alterado o de otra consulta responde 400 `invalid_cursor`. Una misma consulta devuelve como máximo 100 técnicos en total (5 páginas de 20); después, `nextCursor` es nulo.
 - **R-12:** Las búsquedas sin ningún técnico ni oficio detectado se registran en `busquedas_sin_resultado` solo de forma agregada: `{ terminoNormalizado, dia, conteo }`, sin `sub`, sin colonia y sin IP, con incremento atómico (`upsert` con `$inc`). Antes de guardar, el término pasa por el filtro de datos personales de la spec 024; si contiene un dato personal (teléfono, correo, CURP, RFC, tarjeta o dirección) o 7 dígitos o más seguidos, no se guarda. Los documentos vencen a los 90 días (índice TTL).
 - **R-13:** La respuesta se cachea en Redis 30 segundos con la clave `busqueda:{huella}`, donde la huella es un SHA-256 de la consulta normalizada y del número de versión del diccionario; no depende de quién pregunta porque el resultado no es personal. La respuesta lleva `Cache-Control: private, max-age=30`. Si Redis no responde, la búsqueda va a MongoDB y responde igual. Al cambiar el diccionario sube su versión (`sinonimos_version`) y las claves anteriores dejan de usarse.
 - **R-14:** Límite propio de 30 búsquedas por minuto por persona, además de los límites global y por usuario del gateway (spec 009). Se aplica en el gateway como política de ruta `busqueda` con contador por `sub` en Redis (mismo script atómico de la spec 009); al pasarse responde 429 con `Retry-After`. Si Redis no responde, el gateway responde 503, como en el resto de sus límites.
 - **R-15:** Rendimiento: con 200 técnicos activos y el diccionario sembrado, la búsqueda responde en menos de 300 ms en el percentil 95 sin caché, con las consultas indexadas de §6 y la proyección mínima de R-10.
-- **R-16:** Si MongoDB no responde, responde 503 `busqueda_no_disponible`. Los errores usan ProblemDetails con `correlationId` y `traceId`. Los registros llevan solo conteos, el estado de la interpretación y la latencia; nunca `q`, el término normalizado, la colonia ni el `sub`.
+- **R-16:** Si MongoDB no responde, responde 503 `search_unavailable`. Los errores usan ProblemDetails con `correlationId` y `traceId`. Los registros llevan solo conteos, el estado de la interpretación y la latencia; nunca `q`, el término normalizado, la colonia ni el `sub`.
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dada una persona en una colonia atendida por tres plomeros, cuando busca «boiler», entonces `interpretacion.estado` es `detectado` con plomería y recibe a los tres plomeros que atienden su colonia.
@@ -56,13 +56,13 @@ Que una persona que no sabe qué oficio elegir escriba con sus palabras («boile
 - **CA-08:** Dados técnicos con distintas calificaciones, verificación y distancia, cuando se busca, entonces el orden sigue R-09 y es el mismo en dos peticiones iguales.
 - **CA-09:** Dado un técnico cuyo radio no llega a la colonia consultada, cuando se busca su oficio, entonces no aparece; y dada una colonia sin `centro`, cuando se busca, entonces solo aparecen técnicos con esa colonia base.
 - **CA-10:** Dados 45 técnicos que cumplen, cuando se pide la primera página, entonces recibe 20 y un `nextCursor`; con el cursor recibe los siguientes 20 sin repetir ninguno; y dados 130, cuando se recorren las páginas, entonces la quinta no trae `nextCursor` (tope de 100).
-- **CA-11:** Dado un cursor alterado o de otra consulta, cuando se busca, entonces responde 400 `cursor_invalido`.
+- **CA-11:** Dado un cursor alterado o de otra consulta, cuando se busca, entonces responde 400 `invalid_cursor`.
 - **CA-12:** Dado `q` de 1 carácter, de 81 caracteres, solo con signos, repetido en la consulta, o `limit=21`, cuando se busca, entonces responde 422 con `errors`; y dada una `coloniaId` inexistente o un `oficio` inactivo, entonces responde 422.
 - **CA-13:** Dado cualquier resultado, cuando se inspecciona el cuerpo, entonces no contiene `usuarioId`, teléfono, contacto público, dirección, coordenadas ni `radioAtencionKm`.
 - **CA-14:** Dada una búsqueda sin resultado con un teléfono, un correo o 7 dígitos seguidos, cuando se registra, entonces no se guarda ningún documento en `busquedas_sin_resultado`.
 - **CA-15:** Dada la misma búsqueda dos veces en 30 segundos, cuando llega la segunda, entonces no consulta MongoDB y lleva `Cache-Control: private, max-age=30`; con Redis caído responde igual desde MongoDB.
 - **CA-16:** Dada una petición sin token, cuando se busca, entonces responde 401; y dadas 31 búsquedas en un minuto de la misma persona, cuando llega la 31, entonces responde 429 con `Retry-After`.
-- **CA-17:** Dado MongoDB caído, cuando se busca, entonces responde 503 `busqueda_no_disponible`.
+- **CA-17:** Dado MongoDB caído, cuando se busca, entonces responde 503 `search_unavailable`.
 - **CA-18:** Dados el registro de una búsqueda con resultado y otra sin resultado, cuando se inspeccionan, entonces no contienen `q`, el término normalizado, la colonia ni el `sub`.
 - **CA-19:** Dados 200 técnicos activos y el diccionario sembrado, cuando se ejecutan 200 búsquedas variadas sin caché, entonces el percentil 95 es menor de 300 ms.
 
@@ -93,7 +93,7 @@ Que una persona que no sabe qué oficio elegir escriba con sus palabras («boile
 ## 5. Contrato
 | Método y ruta | Quién | Consulta | Respuestas |
 |---|---|---|---|
-| `GET /api/v1/busqueda` | persona con sesión | `q`, `coloniaId`, `oficio?`, `soloVerificados?`, `cursor?`, `limit?` (1–20) | 200 `ResultadoBusqueda`, 400 (`cursor_invalido`), 401, 422 (formato y catálogo), 429, 503 |
+| `GET /api/v1/busqueda` | persona con sesión | `q`, `coloniaId`, `oficio?`, `soloVerificados?`, `cursor?`, `limit?` (1–20) | 200 `ResultadoBusqueda`, 400 (`invalid_cursor`), 401, 422 (formato y catálogo), 429, 503 |
 
 **Cuerpo de respuesta (`ResultadoBusqueda`)**
 ```
@@ -108,7 +108,7 @@ Que una persona que no sabe qué oficio elegir escriba con sus palabras («boile
 
 **Encabezados:** `Cache-Control: private, max-age=30` en 200; `Retry-After` en 429; `X-Correlation-Id` en todas.
 
-**Códigos de error:** `colonia_no_encontrada` (422), `oficio_no_valido` (422), `cursor_invalido` (400), `busqueda_no_disponible` (503). Los errores de forma salen como 422 con `errors` por campo (`q`, `limit`, `soloVerificados`, `coloniaId`).
+**Códigos de error:** `colonia_not_found` (422), `trade_invalid` (422), `invalid_cursor` (400), `search_unavailable` (503). Los errores de forma salen como 422 con `errors` por campo (`q`, `limit`, `soloVerificados`, `coloniaId`).
 
 **Límites:** `q` de 2 a 80 caracteres normalizados; `limit` de 1 a 20; 100 resultados como máximo por consulta; 30 búsquedas por minuto por persona; caché de 30 segundos.
 
@@ -215,7 +215,7 @@ Que una persona que no sabe qué oficio elegir escriba con sus palabras («boile
 - Persona que intenta leer 500 técnicos paginando: se corta en 100.
 
 **Errores esperados**
-- 400 (`cursor_invalido`), 401, 422 (`errors.q`, `errors.limit`, `colonia_no_encontrada`, `oficio_no_valido`), 429 con `Retry-After`, 503 `busqueda_no_disponible`.
+- 400 (`invalid_cursor`), 401, 422 (`errors.q`, `errors.limit`, `colonia_not_found`, `trade_invalid`), 429 con `Retry-After`, 503 `search_unavailable`.
 
 **Casos límite**
 - `q` de 2 y de 80 caracteres; «ñ» conservada («baño»); palabras de 3 letras (solo exactas) y de 4 y 8 letras (distancia 1 y 2).

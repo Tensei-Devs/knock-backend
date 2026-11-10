@@ -6,7 +6,7 @@
 ## Enfoque
 1. Añadir `TecnicoTrabajoService` con cuatro consultas independientes (visitas próximas, cotizaciones enviadas, terminadas paginadas y resumen) y componer la respuesta única de R-02.
 2. Escribir las reglas puras: dirección solo en `confirmada` o `en_curso` (R-03), `motivoRechazo` (R-04), `disponibleHoy` por omisión (R-05) y orden con desempate de `terminadas` (R-02).
-3. Escribir `IdentidadVerificacionCatalog` (cliente HTTP interno a Identidad, spec 025, con tiempo límite y sin reintentos) y mapear cualquier falla a `503 no_disponible` (R-06, R-07).
+3. Escribir `IdentidadVerificacionCatalog` (cliente HTTP interno a Identidad, spec 025, con tiempo límite y sin reintentos) y mapear cualquier falla a `503 unavailable` (R-06, R-07).
 4. Exponer `GET /api/v1/tecnicos/me/trabajo` con `Cache-Control: private, no-store`, cursor de `terminadas` (spec 010) y el límite de lectura del gateway (R-08, R-10).
 5. Documentar la ruta en OpenAPI, `docs/endpoints.md` y `docs/rate-limit-matrix.md`, y la decisión en `Memoria.md`.
 

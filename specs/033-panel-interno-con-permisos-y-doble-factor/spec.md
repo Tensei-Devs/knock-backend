@@ -38,15 +38,15 @@ Que una persona del equipo de Knock entre al panel web interno con su celular ve
 
 **Primer paso: celular**
 - **R-04:** `POST /api/v1/panel/sesion/celular` es público en el gateway, con el límite por IP de las rutas de autenticación. Cuerpo `{ idToken }` de 1 a 4 096 caracteres; cuerpo máximo de 8 KB. Un cuerpo inválido responde 400 con `errors` sin llamar a Firebase.
-- **R-05:** El servicio valida `idToken` con el mismo verificador de Firebase de la spec 015 (firma, emisor, destinatario, vencimiento y celular verificado) y deriva el `sub` igual que ella. Un token inválido responde 401 `credenciales_invalidas`.
-- **R-06:** Si no existe una cuenta del panel con ese `sub`, si está `deshabilitada`, si la cuenta de la app está suspendida o si no tiene secreto TOTP, responde 403 `sin_acceso_panel`, con el mismo cuerpo en todos los casos. No se crea nada.
+- **R-05:** El servicio valida `idToken` con el mismo verificador de Firebase de la spec 015 (firma, emisor, destinatario, vencimiento y celular verificado) y deriva el `sub` igual que ella. Un token inválido responde 401 `invalid_credentials`.
+- **R-06:** Si no existe una cuenta del panel con ese `sub`, si está `deshabilitada`, si la cuenta de la app está suspendida o si no tiene secreto TOTP, responde 403 `no_panel_access`, con el mismo cuerpo en todos los casos. No se crea nada.
 - **R-07:** Si la cuenta procede, crea un desafío de un solo uso en Redis (`panel:desafio:{desafioId}`, `desafioId` de 128 bits aleatorios en base64url) con el `sub` y un contador de intentos, que vence a los 5 minutos, y responde 200 `{ desafioId, requiereTotp: true, venceEn }`.
 
 **Segundo paso: TOTP**
 - **R-08:** `POST /api/v1/panel/sesion/totp` es público en el gateway, con el mismo límite por IP. Cuerpo `{ desafioId, codigo }`; `codigo` son exactamente 6 dígitos; cuerpo máximo de 1 KB. Un cuerpo inválido responde 400.
 - **R-09:** El TOTP sigue RFC 6238: HMAC-SHA1, 6 dígitos, pasos de 30 segundos y una ventana de ±1 paso. Un paso ya aceptado no se vuelve a aceptar: la cuenta guarda `totpUltimoPaso` y la aceptación es una actualización condicionada a que el paso nuevo sea mayor (protege contra la repetición del mismo código y contra dos peticiones simultáneas). El código se compara en tiempo constante.
-- **R-10:** Un desafío inexistente, vencido o ya usado, o un código incorrecto o repetido, responde 401 `credenciales_invalidas` con el mismo cuerpo, sin decir cuál falló. Cada código incorrecto suma un intento al desafío; al quinto el desafío se borra.
-- **R-11:** Los fallos se cuentan también por cuenta (`panel:fallos:{sub}`) y por IP (`panel:fallos-ip:{ip}`) en una ventana fija de 15 minutos compartida entre réplicas. Con 5 fallos de la cuenta o 10 de la IP en la ventana, todo intento de los dos pasos para esa cuenta o IP responde 429 `limite_excedido` con `Retry-After` hasta que la ventana termina, aunque el código sea correcto. Un acceso exitoso no reinicia el contador de la IP.
+- **R-10:** Un desafío inexistente, vencido o ya usado, o un código incorrecto o repetido, responde 401 `invalid_credentials` con el mismo cuerpo, sin decir cuál falló. Cada código incorrecto suma un intento al desafío; al quinto el desafío se borra.
+- **R-11:** Los fallos se cuentan también por cuenta (`panel:fallos:{sub}`) y por IP (`panel:fallos-ip:{ip}`) en una ventana fija de 15 minutos compartida entre réplicas. Con 5 fallos de la cuenta o 10 de la IP en la ventana, todo intento de los dos pasos para esa cuenta o IP responde 429 `limit_exceeded` con `Retry-After` hasta que la ventana termina, aunque el código sea correcto. Un acceso exitoso no reinicia el contador de la IP.
 - **R-12:** Con el código correcto, el desafío se consume de forma atómica (no puede usarse dos veces) y se crea una sesión del panel. La respuesta es 200 `{ accessToken, expiraEn, permisos, nombre }` con `Set-Cookie` del token de renovación (R-16). `permisos` es la lista de permisos efectivos de los roles de la cuenta; `nombre` es el nombre visible guardado en la cuenta del panel.
 
 **Sesión del panel**
@@ -54,18 +54,18 @@ Que una persona del equipo de Knock entre al panel web interno con su celular ve
 - **R-14:** El gateway valida los tokens del panel solo en `/api/v1/panel/**` y rechaza con 401 un token de la app en esas rutas y un token del panel en cualquier otra ruta. Aplica a las sesiones del panel la cancelación por `sid` de la spec 009 (`sesion-cancelada:{sid}`).
 - **R-15:** Cada sesión del panel es un documento de `panel_sesiones` con la huella SHA-256 del token de renovación vigente, las últimas 5 huellas usadas, `creadaEn`, `ultimaActividad`, `renovacionVenceEn` y `venceEn`. La vida máxima de una sesión es de 8 horas desde el acceso con TOTP; después hay que repetir los dos pasos. Una cuenta tiene como máximo 3 sesiones abiertas; al abrir la cuarta se revoca la más antigua.
 - **R-16:** El token de renovación es aleatorio de 256 bits, se guarda solo como huella y viaja únicamente en la cookie `__Secure-knock-panel-rt` con `HttpOnly`, `Secure`, `SameSite=None`, `Partitioned`, `Path=/api/v1/panel/sesion` y una vida de 20 minutos. Nunca aparece en un cuerpo de respuesta.
-- **R-17:** `POST /api/v1/panel/sesion/renovar` no lleva cuerpo y exige la cookie, el encabezado `X-Knock-Panel: 1` y un encabezado `Origin` idéntico al origen configurado del panel; sin el encabezado o con otro origen responde 403 `origen_no_permitido`. Rota el token de renovación con una actualización condicionada a la huella vigente (de dos renovaciones simultáneas solo una gana) y responde como R-12 con la cookie nueva. Un token desconocido, vencido, de una sesión revocada o que superó las 8 horas responde 401 `sesion_invalida` y borra la cookie. Un token que coincide con una huella usada se trata como robado: se revocan todas las sesiones del panel de esa cuenta, se cancelan sus `sid` en Redis y se registra en la auditoría.
-- **R-18:** Antes de renovar, el servicio vuelve a leer la cuenta: si está deshabilitada o su `permisosVersion` cambió, responde 401 `permisos_cambiaron`, revoca la sesión y borra la cookie.
-- **R-19:** `POST /api/v1/panel/sesion/cerrar` exige el token del panel y el encabezado `X-Knock-Panel: 1` (sin él responde 403 `origen_no_permitido`); revoca la sesión del `sid`, escribe `sesion-cancelada:{sid}` en Redis por el resto de la vida del token, borra la cookie y responde 204. Repetirlo con el mismo token responde 401.
+- **R-17:** `POST /api/v1/panel/sesion/renovar` no lleva cuerpo y exige la cookie, el encabezado `X-Knock-Panel: 1` y un encabezado `Origin` idéntico al origen configurado del panel; sin el encabezado o con otro origen responde 403 `origin_not_allowed`. Rota el token de renovación con una actualización condicionada a la huella vigente (de dos renovaciones simultáneas solo una gana) y responde como R-12 con la cookie nueva. Un token desconocido, vencido, de una sesión revocada o que superó las 8 horas responde 401 `invalid_session` y borra la cookie. Un token que coincide con una huella usada se trata como robado: se revocan todas las sesiones del panel de esa cuenta, se cancelan sus `sid` en Redis y se registra en la auditoría.
+- **R-18:** Antes de renovar, el servicio vuelve a leer la cuenta: si está deshabilitada o su `permisosVersion` cambió, responde 401 `permissions_changed`, revoca la sesión y borra la cookie.
+- **R-19:** `POST /api/v1/panel/sesion/cerrar` exige el token del panel y el encabezado `X-Knock-Panel: 1` (sin él responde 403 `origin_not_allowed`); revoca la sesión del `sid`, escribe `sesion-cancelada:{sid}` en Redis por el resto de la vida del token, borra la cookie y responde 204. Repetirlo con el mismo token responde 401.
 
 **Autorización por permiso**
 - **R-20:** Todo endpoint del panel (salvo los cuatro de sesión) declara exactamente un permiso con el atributo `RequierePermiso`; una prueba de arquitectura falla si un controller bajo `/api/v1/panel/` no lo declara. Sin declaración, la política deniega.
-- **R-21:** En cada petición a un endpoint con permiso, el servicio lee la cuenta del panel (por caché, R-24) y: si está deshabilitada o su `permisosVersion` no coincide con el claim `pv`, responde 401 `permisos_cambiaron` y revoca la sesión; si la cuenta no tiene el permiso del endpoint, responde 403 `permiso_insuficiente`. La decisión se toma siempre con los roles vigentes en el servidor, nunca con lo que diga el cliente.
+- **R-21:** En cada petición a un endpoint con permiso, el servicio lee la cuenta del panel (por caché, R-24) y: si está deshabilitada o su `permisosVersion` no coincide con el claim `pv`, responde 401 `permissions_changed` y revoca la sesión; si la cuenta no tiene el permiso del endpoint, responde 403 `insufficient_permission`. La decisión se toma siempre con los roles vigentes en el servidor, nunca con lo que diga el cliente.
 - **R-22:** Los endpoints del panel responden `Cache-Control: no-store` y las respuestas de sesión no se comprimen (llevan tokens, spec 010, R-09).
 
 **Auditoría**
 - **R-23:** Se escribe un documento en `panel_auditoria` por cada: paso de acceso (exitoso, fallido o bloqueado), renovación, cierre, reuso de token, acción con permiso (permitida o denegada) y cambio hecho con la herramienta interna. Lleva `fecha`, `tipo`, `evento`, `resultado`, `sub` del personal cuando se conoce, `sid`, `permiso`, plantilla de la ruta, `recursoId` cuando la acción toca un recurso, `ipHmac` (HMAC-SHA256 de la IP con la llave de búsqueda de la spec 009) y `correlationId`. Nunca lleva celular, códigos, tokens, `idToken`, cuerpos ni datos de la persona sobre la que se actúa más allá del identificador del recurso. La colección es de solo inserción para el servicio (sin endpoints ni código que actualice o borre) y sus documentos vencen a los 365 días.
-- **R-24:** Si la auditoría no se puede escribir, la acción se niega con 503 `auditoria_no_disponible` (falla cerrada contra el repudio); en los pasos de acceso, el acceso no se concede. La cuenta del panel se cachea en Redis (`panel:cuenta:{sub}`, 60 segundos) y toda escritura de la herramienta interna borra esa clave antes de terminar (constitución, principio 9).
+- **R-24:** Si la auditoría no se puede escribir, la acción se niega con 503 `audit_unavailable` (falla cerrada contra el repudio); en los pasos de acceso, el acceso no se concede. La cuenta del panel se cachea en Redis (`panel:cuenta:{sub}`, 60 segundos) y toda escritura de la herramienta interna borra esa clave antes de terminar (constitución, principio 9).
 
 **Herramienta interna**
 - **R-25:** La herramienta interna es un modo de línea de comandos del ensamblado de Identity (`panel alta`, `panel roles`, `panel deshabilitar`, `panel habilitar`, `panel reiniciar-totp`) que corre sin levantar el servidor web, con la misma configuración del entorno, y solo la ejecuta una persona con acceso al entorno. `alta` recibe el celular de una cuenta existente de la app (lo busca por `celularHash`, nunca lo guarda en claro), el nombre visible (1 a 60 caracteres) y los roles; genera un secreto TOTP de 160 bits y muestra **una sola vez** en la consola la dirección `otpauth://` para registrarlo en una app de autenticación; nunca lo escribe en un registro. Cada comando incrementa `permisosVersion` cuando corresponde, borra la caché de la cuenta, revoca sus sesiones del panel y escribe la auditoría.
@@ -73,34 +73,34 @@ Que una persona del equipo de Knock entre al panel web interno con su celular ve
 
 **Generales**
 - **R-27:** El gateway enruta `/api/v1/panel/**` al servicio de Identidad. Los cuatro endpoints de sesión llevan la política de límite estricto por IP (10 por minuto, como `/auth`); el resto, la política por usuario con el `sub` del token del panel. CORS permite credenciales solo para el origen del panel (`Cors:Panel:Origen`, exacto, `https`) y solo en `/api/v1/panel/**`; los demás orígenes no reciben `Access-Control-Allow-Credentials`.
-- **R-28:** Si Firebase, Redis o MongoDB no responden, los pasos de acceso responden 503 `no_disponible` con `Retry-After`, sin conceder acceso. Los errores usan ProblemDetails con `code`, `correlationId` y `traceId`. Los registros técnicos no contienen celular, `idToken`, códigos, tokens, `desafioId`, secretos TOTP ni la dirección `otpauth://`.
+- **R-28:** Si Firebase, Redis o MongoDB no responden, los pasos de acceso responden 503 `unavailable` con `Retry-After`, sin conceder acceso. Los errores usan ProblemDetails con `code`, `correlationId` y `traceId`. Los registros técnicos no contienen celular, `idToken`, códigos, tokens, `desafioId`, secretos TOTP ni la dirección `otpauth://`.
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dada una cuenta del panel con rol `administrador` y TOTP registrado, cuando envía un `idToken` válido y después el código TOTP vigente, entonces recibe 200 con `accessToken` de destinatario `knock-panel`, los cinco permisos, su nombre y la cookie de renovación con `HttpOnly`, `Secure`, `SameSite=None`, `Partitioned` y la ruta de sesión, y queda una sesión y dos registros de auditoría de acceso.
-- **CA-02:** Dado un desafío vigente, cuando el código TOTP falta, no tiene 6 dígitos, es incorrecto o es de un paso fuera de la ventana, entonces responde 400 (los dos primeros) o 401 `credenciales_invalidas` (los dos últimos) con el mismo cuerpo, sin token ni cookie.
-- **CA-03:** Dado un celular cuya cuenta de la app no tiene cuenta del panel, o una cuenta del panel deshabilitada, cuando envía su `idToken`, entonces responde 403 `sin_acceso_panel` con el mismo cuerpo en ambos casos y no se crea desafío.
-- **CA-04:** Dada una sesión con solo el rol `moderador`, cuando pide un endpoint de prueba que exige `verification:review`, entonces responde 403 `permiso_insuficiente` y queda un registro de auditoría con resultado `denegado`; con un endpoint que exige `reviews:moderate`, responde 200 y queda uno `permitido`.
-- **CA-05:** Dada una sesión abierta, cuando la herramienta interna cambia los roles de la cuenta, entonces la siguiente petición con el token anterior responde 401 `permisos_cambiaron`, la sesión queda revocada y la renovación con su cookie responde 401.
-- **CA-06:** Dado un código TOTP ya aceptado, cuando se presenta otra vez con un desafío nuevo dentro de su ventana, entonces responde 401 `credenciales_invalidas`.
+- **CA-02:** Dado un desafío vigente, cuando el código TOTP falta, no tiene 6 dígitos, es incorrecto o es de un paso fuera de la ventana, entonces responde 400 (los dos primeros) o 401 `invalid_credentials` (los dos últimos) con el mismo cuerpo, sin token ni cookie.
+- **CA-03:** Dado un celular cuya cuenta de la app no tiene cuenta del panel, o una cuenta del panel deshabilitada, cuando envía su `idToken`, entonces responde 403 `no_panel_access` con el mismo cuerpo en ambos casos y no se crea desafío.
+- **CA-04:** Dada una sesión con solo el rol `moderador`, cuando pide un endpoint de prueba que exige `verification:review`, entonces responde 403 `insufficient_permission` y queda un registro de auditoría con resultado `denegado`; con un endpoint que exige `reviews:moderate`, responde 200 y queda uno `permitido`.
+- **CA-05:** Dada una sesión abierta, cuando la herramienta interna cambia los roles de la cuenta, entonces la siguiente petición con el token anterior responde 401 `permissions_changed`, la sesión queda revocada y la renovación con su cookie responde 401.
+- **CA-06:** Dado un código TOTP ya aceptado, cuando se presenta otra vez con un desafío nuevo dentro de su ventana, entonces responde 401 `invalid_credentials`.
 - **CA-07:** Dadas dos peticiones simultáneas con el mismo desafío y el mismo código correcto, cuando terminan, entonces una responde 200 y la otra 401, y existe una sola sesión.
-- **CA-08:** Dados 5 códigos incorrectos de la misma cuenta en 15 minutos, repartidos entre dos réplicas, cuando llega el sexto intento aunque sea correcto, entonces responde 429 `limite_excedido` con `Retry-After`; dados 10 fallos desde una IP con cuentas distintas, el undécimo intento de esa IP responde 429.
-- **CA-09:** Dado un desafío con 5 códigos incorrectos o con más de 5 minutos, cuando se usa, entonces responde 401 `credenciales_invalidas` y el desafío ya no existe en Redis.
+- **CA-08:** Dados 5 códigos incorrectos de la misma cuenta en 15 minutos, repartidos entre dos réplicas, cuando llega el sexto intento aunque sea correcto, entonces responde 429 `limit_exceeded` con `Retry-After`; dados 10 fallos desde una IP con cuentas distintas, el undécimo intento de esa IP responde 429.
+- **CA-09:** Dado un desafío con 5 códigos incorrectos o con más de 5 minutos, cuando se usa, entonces responde 401 `invalid_credentials` y el desafío ya no existe en Redis.
 - **CA-10:** Dado un token de acceso de la app (destinatario `knock-app`), cuando se presenta en una ruta del panel, entonces el gateway responde 401; dado un token del panel en una ruta de la app, también 401.
 - **CA-11:** Dada una cookie vigente, el encabezado `X-Knock-Panel: 1` y el origen del panel, cuando se renueva, entonces responde 200 con un token nuevo y otra cookie, y la cookie anterior ya no sirve.
-- **CA-12:** Dada una renovación sin `X-Knock-Panel`, con otro `Origin` o sin `Origin`, cuando se pide, entonces responde 403 `origen_no_permitido` y no rota nada.
+- **CA-12:** Dada una renovación sin `X-Knock-Panel`, con otro `Origin` o sin `Origin`, cuando se pide, entonces responde 403 `origin_not_allowed` y no rota nada.
 - **CA-13:** Dadas dos renovaciones simultáneas con la misma cookie, cuando terminan, entonces una responde 200 y la otra 401; dado después el token anterior, cuando se presenta, entonces responde 401, todas las sesiones del panel de la cuenta quedan revocadas y hay un registro de auditoría de reuso.
-- **CA-14:** Dada una sesión iniciada hace más de 8 horas, cuando se renueva, entonces responde 401 `sesion_invalida` aunque la cookie sea reciente.
+- **CA-14:** Dada una sesión iniciada hace más de 8 horas, cuando se renueva, entonces responde 401 `invalid_session` aunque la cookie sea reciente.
 - **CA-15:** Dada una sesión abierta, cuando se cierra, entonces responde 204, la cookie se borra, existe `sesion-cancelada:{sid}` en Redis y el mismo token responde 401 en cualquier ruta del panel.
 - **CA-16:** Dada una cuenta con 3 sesiones del panel abiertas, cuando abre otra, entonces la más antigua queda revocada y siguen 3.
 - **CA-17:** Dada la base `identity`, cuando se inspeccionan `panel_cuentas` y `panel_sesiones`, entonces el secreto TOTP solo aparece cifrado, el token de renovación solo como huella y no hay celular en claro.
-- **CA-18:** Dada la auditoría sin poder escribirse, cuando se intenta un acceso o una acción con permiso, entonces responde 503 `auditoria_no_disponible` y no concede el acceso ni ejecuta la acción.
+- **CA-18:** Dada la auditoría sin poder escribirse, cuando se intenta un acceso o una acción con permiso, entonces responde 503 `audit_unavailable` y no concede el acceso ni ejecuta la acción.
 - **CA-19:** Dados los registros técnicos y la auditoría de un acceso completo, de uno fallido y de un alta con la herramienta, cuando se inspeccionan, entonces no contienen celular, `idToken`, códigos, tokens, `desafioId`, secreto TOTP ni dirección `otpauth://`.
 - **CA-20:** Dado un controller bajo `/api/v1/panel/` sin `RequierePermiso`, cuando corren las pruebas de arquitectura, entonces fallan; dado un endpoint con permiso sin declaración en tiempo de ejecución, la política responde 403.
 - **CA-21:** Dada la herramienta interna, cuando se da de alta una cuenta con un celular que no tiene cuenta de la app, con un rol fuera de la lista o con `--secreto-de-prueba` fuera de Development, entonces falla sin crear nada; con datos válidos crea la cuenta, muestra la dirección `otpauth://` una sola vez y escribe la auditoría.
 - **CA-22:** Dadas más de 10 peticiones por minuto desde una IP a los endpoints de sesión del panel, cuando llega la undécima, entonces el gateway responde 429 con `Retry-After`.
 - **CA-23:** Dada una petición preliminar de CORS desde el origen del panel a una ruta del panel, cuando se responde, entonces permite credenciales y el encabezado `X-Knock-Panel`; desde otro origen o hacia una ruta que no es del panel, no permite credenciales.
-- **CA-24:** Dado Firebase, Redis o MongoDB sin responder, cuando se intenta cualquiera de los dos pasos, entonces responde 503 `no_disponible` y no concede acceso.
-- **CA-25:** Dada una cuenta suspendida en la app (spec 015) con cuenta del panel activa, cuando envía su `idToken`, entonces responde 403 `sin_acceso_panel`.
+- **CA-24:** Dado Firebase, Redis o MongoDB sin responder, cuando se intenta cualquiera de los dos pasos, entonces responde 503 `unavailable` y no concede acceso.
+- **CA-25:** Dada una cuenta suspendida en la app (spec 015) con cuenta del panel activa, cuando envía su `idToken`, entonces responde 403 `no_panel_access`.
 
 **4.1 Criterio → prueba prevista**
 
@@ -135,11 +135,11 @@ Que una persona del equipo de Knock entre al panel web interno con su celular ve
 ## 5. Contrato
 | Método y ruta | Quién | Entrada | Respuestas |
 |---|---|---|---|
-| `POST /api/v1/panel/sesion/celular` | público (límite por IP) | `{ idToken }` | 200 `{ desafioId, requiereTotp: true, venceEn }`; 400, 401 `credenciales_invalidas`, 403 `sin_acceso_panel`, 429 `limite_excedido`, 503 `no_disponible` |
-| `POST /api/v1/panel/sesion/totp` | público (límite por IP) | `{ desafioId, codigo }` | 200 `{ accessToken, expiraEn, permisos[], nombre }` + `Set-Cookie`; 400, 401 `credenciales_invalidas`, 403 `sin_acceso_panel`, 429 `limite_excedido`, 503 `no_disponible` o `auditoria_no_disponible` |
-| `POST /api/v1/panel/sesion/renovar` | cookie de renovación + `X-Knock-Panel: 1` + `Origin` del panel | sin cuerpo | 200 como `totp` + `Set-Cookie` nueva; 401 `sesion_invalida` o `permisos_cambiaron`, 403 `origen_no_permitido`, 429, 503 |
-| `POST /api/v1/panel/sesion/cerrar` | token del panel + `X-Knock-Panel: 1` | sin cuerpo | 204 (borra la cookie); 401, 403 `origen_no_permitido` |
-| Cualquier endpoint futuro del panel | token del panel con el permiso declarado | según su spec | además de los suyos: 401 `permisos_cambiaron`, 403 `permiso_insuficiente`, 503 `auditoria_no_disponible` |
+| `POST /api/v1/panel/sesion/celular` | público (límite por IP) | `{ idToken }` | 200 `{ desafioId, requiereTotp: true, venceEn }`; 400, 401 `invalid_credentials`, 403 `no_panel_access`, 429 `limit_exceeded`, 503 `unavailable` |
+| `POST /api/v1/panel/sesion/totp` | público (límite por IP) | `{ desafioId, codigo }` | 200 `{ accessToken, expiraEn, permisos[], nombre }` + `Set-Cookie`; 400, 401 `invalid_credentials`, 403 `no_panel_access`, 429 `limit_exceeded`, 503 `unavailable` o `audit_unavailable` |
+| `POST /api/v1/panel/sesion/renovar` | cookie de renovación + `X-Knock-Panel: 1` + `Origin` del panel | sin cuerpo | 200 como `totp` + `Set-Cookie` nueva; 401 `invalid_session` o `permissions_changed`, 403 `origin_not_allowed`, 429, 503 |
+| `POST /api/v1/panel/sesion/cerrar` | token del panel + `X-Knock-Panel: 1` | sin cuerpo | 204 (borra la cookie); 401, 403 `origin_not_allowed` |
+| Cualquier endpoint futuro del panel | token del panel con el permiso declarado | según su spec | además de los suyos: 401 `permissions_changed`, 403 `insufficient_permission`, 503 `audit_unavailable` |
 
 **Formas:** `permisos` es un arreglo de cadenas de la lista de R-02, sin repetidos y en el orden de esa lista; `expiraEn` y `venceEn` son fechas UTC ISO 8601; `nombre` tiene de 1 a 60 caracteres.
 
@@ -151,7 +151,7 @@ Que una persona del equipo de Knock entre al panel web interno con su celular ve
 
 **Límites:** cuerpos de 8 KB (celular) y 1 KB (TOTP); desafío de 5 minutos y 5 códigos; 5 fallos por cuenta y 10 por IP en 15 minutos; 10 peticiones por minuto por IP en los endpoints de sesión; 15 minutos de token de acceso, 20 de cookie y 8 horas de sesión; 3 sesiones por cuenta.
 
-**Diferencias con lo que propuso la spec 023 de frontend:** coinciden las cuatro rutas, `idToken`, `desafioId`, `requiereTotp`, `codigo`, la respuesta `{ accessToken, expiraEn, permisos, nombre }`, los cinco permisos, `credenciales_invalidas`, `sin_acceso_panel` y `permisos_cambiaron`. Esta spec agrega `403 permiso_insuficiente`, `403 origen_no_permitido`, `401 sesion_invalida`, `503 no_disponible` y `auditoria_no_disponible`, el encabezado obligatorio `X-Knock-Panel: 1` en renovar y cerrar, y fija el límite por IP en 10 fallos (la 023 supuso 5); el panel solo obedece `Retry-After`, así que el cambio no rompe su comportamiento.
+**Diferencias con lo que propuso la spec 023 de frontend:** coinciden las cuatro rutas, `idToken`, `desafioId`, `requiereTotp`, `codigo`, la respuesta `{ accessToken, expiraEn, permisos, nombre }`, los cinco permisos, `invalid_credentials`, `no_panel_access` y `permissions_changed`. Esta spec agrega `403 insufficient_permission`, `403 origin_not_allowed`, `401 invalid_session`, `503 unavailable` y `audit_unavailable`, el encabezado obligatorio `X-Knock-Panel: 1` en renovar y cerrar, y fija el límite por IP en 10 fallos (la 023 supuso 5); el panel solo obedece `Retry-After`, así que el cambio no rompe su comportamiento.
 
 ## 6. Modelo de datos
 **`panel_cuentas` (base `identity`)**
@@ -235,7 +235,7 @@ Que una persona del equipo de Knock entre al panel web interno con su celular ve
 | Robo del token de renovación | Cookie `HttpOnly` fuera del alcance de los scripts, rotación y detección de reuso que revoca todo | CA-11, CA-13 |
 | Falsificación de petición entre sitios con la cookie `SameSite=None` | `Origin` exacto y encabezado `X-Knock-Panel` que obliga a una petición preliminar de CORS solo permitida al panel | CA-12, CA-23 |
 | Sesión olvidada en un equipo compartido | Token de 15 minutos, cookie de 20, sesión de 8 horas y cierre que cancela el `sid` | CA-14, CA-15 |
-| Enumerar cuentas del panel | El 403 `sin_acceso_panel` solo lo ve quien ya demostró tener el celular con Firebase; mismo cuerpo para inexistente y deshabilitada | CA-03, CA-25 |
+| Enumerar cuentas del panel | El 403 `no_panel_access` solo lo ve quien ya demostró tener el celular con Firebase; mismo cuerpo para inexistente y deshabilitada | CA-03, CA-25 |
 | Robo de la base | Secreto TOTP cifrado con llave propia; renovación solo como huella | CA-17 |
 | Repudio («yo no hice esa acción») | Auditoría de solo inserción con `sub`, `sid`, permiso y recurso; sin auditoría no hay acción | CA-04, CA-18 |
 | Fuga de datos por registros o auditoría | Lista de campos prohibidos y prueba que la comprueba | CA-19 |
@@ -274,7 +274,7 @@ Que una persona del equipo de Knock entre al panel web interno con su celular ve
 - Se presenta el token de la app en `/api/v1/panel/...`.
 
 **Errores esperados**
-- 400 por cuerpos inválidos; 401 `credenciales_invalidas`, `sesion_invalida` y `permisos_cambiaron`; 403 `sin_acceso_panel`, `permiso_insuficiente` y `origen_no_permitido`; 429 `limite_excedido`; 503 `no_disponible` y `auditoria_no_disponible`.
+- 400 por cuerpos inválidos; 401 `invalid_credentials`, `invalid_session` y `permissions_changed`; 403 `no_panel_access`, `insufficient_permission` y `origin_not_allowed`; 429 `limit_exceeded`; 503 `unavailable` y `audit_unavailable`.
 
 **Casos límite**
 - Código del paso anterior, del actual y del siguiente (aceptados) y de dos pasos atrás (rechazado).
@@ -317,7 +317,7 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 ## 15. Riesgos y dudas abiertas
 - **Cookies de terceros:** si el navegador del personal bloquea cookies de terceros aun con `Partitioned`, la renovación no funciona y cada 15 minutos se repiten SMS y TOTP. La solución definitiva es un dominio común para panel y API; queda para el líder.
 - **Firebase Phone Auth en web exige reCAPTCHA y tiene cuotas** (KNOCK-146); es un riesgo de frontend que puede afectar el costo cero.
-- **`permiso_insuficiente` y `sin_acceso_panel` en la spec 023:** el panel trata cualquier 403 como «sin permiso» o «sin acceso»; conviene que distinga los dos códigos.
+- **`insufficient_permission` y `no_panel_access` en la spec 023:** el panel trata cualquier 403 como «sin permiso» o «sin acceso»; conviene que distinga los dos códigos.
 - **Endpoints del panel en otros servicios:** la política de permisos se construye en Identity; Mercado (reseñas, catálogos) necesitará la misma regla. Compartirla por `Knock.Contracts` va contra «contratos sin lógica»; duplicarla requiere una excepción registrada.
 - **La auditoría de acciones depende de que cada spec futura pase `recursoId`:** HU-067, 069 y 070 deben declararlo.
 - **Responsable:** KNOCK-75 está sin asignar en Jira; la ficha nombra a Alexis.

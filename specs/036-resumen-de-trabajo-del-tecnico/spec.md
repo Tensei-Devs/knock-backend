@@ -27,7 +27,7 @@ Que la pestaña Trabajo del técnico reciba en una sola respuesta sus visitas pr
 
 ## 3. Requisitos
 
-- **R-01:** Exige JWT. Si la persona no es técnico activo, responde `403 no_es_tecnico`. El técnico se resuelve por el `sub` del token en `tecnicos`, como en la spec 020 R-11.
+- **R-01:** Exige JWT. Si la persona no es técnico activo, responde `403 not_a_technician`. El técnico se resuelve por el `sub` del token en `tecnicos`, como en la spec 020 R-11.
 - **R-02:** La respuesta tiene cuatro secciones, cada una de una consulta propia:
   - `proximasVisitas`: visitas del técnico en estado `confirmada` o `en_curso`, ordenadas por `dia` y `hora` ascendentes, con un máximo de 20.
   - `cotizacionesEnviadas`: las 20 cotizaciones más recientes del técnico, de cualquier estado, ordenadas por `enviadaEn` descendente.
@@ -37,7 +37,7 @@ Que la pestaña Trabajo del técnico reciba en una sola respuesta sus visitas pr
 - **R-04:** Cada cotización enviada lleva `motivoRechazo` cuando su estado es `rechazada` o `retirada`, con los valores que define la spec 021 (*decisión de revisión, confirmar*: esta spec no inventa valores nuevos; si la 021 no los define, se añaden allí).
 - **R-05:** `disponibleHoy` se lee del campo de `tecnicos` y, si no existe, vale `false`. Esta spec no lo escribe.
 - **R-06:** `verificacion.estado` se lee de Identidad (spec 025) por la red interna, como `GET /colonias/existe` (spec 017). `nivel` se lee de `tecnicos`.
-- **R-07:** Si cualquier parte del resumen falla (Identidad no responde, la base no responde o falla una de las cuatro consultas), la respuesta entera es `503 no_disponible`. Nunca se devuelve una respuesta parcial (*decisión de revisión, confirmar*: la app trata la pestaña como una sola carga; una falla deja toda la pestaña en error, y así el contrato queda simple).
+- **R-07:** Si cualquier parte del resumen falla (Identidad no responde, la base no responde o falla una de las cuatro consultas), la respuesta entera es `503 unavailable`. Nunca se devuelve una respuesta parcial (*decisión de revisión, confirmar*: la app trata la pestaña como una sola carga; una falla deja toda la pestaña en error, y así el contrato queda simple).
 - **R-08:** La respuesta lleva `Cache-Control: private, no-store` (spec 010, R-04): contiene datos personales y cambia con cada solicitud.
 - **R-09:** Ninguna sección lleva el código de la visita, el nombre ni el teléfono del cliente, ni la dirección fuera de R-03.
 - **R-10:** El límite de lectura del gateway (spec 009) aplica; con exceso, `429` con `Retry-After`.
@@ -46,7 +46,7 @@ Que la pestaña Trabajo del técnico reciba en una sola respuesta sus visitas pr
 
 | Método y ruta | Quién | Parámetros | Respuesta | Errores |
 |---|---|---|---|---|
-| `GET /api/v1/tecnicos/me/trabajo` | técnico activo | `cursorTerminadas?`, `limit?` (1–20) | `200` (ver forma abajo) | `400` (`cursor_invalido`), `401`, `403 no_es_tecnico`, `422` (`limit` fuera de rango), `429`, `503 no_disponible` |
+| `GET /api/v1/tecnicos/me/trabajo` | técnico activo | `cursorTerminadas?`, `limit?` (1–20) | `200` (ver forma abajo) | `400` (`invalid_cursor`), `401`, `403 not_a_technician`, `422` (`limit` fuera de rango), `429`, `503 unavailable` |
 
 **Forma de la respuesta**
 - `disponibleHoy: boolean`, `verificacion: { estado }`, `nivel: { clave, nombre }`
@@ -59,18 +59,18 @@ Que la pestaña Trabajo del técnico reciba en una sola respuesta sus visitas pr
 
 | Amenaza | Control | Prueba |
 |---|---|---|
-| Un cliente lee el resumen de trabajo de un técnico | `403 no_es_tecnico` por rol y `sub` | CA-02 |
+| Un cliente lee el resumen de trabajo de un técnico | `403 not_a_technician` por rol y `sub` | CA-02 |
 | Fuga de datos de contacto o de la dirección antes de elegir | Forma fija por sección y R-03 | CA-01, CA-06 |
 | Caché compartida de datos personales | `Cache-Control: private, no-store` | CA-05 |
-| Cursor manipulado | `cursor_invalido` (400) | Integración |
+| Cursor manipulado | `invalid_cursor` (400) | Integración |
 
 ## 6. Criterios de aceptación
 
 - **CA-01:** Dado un técnico con una visita `confirmada` y otra `terminada`, cuando pide su resumen, entonces la primera está en `proximasVisitas` con dirección y la segunda en `terminadas`. (R-02, R-03)
-- **CA-02:** Dada una persona que no es técnico activo (cliente o técnico dado de baja), cuando pide el resumen, entonces responde `403 no_es_tecnico`. (R-01)
+- **CA-02:** Dada una persona que no es técnico activo (cliente o técnico dado de baja), cuando pide el resumen, entonces responde `403 not_a_technician`. (R-01)
 - **CA-03:** Dado un técnico con 25 trabajos terminados, cuando pide la lista, entonces recibe 20 y `nextCursor`, y con el cursor recibe los 5 restantes sin repetir. (R-02)
 - **CA-04:** Dada una cotización rechazada porque el cliente eligió a otro técnico, cuando el técnico pide su resumen, entonces esa cotización lleva `motivoRechazo`. (R-04)
-- **CA-05:** Dado Identidad sin responder, cuando se pide el resumen, entonces responde `503 no_disponible` sin secciones parciales y con `Cache-Control: private, no-store`. (R-07, R-08)
+- **CA-05:** Dado Identidad sin responder, cuando se pide el resumen, entonces responde `503 unavailable` sin secciones parciales y con `Cache-Control: private, no-store`. (R-07, R-08)
 - **CA-06:** Dada cualquier respuesta, cuando se revisa, entonces no contiene nombre, teléfono ni `sub` del cliente, ni la dirección de una visita no aceptada. (R-03, R-09)
 - **CA-07:** Dado un técnico sin el campo `disponibleHoy`, cuando pide el resumen, entonces `disponibleHoy` es `false` y el resumen no escribe ese campo. (R-05)
 - **CA-08:** Dado un técnico con su nivel en `tecnicos` y su verificación en Identidad, cuando pide el resumen, entonces `verificacion.estado` viene de Identidad y `nivel` de `tecnicos`. (R-06)
@@ -95,7 +95,7 @@ Que la pestaña Trabajo del técnico reciba en una sola respuesta sus visitas pr
 ## 8. Riesgos y decisiones
 
 1. **Una sola respuesta, no tres llamadas.** La app pidió un agregado (frontend 019 D-01). Alternativa: cuatro rutas pequeñas, que multiplican el trabajo del cliente y la lógica de error. *Decisión de revisión, confirmar.*
-2. **Falla completa, no parcial (R-07).** Si falla una parte, la respuesta entera es `503 no_disponible`; la app muestra error en la pestaña. Alternativa: secciones con su propio estado, que exige respuestas parciales y un contrato más complejo. *Decisión de revisión, confirmar.*
+2. **Falla completa, no parcial (R-07).** Si falla una parte, la respuesta entera es `503 unavailable`; la app muestra error en la pestaña. Alternativa: secciones con su propio estado, que exige respuestas parciales y un contrato más complejo. *Decisión de revisión, confirmar.*
 3. **Calificación en `null` cuando no hay reseñas.** No hay spec de reseñas; mejor un campo vacío que inventar una fuente. *Decisión de revisión, confirmar.*
 4. **Sin escritura de «Disponible hoy».** Lo define HU-019, que no tiene spec; esta spec solo lee el campo.
 
