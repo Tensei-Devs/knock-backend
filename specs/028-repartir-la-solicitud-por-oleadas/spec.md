@@ -41,9 +41,9 @@ Que cada solicitud llegue a pocos técnicos adecuados y no a todos: una primera 
 - **R-09:** **Ejecutor de tareas programadas.** Un servicio en segundo plano consulta `tareas_programadas` cada `TareasProgramadas:IntervaloSegundos` (15 por omisión) y reserva una tarea a la vez con un solo `findOneAndUpdate` condicionado (`estado = pendiente` y `programadaPara <= ahora`, o `estado = en_proceso` con `reservadaHasta < ahora`), que la pasa a `en_proceso` con `reservadaHasta = ahora + 2 min`. Al terminar la marca `hecha`; si falla, suma `intentos` y la reprograma con espera exponencial (5 s, 30 s, 2 min, 10 min); al quinto fallo queda `fallida` y se registra el tipo y el identificador de la tarea, sin datos personales.
 - **R-10:** Las tareas son idempotentes: el índice único `{ tipo, claveNegocio }` impide programar dos veces la misma, y cada manejador comprueba el estado actual antes de actuar. Dos réplicas nunca ejecutan la misma tarea a la vez y una oleada nunca se reparte dos veces.
 - **R-11:** **Cotizar exige envío.** Con `Oleadas:Habilitado`, `POST /api/v1/solicitudes/{id}/cotizaciones` (spec 020) solo acepta al técnico con un envío `activo` de esa solicitud; cualquier otro técnico recibe 404, igual que una solicitud inexistente. Al cotizar, el envío pasa a `cotizado`.
-- **R-12:** **Tope de cotizaciones.** Una solicitud admite como máximo `Oleadas:MaximoCotizaciones` (5) cotizaciones en estado `enviada` o `aceptada`. La sexta responde 409 `cupo_de_cotizaciones_lleno` con el detalle «Esta solicitud ya tiene suficientes cotizaciones». La comprobación es parte de la transacción de la cotización con un contador `solicitudes.cotizacionesActivas` incrementado de forma condicionada (`< 5`), para que dos cotizaciones simultáneas no pasen del tope.
-- **R-13:** `GET /api/v1/tecnicos/me/solicitudes` exige JWT de técnico (403 `no_es_tecnico` si el `sub` no está en `tecnicos`) y devuelve sus envíos `activos` de solicitudes abiertas y no vencidas, de la más reciente a la más antigua, con paginación por cursor (`limit` de 1 a 20, 20 por omisión). Cada elemento es la vista acotada `{ solicitudId, oficio: { clave, nombre }, colonia: { nombre, cp }, descripcion, fotos[], dia, franja, modalidad, venceEn, oleada, recibidaEn, yaCotizo }`, **sin** dirección, nombre ni teléfono del cliente. Responde `Cache-Control: private, no-store`.
-- **R-14:** `POST /api/v1/solicitudes/{id}/descartar` exige JWT de técnico y cuerpo vacío. Si el técnico tiene un envío `activo` de esa solicitud, lo marca `descartado` con `descartadoEn` y responde 204; repetirlo responde 204 sin cambios. Si no tiene envío, responde 404; si ya cotizó, 409 `solicitud_no_descartable`. Un técnico que descartó no vuelve a recibir esa solicitud. El descarte tiene un límite de 30 por hora por técnico (contador en Redis por `sub`, como los del gateway); al pasarse responde 429 con `Retry-After`.
+- **R-12:** **Tope de cotizaciones.** Una solicitud admite como máximo `Oleadas:MaximoCotizaciones` (5) cotizaciones en estado `enviada` o `aceptada`. La sexta responde 409 `quote_quota_full` con el detalle «Esta solicitud ya tiene suficientes cotizaciones». La comprobación es parte de la transacción de la cotización con un contador `solicitudes.cotizacionesActivas` incrementado de forma condicionada (`< 5`), para que dos cotizaciones simultáneas no pasen del tope.
+- **R-13:** `GET /api/v1/tecnicos/me/solicitudes` exige JWT de técnico (403 `not_a_technician` si el `sub` no está en `tecnicos`) y devuelve sus envíos `activos` de solicitudes abiertas y no vencidas, de la más reciente a la más antigua, con paginación por cursor (`limit` de 1 a 20, 20 por omisión). Cada elemento es la vista acotada `{ solicitudId, oficio: { clave, nombre }, colonia: { nombre, cp }, descripcion, fotos[], dia, franja, modalidad, venceEn, oleada, recibidaEn, yaCotizo }`, **sin** dirección, nombre ni teléfono del cliente. Responde `Cache-Control: private, no-store`.
+- **R-14:** `POST /api/v1/solicitudes/{id}/descartar` exige JWT de técnico y cuerpo vacío. Si el técnico tiene un envío `activo` de esa solicitud, lo marca `descartado` con `descartadoEn` y responde 204; repetirlo responde 204 sin cambios. Si no tiene envío, responde 404; si ya cotizó, 409 `request_not_dismissable`. Un técnico que descartó no vuelve a recibir esa solicitud. El descarte tiene un límite de 30 por hora por técnico (contador en Redis por `sub`, como los del gateway); al pasarse responde 429 con `Retry-After`.
 - **R-15:** La vista del técnico de `GET /api/v1/solicitudes/{id}` (spec 020, R-08) se amplía a quien tiene un envío `activo` o `cotizado` de la solicitud, con las mismas reglas: colonia sí, dirección solo si fue elegido. Un técnico con el envío `descartado` o `cerrado` recibe 404.
 - **R-16:** Los eventos `SolicitudEnviadaATecnico` (`{ solicitudId, tecnicoId, oleada }`) y `SolicitudSinTecnicos` (`{ solicitudId }`) se escriben en el buzón de salida en la misma transacción y no llevan descripción, dirección, nombres ni teléfonos. Se registran en `docs/events.md`.
 - **R-17:** Los registros llevan solo conteos (elegibles, enviados, oleada) y tiempos; nunca el `sub`, el `tecnicoId` en texto libre, la colonia ni la descripción. Los errores usan ProblemDetails con `correlationId` y `traceId`.
@@ -54,14 +54,14 @@ Que cada solicitud llegue a pocos técnicos adecuados y no a todos: una primera 
 - **CA-03:** Dada una solicitud con 2 cotizaciones a los 15 minutos, cuando corre la revisión, entonces no se amplía.
 - **CA-04:** Dado un técnico que descartó la solicitud, otro oculto, otro suspendido, otro con `disponibleHasta` vencido y el propio cliente registrado como técnico, cuando se arma una oleada, entonces ninguno la recibe.
 - **CA-05:** Dadas dos réplicas del ejecutor sobre la misma base, cuando vence la revisión, entonces la oleada siguiente se reparte una sola vez y no hay envíos repetidos.
-- **CA-06:** Dada una solicitud con 5 cotizaciones activas, cuando llega una sexta, entonces responde 409 `cupo_de_cotizaciones_lleno`; y dadas dos cotizaciones simultáneas con 4 activas, cuando terminan, entonces una responde 201 y la otra 409.
+- **CA-06:** Dada una solicitud con 5 cotizaciones activas, cuando llega una sexta, entonces responde 409 `quote_quota_full`; y dadas dos cotizaciones simultáneas con 4 activas, cuando terminan, entonces una responde 201 y la otra 409.
 - **CA-07:** Dados 10 técnicos sin ningún nuevo y sin ninguno cercano distinto de los mejor ordenados, cuando se reparte, entonces se completan 5 con `relleno` y nunca más de 5.
 - **CA-08:** Dados los mismos técnicos, cuando se calcula la selección dos veces, entonces el resultado es idéntico; y con 200 elegibles tarda menos de 200 ms.
 - **CA-09:** Dada una solicitud cancelada o vencida antes de la revisión, cuando corre `RevisarOleada` o `RepartirOleada`, entonces no hay envíos nuevos ni eventos.
 - **CA-10:** Dadas 3 oleadas sin cotizaciones suficientes, cuando corre la tercera revisión, entonces no se programa una cuarta; y si ninguna oleada encontró técnicos, entonces hay un `SolicitudSinTecnicos`.
 - **CA-11:** Dado un técnico con el oficio pero sin envío de la solicitud, cuando intenta cotizar, entonces responde 404; y con el envío activo, responde 201 y el envío queda `cotizado`.
-- **CA-12:** Dado un técnico con tres envíos activos, cuando pide su bandeja, entonces recibe tres elementos sin dirección, nombre ni teléfono del cliente, con `Cache-Control: private, no-store`; y un cliente que pide la bandeja recibe 403 `no_es_tecnico`.
-- **CA-13:** Dado un envío activo, cuando el técnico descarta, entonces responde 204, el envío queda `descartado` y desaparece de la bandeja; repetirlo responde 204; descartar una solicitud que no recibió responde 404 y una que ya cotizó, 409 `solicitud_no_descartable`.
+- **CA-12:** Dado un técnico con tres envíos activos, cuando pide su bandeja, entonces recibe tres elementos sin dirección, nombre ni teléfono del cliente, con `Cache-Control: private, no-store`; y un cliente que pide la bandeja recibe 403 `not_a_technician`.
+- **CA-13:** Dado un envío activo, cuando el técnico descarta, entonces responde 204, el envío queda `descartado` y desaparece de la bandeja; repetirlo responde 204; descartar una solicitud que no recibió responde 404 y una que ya cotizó, 409 `request_not_dismissable`.
 - **CA-14:** Dado un técnico con envío activo, cuando pide el detalle de la solicitud, entonces ve la colonia y no la dirección; con el envío descartado recibe 404.
 - **CA-15:** Dada una tarea que falla, cuando se reintenta, entonces se reprograma con espera creciente y al quinto fallo queda `fallida`; y dada una tarea reservada por una réplica que se cayó, cuando pasa `reservadaHasta`, entonces otra réplica la toma.
 - **CA-16:** Dado `Oleadas:Habilitado` en falso, cuando se crea una solicitud, entonces no hay tareas de reparto y cualquier técnico con el oficio puede cotizar (regla de la spec 020); y dado `MejorOrdenados = 4` con `TamanoOleada = 5`, cuando arranca el servicio, entonces falla.
@@ -96,12 +96,12 @@ Que cada solicitud llegue a pocos técnicos adecuados y no a todos: una primera 
 |---|---|---|---|
 | `GET /api/v1/tecnicos/me/solicitudes` | técnico | `cursor?`, `limit?` (1–20) | 200 `CursorPage<SolicitudRecibida>`, 400, 401, 403, 429 |
 | `POST /api/v1/solicitudes/{id}/descartar` | técnico con envío | vacío | 204, 400, 401, 403, 404, 409, 429 |
-| `POST /api/v1/solicitudes/{id}/cotizaciones` (spec 020) | técnico con envío activo | sin cambios | se agregan 404 (sin envío) y 409 `cupo_de_cotizaciones_lleno` |
+| `POST /api/v1/solicitudes/{id}/cotizaciones` (spec 020) | técnico con envío activo | sin cambios | se agregan 404 (sin envío) y 409 `quote_quota_full` |
 | `GET /api/v1/solicitudes/{id}` (spec 020) | dueña, técnico cotizante o con envío activo | sin cambios | sin cambios |
 
 **`SolicitudRecibida`:** `{ solicitudId, oficio: { clave, nombre }, colonia: { nombre, cp }, descripcion, fotos[], dia, franja, modalidad, venceEn, oleada, recibidaEn, yaCotizo }`.
 
-**Códigos de error nuevos:** `cupo_de_cotizaciones_lleno` (409), `solicitud_no_descartable` (409). Se reutiliza `no_es_tecnico` (403) de las specs 020 y 022.
+**Códigos de error nuevos:** `quote_quota_full` (409), `request_not_dismissable` (409). Se reutiliza `not_a_technician` (403) de las specs 020 y 022.
 
 **Eventos (buzón de Mercado):** `SolicitudEnviadaATecnico { solicitudId, tecnicoId, oleada }`, `SolicitudSinTecnicos { solicitudId }`. Tareas: `RepartirOleada`, `RevisarOleada`.
 
@@ -120,7 +120,7 @@ Que cada solicitud llegue a pocos técnicos adecuados y no a todos: una primera 
 | `oleada` | int | 1 a 3 |
 | `motivo` | string | `mejor_ordenado`, `nuevo`, `cercano`, `relleno` |
 | `estado` | string | `activo`, `cotizado`, `descartado`, `cerrado` |
-| `cerradoMotivo` | string? | `solicitud_cancelada`, `solicitud_vencida`, `se_eligio_otra` (lo escriben las specs 021 y 029) |
+| `cerradoMotivo` | string? | `request_cancelled`, `request_expired`, `se_eligio_otra` (lo escriben las specs 021 y 029) |
 | `enviadoEn`, `descartadoEn?`, `actualizadoEn` | date | UTC |
 
 Índices: `{ solicitudId: 1, tecnicoId: 1 }` único; `{ tecnicoUsuarioId: 1, estado: 1, enviadoEn: -1 }` (bandeja); `{ solicitudId: 1, estado: 1 }`.
@@ -207,7 +207,7 @@ El script `db/` de esta spec crea `envios`, los índices nuevos y no borra ni ca
 - Cliente que pide la bandeja: 403.
 
 **Errores esperados**
-- 400 (cursor inválido), 401, 403 `no_es_tecnico`, 404, 409 (`cupo_de_cotizaciones_lleno`, `solicitud_no_descartable`), 429.
+- 400 (cursor inválido), 401, 403 `not_a_technician`, 404, 409 (`quote_quota_full`, `request_not_dismissable`), 429.
 
 **Casos límite**
 - Exactamente 5 elegibles; 0 elegibles en las 3 oleadas; 4 cotizaciones y dos simultáneas; técnico con `disponibleHasta` igual a la hora del reparto (no elegible); réplica que se cae con la tarea reservada; solicitud que vence entre la reserva y la ejecución; técnico que descarta mientras cotiza (gana el primero que confirma; el otro recibe 409 o 404).
@@ -235,7 +235,7 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 5. **El aviso al técnico es un evento, no un push directo.** El servicio de Mensajería es el dueño de las notificaciones (constitución §4); Mercado no conoce los tokens de dispositivo.
 6. **La bandeja es una ruta propia (`/tecnicos/me/solicitudes`) y no la pestaña Trabajo completa.** Frontend 019 pide `GET /tecnicos/me/trabajo`, que agrega disponibilidad, verificación, visitas y resumen de otras historias sin spec; la bandeja es lo único que esta historia puede comprometer. Alternativa: escribir el agregado aquí, mezclando cinco historias.
 7. **El descarte responde 204 y es idempotente por estado,** como lo consume frontend 019.
-8. **Se agrega 409 `cupo_de_cotizaciones_lleno` a la ruta de la spec 020** en vez de crear otra ruta: el tope es una regla de la misma operación.
+8. **Se agrega 409 `quote_quota_full` a la ruta de la spec 020** en vez de crear otra ruta: el tope es una regla de la misma operación.
 
 ## 15. Riesgos y dudas abiertas
 - **`Idempotency-Key` retirada por ahora (decisión del 2026-11-10).** Se quitó del descarte, que ya es idempotente por estado: repetirlo responde 204 sin cambios. Se retoma con una spec propia si se decide volver a exigirla.

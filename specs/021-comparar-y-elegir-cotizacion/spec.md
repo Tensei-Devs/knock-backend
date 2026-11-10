@@ -31,25 +31,25 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 
 ## 3. Requisitos
 - **R-01:** `GET /api/v1/solicitudes/{id}/cotizaciones` exige JWT y responde solo al cliente dueño de la solicitud. Cualquier otra persona recibe 404 uniforme; un `id` que no es `ObjectId` responde 400.
-- **R-02:** La respuesta trae hasta cinco cotizaciones en estado `enviada`, `aceptada` o `rechazada`, con `{ id, estado, tipoPrecio, precio, precioMin?, precioMax?, tope, requiereAprobacion, dia, hora, nota?, cubre, etiquetas[], tecnico, motivoRechazo? }`. `motivoRechazo` aparece solo en las `rechazada` (valores `se_eligio_otra` de esta spec y `solicitud_cancelada` y `solicitud_vencida` de la spec 029; *decisión automática, revisar*). Las retiradas no se listan.
+- **R-02:** La respuesta trae hasta cinco cotizaciones en estado `enviada`, `aceptada` o `rechazada`, con `{ id, estado, tipoPrecio, precio, precioMin?, precioMax?, tope, requiereAprobacion, dia, hora, nota?, cubre, etiquetas[], tecnico, motivoRechazo? }`. `motivoRechazo` aparece solo en las `rechazada` (valores `se_eligio_otra` de esta spec y `request_cancelled` y `request_expired` de la spec 029; *decisión automática, revisar*). Las retiradas no se listan.
 - **R-03:** La spec 020 limita cada solicitud a 5 cotizaciones vivas, así que el listado está acotado y se devuelve completo, sin cursor (excepción documentada a la spec 010, R-07, como el catálogo de oficios). `totalCotizaciones` dice cuántas se devuelven. Las etiquetas se calculan sobre todas las devueltas.
 - **R-04:** `?orden` acepta `recomendadas` (omisión), `precio`, `calificacion` y `pronto`; otro valor responde 422 con `errors.orden`. `precio` ordena por `tope` de menor a mayor y deja las visitas al final; `calificacion` de mayor a menor (sin calificación al final); `pronto` por `dia` y `hora` de menor a mayor. Todo empate se resuelve por `creadoEn` ascendente y luego por `_id`, para que el orden sea estable.
 - **R-05:** Mientras el aprendizaje automático no exista, `recomendadas` usa un orden determinista y documentado: primero los técnicos verificados, después la calificación de mayor a menor, después el `tope` de menor a mayor y por último el más antiguo.
 - **R-06:** `etiquetas` solo puede contener `verificado`, `mejor_precio` y `puede_ir_mas_pronto`. `mejor_precio` se asigna al `tope` más bajo entre las cotizaciones que no son visita y nunca a una visita; `puede_ir_mas_pronto` a la fecha y hora más tempranas.
 - **R-07:** `cubre` es un texto fijo por tipo: `visita` = “Solo visita: ir a ver el trabajo”; `fijo` = “Arreglo completo, mano de obra incluida, refacciones aparte”; `rango` = “Estimado del arreglo dentro del rango”. Si hay tipos distintos, `tiposMixtos` es verdadero para que la app muestre el aviso.
-- **R-08:** La respuesta lleva `puedeElegir` y, cuando es falso, `motivo` con el mismo nombre que el error que daría la elección (`solicitud_sin_cotizaciones`, `solicitud_vencida`, `solicitud_cancelada`, `solicitud_ya_elegida`) y `visitaId` si ya se eligió. El listado no se cachea: `Cache-Control: private, no-store`, sin `ETag`. El listado **nunca** incluye `telefono`, `whatsapp`, la dirección del taller ni la del cliente.
+- **R-08:** La respuesta lleva `puedeElegir` y, cuando es falso, `motivo` con el mismo nombre que el error que daría la elección (`request_without_quotes`, `request_expired`, `request_cancelled`, `request_already_chosen`) y `visitaId` si ya se eligió. El listado no se cachea: `Cache-Control: private, no-store`, sin `ETag`. El listado **nunca** incluye `telefono`, `whatsapp`, la dirección del taller ni la del cliente.
 - **R-09:** `POST /api/v1/solicitudes/{id}/elegir` exige JWT del cliente dueño y cuerpo `{ cotizacionId }` (`ObjectId`; si no, 422 `errors.cotizacionId`). Responde 200 con la cita confirmada y los datos revelados.
 - **R-10:** La elección se ejecuta en una sola transacción: cambia la solicitud a `cita_confirmada` solo si estaba en `cotizando` y no venció; acepta la cotización elegida si estaba `enviada`; marca las demás `enviada` como `rechazada` con motivo `se_eligio_otra`; crea una sola `visita`; y escribe los eventos en el buzón.
-- **R-11:** Dos elecciones simultáneas de la misma solicitud: gana una y la otra responde 409 `solicitud_ya_elegida`. Elegir otra vez una solicitud que ya tiene cita confirmada responde 409 `solicitud_ya_elegida`, sea la misma cotización u otra, y no duplica nada.
-- **R-12:** La cotización elegida debe pertenecer a la solicitud y estar `enviada`; si no existe o es de otra solicitud, 404; si fue retirada o ya está rechazada, 409 `cotizacion_no_disponible`.
-- **R-13:** Si la solicitud venció o está cancelada, responde 409 `solicitud_vencida` o `solicitud_cancelada` y no cambia nada. Si no está en `cotizando` (por ejemplo, `enviada` sin cotizaciones), 409 `solicitud_sin_cotizaciones`.
+- **R-11:** Dos elecciones simultáneas de la misma solicitud: gana una y la otra responde 409 `request_already_chosen`. Elegir otra vez una solicitud que ya tiene cita confirmada responde 409 `request_already_chosen`, sea la misma cotización u otra, y no duplica nada.
+- **R-12:** La cotización elegida debe pertenecer a la solicitud y estar `enviada`; si no existe o es de otra solicitud, 404; si fue retirada o ya está rechazada, 409 `quote_unavailable`.
+- **R-13:** Si la solicitud venció o está cancelada, responde 409 `request_expired` o `request_cancelled` y no cambia nada. Si no está en `cotizando` (por ejemplo, `enviada` sin cotizaciones), 409 `request_without_quotes`.
 - **R-14:** La respuesta de la elección incluye `{ visitaId, solicitudId, cotizacionId, estado, modalidad, dia, hora, precio, tope, tecnico, lugar }`. `tecnico` trae `{ id, nombre, fotoUrl, verificado, nivelVerificacion, telefono?, whatsapp? }`; `lugar` trae `{ tipo: "taller" | "domicilio", direccion }`.
 - **R-15:** El `telefono` y el `whatsapp` son el **contacto público** del técnico, guardado en `tecnicos.contactoPublico`; si el técnico no lo publicó, los campos van ausentes y la app ofrece el chat. Nunca se devuelve el celular personal que vive cifrado en Identidad.
 - **R-16:** Para `domicilio`, `lugar.direccion` es la dirección que el cliente escribió en su solicitud (se descifra para él); para `taller`, es la dirección del taller del técnico. El contacto y la dirección solo aparecen después de elegir y en la respuesta de la elección o en el detalle de la visita (spec 022).
 - **R-17:** La cita se crea en estado `confirmada`, con la `modalidad`, el `dia` y la `hora` de la cotización elegida. Para `domicilio` se genera un código de cuatro dígitos con generador criptográfico, se guarda cifrado (AES-256-GCM con llave versionada en Key Vault) y con vencimiento; para `taller` no hay código. El código no se devuelve en esta respuesta.
 - **R-18:** La operación escribe `CotizacionAceptada` (para el elegido), un `CotizacionRechazada` por cada rechazada y `VisitaConfirmada` en el buzón de salida, en la misma transacción. Los eventos llevan solo identificadores y datos no personales.
 - **R-19:** Los errores usan ProblemDetails con `correlationId`, `traceId` y `code` (convención de errores de la spec 020, §5). Los registros no incluyen nombres, teléfonos, direcciones ni el código.
-- **R-20:** Si la transacción se aborta por un conflicto transitorio, se reintenta una vez; si vuelve a fallar o la base no responde, responde 503 `servicio_no_disponible` sin haber cambiado nada, y la app puede repetir la elección (si la solicitud ya quedó con cita, responde 409 `solicitud_ya_elegida`).
+- **R-20:** Si la transacción se aborta por un conflicto transitorio, se reintenta una vez; si vuelve a fallar o la base no responde, responde 503 `service_unavailable` sin haber cambiado nada, y la app puede repetir la elección (si la solicitud ya quedó con cita, responde 409 `request_already_chosen`).
 - **R-21:** Regla de privacidad: el contacto público del técnico y el lugar de la cita (dirección del cliente o del taller) solo se revelan al cliente dueño después de elegir, en esta respuesta o en la visita (spec 022). El técnico nunca recibe el teléfono del cliente.
 
 ## 4. Criterios de aceptación
@@ -57,18 +57,18 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 - **CA-02:** Dadas cotizaciones con tope 900, 1 100 y una visita de 250, cuando se ordena por `precio`, entonces quedan 900, 1 100 y la visita al final, y `mejor_precio` está en la de 900.
 - **CA-03:** Dada una solicitud de otra persona, cuando se pide el listado, entonces responde 404.
 - **CA-04:** Dada una cotización válida, cuando el dueño elige, entonces responde 200, la solicitud queda `cita_confirmada`, la cotización `aceptada`, las demás `rechazadas`, hay una `visita` y los eventos están en el buzón.
-- **CA-05:** Dadas dos elecciones simultáneas de la misma solicitud, cuando llegan, entonces una responde 200 y la otra 409 `solicitud_ya_elegida`, y hay una sola cita.
-- **CA-06:** Dada una solicitud que ya tiene cita confirmada, cuando se elige otra vez, entonces responde 409 `solicitud_ya_elegida` y no crea otra cita.
+- **CA-05:** Dadas dos elecciones simultáneas de la misma solicitud, cuando llegan, entonces una responde 200 y la otra 409 `request_already_chosen`, y hay una sola cita.
+- **CA-06:** Dada una solicitud que ya tiene cita confirmada, cuando se elige otra vez, entonces responde 409 `request_already_chosen` y no crea otra cita.
 - **CA-07:** Dada una cotización de otra solicitud o retirada, cuando se elige, entonces responde 404 o 409 y no cambia nada.
 - **CA-08:** Dada una solicitud vencida o cancelada, cuando se elige, entonces responde 409 y no cambia nada.
 - **CA-09:** Dada una elección confirmada, cuando se inspecciona la respuesta, entonces trae el contacto público del técnico y la dirección del lugar; el listado previo no traía ninguno de los dos.
 - **CA-10:** Dada una cita a domicilio, cuando se inspecciona la base, entonces hay un código de cuatro dígitos cifrado (nunca en claro) y con vencimiento; en una cita de taller no hay código.
-- **CA-11:** Dado un listado de una solicitud vencida, cuando se pide, entonces responde 200 con `puedeElegir` falso y `motivo` `solicitud_vencida`.
+- **CA-11:** Dado un listado de una solicitud vencida, cuando se pide, entonces responde 200 con `puedeElegir` falso y `motivo` `request_expired`.
 - **CA-12:** Dada una petición sin token, cuando se pide el listado o se elige, entonces responde 401; con el token de un técnico, 404.
 - **CA-13:** Dado el registro de una elección, cuando se inspecciona, entonces no contiene nombre, teléfono, dirección ni código.
 - **CA-14:** Dadas dos cotizaciones del mismo tipo y tope, cuando se ordena por `recomendadas`, entonces el orden es estable y el verificado va primero.
 - **CA-15:** Dado `?orden=barato` o un `id` que no es `ObjectId`, cuando se pide el listado, entonces responde 422 con `errors.orden` o 400, respectivamente.
-- **CA-17:** Dada una falla de la base durante la transacción (simulada), cuando se elige, entonces responde 503 `servicio_no_disponible`, la solicitud sigue en `cotizando`, no hay `visita` ni eventos, y repetir con la misma clave termina bien.
+- **CA-17:** Dada una falla de la base durante la transacción (simulada), cuando se elige, entonces responde 503 `service_unavailable`, la solicitud sigue en `cotizando`, no hay `visita` ni eventos, y repetir con la misma clave termina bien.
 - **CA-18:** Dado el listado de cualquier solicitud (antes o después de elegir), cuando se inspecciona la respuesta, entonces no contiene `telefono`, `whatsapp` ni direcciones.
 
 ## 5. Contrato
@@ -81,7 +81,7 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 
 **Cuerpo de la cita:** `{ visitaId, solicitudId, cotizacionId, estado, modalidad, dia, hora, precio, tope, tecnico: { id, nombre, fotoUrl, verificado, nivelVerificacion, telefono?, whatsapp? }, lugar: { tipo, direccion } }`.
 
-**Códigos de error:** `solicitud_ya_elegida` (409), `solicitud_vencida` (409), `solicitud_cancelada` (409), `solicitud_sin_cotizaciones` (409), `cotizacion_no_disponible` (409), `servicio_no_disponible` (503). Errores de formato: 422 con `errors`; recurso ajeno o inexistente: 404 uniforme.
+**Códigos de error:** `request_already_chosen` (409), `request_expired` (409), `request_cancelled` (409), `request_without_quotes` (409), `quote_unavailable` (409), `service_unavailable` (503). Errores de formato: 422 con `errors`; recurso ajeno o inexistente: 404 uniforme.
 
 **Límites:** 5 cotizaciones por respuesta (cupo de la spec 020); cuerpo de 8 KB; 10 elecciones por minuto y 60 listados por minuto por persona (se registran en `docs/rate-limit-matrix.md`).
 
@@ -231,17 +231,17 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 5. **El código no se devuelve en la elección.** La app lo pide a la visita (spec 022); así el código no viaja en la respuesta de una operación que se registra y se reintenta. Alternativa: devolverlo una sola vez y que la app lo guarde; se pierde al reinstalar.
 6. **Las cotizaciones retiradas no se listan.** La ficha de HU-035 no está implementada, pero el estado existe; ocultarlas evita ofrecer algo que ya no está.
 7. **La visita nace en `confirmada` y su ciclo vive en la spec 022.** Repartir la creación entre dos specs dejaría una ventana sin cita.
-8. **Sin repetición idempotente.** Una segunda elección de la misma solicitud responde 409 `solicitud_ya_elegida`; no se guarda ninguna clave (ver §15).
+8. **Sin repetición idempotente.** Una segunda elección de la misma solicitud responde 409 `request_already_chosen`; no se guarda ninguna clave (ver §15).
 
 **Agregadas en la revisión del 9 de noviembre**
 
 9. **El listado no se pagina.** El cupo de 5 cotizaciones vivas de la spec 020 lo acota; se documenta como excepción a la spec 010, igual que el catálogo de oficios. Alternativa: cursor sobre 5 elementos, que complica la pantalla sin beneficio.
 10. **503 en lugar de 500 cuando la transacción falla.** Es una falla de dependencia y la operación es repetible con la misma clave; 500 sugiere un error del programa. Alternativa: 500, que la app trataría como no recuperable.
-11. **`motivo` usa los mismos nombres que los errores.** El borrador tenía `sin_cotizaciones` y `ya_elegida` en el listado y `solicitud_sin_cotizaciones` y `solicitud_ya_elegida` en la elección; con un solo nombre la app usa un solo texto.
+11. **`motivo` usa los mismos nombres que los errores.** El borrador tenía `sin_cotizaciones` y `ya_elegida` en el listado y `request_without_quotes` y `request_already_chosen` en la elección; con un solo nombre la app usa un solo texto.
 12. **KNOCK-81 (HU-032) se cubre aquí del lado del backend.** La ficha es de pantalla, pero el orden y las etiquetas son reglas del servidor. Alternativa: una spec aparte solo para el listado, que duplicaría el modelo.
 
 ## 15. Riesgos y dudas abiertas
-- **`Idempotency-Key` retirada por ahora (decisión del 2026-11-10).** Se quitó de la elección. Sin ella, si la respuesta de una elección exitosa se pierde por la red, el reintento recibe 409 `solicitud_ya_elegida`: la app debe consultar la solicitud (`GET /api/v1/solicitudes/{id}`) antes de mostrar un error, porque la cita ya existe. Se retoma con una spec propia si se decide volver a exigirla.
+- **`Idempotency-Key` retirada por ahora (decisión del 2026-11-10).** Se quitó de la elección. Sin ella, si la respuesta de una elección exitosa se pierde por la red, el reintento recibe 409 `request_already_chosen`: la app debe consultar la solicitud (`GET /api/v1/solicitudes/{id}`) antes de mostrar un error, porque la cita ya existe. Se retoma con una spec propia si se decide volver a exigirla.
 - **El ML de “Recomendadas” no existe:** el orden es determinista y puede no coincidir con el que el equipo espera para la demo; se sustituye en Sprint 5 sin cambiar el contrato.
 - **El contacto público del técnico puede no estar cargado:** si las semillas no lo traen, el cliente solo verá el chat. Hay que sembrarlo en `db/` para la demo.
 - **La dirección del cliente se copia a `solicitudes`:** si el cliente la cambia después, la cita conserva la del momento; es lo correcto para el servicio, pero hay que decirlo en la pantalla.

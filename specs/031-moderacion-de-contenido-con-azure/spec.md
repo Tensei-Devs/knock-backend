@@ -35,15 +35,15 @@ Que todo texto e imagen que una persona publica en Knock se revise con Azure AI 
 - **R-03:** **Texto, paso 1: lista local.** El texto se normaliza (minúsculas, sin acentos, sin signos repetidos, con sustituciones comunes como «4» por «a» o «0» por «o») y se compara con la lista local `lista-local.es-MX.txt` por palabra completa. Si coincide, el resultado es `Rejected` con `Source = lista_local` y no se llama a Azure.
 - **R-04:** **Texto, paso 2: datos personales.** Antes de enviar, el texto pasa por las reglas del filtro de datos personales de la spec 024 (teléfonos, CURP, RFC, correos, tarjetas y direcciones) y se envía solo el texto censurado. El texto original no sale del servicio ni se registra.
 - **R-05:** **Texto, paso 3: Azure.** Se llama a `text:analyze` de Content Safety con las categorías `Hate`, `Sexual`, `Violence` y `SelfHarm` y salida de cuatro niveles de severidad (0, 2, 4, 6). El resultado es `Rejected` si alguna categoría alcanza su umbral de `Moderacion:Umbrales:<Categoria>` (por omisión: `Sexual` 2, las demás 4) y `Approved` si ninguna. `Categories` lista solo las categorías que alcanzaron el umbral.
-- **R-06:** El texto a moderar mide de 1 a 4 000 caracteres; uno mayor se rechaza con `ReasonCode = no_moderable` sin llamar a Azure (ningún llamador de Knock admite más de 1 000).
-- **R-07:** **Imagen.** Se llama a `image:analyze` con los bytes ya procesados por la spec 032 (JPEG recodificado, sin metadatos). Solo se aceptan `image/jpeg` o `image/png` de hasta 4 MB con `Context = imagen_publica`; cualquier otra entrada es `Rejected` con `ReasonCode = no_moderable` sin llamar a Azure. Los umbrales son los mismos de R-05.
-- **R-08:** **Falla cerrada.** Si Azure no responde en `Moderacion:TiempoMaximoSegundos` (5), responde 5xx o 429 tras un reintento, responde 401 o 403 (sin reintento), devuelve un cuerpo que no se puede interpretar, o el cortacircuito está abierto, el resultado es `Unavailable` con `ReasonCode = no_disponible`. Nunca se devuelve `Approved` sin una respuesta válida de Azure o de la caché.
+- **R-06:** El texto a moderar mide de 1 a 4 000 caracteres; uno mayor se rechaza con `ReasonCode = not_moderable` sin llamar a Azure (ningún llamador de Knock admite más de 1 000).
+- **R-07:** **Imagen.** Se llama a `image:analyze` con los bytes ya procesados por la spec 032 (JPEG recodificado, sin metadatos). Solo se aceptan `image/jpeg` o `image/png` de hasta 4 MB con `Context = imagen_publica`; cualquier otra entrada es `Rejected` con `ReasonCode = not_moderable` sin llamar a Azure. Los umbrales son los mismos de R-05.
+- **R-08:** **Falla cerrada.** Si Azure no responde en `Moderacion:TiempoMaximoSegundos` (5), responde 5xx o 429 tras un reintento, responde 401 o 403 (sin reintento), devuelve un cuerpo que no se puede interpretar, o el cortacircuito está abierto, el resultado es `Unavailable` con `ReasonCode = unavailable`. Nunca se devuelve `Approved` sin una respuesta válida de Azure o de la caché.
 - **R-09:** Reintento único ante 429, 5xx o error de red, respetando `Retry-After` si es de 2 segundos o menos; cortacircuito por réplica que se abre 30 segundos tras 5 fallos seguidos.
 - **R-10:** **Caché de decisiones.** El resultado `Approved` o `Rejected` de Azure se guarda en Redis con la huella SHA-256 del texto ya censurado y normalizado (`mod:texto:{huella}`, 24 horas) o de los bytes de la imagen (`mod:imagen:{huella}`, 30 días), junto con la versión de los umbrales. Una consulta con la misma huella y la misma versión responde desde la caché con `Source = cache`, sin gastar cuota. `Unavailable` nunca se guarda.
-- **R-11:** **Topes de consumo.** Antes de llamar a Azure se cuenta la llamada en Redis con una operación atómica: tope mensual global por servicio `Moderacion:Limites:LlamadasPorMes` (`mod:consumo:{servicio}:{yyyyMM}`) y tope diario por persona `Moderacion:Limites:LlamadasPorPersonaPorDia` (300 por omisión; `mod:usuario:{sub}:{yyyyMMdd}`), con días y meses en `America/Mexico_City`. Si se agotó el mensual, el resultado es `Unavailable` con `ReasonCode = cuota_agotada`; si se agotó el de la persona, `Unavailable` con `ReasonCode = limite_por_persona`. Al pasar del 80 % del mensual se emite la métrica `moderacion_cuota_80` una vez al día.
-- **R-12:** Si Redis no responde, no se llama a Azure (no se puede contar ni consultar la caché) y el resultado es `Unavailable` con `ReasonCode = limite_no_disponible`.
-- **R-13:** **Traducción a HTTP.** Los llamadores usan `ModerationProblemMapper`, igual en todos: `Rejected` de texto → 422 `contenido_rechazado`; `Rejected` de imagen → 422 `imagen_rechazada` (spec 032); `Unavailable` con `limite_por_persona` → 429 `limite_moderacion` con `Retry-After` hasta la medianoche; cualquier otro `Unavailable` → 503 `moderacion_no_disponible` con `Retry-After: 30`. En ningún caso se guarda ni se publica el contenido.
-- **R-14:** **Plantillas locales.** Los textos que ve la persona salen de plantillas versionadas en español de México por código, sin revelar la categoría ni el término: `contenido_rechazado` = «Tu texto no cumple las reglas de la comunidad de Knock. Revísalo y vuelve a intentarlo.»; `imagen_rechazada` = «Esta foto no se puede publicar. Elige otra que muestre solo el trabajo.»; `moderacion_no_disponible` = «No pudimos revisar tu contenido en este momento. Intenta de nuevo en unos minutos.»; `limite_moderacion` = «Llegaste al límite de publicaciones de hoy. Intenta mañana.».
+- **R-11:** **Topes de consumo.** Antes de llamar a Azure se cuenta la llamada en Redis con una operación atómica: tope mensual global por servicio `Moderacion:Limites:LlamadasPorMes` (`mod:consumo:{servicio}:{yyyyMM}`) y tope diario por persona `Moderacion:Limites:LlamadasPorPersonaPorDia` (300 por omisión; `mod:usuario:{sub}:{yyyyMMdd}`), con días y meses en `America/Mexico_City`. Si se agotó el mensual, el resultado es `Unavailable` con `ReasonCode = quota_exhausted`; si se agotó el de la persona, `Unavailable` con `ReasonCode = per_person_limit`. Al pasar del 80 % del mensual se emite la métrica `moderacion_cuota_80` una vez al día.
+- **R-12:** Si Redis no responde, no se llama a Azure (no se puede contar ni consultar la caché) y el resultado es `Unavailable` con `ReasonCode = limit_unavailable`.
+- **R-13:** **Traducción a HTTP.** Los llamadores usan `ModerationProblemMapper`, igual en todos: `Rejected` de texto → 422 `content_rejected`; `Rejected` de imagen → 422 `image_rejected` (spec 032); `Unavailable` con `per_person_limit` → 429 `moderation_limit` con `Retry-After` hasta la medianoche; cualquier otro `Unavailable` → 503 `moderation_unavailable` con `Retry-After: 30`. En ningún caso se guarda ni se publica el contenido.
+- **R-14:** **Plantillas locales.** Los textos que ve la persona salen de plantillas versionadas en español de México por código, sin revelar la categoría ni el término: `content_rejected` = «Tu texto no cumple las reglas de la comunidad de Knock. Revísalo y vuelve a intentarlo.»; `image_rejected` = «Esta foto no se puede publicar. Elige otra que muestre solo el trabajo.»; `moderation_unavailable` = «No pudimos revisar tu contenido en este momento. Intenta de nuevo en unos minutos.»; `moderation_limit` = «Llegaste al límite de publicaciones de hoy. Intenta mañana.».
 - **R-15:** **Modo de operación.** `Moderacion:Modo` es `azure` o `solo_local`. `solo_local` aprueba lo que pasa la lista local y solo se permite con `ASPNETCORE_ENVIRONMENT = Development`; en cualquier otro entorno el servicio no arranca con ese modo. En `azure`, si falta el punto de conexión, el servicio no arranca.
 - **R-16:** **Credenciales.** En Azure se usa identidad administrada con el rol mínimo para Content Safety; si se usa clave, sale de Key Vault por configuración. La clave, el token y el punto de conexión nunca aparecen en el repositorio ni en los registros.
 - **R-17:** **Registro de uso.** Cada decisión escribe en `uso_moderacion` `{ servicio, contexto, tipo, decision, origen, categorias[], reasonCode?, latenciaMs, creadoEn }`, sin texto, sin imagen, sin huella y sin `sub`; los documentos vencen a los 365 días. Los registros de la aplicación siguen la misma regla.
@@ -51,18 +51,18 @@ Que todo texto e imagen que una persona publica en Knock se revise con Azure AI 
 - **R-19:** Los umbrales se validan al arrancar (solo 2, 4 o 6) y forman una versión (`Moderacion:VersionUmbrales`); cambiar un umbral sin subir la versión impide arrancar, para que la caché nunca devuelva una decisión tomada con otros umbrales.
 
 ## 4. Criterios de aceptación
-- **CA-01:** Dado un texto que Azure califica con `Hate` en 4, cuando se modera, entonces el resultado es `Rejected` con `Source = azure` y `Categories = [Hate]`; y el llamador responde 422 `contenido_rechazado` con el texto de la plantilla y no guarda nada.
+- **CA-01:** Dado un texto que Azure califica con `Hate` en 4, cuando se modera, entonces el resultado es `Rejected` con `Source = azure` y `Categories = [Hate]`; y el llamador responde 422 `content_rejected` con el texto de la plantilla y no guarda nada.
 - **CA-02:** Dado un texto con un término de la lista local, también escrito con acentos o con «0» en lugar de «o», cuando se modera, entonces el resultado es `Rejected` con `Source = lista_local` y no hubo ninguna llamada a Azure.
 - **CA-03:** Dado un texto limpio que Azure califica con severidad 0 en todo, cuando se modera, entonces el resultado es `Approved`.
 - **CA-04:** Dado un texto con teléfono, CURP, correo y dirección, cuando se modera, entonces la petición que llega al servidor simulado de Azure no contiene ninguno de esos valores.
-- **CA-05:** Dado Azure con 500, con 429 dos veces, sin responder en 5 segundos o con un cuerpo que no se entiende, cuando se modera, entonces el resultado es `Unavailable` con `no_disponible`, hubo como máximo un reintento, y el llamador responde 503 `moderacion_no_disponible` con `Retry-After` y no guarda nada.
+- **CA-05:** Dado Azure con 500, con 429 dos veces, sin responder en 5 segundos o con un cuerpo que no se entiende, cuando se modera, entonces el resultado es `Unavailable` con `unavailable`, hubo como máximo un reintento, y el llamador responde 503 `moderation_unavailable` con `Retry-After` y no guarda nada.
 - **CA-06:** Dado Azure con 401, cuando se modera, entonces no se reintenta, el resultado es `Unavailable` y el registro del fallo no contiene la clave ni el token.
-- **CA-07:** Dado el tope mensual agotado, cuando se modera, entonces no se llama a Azure y el resultado es `Unavailable` con `cuota_agotada`; y dado el tope diario de la persona agotado, entonces es `limite_por_persona` y el llamador responde 429 `limite_moderacion`.
-- **CA-08:** Dadas dos moderaciones simultáneas cuando solo queda una llamada en el tope mensual, cuando se ejecutan, entonces solo una llama a Azure y la otra recibe `cuota_agotada`.
-- **CA-09:** Dado Redis caído, cuando se modera, entonces no se llama a Azure y el resultado es `Unavailable` con `limite_no_disponible`.
+- **CA-07:** Dado el tope mensual agotado, cuando se modera, entonces no se llama a Azure y el resultado es `Unavailable` con `quota_exhausted`; y dado el tope diario de la persona agotado, entonces es `per_person_limit` y el llamador responde 429 `moderation_limit`.
+- **CA-08:** Dadas dos moderaciones simultáneas cuando solo queda una llamada en el tope mensual, cuando se ejecutan, entonces solo una llama a Azure y la otra recibe `quota_exhausted`.
+- **CA-09:** Dado Redis caído, cuando se modera, entonces no se llama a Azure y el resultado es `Unavailable` con `limit_unavailable`.
 - **CA-10:** Dado el mismo texto moderado dos veces en 24 horas, cuando llega la segunda, entonces responde con `Source = cache` sin llamar a Azure ni gastar cuota; y si cambió la versión de los umbrales, vuelve a llamar.
-- **CA-11:** Dada una imagen JPEG que Azure califica con `Sexual` en 2, cuando se modera, entonces el resultado es `Rejected`; dada una imagen limpia, `Approved`; y dada una imagen de 5 MB o de tipo `image/gif`, `Rejected` con `no_moderable` sin llamar a Azure.
-- **CA-12:** Dado un texto de 4 001 caracteres, cuando se modera, entonces es `Rejected` con `no_moderable` sin llamar a Azure.
+- **CA-11:** Dada una imagen JPEG que Azure califica con `Sexual` en 2, cuando se modera, entonces el resultado es `Rejected`; dada una imagen limpia, `Approved`; y dada una imagen de 5 MB o de tipo `image/gif`, `Rejected` con `not_moderable` sin llamar a Azure.
+- **CA-12:** Dado un texto de 4 001 caracteres, cuando se modera, entonces es `Rejected` con `not_moderable` sin llamar a Azure.
 - **CA-13:** Dado `Moderacion:Modo = solo_local` en `Production`, cuando arranca el servicio, entonces falla; en `Development` arranca y aprueba un texto limpio sin tráfico de red.
 - **CA-14:** Dado un umbral de 5, o un umbral cambiado sin subir `VersionUmbrales`, cuando arranca el servicio, entonces falla.
 - **CA-15:** Dadas cinco fallas seguidas de Azure en una réplica, cuando llega la sexta moderación, entonces no se llama a Azure durante 30 segundos y el resultado es `Unavailable`.
@@ -101,9 +101,9 @@ Que todo texto e imagen que una persona publica en Knock se revise con Azure AI 
 | Resultado | Texto (020, 030) | Imagen (032) |
 |---|---|---|
 | `Approved` | se guarda | se publica |
-| `Rejected` | 422 `contenido_rechazado` | 422 `imagen_rechazada` |
-| `Unavailable` + `limite_por_persona` | 429 `limite_moderacion` + `Retry-After` | 429 `limite_moderacion` + `Retry-After` |
-| `Unavailable` (otro motivo) | 503 `moderacion_no_disponible` + `Retry-After: 30` | 503 `moderacion_no_disponible` + `Retry-After` |
+| `Rejected` | 422 `content_rejected` | 422 `image_rejected` |
+| `Unavailable` + `per_person_limit` | 429 `moderation_limit` + `Retry-After` | 429 `moderation_limit` + `Retry-After` |
+| `Unavailable` (otro motivo) | 503 `moderation_unavailable` + `Retry-After: 30` | 503 `moderation_unavailable` + `Retry-After` |
 
 **Configuración:** `Moderacion:Modo`, `Moderacion:ContentSafety:Endpoint`, `Moderacion:TiempoMaximoSegundos` (5), `Moderacion:Umbrales:{Hate,Sexual,Violence,SelfHarm}`, `Moderacion:VersionUmbrales`, `Moderacion:Limites:LlamadasPorMes`, `Moderacion:Limites:LlamadasPorPersonaPorDia` (300). La credencial no es configuración del repositorio.
 
@@ -122,7 +122,7 @@ Que todo texto e imagen que una persona publica en Knock se revise con Azure AI 
 | `decision` | string | `aprobado`, `rechazado`, `no_disponible` |
 | `origen` | string | `azure`, `lista_local`, `cache` |
 | `categorias` | string[] | solo las que alcanzaron el umbral |
-| `reasonCode` | string? | `no_moderable`, `no_disponible`, `cuota_agotada`, `limite_por_persona`, `limite_no_disponible` |
+| `reasonCode` | string? | `not_moderable`, `unavailable`, `quota_exhausted`, `per_person_limit`, `limit_unavailable` |
 | `latenciaMs` | int | |
 | `creadoEn` | date | UTC, base del TTL |
 
@@ -177,7 +177,7 @@ El script `db/` de esta spec crea `uso_moderacion` e índices en las dos bases d
 | Arquitectura | Sí | Un solo punto de acceso; verificación sin moderador; `Knock.Contracts` sin lógica |
 | Base de datos | Sí | Script idempotente de `uso_moderacion` con TTL en las dos bases |
 | Mutación | Sí | Normalizador, lista local y comparación con umbrales (meta 70 %) |
-| Humo y extremo a extremo | Sí | En el entorno de evaluación con el moderador real: un texto sintético aprobado y uno rechazado por el flujo de la spec 020 (201 o 422 `contenido_rechazado`), y el tope diario de la cuenta de prueba (429 `limite_moderacion`) |
+| Humo y extremo a extremo | Sí | En el entorno de evaluación con el moderador real: un texto sintético aprobado y uno rechazado por el flujo de la spec 020 (201 o 422 `content_rejected`), y el tope diario de la cuenta de prueba (429 `moderation_limit`) |
 | Regresión | Sí | Las pruebas de moderación de las specs 020, 030 y 032 con el moderador real contra el simulador |
 | Rendimiento | No | La latencia la domina Azure; la caché reduce llamadas |
 | CI/CD y análisis | Sí | Semgrep, Gitleaks, Trivy y dependencias; `Azure.Identity` evaluada y registrada |
@@ -199,7 +199,7 @@ El script `db/` de esta spec crea `uso_moderacion` e índices en las dos bases d
 - Una persona que publica 400 mensajes en un día: al llegar a 300 recibe 429.
 
 **Errores esperados**
-- 422 `contenido_rechazado` o `imagen_rechazada`, 429 `limite_moderacion`, 503 `moderacion_no_disponible`, siempre sin guardar.
+- 422 `content_rejected` o `image_rejected`, 429 `moderation_limit`, 503 `moderation_unavailable`, siempre sin guardar.
 
 **Casos límite**
 - Severidad exactamente igual al umbral (se rechaza); texto de 4 000 y 4 001 caracteres; imagen de 4 MB exactos; el cambio de mes con el tope agotado; Azure responde 429 con `Retry-After: 1` (se reintenta) y con `Retry-After: 10` (no se espera: `Unavailable`); una palabra prohibida dentro de otra palabra permitida (no coincide: es por palabra completa).

@@ -37,13 +37,13 @@ Que la persona vea su visita a domicilio con el código de cuatro dígitos que r
 - **R-04:** La regla de seguridad es el texto fijo: “Pídele a {nombre del técnico} que te diga este código en la puerta. Si no lo sabe, no abras.” El código nunca se dicta por teléfono ni por mensaje.
 - **R-05:** La vista del técnico trae `{ id, rol: "tecnico", estado, modalidad, dia, hora, precio, tope, cliente: { colonia }, lugar: { tipo, direccion }, puedeLlegar }` y **nunca** incluye el código, el nombre ni el teléfono del cliente. La dirección del cliente se revela aquí porque el técnico ya fue elegido. `puedeLlegar` es verdadero solo en domicilio, estado `confirmada`, sin bloqueo y dentro de la **ventana de la cita**: desde las 00:00 del `dia` de la cita hasta `codigoVenceEn` (23:59:59 de ese día más 24 h), en la zona `America/Mexico_City`.
 - **R-06:** Para `modalidad = taller`, la vista muestra día, hora y la dirección del taller; no hay código y `puedeLlegar` es falso. La app abre “Cómo llegar” con la dirección; el servidor no genera rutas ni enlaces de mapas.
-- **R-07:** `POST /api/v1/visitas/{id}/llegada` exige JWT del técnico elegido y cuerpo `{ codigo }` de exactamente cuatro dígitos ASCII (`^[0-9]{4}$`, se conservan los ceros a la izquierda). Un `codigo` con otro formato responde 422 con `errors.codigo` y **no** cuenta como intento. Antes de la ventana de la cita responde 409 `fuera_de_ventana` y no cuenta como intento. Compara en tiempo constante contra el código descifrado; si coincide, responde 200 con la vista del técnico en `en_curso` y `llegadaEn`.
-- **R-08:** Un código incorrecto responde 422 `codigo_incorrecto` con `intentosRestantes` y no cambia la visita, salvo el contador. Al tercer intento fallido la visita queda `bloqueada = true`, responde 409 `visita_bloqueada` y se emite `VisitaBloqueada` para que Identidad abra un reporte de gravedad alta.
-- **R-09:** Un código ya usado (visita `en_curso`) responde 409 `codigo_usado`; uno vencido, 409 `codigo_vencido`; una visita bloqueada, 409 `visita_bloqueada`; una cancelada, 409 `visita_cancelada`; una `terminada` o `no_presentado`, 409 `visita_no_vigente`; una de taller, 409 `visita_sin_codigo`. Ninguno de estos casos cuenta como intento.
-- **R-10:** Repetir una llegada ya exitosa responde 409 `codigo_usado` y no vuelve a emitir el evento ni a cambiar `llegadaEn`. Un intento fallido repetido vuelve a contar como intento.
-- **R-11:** Si la visita no existe o el técnico no es el elegido, responde 404, incluso si el código es correcto. Un cliente que llama a `/llegada` recibe 403 `no_es_tecnico`.
+- **R-07:** `POST /api/v1/visitas/{id}/llegada` exige JWT del técnico elegido y cuerpo `{ codigo }` de exactamente cuatro dígitos ASCII (`^[0-9]{4}$`, se conservan los ceros a la izquierda). Un `codigo` con otro formato responde 422 con `errors.codigo` y **no** cuenta como intento. Antes de la ventana de la cita responde 409 `outside_window` y no cuenta como intento. Compara en tiempo constante contra el código descifrado; si coincide, responde 200 con la vista del técnico en `en_curso` y `llegadaEn`.
+- **R-08:** Un código incorrecto responde 422 `wrong_code` con `intentosRestantes` y no cambia la visita, salvo el contador. Al tercer intento fallido la visita queda `bloqueada = true`, responde 409 `visit_locked` y se emite `VisitaBloqueada` para que Identidad abra un reporte de gravedad alta.
+- **R-09:** Un código ya usado (visita `en_curso`) responde 409 `code_used`; uno vencido, 409 `code_expired`; una visita bloqueada, 409 `visit_locked`; una cancelada, 409 `visit_cancelled`; una `terminada` o `no_presentado`, 409 `visit_not_active`; una de taller, 409 `visit_without_code`. Ninguno de estos casos cuenta como intento.
+- **R-10:** Repetir una llegada ya exitosa responde 409 `code_used` y no vuelve a emitir el evento ni a cambiar `llegadaEn`. Un intento fallido repetido vuelve a contar como intento.
+- **R-11:** Si la visita no existe o el técnico no es el elegido, responde 404, incluso si el código es correcto. Un cliente que llama a `/llegada` recibe 403 `not_a_technician`.
 - **R-12:** `POST /api/v1/visitas/{id}/aviso` exige JWT del cliente dueño y cuerpo vacío. Responde 200 `{ texto, incluyeCodigo: false, incluyeDireccion: false }`; el texto incluye el nombre público del técnico, su estado de verificación, el día, la hora y la recomendación de pedir el código en la puerta. No guarda contactos ni envía mensajes.
-- **R-13:** El aviso solo se prepara con la visita en `confirmada` o `en_curso`; en otro estado responde 409 `visita_no_avisable`. Cada aviso incrementa `avisosEnviados` y emite `AvisoConfianzaPreparado` con identificadores, sin teléfonos ni texto.
+- **R-13:** El aviso solo se prepara con la visita en `confirmada` o `en_curso`; en otro estado responde 409 `visit_not_notifiable`. Cada aviso incrementa `avisosEnviados` y emite `AvisoConfianzaPreparado` con identificadores, sin teléfonos ni texto.
 - **R-14:** Las respuestas llevan `Cache-Control: private, no-store`, sin `ETag`. El código y la dirección no se registran en los logs; los errores usan ProblemDetails con `correlationId`, `traceId` y `code` (convención de errores de la spec 020, §5); las respuestas 429 llevan `Retry-After`.
 - **R-15:** El código se guarda cifrado (AES-256-GCM) con llave versionada en Key Vault y vence a las 23:59:59 del día de la cita más 24 horas. La comparación usa `CryptographicOperations.FixedTimeEquals`; nunca se registra ni se devuelve al técnico.
 - **R-16:** El contador de intentos y el bloqueo son parte de la visita y no se reinician al reconectar. Un bloqueo solo lo levanta una persona del equipo (fuera de esta spec).
@@ -56,18 +56,18 @@ Que la persona vea su visita a domicilio con el código de cuatro dígitos que r
 - **CA-04:** Dado el código correcto, cuando el técnico confirma, entonces responde 200, la visita queda `en_curso`, se guarda `llegadaEn` y hay `VisitaEnCurso` en el buzón.
 - **CA-05:** Dado un código incorrecto, cuando confirma, entonces responde 422 con `intentosRestantes` y no cambia el estado.
 - **CA-06:** Dados tres intentos fallidos, cuando confirma el tercero, entonces la visita queda bloqueada, responde 409 y hay `VisitaBloqueada` en el buzón.
-- **CA-07:** Dado un código ya usado, cuando confirma de nuevo, entonces responde 409 `codigo_usado`.
+- **CA-07:** Dado un código ya usado, cuando confirma de nuevo, entonces responde 409 `code_used`.
 - **CA-08:** Dada una visita cancelada o un código vencido, cuando confirma, entonces responde 409 y no cambia nada.
-- **CA-09:** Dada una cita en taller, cuando el cliente la abre, entonces no hay código y ve la dirección; cuando el técnico intenta confirmar llegada, 409 `visita_sin_codigo`.
+- **CA-09:** Dada una cita en taller, cuando el cliente la abre, entonces no hay código y ve la dirección; cuando el técnico intenta confirmar llegada, 409 `visit_without_code`.
 - **CA-10:** Dada una visita de otra persona, cuando se pide o se intenta confirmar, entonces responde 404; con el token del cliente en `/llegada`, 403.
 - **CA-11:** Dada una visita vigente, cuando el cliente pide el aviso, entonces el texto no contiene el código ni la dirección e incluye nombre, verificación, día y hora.
-- **CA-12:** Dada una llegada exitosa, cuando se repite, entonces responde 409 `codigo_usado` y no hay un segundo evento.
+- **CA-12:** Dada una llegada exitosa, cuando se repite, entonces responde 409 `code_used` y no hay un segundo evento.
 - **CA-13:** Dada una petición sin token, cuando se llama cualquier ruta, entonces responde 401.
 - **CA-14:** Dado el registro de una llegada o de un aviso, cuando se inspecciona, entonces no contiene el código, la dirección ni el nombre del cliente.
 - **CA-15:** Dado un `codigo` de tres dígitos, con letras o de cinco dígitos, cuando el técnico confirma, entonces responde 422 con `errors.codigo` y `intentos` no cambia.
-- **CA-16:** Dada una visita cuyo día aún no empieza, cuando el técnico confirma con el código correcto, entonces responde 409 `fuera_de_ventana`, el código sigue sin usar y `intentos` no cambia.
+- **CA-16:** Dada una visita cuyo día aún no empieza, cuando el técnico confirma con el código correcto, entonces responde 409 `outside_window`, el código sigue sin usar y `intentos` no cambia.
 - **CA-17:** Dada una visita a domicilio confirmada, cuando el cliente la abre, entonces ve el contacto público del técnico (si lo publicó) y la dirección del lugar; cuando la abre el técnico, ve la dirección y la colonia del cliente, pero no su nombre ni su teléfono.
-- **CA-18:** Dada una visita `terminada` o `no_presentado`, cuando el técnico confirma o el cliente pide el aviso, entonces responde 409 `visita_no_vigente` o `visita_no_avisable` y no cambia nada.
+- **CA-18:** Dada una visita `terminada` o `no_presentado`, cuando el técnico confirma o el cliente pide el aviso, entonces responde 409 `visit_not_active` o `visit_not_notifiable` y no cambia nada.
 - **CA-19:** Dada una visita `confirmada`, cuando pasa a `cancelada`, `terminada`, `no_presentado` o `bloqueada`, entonces hay exactamente un `VisitaCerrada` con el `motivo` correcto en el buzón, en la misma transacción que el cambio; si el cambio falla, no hay evento. (R-17)
 
 ## 5. Contrato
@@ -77,7 +77,7 @@ Que la persona vea su visita a domicilio con el código de cuatro dígitos que r
 | `POST /api/v1/visitas/{id}/llegada` | técnico elegido | `{ codigo }` | 200 (vista del técnico), 400, 401, 403, 404, 409, 413, 422, 429 |
 | `POST /api/v1/visitas/{id}/aviso` | cliente dueño | vacío | 200 `{ texto, incluyeCodigo, incluyeDireccion }`, 400, 401, 404, 409, 429 |
 
-**Códigos de error:** `codigo_incorrecto` (422, con `intentosRestantes`), `codigo_usado`, `codigo_vencido`, `visita_bloqueada`, `visita_cancelada`, `visita_no_vigente`, `visita_sin_codigo`, `fuera_de_ventana`, `visita_no_avisable` (todos 409), `no_es_tecnico` (403). Formato inválido: 422 con `errors`; visita ajena o inexistente: 404 uniforme.
+**Códigos de error:** `wrong_code` (422, con `intentosRestantes`), `code_used`, `code_expired`, `visit_locked`, `visit_cancelled`, `visit_not_active`, `visit_without_code`, `outside_window`, `visit_not_notifiable` (todos 409), `not_a_technician` (403). Formato inválido: 422 con `errors`; visita ajena o inexistente: 404 uniforme.
 
 **Caché:** ninguna respuesta se cachea (`Cache-Control: private, no-store`).
 
@@ -123,7 +123,7 @@ Que la persona vea su visita a domicilio con el código de cuatro dígitos que r
 | Fuga del código al técnico o a los registros | Proyección distinta por rol; no se registra; se cifra en reposo | CA-02, CA-03, CA-14 |
 | Fuga de la dirección | Solo el cliente y el técnico elegido; no se registra | CA-09, CA-14 |
 | Reutilizar el código | `codigoUsado` y condición de la actualización | CA-07 |
-| Repetición de la llegada por red inestable | La visita ya `en_curso` responde 409 `codigo_usado` sin repetir el evento | CA-12 |
+| Repetición de la llegada por red inestable | La visita ya `en_curso` responde 409 `code_used` sin repetir el evento | CA-12 |
 | Suplantar al técnico | Se resuelve por `sub` y se comprueba que sea el elegido | CA-10 |
 | Aviso que expone el código o la dirección | El texto se arma en el servidor sin esos campos y la respuesta lo declara | CA-11 |
 | Enumerar visitas ajenas | 404 después de autenticar, sin distinguir inexistente de ajena | CA-10 |
@@ -213,7 +213,7 @@ Que la persona vea su visita a domicilio con el código de cuatro dígitos que r
 1. **Se agrega `POST /visitas/{id}/aviso`.** El insumo lo propone; la app sola podría armar el texto, pero el servidor garantiza que no se filtren el código ni la dirección. Alternativa: dejar el aviso solo en la app y no tener nada que probar en el backend.
 2. **El aviso no incluye el código, aunque la ficha de HU-037 lo menciona.** La descripción del proyecto y la regla de seguridad dicen que el código nunca se dicta ni se comparte; incluirlo en un mensaje que se reenvía anularía la protección. Se anota como conflicto con la ficha.
 3. **El código se guarda cifrado, no como huella.** La descripción dice “huella”, pero el cliente necesita volver a verlo al abrir la visita y sin conexión; con huella no se puede. La alternativa —devolverlo una sola vez y confiar en la caché del teléfono— se pierde al reinstalar.
-4. **Bloqueo tras el tercer intento con 409, no 423.** 423 es de WebDAV y no describe el error; 409 con `visita_bloqueada` es coherente con el resto del contrato.
+4. **Bloqueo tras el tercer intento con 409, no 423.** 423 es de WebDAV y no describe el error; 409 con `visit_locked` es coherente con el resto del contrato.
 5. **La vista del técnico no lleva el nombre del cliente.** Market no lo tiene y no se quiere duplicar el dato de Identidad; en este sprint el técnico tampoco lo recibe por el chat (la spec 026 no envía identidad en los mensajes). Alternativa: pedirlo a Identidad, que abre una interfaz entre servicios que no está en este sprint.
 6. **El aviso no se envía ni se guarda.** Los contactos de confianza viven solo en el teléfono (HU-037); guardarlos en el servidor sería un dato personal nuevo y un riesgo que la historia no pide.
 7. **Ventana de la cita:** la llegada se permite del inicio del día de la cita a las 23:59:59 de ese día, más 24 h para cubrir retrasos. La ficha no fija la ventana; se elige una generosa y se documenta.
@@ -227,7 +227,7 @@ Que la persona vea su visita a domicilio con el código de cuatro dígitos que r
 12. **Mensajería consulta esta vista para la pertenencia (spec 026).** Como la vista del cliente contiene el código y la dirección, la spec 026 deserializa solo `rol` y `estado` y no registra el cuerpo. Alternativa: una ruta interna de pertenencia, que agrega una superficie nueva; queda como mejora si se aprueba.
 
 ## 15. Riesgos y dudas abiertas
-- **`Idempotency-Key` retirada por ahora (decisión del 2026-11-10).** Se quitó de la llegada. Sin ella, si la respuesta de una llegada exitosa se pierde, el reintento recibe 409 `codigo_usado`: la app debe consultar la visita (`GET /api/v1/visitas/{id}`) antes de mostrar un error. Se retoma con una spec propia si se decide volver a exigirla.
+- **`Idempotency-Key` retirada por ahora (decisión del 2026-11-10).** Se quitó de la llegada. Sin ella, si la respuesta de una llegada exitosa se pierde, el reintento recibe 409 `code_used`: la app debe consultar la visita (`GET /api/v1/visitas/{id}`) antes de mostrar un error. Se retoma con una spec propia si se decide volver a exigirla.
 - **No hay consumidor de `VisitaBloqueada`:** el evento queda en el buzón y el reporte de gravedad alta de HU-038 CA3 no se crea hasta que Identidad lo consuma. Es la brecha más importante de esta spec.
 - **El bloqueo no se puede levantar desde la API:** lo hará el panel (spec de verificación y reportes). Mientras tanto, una visita bloqueada requiere intervención en la base.
 - **La ventana de la cita es una decisión:** si el equipo quiere una ventana más corta (por ejemplo, dos horas antes y cuatro después), se cambia en un solo lugar.
