@@ -293,3 +293,8 @@
 - **Por qué:** el PR #60 observó que la §5 pedía los campos `timestamp`, `level`, `service`, `correlationId` y `message`, pero el código emite `@t`, `@l` y `@m`. Un formateador propio solo para renombrar campos no aporta información.
 - **Pendiente de firma:** la nueva aprobación de la 011 la edita José a mano; este cambio no toca la aprobación.
 - **A evitar:** pedir nombres literales de campo en una spec cuando el formato de una biblioteca ya los entrega con otro nombre; escribir un formateador propio solo para renombrarlos.
+
+## 2026-11-10 — Colonia de la UTTT en las semillas del catálogo (KNOCK-249)
+- **Decisión:** se agrega la colonia «El Carmen» (código postal 42830, por confirmar) con un polígono piloto aproximado de unos 800 metros de lado centrado en el campus de la UTTT, en `colonias_tula.geojson`, el extracto de SEPOMEX y `colonias.json`; las pruebas que cuentan colonias pasan de 12 a 13 y de 8 a 9 con polígono.
+- **Porqué:** las ocho colonias sembradas cubren el centro de Tula; desde el campus (carretera Tula-Tepeji) `GET /colonias/en-punto` respondía «fuera de cobertura» y la demo no mostraba la zona de quien la prueba allí.
+- **A evitar:** tomar el polígono como límite oficial (es aproximado y no oficial); olvidar cargar la semilla en la base de Azure (`db/entrega.js`) después de fusionar.
