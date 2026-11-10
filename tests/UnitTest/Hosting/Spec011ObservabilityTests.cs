@@ -118,6 +118,12 @@ public sealed class Spec011ObservabilityTests
             ("Authorization: Bearer abc.def-ghi", "abc.def-ghi"),
             ("?token=t-ficticio&code=777", "t-ficticio"),
             ("{\"refreshToken\":\"r-ficticio\"}", "r-ficticio"),
+            ("?id_token=i-secret-1&x=1", "i-secret-1"),
+            ("access_token: a-secret-2", "a-secret-2"),
+            ("maps 19.4326,-99.1332", "19.4326"),
+            ("contacto persona.ficticia@ejemplo.com fin", "persona.ficticia@ejemplo.com"),
+            ("email=persona.ficticia@ejemplo.com", "persona.ficticia@ejemplo.com"),
+            ("correo: persona.ficticia@ejemplo.com", "persona.ficticia@ejemplo.com"),
             ("cerca de 19.4326, -99.1332", "19.4326"),
             ("ruta /at/19.4326/-99.1332", "99.1332"),
             ("lat=19.43&lon=-99.13", "19.43"),
@@ -222,6 +228,8 @@ public sealed class Spec011ObservabilityTests
         redact("phone", "5555550101").Should().Be(placeholder);
         redact("curp", "XEXX010101HNEXXXA4").Should().Be(placeholder);
         redact("refresh_token", "r-ficticio").Should().Be(placeholder);
+        redact("email", "persona.ficticia@ejemplo.com").Should().Be(placeholder);
+        redact("correo", "persona.ficticia@ejemplo.com").Should().Be(placeholder);
         redact("authorization", "Bearer x").Should().Be(placeholder);
         string[] notes = ["+52 55 5555 0101", "ok"];
         redact("notes", notes).Should().BeEquivalentTo(new[] { placeholder, "ok" });
