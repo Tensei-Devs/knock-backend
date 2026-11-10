@@ -23,3 +23,6 @@ Cada carpeta tiene `spec.md`, `plan.md` y `task.md`. Estados: Borrador → Aprob
 | 017 | Perfil de la persona (USR-01, USR-02) | Aprobada | [`017-perfil-de-la-persona`](017-perfil-de-la-persona/spec.md) |
 | 018 | Sesiones por dispositivo (SES-04, SES-05) | Aprobada | [`018-sesiones-por-dispositivo`](018-sesiones-por-dispositivo/spec.md) |
 | 019 | MCP del proyecto | Aprobada | [`019-mcp-del-proyecto`](019-mcp-del-proyecto/spec.md) |
+| BUG-002 | Falta Strict-Transport-Security en el gateway (KNOCK-239) | Borrador | [`BUG-002-falta-strict-transport-security-en-el-gateway`](BUG-002-falta-strict-transport-security-en-el-gateway/spec.md) |
+| BUG-003 | El gateway y Mensajería exponen `Server: Kestrel` (KNOCK-240) | Borrador | [`BUG-003-el-gateway-expone-el-encabezado-server`](BUG-003-el-gateway-expone-el-encabezado-server/spec.md) |
+| BUG-004 | Mensajería sin JWT, encabezados ni límite propios (KNOCK-241) | Borrador | [`BUG-004-mensajeria-sin-jwt-encabezados-ni-limite`](BUG-004-mensajeria-sin-jwt-encabezados-ni-limite/spec.md) |
