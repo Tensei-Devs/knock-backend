@@ -292,3 +292,8 @@
 - **Decisión:** se agrega la colonia «El Carmen» (código postal 42830, por confirmar) con un polígono piloto aproximado de unos 800 metros de lado centrado en el campus de la UTTT, en `colonias_tula.geojson`, el extracto de SEPOMEX y `colonias.json`; las pruebas que cuentan colonias pasan de 12 a 13 y de 8 a 9 con polígono.
 - **Porqué:** las ocho colonias sembradas cubren el centro de Tula; desde el campus (carretera Tula-Tepeji) `GET /colonias/en-punto` respondía «fuera de cobertura» y la demo no mostraba la zona de quien la prueba allí.
 - **A evitar:** tomar el polígono como límite oficial (es aproximado y no oficial); olvidar cargar la semilla en la base de Azure (`db/entrega.js`) después de fusionar.
+
+## 2026-11-10 — Migración documental de TT-BD-03 (KNOCK-40)
+- **Decisión:** la spec 038 traslada los once casos de semillas ficticias de clientes a Identidad y confianza; queda en Borrador para revisión de Julián. El plan y las tareas son propuestas, sin implementación.
+- **Pendiente:** conciliar estado, perfil y consentimientos con la 015; resolver acceso a datos actual, detección de entorno local, atomicidad ante concurrencia, caché, códigos de error y ubicación del nombre (spec 038 §9).
+- **Por qué:** la fuente heredada describe un módulo antiguo; se prevé reutilizar los componentes de Identidad existentes, sin crear duplicados por esta migración.
