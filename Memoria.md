@@ -7,6 +7,11 @@
 - 14 specs de la base (arquitectura, estructura del repositorio, infraestructura, rendimiento, observabilidad, versionamiento y seguridad) redactadas en **Borrador**; sus tareas **no se han ejecutado**.
 - Sin código de producto todavía.
 
+## 2026-11-08 — Despliegue de imágenes y credencial federada
+- **Decisión:** `id-knock-deploy` lleva dos credenciales federadas para `main` (`github-main` y `github-main-ids`), porque GitHub presenta el sujeto con dos formas; el perfil «Consumption» ya no produce diferencias en el plan.
+- **Porqué:** la primera corrida de `ci-deploy` en `main` falló con `AADSTS700213`; con la segunda credencial publicó las cuatro imágenes y el apply dejó las cuatro apps sanas.
+- **A evitar:** asumir que una credencial federada con el sujeto en forma corta basta; si el inicio de sesión falla, comparar el sujeto del error con el de la credencial.
+
 ## 2026-10-27 — Aclaración de «Uso de IA»
 - **Decisión:** la sección «Uso de IA» es del **pull request** (plantilla de PR), no de cada spec.
 - **Porqué:** `@constitution-reviewer` marcó FAIL a la spec 001 por leer «todo cambio» de forma literal; la redacción era ambigua.
@@ -282,3 +287,8 @@
 - **Decisión:** se proponen las specs 020 a 037 (solicitudes y cotizaciones, comparar y elegir, visita segura con código, zona por ubicación, cliente de IA con Azure, verificación de identidad, mensajería en tiempo real, búsqueda de expertos, oleadas, cancelar y vencer, chat previo, moderación, CDN de imágenes, panel interno, escalado a dos réplicas, redacción de registros, resumen de trabajo del técnico y registro de dispositivos). Todas quedan en Borrador hasta que una persona las apruebe. Decisiones de revisión por confirmar: el código de la visita no viaja en el aviso; las fotos de una solicitud son privadas; el chat tiene un límite único de 30 mensajes por minuto; el cierre de una visita corta el chat al instante.
 - **Porqué:** con las specs aprobadas antes de implementar, el equipo puede tomar varias tareas en paralelo y solo esperar revisiones, y cada criterio de aceptación llega con su prueba prevista.
 - **A evitar:** empezar a implementar una spec en Borrador; cambiar un código de error o un límite en una spec sin alinear la otra que lo usa.
+
+## 2026-11-09 — EXC-019: huella de Gitleaks de una cadena sintética en la rama de KNOCK-205
+- **Decisión:** se registra la huella del commit 0b7a866 (`tests/perf/README.md`, línea 23) en `.gitleaksignore`, respaldada por EXC-019 hasta el 2026-12-04, sin reescribir el historial.
+- **Porqué:** el CI descarga todas las ramas, así que un commit con una cadena de conexión sintética en una rama de trabajo hacía fallar el chequeo de secretos de todos los PR del repositorio.
+- **A evitar:** poner ejemplos con credenciales, aunque sean del entorno local, en la documentación; escribirlas como `<usuario>:<contraseña>`. Retirar la huella y la excepción al fusionar la rama.
