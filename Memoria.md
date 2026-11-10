@@ -287,3 +287,9 @@
 - **Decisión:** se registra la huella del commit 0b7a866 (`tests/perf/README.md`, línea 23) en `.gitleaksignore`, respaldada por EXC-019 hasta el 2026-12-04, sin reescribir el historial.
 - **Porqué:** el CI descarga todas las ramas, así que un commit con una cadena de conexión sintética en una rama de trabajo hacía fallar el chequeo de secretos de todos los PR del repositorio.
 - **A evitar:** poner ejemplos con credenciales, aunque sean del entorno local, en la documentación; escribirlas como `<usuario>:<contraseña>`. Retirar la huella y la excepción al fusionar la rama.
+
+## 2026-11-10 — Enmienda propuesta de la spec 011: el formato compacto de Serilog cumple el contrato de registros (KNOCK-206)
+- **Decisión:** se propone que la §5 de la spec 011 acepte el formato compacto de Serilog y diga a qué campo corresponde cada campo lógico: `timestamp` = `@t`, `level` = `@l` (omitido en `Information`), `message` = `@m`, `correlationId` = la propiedad `CorrelationId`, y `service` = `service.name` del recurso (no va en la línea de consola).
+- **Por qué:** el PR #60 observó que la §5 pedía los campos `timestamp`, `level`, `service`, `correlationId` y `message`, pero el código emite `@t`, `@l` y `@m`. Un formateador propio solo para renombrar campos no aporta información.
+- **Pendiente de firma:** la nueva aprobación de la 011 la edita José a mano; este cambio no toca la aprobación.
+- **A evitar:** pedir nombres literales de campo en una spec cuando el formato de una biblioteca ya los entrega con otro nombre; escribir un formateador propio solo para renombrarlos.
