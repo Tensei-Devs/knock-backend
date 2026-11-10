@@ -4,3 +4,5 @@ de1c61af882345e0a8b75cf1afbce7213e245b22:tests/IntegrationTest/Support/TestContr
 de1c61af882345e0a8b75cf1afbce7213e245b22:tests/SecurityTest/Observability/TraceContextInjectionTests.cs:generic-api-key:15
 de1c61af882345e0a8b75cf1afbce7213e245b22:tests/IntegrationTest/Observability/OutgoingHttpTelemetryTests.cs:generic-api-key:13
 de1c61af882345e0a8b75cf1afbce7213e245b22:tests/SecurityTest/Observability/SpanPrivacyTests.cs:jwt:42
+# EXC-019: cadena sintética del Mongo local (credenciales del compose) en el commit 0b7a866 de la rama de KNOCK-205; el texto se quita en un commit posterior y la excepción vence al fusionar.
+0b7a8668d4656e79e4c713c677793c931d12c1a7:tests/perf/README.md:knock-mongodb-connection-string:23
