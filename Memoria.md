@@ -7,6 +7,11 @@
 - 14 specs de la base (arquitectura, estructura del repositorio, infraestructura, rendimiento, observabilidad, versionamiento y seguridad) redactadas en **Borrador**; sus tareas **no se han ejecutado**.
 - Sin código de producto todavía.
 
+## 2026-11-08 — Despliegue de imágenes y credencial federada
+- **Decisión:** `id-knock-deploy` lleva dos credenciales federadas para `main` (`github-main` y `github-main-ids`), porque GitHub presenta el sujeto con dos formas; el perfil «Consumption» ya no produce diferencias en el plan.
+- **Porqué:** la primera corrida de `ci-deploy` en `main` falló con `AADSTS700213`; con la segunda credencial publicó las cuatro imágenes y el apply dejó las cuatro apps sanas.
+- **A evitar:** asumir que una credencial federada con el sujeto en forma corta basta; si el inicio de sesión falla, comparar el sujeto del error con el de la credencial.
+
 ## 2026-10-27 — Aclaración de «Uso de IA»
 - **Decisión:** la sección «Uso de IA» es del **pull request** (plantilla de PR), no de cada spec.
 - **Porqué:** `@constitution-reviewer` marcó FAIL a la spec 001 por leer «todo cambio» de forma literal; la redacción era ambigua.
@@ -291,3 +296,7 @@
 - **Verificación:** `dotnet build Knock.slnx -c Release -warnaserror` en verde (0/0), `dotnet format` sin cambios y `UnitTest` (732 sin `Category=Performance`) en verde, incluidas las tres pruebas nuevas.
 - **Pendiente:** terraform no está instalado en esta máquina: `terraform fmt -check`, `validate` y el `tftest.hcl` del módulo quedan por correr (el CI solo pasa Checkov sobre `deploy/`; si marca los recursos nuevos, la excepción la registra el líder porque `security/` es zona protegida). Al desplegar, el líder pasa `-var alert_email_receiver=<correo>` en `deploy/infra`: sin ese valor la alerta se ve en el portal pero nadie recibe correos. El disparo real (umbral cruzado y correo en el buzón) se comprueba tras el despliegue.
 - **A evitar:** poner un correo real por defecto en el repositorio (la dirección queda solo en el estado remoto de Terraform) y marcar CA-03 como «(comando)»: ya tiene prueba estática.
+## 2026-11-09 — EXC-019: huella de Gitleaks de una cadena sintética en la rama de KNOCK-205
+- **Decisión:** se registra la huella del commit 0b7a866 (`tests/perf/README.md`, línea 23) en `.gitleaksignore`, respaldada por EXC-019 hasta el 2026-12-04, sin reescribir el historial.
+- **Porqué:** el CI descarga todas las ramas, así que un commit con una cadena de conexión sintética en una rama de trabajo hacía fallar el chequeo de secretos de todos los PR del repositorio.
+- **A evitar:** poner ejemplos con credenciales, aunque sean del entorno local, en la documentación; escribirlas como `<usuario>:<contraseña>`. Retirar la huella y la excepción al fusionar la rama.
