@@ -110,7 +110,7 @@ Que solo sigan abiertas las necesidades vigentes: el cliente puede cancelar una 
 
 Índices: se usa `{ estado: 1, venceEn: 1 }` (ya definido en la spec 020).
 
-**`cotizaciones`** (spec 020): `motivoRechazo` admite además `request_cancelled` y `request_expired` (la spec 021 ya define `se_eligio_otra`).
+**`cotizaciones`** (spec 020): `motivoRechazo` admite además `request_cancelled` y `request_expired` (la spec 021 ya define `other_quote_chosen`).
 
 **`envios`** (spec 028): `cerradoMotivo` usa `request_cancelled` y `request_expired`.
 

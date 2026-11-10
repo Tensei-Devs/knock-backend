@@ -57,7 +57,7 @@ Que un técnico pueda verificar su identidad con su INE y una selfie solo si ant
 - **CA-01:** Dado un técnico sin consentimiento, cuando crea la verificación, entonces responde 422 `consent_required` y no hay documento de verificación.
 - **CA-02:** Dado un consentimiento aceptado, cuando crea la verificación, entonces hay un documento en `consentimientos` con el texto, la versión, la fecha, el dispositivo de la sesión y el identificador de la verificación.
 - **CA-03:** Dada una creación válida de nivel básico, cuando responde, entonces trae dos enlaces de subida (INE frente y selfie) de 5 minutos, uno por tipo, y el estado es `en_captura`.
-- **CA-04:** Dada una creación de nivel completo, cuando responde, entonces trae tres enlaces; una de nivel básico con un `tipo` de nivel completo en la confirmación responde 400 `type_invalid`; un `nivel` desconocido al crear responde 422 con `errors.nivel`.
+- **CA-04:** Dada una creación de nivel completo, cuando responde, entonces trae tres enlaces; una de nivel básico con un `tipo` de nivel completo en la confirmación responde 409 `type_invalid` (el `tipo` es válido, pero no corresponde al nivel de esa verificación); un `nivel` desconocido al crear responde 422 con `errors.nivel`.
 - **CA-05:** Dada una CURP mal formada, cuando se envía, entonces responde 422 `curp_invalid`, no repite el valor y no guarda nada.
 - **CA-06:** Dada una CURP válida, cuando se guarda, entonces el documento tiene un HMAC y ningún campo contiene la CURP en claro.
 - **CA-07:** Dada una CURP que ya tiene otra cuenta en revisión o verificada, cuando se envía, entonces responde 409 `curp_duplicate`, el mensaje no menciona a la otra cuenta y hay un `CurpDuplicada` en el buzón.
@@ -116,7 +116,7 @@ Que un técnico pueda verificar su identidad con su INE y una selfie solo si ant
 - Estados: `sin_verificar`, `en_captura`, `en_revision`, `verificada`, `no_verificada`.
 - Estados de foto: `pendiente`, `cifrada`, `borrada`.
 
-**Códigos de error:** `consent_required` (422), `curp_invalid` (422), `curp_duplicate` (409), `verification_under_review` (409), `already_verified` (409), `already_fully_verified` (409), `type_invalid` (400), `photo_not_uploaded`, `photo_already_confirmed`, `capture_expired`, `content_invalid`, `photos_missing`, `deletion_scheduled`.
+**Códigos de error:** `consent_required` (422), `curp_invalid` (422), `curp_duplicate` (409), `verification_under_review` (409), `already_verified` (409), `already_fully_verified` (409), `type_invalid` (409), `photo_not_uploaded`, `photo_already_confirmed`, `capture_expired`, `content_invalid`, `photos_missing`, `deletion_scheduled`.
 
 **Límites:** 8 MB y 8 KB de cuerpo; SAS de escritura de 5 minutos; 3 creaciones y 10 confirmaciones por hora por persona; 7 días de vida de las fotos; CURP de 18 caracteres; `consejos` de 1 a 3.
 
@@ -227,7 +227,7 @@ El script `db/` de esta spec crea las colecciones y los índices de forma idempo
 - Envía una CURP que ya está en revisión en otra cuenta.
 
 **Errores esperados**
-- 400 por identificador o `tipo` de la ruta, 422 por `nivel`, 401 sin sesión, 404 por verificación ajena, 409 por estado o duplicado, 413 por cuerpo, 422 por consentimiento, CURP o contenido, 429 por límite.
+- 400 por identificador mal formado o `tipo` desconocido de la ruta, 422 por `nivel`, 401 sin sesión, 404 por verificación ajena, 409 por estado, duplicado o `tipo` que no corresponde al nivel, 413 por cuerpo, 422 por consentimiento, CURP o contenido, 429 por límite.
 
 **Casos límite**
 - CURP en minúsculas y con espacios alrededor.
