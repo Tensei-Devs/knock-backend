@@ -25,6 +25,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Knock.IntegrationTest" />
     <InternalsVisibleTo Include="Knock.UnitTest" />
+    <InternalsVisibleTo Include="Knock.SecurityTest" />
   </ItemGroup>
 
 </Project>
