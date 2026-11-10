@@ -10,7 +10,7 @@
 | T-03 | `OcultadorDeContacto` puro con unitarias y mutación | R-12 · CA-04 | — | T-01, T-02 | Guillermo | pendiente |
 | T-04 | Cliente `MarketPermisoDeConversacion` con caché de 60 s y 503 sin permiso; interfaz en `Knock.Contracts` | R-09 · CA-09 | T-01 | T-05 | Guillermo | pendiente |
 | T-05 | Crear y leer conversación (idempotente por par, contraparte sin datos, aviso de seguridad) y límite de 20 por hora | R-01, R-04, R-05, R-06, R-07 · CA-03, CA-14, CA-15, CA-20 | T-02, T-04 | T-06 | Erick | pendiente |
-| T-06 | Envío de mensajes: validación, límite de 30, ocultamiento, moderación (031), transacción, buzón e idempotencia | R-08, R-10, R-11, R-13, R-14 · CA-01, CA-02, CA-05, CA-07, CA-08 | T-02, T-03, T-04; interfaz de la 031 | T-07 | Guillermo | pendiente |
+| T-06 | Envío de mensajes: validación, límite de 30, ocultamiento, moderación (031), transacción y buzón | R-08, R-10, R-11, R-13, R-14 · CA-01, CA-02, CA-05, CA-07 | T-02, T-03, T-04; interfaz de la 031 | T-07 | Guillermo | pendiente |
 | T-07 | Lista, `no-leidas`, mensajes paginados y `leido` con contadores; `no-store` | R-16, R-17, R-18, R-19, R-20 · CA-10, CA-11, CA-12, CA-13, CA-16 | T-02, T-05 | T-06 | Erick | pendiente |
 | T-08 | Hub: unión a `usuario:{sub}`, `UnirseAConversacion`/`SalirDeConversacion`, eventos `mensajeConversacion` y `noLeidos`; regresión de la 026 | R-14, R-15 · CA-01, CA-03, CA-12 | T-06, T-07; spec 026 fusionada | — | Guillermo | pendiente |
 | T-09 | Rutas del gateway, seguridad negativa completa y registros sin datos | R-22 · CA-03, CA-18, CA-20 | T-05 a T-08 | T-10 | Erick | pendiente |

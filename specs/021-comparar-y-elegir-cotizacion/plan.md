@@ -6,7 +6,7 @@
 1. Ampliar el script de `db/` con la colección `visitas` y sus índices, y los campos nuevos de `solicitudes`, `cotizaciones` y `tecnicos`.
 2. Escribir `ComparadorDeCotizaciones` como función pura (orden, etiquetas, `cubre`, `tiposMixtos`, `puedeElegir`) con pruebas unitarias y de mutación.
 3. Escribir `VisitaFactory` (código de 4 dígitos con generador criptográfico, cifrado con `CifradoDeCampo` y vencimiento).
-4. Escribir `EleccionService` con una sesión de MongoDB: cuatro escrituras condicionadas, buzón y repetición idempotente por `eleccionKey`.
+4. Escribir `EleccionService` con una sesión de MongoDB: cuatro escrituras condicionadas y buzón.
 5. Exponer `CotizacionesController` (listado) y `EleccionController` (elección) con la convención de errores de la spec 020.
 6. Publicar contrato, endpoints, límites y semillas con contacto público.
 

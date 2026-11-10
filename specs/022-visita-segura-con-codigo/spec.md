@@ -37,10 +37,10 @@ Que la persona vea su visita a domicilio con el código de cuatro dígitos que r
 - **R-04:** La regla de seguridad es el texto fijo: “Pídele a {nombre del técnico} que te diga este código en la puerta. Si no lo sabe, no abras.” El código nunca se dicta por teléfono ni por mensaje.
 - **R-05:** La vista del técnico trae `{ id, rol: "tecnico", estado, modalidad, dia, hora, precio, tope, cliente: { colonia }, lugar: { tipo, direccion }, puedeLlegar }` y **nunca** incluye el código, el nombre ni el teléfono del cliente. La dirección del cliente se revela aquí porque el técnico ya fue elegido. `puedeLlegar` es verdadero solo en domicilio, estado `confirmada`, sin bloqueo y dentro de la **ventana de la cita**: desde las 00:00 del `dia` de la cita hasta `codigoVenceEn` (23:59:59 de ese día más 24 h), en la zona `America/Mexico_City`.
 - **R-06:** Para `modalidad = taller`, la vista muestra día, hora y la dirección del taller; no hay código y `puedeLlegar` es falso. La app abre “Cómo llegar” con la dirección; el servidor no genera rutas ni enlaces de mapas.
-- **R-07:** `POST /api/v1/visitas/{id}/llegada` exige JWT del técnico elegido y cuerpo `{ codigo }` de exactamente cuatro dígitos ASCII (`^[0-9]{4}$`, se conservan los ceros a la izquierda) más `Idempotency-Key`. Un `codigo` con otro formato responde 422 con `errors.codigo` y **no** cuenta como intento. Antes de la ventana de la cita responde 409 `fuera_de_ventana` y no cuenta como intento. Compara en tiempo constante contra el código descifrado; si coincide, responde 200 con la vista del técnico en `en_curso` y `llegadaEn`.
+- **R-07:** `POST /api/v1/visitas/{id}/llegada` exige JWT del técnico elegido y cuerpo `{ codigo }` de exactamente cuatro dígitos ASCII (`^[0-9]{4}$`, se conservan los ceros a la izquierda). Un `codigo` con otro formato responde 422 con `errors.codigo` y **no** cuenta como intento. Antes de la ventana de la cita responde 409 `fuera_de_ventana` y no cuenta como intento. Compara en tiempo constante contra el código descifrado; si coincide, responde 200 con la vista del técnico en `en_curso` y `llegadaEn`.
 - **R-08:** Un código incorrecto responde 422 `codigo_incorrecto` con `intentosRestantes` y no cambia la visita, salvo el contador. Al tercer intento fallido la visita queda `bloqueada = true`, responde 409 `visita_bloqueada` y se emite `VisitaBloqueada` para que Identidad abra un reporte de gravedad alta.
 - **R-09:** Un código ya usado (visita `en_curso`) responde 409 `codigo_usado`; uno vencido, 409 `codigo_vencido`; una visita bloqueada, 409 `visita_bloqueada`; una cancelada, 409 `visita_cancelada`; una `terminada` o `no_presentado`, 409 `visita_no_vigente`; una de taller, 409 `visita_sin_codigo`. Ninguno de estos casos cuenta como intento.
-- **R-10:** Repetir la misma petición exitosa con la misma `Idempotency-Key` responde 200 con la misma respuesta y `Idempotent-Replay: true`, y no vuelve a emitir el evento ni a cambiar `llegadaEn`. Solo se guarda la clave de la llegada exitosa (`llegadaKey`): un intento fallido no se guarda y repetirlo con la misma clave vuelve a contar como intento. Sin la clave, o con una que no cumple la regla de la spec 020, la ruta responde 400 `idempotency_key_requerida`.
+- **R-10:** Repetir una llegada ya exitosa responde 409 `codigo_usado` y no vuelve a emitir el evento ni a cambiar `llegadaEn`. Un intento fallido repetido vuelve a contar como intento.
 - **R-11:** Si la visita no existe o el técnico no es el elegido, responde 404, incluso si el código es correcto. Un cliente que llama a `/llegada` recibe 403 `no_es_tecnico`.
 - **R-12:** `POST /api/v1/visitas/{id}/aviso` exige JWT del cliente dueño y cuerpo vacío. Responde 200 `{ texto, incluyeCodigo: false, incluyeDireccion: false }`; el texto incluye el nombre público del técnico, su estado de verificación, el día, la hora y la recomendación de pedir el código en la puerta. No guarda contactos ni envía mensajes.
 - **R-13:** El aviso solo se prepara con la visita en `confirmada` o `en_curso`; en otro estado responde 409 `visita_no_avisable`. Cada aviso incrementa `avisosEnviados` y emite `AvisoConfianzaPreparado` con identificadores, sin teléfonos ni texto.
@@ -61,7 +61,7 @@ Que la persona vea su visita a domicilio con el código de cuatro dígitos que r
 - **CA-09:** Dada una cita en taller, cuando el cliente la abre, entonces no hay código y ve la dirección; cuando el técnico intenta confirmar llegada, 409 `visita_sin_codigo`.
 - **CA-10:** Dada una visita de otra persona, cuando se pide o se intenta confirmar, entonces responde 404; con el token del cliente en `/llegada`, 403.
 - **CA-11:** Dada una visita vigente, cuando el cliente pide el aviso, entonces el texto no contiene el código ni la dirección e incluye nombre, verificación, día y hora.
-- **CA-12:** Dada la misma `Idempotency-Key` de una llegada exitosa, cuando se repite, entonces responde 200 con la misma respuesta y no hay un segundo evento.
+- **CA-12:** Dada una llegada exitosa, cuando se repite, entonces responde 409 `codigo_usado` y no hay un segundo evento.
 - **CA-13:** Dada una petición sin token, cuando se llama cualquier ruta, entonces responde 401.
 - **CA-14:** Dado el registro de una llegada o de un aviso, cuando se inspecciona, entonces no contiene el código, la dirección ni el nombre del cliente.
 - **CA-15:** Dado un `codigo` de tres dígitos, con letras o de cinco dígitos, cuando el técnico confirma, entonces responde 422 con `errors.codigo` y `intentos` no cambia.
@@ -74,14 +74,14 @@ Que la persona vea su visita a domicilio con el código de cuatro dígitos que r
 | Método y ruta | Quién | Cuerpo | Respuestas |
 |---|---|---|---|
 | `GET /api/v1/visitas/{id}` | cliente dueño o técnico elegido | — | 200 (vista según rol, campo `rol`), 400, 401, 404, 429 |
-| `POST /api/v1/visitas/{id}/llegada` | técnico elegido | `{ codigo }` + `Idempotency-Key` | 200 (vista del técnico; repetida con `Idempotent-Replay: true`), 400, 401, 403, 404, 409, 413, 422, 429 |
+| `POST /api/v1/visitas/{id}/llegada` | técnico elegido | `{ codigo }` | 200 (vista del técnico), 400, 401, 403, 404, 409, 413, 422, 429 |
 | `POST /api/v1/visitas/{id}/aviso` | cliente dueño | vacío | 200 `{ texto, incluyeCodigo, incluyeDireccion }`, 400, 401, 404, 409, 429 |
 
-**Códigos de error:** `codigo_incorrecto` (422, con `intentosRestantes`), `codigo_usado`, `codigo_vencido`, `visita_bloqueada`, `visita_cancelada`, `visita_no_vigente`, `visita_sin_codigo`, `fuera_de_ventana`, `visita_no_avisable` (todos 409), `no_es_tecnico` (403), `idempotency_key_requerida` (400). Formato inválido: 422 con `errors`; visita ajena o inexistente: 404 uniforme.
+**Códigos de error:** `codigo_incorrecto` (422, con `intentosRestantes`), `codigo_usado`, `codigo_vencido`, `visita_bloqueada`, `visita_cancelada`, `visita_no_vigente`, `visita_sin_codigo`, `fuera_de_ventana`, `visita_no_avisable` (todos 409), `no_es_tecnico` (403). Formato inválido: 422 con `errors`; visita ajena o inexistente: 404 uniforme.
 
 **Caché:** ninguna respuesta se cachea (`Cache-Control: private, no-store`).
 
-**Límites:** 3 intentos de código por visita; 5 peticiones de llegada por minuto por técnico; 10 avisos por hora por cliente; `Idempotency-Key` de 1 a 64 caracteres.
+**Límites:** 3 intentos de código por visita; 5 peticiones de llegada por minuto por técnico; 10 avisos por hora por cliente.
 
 ## 6. Modelo de datos
 **`visitas`** (creada en la spec 021; esta spec la completa)
@@ -92,7 +92,6 @@ Que la persona vea su visita a domicilio con el código de cuatro dígitos que r
 | `intentos` | máximo 3 |
 | `bloqueada` | la pone esta spec al tercer fallo |
 | `llegadaEn` | hora real de llegada |
-| `llegadaKey`, `llegadaRespuesta` | repetición idempotente de la llegada exitosa (la respuesta guardada no contiene el código) |
 | `avisosEnviados` | contador entero |
 | `estado` | `confirmada → en_curso`; `terminada`, `cancelada` y `no_presentado` los usan otras specs |
 
@@ -124,7 +123,7 @@ Que la persona vea su visita a domicilio con el código de cuatro dígitos que r
 | Fuga del código al técnico o a los registros | Proyección distinta por rol; no se registra; se cifra en reposo | CA-02, CA-03, CA-14 |
 | Fuga de la dirección | Solo el cliente y el técnico elegido; no se registra | CA-09, CA-14 |
 | Reutilizar el código | `codigoUsado` y condición de la actualización | CA-07 |
-| Repetición de la llegada por red inestable | `Idempotency-Key` y `llegadaKey` | CA-12 |
+| Repetición de la llegada por red inestable | La visita ya `en_curso` responde 409 `codigo_usado` sin repetir el evento | CA-12 |
 | Suplantar al técnico | Se resuelve por `sub` y se comprueba que sea el elegido | CA-10 |
 | Aviso que expone el código o la dirección | El texto se arma en el servidor sin esos campos y la respuesta lo declara | CA-11 |
 | Enumerar visitas ajenas | 404 después de autenticar, sin distinguir inexistente de ajena | CA-10 |
@@ -162,7 +161,7 @@ Que la persona vea su visita a domicilio con el código de cuatro dígitos que r
 | CA-09 | `Spec022VistaTests.Cita_En_Taller_CA_022_09` |
 | CA-10 | `Spec022SeguridadTests.Visita_Ajena_CA_022_10` |
 | CA-11 | `Spec022AvisoTests.Texto_Sin_Codigo_Ni_Direccion_CA_022_11` |
-| CA-12 | `Spec022LlegadaTests.Idempotencia_CA_022_12` |
+| CA-12 | `Spec022LlegadaTests.Llegada_Repetida_Responde_409_CA_022_12` |
 | CA-13 | `Spec022SeguridadTests.Exige_Sesion_CA_022_13` |
 | CA-14 | `Spec022RegistrosTests.Sin_Datos_Sensibles_CA_022_14` |
 | CA-15 | `Spec022LlegadaTests.Codigo_Mal_Formado_No_Cuenta_CA_022_15` |
@@ -224,10 +223,11 @@ Que la persona vea su visita a domicilio con el código de cuatro dígitos que r
 8. **Un código mal formado o fuera de ventana no cuenta como intento.** Solo un código de cuatro dígitos comparado contra el real es un intento de adivinar; contar los errores de captura bloquearía visitas por un dedo. Alternativa: contar todo, más estricto pero con bloqueos accidentales.
 9. **La vista del cliente incluye el contacto público del técnico.** La spec 021 dice que el contacto se ve «en la respuesta de la elección o en el detalle de la visita»; el borrador de esta spec no lo traía. Alternativa: solo en la elección, que lo pierde al reabrir la app.
 10. **Las respuestas llevan `rol`.** Mensajería (spec 026) y la app distinguen la vista sin inferirla por los campos presentes.
-11. **El aviso no lleva `Idempotency-Key`.** No crea recursos ni envía nada; repetirlo solo incrementa un contador. Alternativa: exigir la clave, sin beneficio.
+11. **El aviso no lleva clave de idempotencia.** No crea recursos ni envía nada; repetirlo solo incrementa un contador.
 12. **Mensajería consulta esta vista para la pertenencia (spec 026).** Como la vista del cliente contiene el código y la dirección, la spec 026 deserializa solo `rol` y `estado` y no registra el cuerpo. Alternativa: una ruta interna de pertenencia, que agrega una superficie nueva; queda como mejora si se aprueba.
 
 ## 15. Riesgos y dudas abiertas
+- **`Idempotency-Key` retirada por ahora (decisión del 2026-11-10).** Se quitó de la llegada. Sin ella, si la respuesta de una llegada exitosa se pierde, el reintento recibe 409 `codigo_usado`: la app debe consultar la visita (`GET /api/v1/visitas/{id}`) antes de mostrar un error. Se retoma con una spec propia si se decide volver a exigirla.
 - **No hay consumidor de `VisitaBloqueada`:** el evento queda en el buzón y el reporte de gravedad alta de HU-038 CA3 no se crea hasta que Identidad lo consuma. Es la brecha más importante de esta spec.
 - **El bloqueo no se puede levantar desde la API:** lo hará el panel (spec de verificación y reportes). Mientras tanto, una visita bloqueada requiere intervención en la base.
 - **La ventana de la cita es una decisión:** si el equipo quiere una ventana más corta (por ejemplo, dos horas antes y cuatro después), se cambia en un solo lugar.

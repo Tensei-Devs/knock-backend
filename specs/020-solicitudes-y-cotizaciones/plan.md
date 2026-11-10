@@ -5,7 +5,7 @@
 ## Enfoque
 1. Traer a Mercado el módulo de archivos privados (`Media`, TT-API-05) desde `legacy/` o, si ya llegó con la spec 013, reutilizar su `IMediaApi`; sin él no hay fotos y la cadena se bloquea.
 2. Crear el host de integración de Mercado (`MarketApiFactory` con `Testcontainers`) que también usan las specs 021, 022 y 023.
-3. Escribir el script de `db/` con `solicitudes` y `cotizaciones` y sus índices (únicos parciales de idempotencia, único `{ solicitudId, tecnicoId }`).
+3. Escribir el script de `db/` con `solicitudes` y `cotizaciones` y sus índices (único `{ solicitudId, tecnicoId }`).
 4. Crear el módulo `Requests` como rebanada vertical: dominio (estados, tope), validadores, servicios, almacén y controllers.
 5. Integrar catálogo (oficios y colonias con caché de 24 h), moderación (spec 013), cifrado de campo de la dirección y buzón de salida.
 6. Publicar el contrato (OpenAPI de Mercado), las filas de `docs/endpoints.md` y los límites en `docs/rate-limit-matrix.md`.
@@ -16,7 +16,7 @@
 - `src/Knock.Market.Api/Modules/Requests/Controllers/` (`SolicitudesController`, `CotizacionesController`)
 - `src/Knock.Market.Api/Modules/Requests/Dtos/` y `Validators/` (creación, cotización, consulta del listado)
 - `src/Knock.Market.Api/Modules/Requests/Domain/` (`Solicitud`, `Cotizacion`, estados, `CotizacionTopeCalculator`)
-- `src/Knock.Market.Api/Modules/Requests/Services/` (`SolicitudService`, `CotizacionService`, `IdempotenciaService`)
+- `src/Knock.Market.Api/Modules/Requests/Services/` (`SolicitudService`, `CotizacionService`)
 - `src/Knock.Market.Api/Modules/Requests/Data/` (`RequestsStore`, `ICatalogoOficiosYColonias`)
 - `src/Knock.Market.Api/Modules/Requests/Events/` (`SolicitudCreada`, `CotizacionEnviada`)
 - `src/Knock.Market.Api/Modules/Media/` (traído de `legacy/` si no existe) y `src/Knock.Market.Api/Common/Crypto/CifradoDeCampo.cs`
@@ -31,7 +31,7 @@
 - Llave de cifrado de campo en Key Vault y Azure AI Content Safety (con moderador falso en pruebas).
 
 ## Decisiones de la spec que este plan sigue
-- Fotos privadas por `archivoId`; idempotencia en la base con huella del cuerpo; tope en el servidor; dirección cifrada; sin caché personal; cupo de 5 cotizaciones vivas; convención de errores común de §5.
+- Fotos privadas por `archivoId`; tope en el servidor; dirección cifrada; sin caché personal; cupo de 5 cotizaciones vivas; convención de errores común de §5.
 
 ## Orden y paralelismo
 - **Bloquean todo:** T-01 (archivos privados) y T-02 (host de integración). Pueden hacerse a la vez por dos personas.

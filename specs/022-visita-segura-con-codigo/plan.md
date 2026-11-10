@@ -6,7 +6,7 @@
 1. Agregar al script de `db/` los índices nuevos de `visitas` (`{ estado, codigoVenceEn }` y `{ tecnicoUsuarioId, estado, dia }`).
 2. Escribir las reglas puras: ventana de la cita, motivo del código, `puedeLlegar`, `puedeAvisar` y la plantilla del aviso.
 3. Escribir `VisitaService` con dos proyecciones (cliente y técnico) y el descifrado del código solo para el cliente.
-4. Escribir `LlegadaService` con una sola actualización condicionada (intentos, bloqueo, `llegadaKey`) y los eventos `VisitaEnCurso` y `VisitaBloqueada`.
+4. Escribir `LlegadaService` con una sola actualización condicionada (intentos y bloqueo) y los eventos `VisitaEnCurso` y `VisitaBloqueada`.
 5. Escribir `AvisoService` y los tres controllers.
 6. Publicar contrato, endpoints y límites.
 
