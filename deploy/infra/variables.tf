@@ -37,6 +37,11 @@ variable "alert_email_receiver" {
   description = "Correo que recibe las alertas del grupo de acciones (spec 011, CA-03). Vacío crea el grupo sin receptores; la dirección nunca vive en el repositorio."
   type        = string
   default     = ""
+
+  validation {
+    condition     = can(regex("^$|^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", var.alert_email_receiver))
+    error_message = "alert_email_receiver debe estar vacío o ser un correo válido (texto@dominio.tld)."
+  }
 }
 
 variable "alert_failed_requests_threshold" {
