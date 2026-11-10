@@ -77,10 +77,10 @@ Diez clientes, sin técnicos ni solicitudes; nombres manuales y números fictici
 
 ## 9. Riesgos y dudas abiertas
 - **Frontera de datos:** la heredada usa `IdentityStore` y `Modules/Identity`; el servicio actual tiene `Modules/Sesiones`. ¿Qué acceso a datos concreto debe extenderse y cómo se mantiene la regla de arquitectura al adaptarlo?
-- **Atomicidad:** una comprobación previa no evita por sí sola una carrera con otras escrituras. ¿Cómo se garantiza R-05 ante conflictos concurrentes? **Propuesta, pendiente de Julián:** basta un upsert por `_id`, porque el cargador corre una sola vez al arrancar; aún debe conciliarse con la ausencia de escrituras parciales.
-- **Caché:** la constitución exige invalidación al escribir. **Propuesta, pendiente de Julián:** no hay caché de usuarios que invalidar; confirmar frente a la caché de perfil existente.
-- **Errores:** ¿se necesitan códigos para fallos del cargador no HTTP? **Propuesta, pendiente de Julián:** no hacen falta, porque no expone HTTP; si falla, aborta el arranque con un log sin datos sensibles. Si se definen, aplicar R-09.
-- **Nombre:** ¿dónde se guarda? **Propuesta, pendiente de Julián:** en `usuarios`, como en la spec 017.
+- **Atomicidad:** una comprobación previa no evita por sí sola una carrera con otras escrituras. ¿Cómo se garantiza R-05 ante conflictos concurrentes? **Decidido (Julián, 2026-11-10, sí a la propuesta):** basta un upsert por `_id`, porque el cargador corre una sola vez al arrancar; aún debe conciliarse con la ausencia de escrituras parciales.
+- **Caché:** la constitución exige invalidación al escribir. **Decidido (Julián, 2026-11-10, sí a la propuesta):** no hay caché de usuarios que invalidar; confirmar frente a la caché de perfil existente.
+- **Errores:** ¿se necesitan códigos para fallos del cargador no HTTP? **Decidido (Julián, 2026-11-10, sí a la propuesta):** no hacen falta, porque no expone HTTP; si falla, aborta el arranque con un log sin datos sensibles. Si se definen, aplicar R-09.
+- **Nombre:** ¿dónde se guarda? **Decidido (Julián, 2026-11-10, sí a la propuesta):** en `usuarios`, como en la spec 017.
 
 ## Aprobación
 - [ ] Revisor — José Julián Hernández Hernández · fecha:
