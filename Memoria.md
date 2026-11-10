@@ -1,9 +1,5 @@
 # Memoria — knock-backend
 
-## 2026-11-10 — BUG-005: borrador de redacción de consola de Market (KNOCK-255)
-- **Decisión propuesta:** documentar la corrección y pruebas de redacción de consola para Market, sin introducir clones; coordinar una posible biblioteca compartida con KNOCK-251. La spec está en Borrador y corresponde a Julián aprobarla y resolver las dudas.
-- **Limitación:** el guard bloqueó la lectura de los archivos de implementación; el diagnóstico proviene del issue y requiere contraste y reproducción antes de aprobar. No se ejecutó la corrección ni sus pruebas.
-
 > Registro del proyecto: estado, decisiones con su fecha y su porqué, y errores a evitar. Los agentes la leen al empezar y agregan una entrada al terminar cada cambio. Sin datos sensibles.
 
 ## Estado actual
@@ -296,3 +292,8 @@
 - **Decisión:** se agrega la colonia «El Carmen» (código postal 42830, por confirmar) con un polígono piloto aproximado de unos 800 metros de lado centrado en el campus de la UTTT, en `colonias_tula.geojson`, el extracto de SEPOMEX y `colonias.json`; las pruebas que cuentan colonias pasan de 12 a 13 y de 8 a 9 con polígono.
 - **Porqué:** las ocho colonias sembradas cubren el centro de Tula; desde el campus (carretera Tula-Tepeji) `GET /colonias/en-punto` respondía «fuera de cobertura» y la demo no mostraba la zona de quien la prueba allí.
 - **A evitar:** tomar el polígono como límite oficial (es aproximado y no oficial); olvidar cargar la semilla en la base de Azure (`db/entrega.js`) después de fusionar.
+
+## 2026-11-10 — BUG-005: redacción de consola de Market (KNOCK-255)
+- **Decisión (Julián, 2026-11-10):** se corrige ya en Market con el mismo patrón que Gateway, Identity y Messaging, porque es privacidad y no debe esperar. KNOCK-251 extraerá después el redactor y `ForwardedHeadersExtensions` juntos a una biblioteca compartida. En la misma corrección, `service.name` de Market pasa de `knock-api` a `knock-market`.
+- **Diagnóstico confirmado por una persona:** `src/Knock.Market.Api/Hosting/LoggingExtensions.cs` escribe con `.WriteTo.Console(new RenderedCompactJsonFormatter())` sin `RedactingJsonFormatter`; `ObservabilityExtensions.ServiceName` y `appsettings.json` usan `knock-api`.
+- **A evitar:** cambiar el `Issuer` del JWT (`knock-api`): es otro valor, no el nombre del servicio.
