@@ -293,3 +293,8 @@
 - **Por qué:** la 013 (Aprobada) decía que las imágenes públicas se sirven por una CDN y la 032 (borrador) y el ADR-007 dicen que no hay CDN de pago (Front Door Standard cuesta unos 35 USD al mes). Mientras tanto el PR de OI-2 no podía exponer rutas sin saber cuál prevalece.
 - **Pendiente de firma:** la nueva aprobación de la 013 y el estado del ADR-007 los edita José a mano; este cambio no toca ninguna aprobación.
 - **A evitar:** implementar rutas de imágenes antes de que la 013 esté re-aprobada; dejar «CDN» en el título de la spec o del plan mientras no exista ninguna.
+
+## 2026-11-10 — Colonia de la UTTT en las semillas del catálogo (KNOCK-249)
+- **Decisión:** se agrega la colonia «El Carmen» (código postal 42830, por confirmar) con un polígono piloto aproximado de unos 800 metros de lado centrado en el campus de la UTTT, en `colonias_tula.geojson`, el extracto de SEPOMEX y `colonias.json`; las pruebas que cuentan colonias pasan de 12 a 13 y de 8 a 9 con polígono.
+- **Porqué:** las ocho colonias sembradas cubren el centro de Tula; desde el campus (carretera Tula-Tepeji) `GET /colonias/en-punto` respondía «fuera de cobertura» y la demo no mostraba la zona de quien la prueba allí.
+- **A evitar:** tomar el polígono como límite oficial (es aproximado y no oficial); olvidar cargar la semilla en la base de Azure (`db/entrega.js`) después de fusionar.
