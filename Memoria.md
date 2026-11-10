@@ -1,5 +1,9 @@
 # Memoria — knock-backend
 
+## 2026-11-10 — BUG-005: borrador de redacción de consola de Market (KNOCK-255)
+- **Decisión propuesta:** documentar la corrección y pruebas de redacción de consola para Market, sin introducir clones; coordinar una posible biblioteca compartida con KNOCK-251. La spec está en Borrador y corresponde a Julián aprobarla y resolver las dudas.
+- **Limitación:** el guard bloqueó la lectura de los archivos de implementación; el diagnóstico proviene del issue y requiere contraste y reproducción antes de aprobar. No se ejecutó la corrección ni sus pruebas.
+
 > Registro del proyecto: estado, decisiones con su fecha y su porqué, y errores a evitar. Los agentes la leen al empezar y agregan una entrada al terminar cada cambio. Sin datos sensibles.
 
 ## Estado actual
