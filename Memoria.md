@@ -292,3 +292,9 @@
 - **Decisión:** se agrega la colonia «El Carmen» (código postal 42830, por confirmar) con un polígono piloto aproximado de unos 800 metros de lado centrado en el campus de la UTTT, en `colonias_tula.geojson`, el extracto de SEPOMEX y `colonias.json`; las pruebas que cuentan colonias pasan de 12 a 13 y de 8 a 9 con polígono.
 - **Porqué:** las ocho colonias sembradas cubren el centro de Tula; desde el campus (carretera Tula-Tepeji) `GET /colonias/en-punto` respondía «fuera de cobertura» y la demo no mostraba la zona de quien la prueba allí.
 - **A evitar:** tomar el polígono como límite oficial (es aproximado y no oficial); olvidar cargar la semilla en la base de Azure (`db/entrega.js`) después de fusionar.
+
+## 2026-11-10 — Convención de errores propuesta: 422 para validación de campos, 400 para lo ilegible, códigos en inglés (KNOCK-197)
+- **Decisión:** se propone que la spec 002 diga que **422** es el código de toda validación de campos (formato, longitud, tipo, rango y reglas de contenido) y **400** solo el de un cuerpo ilegible, un identificador de ruta mal formado o un cursor mal formado, y que todo `code` de error esté en inglés y en `snake_case`. Se alinean las specs 016 (`/auth/refresh` agrega 422) y 017 (CA-06 pasa de 400 a 422). La 018 ya cumple (identificador mal formado = 400).
+- **Por qué:** es lo que ya hacen el filtro de validación de Identity y Market y la spec 015, y deja a la app con un solo nombre por error. La única pieza que no cumple es la validación manual de `PUT /me`, que responde 400: va en una tarea de código aparte.
+- **Pendiente de firma:** la nueva aprobación de las specs 002, 016 y 017 la edita José a mano; este cambio no toca ninguna aprobación.
+- **A evitar:** validar a mano en un controller con otro código que el del filtro de validación; mezclar nombres de error en español y en inglés.
