@@ -2,10 +2,11 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Knock.Market.Api.Modules.Media.Data;
 
-/// <summary>Configuración del módulo (sección <c>Media</c> de appsettings, sin secretos). OI-1: sin Blob ni Azure.</summary>
+/// <summary>Module configuration (<c>Media</c> section of appsettings, no secrets).</summary>
 internal sealed class MediaOptions
 {
     public const string SectionName = "Media";
+    public const string ConnectionStringName = "KnockBlob";
 
     [Required] public string QuarantineContainer { get; set; } = "cuarentena";
     [Required] public string FilesContainer { get; set; } = "archivos";
