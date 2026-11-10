@@ -4,7 +4,7 @@
 > **Repositorio:** knock-backend · **Otra parte en:** —
 > **Fuentes:** docs/modelo-de-amenazas.md H-03 · specs/009 · specs/001
 > **Skills:** security-core, auth-firebase-jwt, foundation-backend
-> **Estado:** Borrador
+> **Estado:** Aprobada
 
 ## 1. Objetivo
 Mensajería no valida JWT, no agrega encabezados de seguridad y no limita peticiones por sí misma; hoy solo la protege el ingreso interno del entorno. No tiene controladores de negocio, así que el riesgo es bajo hoy y crece cuando se agreguen. Se aplican los mismos controles que Identidad y Mercado **antes** de que Mensajería publique su primer endpoint (y de la spec 026, KNOCK-62).
@@ -72,6 +72,6 @@ Mensajería no valida JWT, no agrega encabezados de seguridad y no limita petici
 4. **Alternativa aceptada por la ficha:** si no se implementa ahora, la spec de Mensajería debe exigir estos controles antes de su primer endpoint. Propuesta: implementarlo (es corto y desbloquea la spec 026 (KNOCK-62)).
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-10
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Firmada (tras el merge)

@@ -4,7 +4,7 @@
 > **Repositorio:** knock-backend · **Otra parte en:** —
 > **Fuentes:** docs/modelo-de-amenazas.md H-02 · docs/security-headers.md
 > **Skills:** security-core, foundation-backend
-> **Estado:** Borrador
+> **Estado:** Aprobada
 
 ## 1. Objetivo
 Las respuestas del gateway desplegado incluyen `server: Kestrel`, y `docs/security-headers.md` dice que ese encabezado no sale. Identidad y Mercado fijan `AddServerHeader = false` (`Hosting/SecurityExtensions.cs`); el gateway y Mensajería no.
@@ -56,6 +56,6 @@ Las respuestas del gateway desplegado incluyen `server: Kestrel`, y `docs/securi
 1. **Pruebas de Mensajería sin fábrica.** Mensajería no tiene fábrica de pruebas de seguridad; se crea una mínima (`SecurityMessagingFactory`) que también servirá a BUG-004 y la spec 026 (KNOCK-62). Si BUG-004 se hace primero, se reutiliza.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-10
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Firmada (tras el merge)

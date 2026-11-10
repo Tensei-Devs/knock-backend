@@ -4,7 +4,7 @@
 > **Repositorio:** knock-backend · **Otra parte en:** —
 > **Fuentes:** docs/modelo-de-amenazas.md H-01 · docs/security-headers.md · docs/evidencia/KNOCK-78-resumen.md · specs/009
 > **Skills:** security-core, foundation-backend
-> **Estado:** Borrador
+> **Estado:** Aprobada
 
 ## 1. Objetivo
 Ninguna respuesta del gateway desplegado incluye `Strict-Transport-Security`, aunque `Program.cs` llama a `UseHsts()` fuera de Development. Se comprobó con `curl -D` en `/health`, `/sitemap.xml` y `/api/v1/me/x`. Se diagnostica la causa y se corrige para que las respuestas HTTPS lo incluyan.
@@ -64,6 +64,6 @@ Ninguna respuesta del gateway desplegado incluye `Strict-Transport-Security`, au
 3. **Despliegue.** El cierre del bug exige un despliegue del gateway; lo hace el líder.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-10
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Firmada (tras el merge)
