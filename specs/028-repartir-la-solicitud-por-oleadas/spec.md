@@ -120,7 +120,7 @@ Que cada solicitud llegue a pocos técnicos adecuados y no a todos: una primera 
 | `oleada` | int | 1 a 3 |
 | `motivo` | string | `mejor_ordenado`, `nuevo`, `cercano`, `relleno` |
 | `estado` | string | `activo`, `cotizado`, `descartado`, `cerrado` |
-| `cerradoMotivo` | string? | `request_cancelled`, `request_expired`, `se_eligio_otra` (lo escriben las specs 021 y 029) |
+| `cerradoMotivo` | string? | `request_cancelled`, `request_expired`, `other_quote_chosen` (lo escriben las specs 021 y 029) |
 | `enviadoEn`, `descartadoEn?`, `actualizadoEn` | date | UTC |
 
 Índices: `{ solicitudId: 1, tecnicoId: 1 }` único; `{ tecnicoUsuarioId: 1, estado: 1, enviadoEn: -1 }` (bandeja); `{ solicitudId: 1, estado: 1 }`.
@@ -156,7 +156,7 @@ El script `db/` de esta spec crea `envios`, los índices nuevos y no borra ni ca
 - Sin estado en el proceso: la oleada vigente, los envíos y las tareas viven en MongoDB.
 
 ## 8. Dependencias
-- Spec 003 (outbox, `tareas_programadas`, transacciones), 009 (JWT y límites), 010 (cursor, sin caché personal), 020 (solicitudes, cotizaciones, detalle), 021 (al elegir, cierra los envíos restantes con `se_eligio_otra`; ver §15), 027 (regla de cobertura y campos de `tecnicos`).
+- Spec 003 (outbox, `tareas_programadas`, transacciones), 009 (JWT y límites), 010 (cursor, sin caché personal), 020 (solicitudes, cotizaciones, detalle), 021 (al elegir, cierra los envíos restantes con `other_quote_chosen`; ver §15), 027 (regla de cobertura y campos de `tecnicos`).
 - Spec 029 reutiliza el ejecutor y cierra los envíos al cancelar o vencer.
 - Spec 030 usa los envíos para permitir el chat antes de elegir.
 - HU-019 («Disponible hoy») sin spec: `disponibleHasta` se llena por semillas mientras tanto.
@@ -240,7 +240,7 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 ## 15. Riesgos y dudas abiertas
 - **`Idempotency-Key` retirada por ahora (decisión del 2026-11-10).** Se quitó del descarte, que ya es idempotente por estado: repetirlo responde 204 sin cambios. Se retoma con una spec propia si se decide volver a exigirla.
 - **Conflicto con la spec 020 (borrador):** R-11, R-12 y R-15 cambian su comportamiento (cotizar exige envío, tope de 5, vista del destinatario) y agregan los campos `oleadaActual` y `cotizacionesActivas`. Hay que reflejarlo en la 020 o aprobar ambas juntas.
-- **Conflicto con la spec 021 (borrador):** al elegir, los envíos restantes deben pasar a `cerrado` con `se_eligio_otra`; la 021 no lo menciona. Mientras no se agregue, la bandeja filtra por estado de la solicitud y no muestra solicitudes ya elegidas.
+- **Conflicto con la spec 021 (borrador):** al elegir, los envíos restantes deben pasar a `cerrado` con `other_quote_chosen`; la 021 no lo menciona. Mientras no se agregue, la bandeja filtra por estado de la solicitud y no muestra solicitudes ya elegidas.
 - **Hueco:** `tecnicos` sin spec dueña (ver spec 027 §15) y HU-019 sin spec: `disponibleHasta` se siembra a mano para la demo.
 - **Resuelto:** `GET /api/v1/tecnicos/me/trabajo` (frontend 019) tiene spec de backend 036 (Borrador).
 - **Hueco:** la entrega de avisos push (HU-050) y el transporte de eventos entre servicios no tienen spec; los eventos quedan en el buzón de Mercado.
