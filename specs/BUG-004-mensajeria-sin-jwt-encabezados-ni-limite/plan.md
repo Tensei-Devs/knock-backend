@@ -9,4 +9,4 @@
 - **No tocar:** `.github/`, `scripts/`, `.agents/`, configuración de analizadores, `constitution.md`, `docs/openapi.v1.json` a mano, specs ajenas.
 
 ## 2. Riesgos y efectos secundarios
-Copiar tres extensiones suma duplicados (cubierto por EXC-007, pero hay que registrar el nuevo origen). Una configuración nueva obligatoria hace que Mensajería no arranque si falta la llave en el entorno: hay que avisar al líder antes del despliegue.
+Copiar tres extensiones suma duplicados que EXC-007 NO cubre (solo ampara logging, observabilidad y `TelemetryRedactor`): hay que pedir una excepción jscpd propia y temporal ligada a KNOCK-251, o llevar las clases directo a la biblioteca compartida. Una configuración nueva obligatoria hace que Mensajería no arranque si falta la llave en el entorno: hay que avisar al líder antes del despliegue.
