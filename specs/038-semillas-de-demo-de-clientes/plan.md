@@ -3,7 +3,7 @@
 > **Jira:** KNOCK-40 · **Estado:** Borrador · **Servicio:** Identidad y confianza. Plan propuesto, sujeto a la aprobación humana de la spec y resolución de sus dudas.
 
 ## Enfoque
-1. Resolver la frontera de datos y las propuestas pendientes de `spec.md` §9 antes de implementar; aplicar las decisiones de Julián de §8.
+1. Resolver la frontera de datos antes de implementar y aplicar las decisiones de `spec.md` §9; aplicar las decisiones de Julián de §8.
 2. Reutilizar el formato y patrón de semillas de `db/seeds/catalog/` y la protección y derivación de `src/Knock.Identity.Api/Modules/Sesiones/Services/` (`PhoneProtector`, `UserIdDerivation`); no copiar acceso entre servicios.
 3. Preparar diez clientes ficticios activos, con perfil completo y consentimientos vigentes; extender el acceso a datos de Identidad y conectar el cargador al arranque con las guardas de R-07, incluida la lista estricta de hosts locales.
 4. Probar idempotencia, protección, conflictos, estado y consentimientos, rechazo de host no local, frontera y humo local; documentar carga, conteo y borrado, y la carga manual separada a Azure con `db/entrega.js`. El cifrado aleatorio se verifica por descifrado y no por igualdad de bytes.
@@ -16,7 +16,7 @@
 
 ## Dependencias y riesgos
 - Spec 015 y su implementación de `usuarios`, índices únicos, derivación y protección; formato del catálogo de TT-BD-06; `documentdb-local` y fixture existente.
-- CA-11 exige ausencia de escrituras parciales incluso ante conflictos; la propuesta de atomicidad aún debe conciliarse con concurrencia (§9). Los hosts permitidos están decididos en R-07.
+- CA-11 exige ausencia de escrituras parciales incluso ante conflictos; la atomicidad se resuelve con upsert por `_id` (decisión de Julián, §9). Los hosts permitidos están decididos en R-07.
 - Revisión humana de nombres inventados; evidencia sin secretos ni cadenas.
 
 ## Verificación
