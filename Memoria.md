@@ -298,3 +298,4 @@
 - **Por qué:** es lo que ya hacen el filtro de validación de Identity y Market y la spec 015, y deja a la app con un solo nombre por error. La única pieza que no cumple es la validación manual de `PUT /me`, que responde 400: va en una tarea de código aparte.
 - **Pendiente de firma:** la nueva aprobación de las specs 002, 016 y 017 la edita José a mano; este cambio no toca ninguna aprobación.
 - **A evitar:** validar a mano en un controller con otro código que el del filtro de validación; mezclar nombres de error en español y en inglés.
+- **Seguimiento de la revisión de Alexis (2026-11-10):** se agrega R-12 (409 si la petición choca con el estado actual del recurso; 422 si el contenido no sirve sin importar el estado) y CA-08, y CA-07 pasa a verificarse con una prueba de arquitectura que recorra las constantes de `code`. Queda abierto qué términos de dominio se conservan en español dentro de un `code` (`colonia` frente a `oficio`).
