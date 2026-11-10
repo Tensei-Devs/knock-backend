@@ -38,9 +38,9 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 - **R-06:** `etiquetas` solo puede contener `verificado`, `mejor_precio` y `puede_ir_mas_pronto`. `mejor_precio` se asigna al `tope` más bajo entre las cotizaciones que no son visita y nunca a una visita; `puede_ir_mas_pronto` a la fecha y hora más tempranas.
 - **R-07:** `cubre` es un texto fijo por tipo: `visita` = “Solo visita: ir a ver el trabajo”; `fijo` = “Arreglo completo, mano de obra incluida, refacciones aparte”; `rango` = “Estimado del arreglo dentro del rango”. Si hay tipos distintos, `tiposMixtos` es verdadero para que la app muestre el aviso.
 - **R-08:** La respuesta lleva `puedeElegir` y, cuando es falso, `motivo` con el mismo nombre que el error que daría la elección (`solicitud_sin_cotizaciones`, `solicitud_vencida`, `solicitud_cancelada`, `solicitud_ya_elegida`) y `visitaId` si ya se eligió. El listado no se cachea: `Cache-Control: private, no-store`, sin `ETag`. El listado **nunca** incluye `telefono`, `whatsapp`, la dirección del taller ni la del cliente.
-- **R-09:** `POST /api/v1/solicitudes/{id}/elegir` exige JWT del cliente dueño y cuerpo `{ cotizacionId }` (`ObjectId`; si no, 422 `errors.cotizacionId`) más el encabezado `Idempotency-Key` con la regla de la spec 020 (falta o mal formado: 400 `idempotency_key_requerida`). Responde 200 con la cita confirmada y los datos revelados. La misma clave con otro `cotizacionId` responde 422 `idempotency_key_conflicto`.
+- **R-09:** `POST /api/v1/solicitudes/{id}/elegir` exige JWT del cliente dueño y cuerpo `{ cotizacionId }` (`ObjectId`; si no, 422 `errors.cotizacionId`). Responde 200 con la cita confirmada y los datos revelados.
 - **R-10:** La elección se ejecuta en una sola transacción: cambia la solicitud a `cita_confirmada` solo si estaba en `cotizando` y no venció; acepta la cotización elegida si estaba `enviada`; marca las demás `enviada` como `rechazada` con motivo `se_eligio_otra`; crea una sola `visita`; y escribe los eventos en el buzón.
-- **R-11:** Dos elecciones simultáneas de la misma solicitud: gana una y la otra responde 409 `solicitud_ya_elegida`. Repetir la misma `Idempotency-Key` responde 200 con la misma cita y no duplica nada.
+- **R-11:** Dos elecciones simultáneas de la misma solicitud: gana una y la otra responde 409 `solicitud_ya_elegida`. Elegir otra vez una solicitud que ya tiene cita confirmada responde 409 `solicitud_ya_elegida`, sea la misma cotización u otra, y no duplica nada.
 - **R-12:** La cotización elegida debe pertenecer a la solicitud y estar `enviada`; si no existe o es de otra solicitud, 404; si fue retirada o ya está rechazada, 409 `cotizacion_no_disponible`.
 - **R-13:** Si la solicitud venció o está cancelada, responde 409 `solicitud_vencida` o `solicitud_cancelada` y no cambia nada. Si no está en `cotizando` (por ejemplo, `enviada` sin cotizaciones), 409 `solicitud_sin_cotizaciones`.
 - **R-14:** La respuesta de la elección incluye `{ visitaId, solicitudId, cotizacionId, estado, modalidad, dia, hora, precio, tope, tecnico, lugar }`. `tecnico` trae `{ id, nombre, fotoUrl, verificado, nivelVerificacion, telefono?, whatsapp? }`; `lugar` trae `{ tipo: "taller" | "domicilio", direccion }`.
@@ -49,16 +49,16 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 - **R-17:** La cita se crea en estado `confirmada`, con la `modalidad`, el `dia` y la `hora` de la cotización elegida. Para `domicilio` se genera un código de cuatro dígitos con generador criptográfico, se guarda cifrado (AES-256-GCM con llave versionada en Key Vault) y con vencimiento; para `taller` no hay código. El código no se devuelve en esta respuesta.
 - **R-18:** La operación escribe `CotizacionAceptada` (para el elegido), un `CotizacionRechazada` por cada rechazada y `VisitaConfirmada` en el buzón de salida, en la misma transacción. Los eventos llevan solo identificadores y datos no personales.
 - **R-19:** Los errores usan ProblemDetails con `correlationId`, `traceId` y `code` (convención de errores de la spec 020, §5). Los registros no incluyen nombres, teléfonos, direcciones ni el código.
-- **R-20:** Si la transacción se aborta por un conflicto transitorio, se reintenta una vez; si vuelve a fallar o la base no responde, responde 503 `servicio_no_disponible` sin haber cambiado nada, y la app puede repetir con la misma `Idempotency-Key`.
+- **R-20:** Si la transacción se aborta por un conflicto transitorio, se reintenta una vez; si vuelve a fallar o la base no responde, responde 503 `servicio_no_disponible` sin haber cambiado nada, y la app puede repetir la elección (si la solicitud ya quedó con cita, responde 409 `solicitud_ya_elegida`).
 - **R-21:** Regla de privacidad: el contacto público del técnico y el lugar de la cita (dirección del cliente o del taller) solo se revelan al cliente dueño después de elegir, en esta respuesta o en la visita (spec 022). El técnico nunca recibe el teléfono del cliente.
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dada una solicitud con tres cotizaciones, cuando el dueño pide el listado, entonces recibe tres, con `cubre` y `etiquetas`, y `puedeElegir` verdadero.
 - **CA-02:** Dadas cotizaciones con tope 900, 1 100 y una visita de 250, cuando se ordena por `precio`, entonces quedan 900, 1 100 y la visita al final, y `mejor_precio` está en la de 900.
 - **CA-03:** Dada una solicitud de otra persona, cuando se pide el listado, entonces responde 404.
-- **CA-04:** Dada una cotización válida y una `Idempotency-Key`, cuando el dueño elige, entonces responde 200, la solicitud queda `cita_confirmada`, la cotización `aceptada`, las demás `rechazadas`, hay una `visita` y los eventos están en el buzón.
+- **CA-04:** Dada una cotización válida, cuando el dueño elige, entonces responde 200, la solicitud queda `cita_confirmada`, la cotización `aceptada`, las demás `rechazadas`, hay una `visita` y los eventos están en el buzón.
 - **CA-05:** Dadas dos elecciones simultáneas de la misma solicitud, cuando llegan, entonces una responde 200 y la otra 409 `solicitud_ya_elegida`, y hay una sola cita.
-- **CA-06:** Dada la misma `Idempotency-Key` repetida, cuando llega la segunda, entonces responde 200 con la misma `visitaId` y no crea otra cita.
+- **CA-06:** Dada una solicitud que ya tiene cita confirmada, cuando se elige otra vez, entonces responde 409 `solicitud_ya_elegida` y no crea otra cita.
 - **CA-07:** Dada una cotización de otra solicitud o retirada, cuando se elige, entonces responde 404 o 409 y no cambia nada.
 - **CA-08:** Dada una solicitud vencida o cancelada, cuando se elige, entonces responde 409 y no cambia nada.
 - **CA-09:** Dada una elección confirmada, cuando se inspecciona la respuesta, entonces trae el contacto público del técnico y la dirección del lugar; el listado previo no traía ninguno de los dos.
@@ -68,7 +68,6 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 - **CA-13:** Dado el registro de una elección, cuando se inspecciona, entonces no contiene nombre, teléfono, dirección ni código.
 - **CA-14:** Dadas dos cotizaciones del mismo tipo y tope, cuando se ordena por `recomendadas`, entonces el orden es estable y el verificado va primero.
 - **CA-15:** Dado `?orden=barato` o un `id` que no es `ObjectId`, cuando se pide el listado, entonces responde 422 con `errors.orden` o 400, respectivamente.
-- **CA-16:** Dada una `Idempotency-Key` ya usada con otro `cotizacionId`, cuando se elige, entonces responde 422 `idempotency_key_conflicto`; sin el encabezado, 400 `idempotency_key_requerida`; en ningún caso cambia nada.
 - **CA-17:** Dada una falla de la base durante la transacción (simulada), cuando se elige, entonces responde 503 `servicio_no_disponible`, la solicitud sigue en `cotizando`, no hay `visita` ni eventos, y repetir con la misma clave termina bien.
 - **CA-18:** Dado el listado de cualquier solicitud (antes o después de elegir), cuando se inspecciona la respuesta, entonces no contiene `telefono`, `whatsapp` ni direcciones.
 
@@ -76,15 +75,15 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 | Método y ruta | Quién | Cuerpo / consulta | Respuestas |
 |---|---|---|---|
 | `GET /api/v1/solicitudes/{id}/cotizaciones` | cliente dueño | `orden?` (`recomendadas`, `precio`, `calificacion`, `pronto`) | 200 `{ solicitudId, cotizaciones[], totalCotizaciones, tiposMixtos, puedeElegir, motivo?, visitaId? }`, 400, 401, 404, 422, 429 |
-| `POST /api/v1/solicitudes/{id}/elegir` | cliente dueño | `{ cotizacionId }` + `Idempotency-Key` | 200 (cita; repetida con `Idempotent-Replay: true`), 400, 401, 404, 409, 413, 422, 429, 503 |
+| `POST /api/v1/solicitudes/{id}/elegir` | cliente dueño | `{ cotizacionId }` | 200 (cita), 400, 401, 404, 409, 413, 422, 429, 503 |
 
 **Cuerpo de una cotización:** `{ id, estado, tipoPrecio, precio, precioMin?, precioMax?, tope, requiereAprobacion, dia, hora, nota?, cubre, etiquetas[], tecnico: { id, nombre, fotoUrl, calificacion, verificado, nivelVerificacion } }`.
 
 **Cuerpo de la cita:** `{ visitaId, solicitudId, cotizacionId, estado, modalidad, dia, hora, precio, tope, tecnico: { id, nombre, fotoUrl, verificado, nivelVerificacion, telefono?, whatsapp? }, lugar: { tipo, direccion } }`.
 
-**Códigos de error:** `solicitud_ya_elegida` (409), `solicitud_vencida` (409), `solicitud_cancelada` (409), `solicitud_sin_cotizaciones` (409), `cotizacion_no_disponible` (409), `idempotency_key_requerida` (400), `idempotency_key_conflicto` (422), `servicio_no_disponible` (503). Errores de formato: 422 con `errors`; recurso ajeno o inexistente: 404 uniforme.
+**Códigos de error:** `solicitud_ya_elegida` (409), `solicitud_vencida` (409), `solicitud_cancelada` (409), `solicitud_sin_cotizaciones` (409), `cotizacion_no_disponible` (409), `servicio_no_disponible` (503). Errores de formato: 422 con `errors`; recurso ajeno o inexistente: 404 uniforme.
 
-**Límites:** 5 cotizaciones por respuesta (cupo de la spec 020); cuerpo de 8 KB; `Idempotency-Key` de 1 a 64 caracteres; 10 elecciones por minuto y 60 listados por minuto por persona (se registran en `docs/rate-limit-matrix.md`).
+**Límites:** 5 cotizaciones por respuesta (cupo de la spec 020); cuerpo de 8 KB; 10 elecciones por minuto y 60 listados por minuto por persona (se registran en `docs/rate-limit-matrix.md`).
 
 **Caché:** ninguna respuesta se cachea (`Cache-Control: private, no-store`).
 
@@ -106,13 +105,12 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 | `intentos` | int | 0 al crear |
 | `bloqueada` | bool | la pone la spec 022 |
 | `llegadaEn` | date? | la pone la spec 022 |
-| `eleccionKey` | string | para la repetición idempotente |
 | `creadoEn`, `actualizadoEn` | date | UTC |
 
 Índices: `{ solicitudId: 1 }` único; `{ clienteId: 1, dia: 1 }`; `{ tecnicoUsuarioId: 1, dia: 1 }`; `{ estado: 1, dia: 1 }`.
 
 **Cambios en colecciones existentes**
-- `solicitudes`: `cotizacionElegidaId`, `eleccionKey`, `estado = cita_confirmada`.
+- `solicitudes`: `cotizacionElegidaId`, `estado = cita_confirmada`.
 - `cotizaciones`: `estado = aceptada | rechazada`, `motivoRechazo`, `aceptadaEn`.
 - `tecnicos`: `contactoPublico: { telefono?, whatsapp? }` (opcional, lo publica el técnico; no es el celular de Identidad), `tallerDireccion?` (solo técnicos de taller) y `nivelVerificacion` (`ninguno`, `basica`, `completa`; lo actualizará el consumidor del evento de la spec 025, hoy por semilla). `verificado` es verdadero cuando `nivelVerificacion` no es `ninguno`.
 
@@ -140,7 +138,7 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 | Revelar contacto antes de elegir | El listado proyecta solo datos públicos del perfil; el contacto y la dirección salen en la respuesta de la elección | CA-09 |
 | Fuga del código | Se guarda cifrado, no se devuelve aquí y no se registra | CA-10, CA-13 |
 | Enumerar solicitudes ajenas | 404 uniforme después de autenticar | CA-03 |
-| Repetición o doble toque | `Idempotency-Key` y `eleccionKey` en la cita | CA-06 |
+| Repetición o doble toque | El índice único de `visitas` por solicitud y la escritura condicionada impiden una segunda cita; responde 409 | CA-06 |
 | Cotización retirada que gana | La transacción exige `estado = enviada` | CA-07 |
 | Datos personales en registros | Filtro de datos personales; eventos solo con identificadores | CA-13 |
 
@@ -171,7 +169,7 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 | CA-03 | `Spec021SeguridadTests.Solicitud_Ajena_CA_021_03` |
 | CA-04 | `Spec021EleccionTests.Elige_Cotizacion_CA_021_04` |
 | CA-05 | `Spec021ConcurrenciaTests.Dos_Elecciones_CA_021_05` |
-| CA-06 | `Spec021EleccionTests.Idempotencia_CA_021_06` |
+| CA-06 | `Spec021EleccionTests.Eleccion_Repetida_Responde_409_CA_021_06` |
 | CA-07 | `Spec021EleccionTests.Cotizacion_No_Disponible_CA_021_07` |
 | CA-08 | `Spec021EleccionTests.Solicitud_No_Elegible_CA_021_08` |
 | CA-09 | `Spec021ContactoTests.Revela_Solo_Despues_CA_021_09` |
@@ -181,7 +179,6 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 | CA-13 | `Spec021RegistrosTests.Sin_Datos_Personales_CA_021_13` |
 | CA-14 | `Spec021OrdenTests.Recomendadas_Estable_CA_021_14` |
 | CA-15 | `Spec021ValidacionTests.Orden_E_Id_Invalidos_CA_021_15` |
-| CA-16 | `Spec021EleccionTests.Clave_Conflicto_O_Ausente_CA_021_16` |
 | CA-17 | `Spec021EleccionTests.Falla_De_Transaccion_CA_021_17` |
 | CA-18 | `Spec021ContactoTests.Listado_Sin_Contacto_CA_021_18` |
 
@@ -234,7 +231,7 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 5. **El código no se devuelve en la elección.** La app lo pide a la visita (spec 022); así el código no viaja en la respuesta de una operación que se registra y se reintenta. Alternativa: devolverlo una sola vez y que la app lo guarde; se pierde al reinstalar.
 6. **Las cotizaciones retiradas no se listan.** La ficha de HU-035 no está implementada, pero el estado existe; ocultarlas evita ofrecer algo que ya no está.
 7. **La visita nace en `confirmada` y su ciclo vive en la spec 022.** Repartir la creación entre dos specs dejaría una ventana sin cita.
-8. **La repetición idempotente se guarda en la cita (`eleccionKey`), no en una colección aparte.** Solo hay una elección por solicitud; una colección de claves sería un índice innecesario.
+8. **Sin repetición idempotente.** Una segunda elección de la misma solicitud responde 409 `solicitud_ya_elegida`; no se guarda ninguna clave (ver §15).
 
 **Agregadas en la revisión del 9 de noviembre**
 
@@ -244,6 +241,7 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 12. **KNOCK-81 (HU-032) se cubre aquí del lado del backend.** La ficha es de pantalla, pero el orden y las etiquetas son reglas del servidor. Alternativa: una spec aparte solo para el listado, que duplicaría el modelo.
 
 ## 15. Riesgos y dudas abiertas
+- **`Idempotency-Key` retirada por ahora (decisión del 2026-11-10).** Se quitó de la elección. Sin ella, si la respuesta de una elección exitosa se pierde por la red, el reintento recibe 409 `solicitud_ya_elegida`: la app debe consultar la solicitud (`GET /api/v1/solicitudes/{id}`) antes de mostrar un error, porque la cita ya existe. Se retoma con una spec propia si se decide volver a exigirla.
 - **El ML de “Recomendadas” no existe:** el orden es determinista y puede no coincidir con el que el equipo espera para la demo; se sustituye en Sprint 5 sin cambiar el contrato.
 - **El contacto público del técnico puede no estar cargado:** si las semillas no lo traen, el cliente solo verá el chat. Hay que sembrarlo en `db/` para la demo.
 - **La dirección del cliente se copia a `solicitudes`:** si el cliente la cambia después, la cita conserva la del momento; es lo correcto para el servicio, pero hay que decirlo en la pantalla.

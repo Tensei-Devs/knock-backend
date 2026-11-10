@@ -15,7 +15,6 @@ Que una persona describa su problema con fotos y reciba cotizaciones de técnico
 
 **2.2 Dentro**
 - Crear una solicitud con oficio, descripción, de 1 a 5 fotos privadas, día, franja y lugar.
-- Envío idempotente de la solicitud (el doble toque o el reintento de la red crean una sola).
 - Ver el detalle de una solicitud propia (cliente) y la vista acotada del técnico.
 - Listar las solicitudes propias con paginación por cursor.
 - Enviar una cotización con precio fijo, rango o visita previa, día, hora y nota, con tope calculado en el servidor.
@@ -38,7 +37,7 @@ Que una persona describa su problema con fotos y reciba cotizaciones de técnico
 - **R-04:** `fotos` es un arreglo de 1 a 5 identificadores de archivo (`archivoId`, cadena de 24 caracteres hexadecimales), sin repetidos. Cada uno debe existir en el módulo de archivos, ser del `sub` del token, tener `uso = solicitud` y estar en estado `listo` (confirmado, sin metadatos y moderado); si no, responde 422 `foto_no_valida` sin decir cuál condición falló y no guarda nada. Las fotos viven en el contenedor **privado** (TT-API-05): nunca se aceptan ni se devuelven direcciones públicas; las vistas devuelven `fotos: [{ id, url, venceEn }]` con enlaces de lectura de 5 minutos (versión reducida) emitidos por `IMediaApi` solo para quien tiene permiso según R-08.
 - **R-05:** `dia` es una fecha `YYYY-MM-DD` en la zona `America/Mexico_City`, de hoy a hoy + 5 días. `franja` es `manana`, `tarde` o `noche`.
 - **R-06:** Si la modalidad es `domicilio`, `direccion` es obligatoria (8 a 200 caracteres) y se guarda cifrada a nivel de campo (AES-256-GCM); si es `taller`, `direccion` no se acepta y su presencia responde 400. La dirección nunca se devuelve en listados ni en la vista del técnico antes de que sea elegido (spec 021).
-- **R-07:** Toda creación exige el encabezado `Idempotency-Key` (1 a 64 caracteres ASCII visibles, patrón `^[\x21-\x7E]{1,64}$`); si falta o no cumple, responde 400 `idempotency_key_requerida`. La clave es única por persona y no vence. La misma persona con la misma clave y el mismo cuerpo recibe 200 con la misma solicitud y `Idempotent-Replay: true`, sin crear otra; con la misma clave y un cuerpo distinto (se compara la huella SHA-256 del cuerpo normalizado, `idempotencyHash`), responde 422 `idempotency_key_conflicto` y no cambia nada.
+- **R-07:** La creación de una solicitud no usa `Idempotency-Key` por ahora (ver §15): cada petición válida crea una solicitud y responde 201.
 - **R-08:** `GET /api/v1/solicitudes/{id}` exige JWT. Responde la **vista del cliente** solo al cliente dueño (incluye la dirección descifrada). Responde la **vista del técnico** a un técnico activo que ya cotizó esa solicitud, o a un técnico activo con el oficio de la solicitud mientras esta sea cotizable (`enviada` o `cotizando`, no vencida); la vista del técnico trae oficio, colonia, descripción, fotos, día y franja, y **nunca** la dirección, el nombre ni el teléfono del cliente, ni siquiera después de ser elegido (después de elegir, el lugar se consulta en la visita, spec 022). Cualquier otra persona recibe 404 uniforme. Un `id` que no es `ObjectId` responde 400.
 - **R-09:** `GET /api/v1/solicitudes` devuelve solo las solicitudes del `sub` del token, de la más reciente a la más antigua (`creadoEn` descendente y `_id` descendente como desempate), con paginación por cursor (spec 002): `limit` de 1 a 50 (20 por omisión), `cursor` opaco (Base64url de `creadoEn` y `_id` de la última fila) y filtro opcional `estado` con uno de los valores de §6. La respuesta es `{ items, nextCursor }`; `nextCursor` es `null` en la última página. `limit` o `estado` fuera de rango responde 422 con `errors`; un cursor que no se puede decodificar responde 400 `cursor_invalido`. No se cachea.
 - **R-10:** `POST /api/v1/solicitudes/{id}/cotizaciones` exige JWT de técnico y cuerpo `{ tipoPrecio, precio, precioMin?, precioMax?, dia, hora, nota? }`; responde 201 con la cotización en estado `enviada`.
@@ -48,7 +47,7 @@ Que una persona describa su problema con fotos y reciba cotizaciones de técnico
 - **R-14:** El servidor calcula el `tope`: para `fijo`, `precio + 10 %`; para `rango`, `precioMax + 20 %` en electricidad y `+ 25 %` en plomería y mecánica; para `visita`, el mismo `precio`. El porcentaje, la cuota máxima de visita (250) y el piso de 100 pesos salen de configuración; el cliente no los envía. `requiereAprobacion` es verdadero solo si la diferencia entre el tope y el precio base es de 100 pesos o más.
 - **R-15:** `dia` de la cotización va de la fecha de la solicitud a esa fecha + 7 días; `hora` es `HH:mm` de 00:00 a 23:59. `nota` es opcional, de hasta 300 caracteres, y pasa por moderación.
 - **R-16:** La primera cotización de una solicitud mueve la solicitud de `enviada` a `cotizando` en una sola operación condicionada al estado; si otra cotización gana la carrera, la solicitud queda en `cotizando` una sola vez y se emite un solo evento.
-- **R-17:** Toda cotización exige `Idempotency-Key`; repetirla devuelve la misma cotización con `Idempotent-Replay: true`. La clave es única por técnico y solicitud.
+- **R-17:** La cotización no usa `Idempotency-Key` por ahora (ver §15). El índice único `{ solicitudId, tecnicoId }` ya impide dos cotizaciones del mismo técnico en la misma solicitud: la segunda responde 409 `cotizacion_duplicada` (R-12).
 - **R-18:** Los listados y los detalles responden `Cache-Control: private, no-store`: son datos personales que cambian al crear. Las validaciones de oficios y colonias sí usan la caché de catálogo (24 h).
 - **R-19:** Los errores usan ProblemDetails con `correlationId`, `traceId` y, cuando hay regla de negocio, `code` (convención de errores de §5). Las respuestas 429 llevan `Retry-After` (spec 009). Los registros no incluyen descripción, dirección, identificadores de fotos, enlaces firmados, nombre ni celular.
 - **R-20:** Una solicitud admite como máximo 5 cotizaciones vivas (`enviada` o `aceptada`); la sexta responde 409 `cupo_de_cotizaciones_lleno`. El conteo y la inserción se hacen en la misma transacción que R-16, para que dos técnicos simultáneos no pasen de 5.
@@ -58,7 +57,6 @@ Que una persona describa su problema con fotos y reciba cotizaciones de técnico
 ## 4. Criterios de aceptación
 - **CA-01:** Dado un cliente con sesión, cuando crea una solicitud válida, entonces responde 201, queda en `enviada`, vence en 48 h y hay un `SolicitudCreada` en el buzón.
 - **CA-02:** Dada una solicitud sin fotos, con 6 fotos, con fotos repetidas o con descripción de 7 caracteres, cuando se crea, entonces responde 422 con `errors` por campo y no guarda nada.
-- **CA-03:** Dada la misma `Idempotency-Key` enviada dos veces, cuando llega la segunda, entonces existe una sola solicitud, la respuesta es la misma y lleva `Idempotent-Replay: true`.
 - **CA-04:** Dado un oficio inactivo o una colonia que no existe, cuando se crea, entonces responde 422 y no guarda nada.
 - **CA-05:** Dada una solicitud de modalidad taller con dirección, cuando se crea, entonces responde 422 `direccion_no_aplica`; dada una de domicilio sin dirección, responde 422 con `errors.direccion`.
 - **CA-06:** Dado un técnico con el oficio de la solicitud, cuando envía una cotización válida, entonces responde 201, la solicitud pasa a `cotizando`, se emite `CotizacionEnviada` y el cliente recibe el aviso por evento.
@@ -75,7 +73,6 @@ Que una persona describa su problema con fotos y reciba cotizaciones de técnico
 - **CA-17:** Dado el registro de una creación o cotización, cuando se inspecciona, entonces no contiene descripción, dirección, identificadores de fotos, enlaces firmados ni nombre.
 - **CA-18:** Dada una foto que no existe, que es de otra persona, que tiene otro `uso` o que no está `listo`, cuando se crea la solicitud, entonces responde 422 `foto_no_valida` sin decir cuál y no guarda nada.
 - **CA-19:** Dada una solicitud con 5 cotizaciones vivas, cuando un sexto técnico cotiza (también si dos lo intentan a la vez con 4), entonces responde 409 `cupo_de_cotizaciones_lleno` y nunca hay más de 5.
-- **CA-20:** Dada una `Idempotency-Key` ya usada con otro cuerpo, cuando se crea la solicitud o la cotización, entonces responde 422 `idempotency_key_conflicto`; sin el encabezado o con más de 64 caracteres, responde 400 `idempotency_key_requerida`.
 - **CA-21:** Dado un cursor alterado o un `limit` de 0 o 51, cuando se pide la lista, entonces responde 400 `cursor_invalido` o 422 con `errors.limit`, respectivamente.
 - **CA-22:** Dado un cuerpo JSON de más de 8 KB, cuando se envía a cualquier `POST` de esta spec, entonces responde 413 y no llega al servicio.
 
@@ -85,7 +82,6 @@ Que una persona describa su problema con fotos y reciba cotizaciones de técnico
 |---|---|
 | CA-01 | `Spec020SolicitudesTests.Crea_Solicitud_Valida_CA_020_01` |
 | CA-02 | `Spec020ValidacionTests.Rechaza_Fotos_Y_Descripcion_CA_020_02` |
-| CA-03 | `Spec020SolicitudesTests.Idempotencia_De_Creacion_CA_020_03` |
 | CA-04 | `Spec020ValidacionTests.Rechaza_Catalogo_Invalido_CA_020_04` |
 | CA-05 | `Spec020ValidacionTests.Rechaza_Direccion_En_Taller_CA_020_05` |
 | CA-06 | `Spec020CotizacionesTests.Envia_Cotizacion_CA_020_06` |
@@ -102,19 +98,18 @@ Que una persona describa su problema con fotos y reciba cotizaciones de técnico
 | CA-17 | `Spec020RegistrosTests.No_Registra_Datos_Personales_CA_020_17` |
 | CA-18 | `Spec020FotosTests.Rechaza_Foto_No_Valida_CA_020_18` |
 | CA-19 | `Spec020ConcurrenciaTests.Cupo_De_Cinco_Cotizaciones_CA_020_19` |
-| CA-20 | `Spec020IdempotenciaTests.Clave_Conflicto_O_Ausente_CA_020_20` |
 | CA-21 | `Spec020ListadoTests.Cursor_Y_Limite_Invalidos_CA_020_21` |
 | CA-22 | `Spec020SeguridadTests.Cuerpo_Demasiado_Grande_CA_020_22` |
 
 ## 5. Contrato
 | Método y ruta | Quién | Cuerpo / consulta | Respuestas |
 |---|---|---|---|
-| `POST /api/v1/solicitudes` | persona | `{ oficioClave, descripcion, fotos[] (archivoId), dia, franja, coloniaId, direccion? }` + `Idempotency-Key` | 201 (solicitud) con `Location`, 200 repetida (`Idempotent-Replay: true`), 400, 401, 413, 422, 429, 503 |
+| `POST /api/v1/solicitudes` | persona | `{ oficioClave, descripcion, fotos[] (archivoId), dia, franja, coloniaId, direccion? }` | 201 (solicitud) con `Location`, 400, 401, 413, 422, 429, 503 |
 | `GET /api/v1/solicitudes` | persona (dueña) | `cursor?`, `limit?` (1–50, 20), `estado?` | 200 `{ items: SolicitudResumen[], nextCursor }`, 400 (`cursor_invalido`), 401, 422, 429 |
 | `GET /api/v1/solicitudes/{id}` | dueña, técnico del oficio mientras sea cotizable o técnico que cotizó | — | 200 (vista según rol), 400 (id mal formado), 401, 404, 429 |
-| `POST /api/v1/solicitudes/{id}/cotizaciones` | técnico | `{ tipoPrecio, precio?, precioMin?, precioMax?, dia, hora, nota? }` + `Idempotency-Key` | 201 (cotización), 200 repetida (`Idempotent-Replay: true`), 400, 401, 403, 404, 409, 413, 422, 429, 503 |
+| `POST /api/v1/solicitudes/{id}/cotizaciones` | técnico | `{ tipoPrecio, precio?, precioMin?, precioMax?, dia, hora, nota? }` | 201 (cotización), 400, 401, 403, 404, 409, 413, 422, 429, 503 |
 
-**Convención de errores (común a las specs 020 a 026):** 400 = ruta, encabezado o cursor mal formado (`ObjectId` inválido, `idempotency_key_requerida`, `cursor_invalido`); 401 = sin sesión válida; 403 = rol equivocado (`no_es_tecnico`); 404 = recurso inexistente o ajeno, sin distinguir; 409 = estado o conflicto (con `code`); 413 = cuerpo mayor al límite; 422 = cuerpo o consulta con formato inválido (`errors` por campo, filtro de validación de `docs/MIDDLEWARES.md`) o regla de contenido (con `code`); 429 = límite, con `Retry-After`; 503 = dependencia caída, se falla cerrado. El código de negocio viaja en la extensión `code` del ProblemDetails.
+**Convención de errores (común a las specs 020 a 026):** 400 = ruta, encabezado o cursor mal formado (`ObjectId` inválido, `cursor_invalido`); 401 = sin sesión válida; 403 = rol equivocado (`no_es_tecnico`); 404 = recurso inexistente o ajeno, sin distinguir; 409 = estado o conflicto (con `code`); 413 = cuerpo mayor al límite; 422 = cuerpo o consulta con formato inválido (`errors` por campo, filtro de validación de `docs/MIDDLEWARES.md`) o regla de contenido (con `code`); 429 = límite, con `Retry-After`; 503 = dependencia caída, se falla cerrado. El código de negocio viaja en la extensión `code` del ProblemDetails.
 
 **Cuerpos de respuesta**
 - `SolicitudResumen` (lista de `GET /solicitudes`): la misma forma sin `descripcion` ni `direccion`, con `visitaId?` (presente cuando la solicitud tiene visita; «Ver visita» de frontend 020, *decisión automática, revisar*).
@@ -122,9 +117,9 @@ Que una persona describa su problema con fotos y reciba cotizaciones de técnico
 - Resumen: `{ id, estado, oficioNombre, coloniaNombre, dia, franja, totalFotos, totalCotizaciones, venceEn, creadoEn }` (sin enlaces de fotos ni dirección).
 - Cotización: `{ id, solicitudId, estado, tipoPrecio, precio, precioMin?, precioMax?, tope, requiereAprobacion, dia, hora, nota?, creadoEn }`.
 
-**Códigos de error:** `oficio_no_valido` (422), `colonia_no_encontrada` (422), `direccion_no_aplica` (422), `foto_no_valida` (422), `contenido_rechazado` (422), `moderacion_no_disponible` (503), `no_es_tecnico` (403), `cotizacion_duplicada` (409), `solicitud_no_cotizable` (409), `cupo_de_cotizaciones_lleno` (409), `idempotency_key_requerida` (400), `idempotency_key_conflicto` (422), `cursor_invalido` (400), `limite_moderacion` (429, cuota diaria de moderación de la spec 031, R-13).
+**Códigos de error:** `oficio_no_valido` (422), `colonia_no_encontrada` (422), `direccion_no_aplica` (422), `foto_no_valida` (422), `contenido_rechazado` (422), `moderacion_no_disponible` (503), `no_es_tecnico` (403), `cotizacion_duplicada` (409), `solicitud_no_cotizable` (409), `cupo_de_cotizaciones_lleno` (409), `cursor_invalido` (400), `limite_moderacion` (429, cuota diaria de moderación de la spec 031, R-13).
 
-**Límites:** `Idempotency-Key` de 1 a 64 caracteres; cuerpo de 8 KB; `descripcion` 500; `nota` 300; `direccion` 200; 5 fotos; montos 200 000; 5 cotizaciones vivas por solicitud; 10 solicitudes por hora por persona; 3 cotizaciones por minuto por técnico (además del límite global y del de usuario del gateway; se registran en `docs/rate-limit-matrix.md`).
+**Límites:** cuerpo de 8 KB; `descripcion` 500; `nota` 300; `direccion` 200; 5 fotos; montos 200 000; 5 cotizaciones vivas por solicitud; 10 solicitudes por hora por persona; 3 cotizaciones por minuto por técnico (además del límite global y del de usuario del gateway; se registran en `docs/rate-limit-matrix.md`).
 
 **Caché:** ninguna respuesta de esta spec se cachea (`Cache-Control: private, no-store`, sin `ETag`); los enlaces de fotos vencen a los 5 minutos y la app los vuelve a pedir con el detalle.
 
@@ -143,10 +138,9 @@ Que una persona describa su problema con fotos y reciba cotizaciones de técnico
 | `direccionCifrada` | string? | AES-256-GCM; solo domicilio |
 | `estado` | string | `enviada`, `cotizando`, `cita_confirmada`, `terminada`, `calificada`, `cancelada`, `vencida` |
 | `cotizacionElegidaId` | ObjectId? | la escribe la spec 021 |
-| `idempotencyKey`, `idempotencyHash` | string | clave única por `clienteId` y huella SHA-256 del cuerpo |
 | `venceEn`, `creadoEn`, `actualizadoEn` | date | UTC |
 
-Índices: `{ clienteId: 1, creadoEn: -1 }`; `{ clienteId: 1, idempotencyKey: 1 }` único y parcial; `{ estado: 1, venceEn: 1 }` (para HU-028); `{ oficioClave: 1, estado: 1 }`.
+Índices: `{ clienteId: 1, creadoEn: -1 }`; `{ estado: 1, venceEn: 1 }` (para HU-028); `{ oficioClave: 1, estado: 1 }`.
 
 **`cotizaciones`**
 | Campo | Tipo | Nota |
@@ -160,10 +154,9 @@ Que una persona describa su problema con fotos y reciba cotizaciones de técnico
 | `requiereAprobacion` | bool | calculado |
 | `dia`, `hora`, `nota` | string | `nota` ≤ 300 |
 | `estado` | string | `enviada`, `aceptada`, `rechazada`, `retirada` |
-| `idempotencyKey`, `idempotencyHash` | string | clave única por técnico y solicitud, y huella del cuerpo |
 | `creadoEn`, `actualizadoEn` | date | UTC |
 
-Índices: `{ solicitudId: 1, tecnicoId: 1 }` único; `{ solicitudId: 1, estado: 1, creadoEn: 1 }`; `{ tecnicoUsuarioId: 1, creadoEn: -1 }`; `{ tecnicoUsuarioId: 1, solicitudId: 1, idempotencyKey: 1 }` único y parcial.
+Índices: `{ solicitudId: 1, tecnicoId: 1 }` único; `{ solicitudId: 1, estado: 1, creadoEn: 1 }`; `{ tecnicoUsuarioId: 1, creadoEn: -1 }`.
 
 El script `db/` de esta spec crea las colecciones y los índices; no borra ni cambia las existentes.
 
@@ -193,14 +186,13 @@ El script `db/` de esta spec crea las colecciones y los índices; no borra ni ca
 | Ver o cotizar solicitudes ajenas | Todo se filtra por el `sub` del token; la solicitud ajena responde 404 | CA-12, CA-09 |
 | Suplantar a un técnico | El técnico se resuelve por `sub` en `tecnicos`; no se recibe su identificador | CA-16 |
 | Manipular el precio o el tope | El tope y el porcentaje se calculan en el servidor; el cliente no los envía | CA-11 |
-| Doble envío por reintento | `Idempotency-Key` con índice único y respuesta repetida | CA-03, CA-07 |
+| Doble envío por reintento de la red | Sin clave de idempotencia por ahora (riesgo aceptado, §15); el límite de 10 solicitudes por hora acota el daño; en las cotizaciones, el índice único y la 409 | CA-07 |
 | Fuga de la dirección | Se guarda cifrada y solo se descifra para el dueño o el técnico elegido | CA-13 |
 | Contenido inapropiado | Moderación previa que falla cerrada | CA-15 |
 | Usar fotos ajenas o sin moderar (IDOR sobre archivos) | Solo `archivoId` del mismo `sub`, `uso = solicitud` y `listo`; error uniforme | CA-18 |
 | Fuga de las fotos (pueden mostrar el interior de la casa) | Contenedor privado, enlaces de lectura de 5 minutos solo para dueño y técnicos con permiso, nunca CDN | CA-13, CA-18 |
 | Enumerar solicitudes probando identificadores | 404 uniforme, límite por usuario y vista del técnico sin datos de contacto | CA-12 |
 | Saturar una solicitud con cotizaciones | Cupo de 5 cotizaciones vivas en transacción | CA-19 |
-| Reutilizar una clave de idempotencia con otro contenido | Huella del cuerpo y 422 `idempotency_key_conflicto` | CA-20 |
 | Fuerza bruta o abuso de creación | Límite global y por usuario, más 3 cotizaciones por minuto | CA-16 |
 | Datos personales en registros | Filtro de datos personales; no se registran cuerpos | CA-17 |
 | Inflar la petición con muchas fotos o textos enormes | Tope de 5 fotos, 500 caracteres y 8 KB por petición (413) | CA-02, CA-22 |
@@ -208,7 +200,7 @@ El script `db/` de esta spec crea las colecciones y los índices; no borra ni ca
 ## 10. Plan de pruebas
 | Tipo | ¿Aplica? | Motivo |
 |---|---|---|
-| Unitarias | Sí | Validadores, cálculo del tope, transición de estados e idempotencia |
+| Unitarias | Sí | Validadores, cálculo del tope y transición de estados |
 | Integración | Sí | MongoDB y Redis reales con `Testcontainers`: crear, cotizar, listar y leer el buzón |
 | Seguridad negativa | Sí | Solicitud ajena, técnico de otro oficio, sin token, montos y fotos hostiles |
 | Contrato | Sí | OpenAPI del servicio de Mercado regenerado y comparado |
@@ -255,7 +247,6 @@ El script `db/` de esta spec crea las colecciones y los índices; no borra ni ca
 
 ## 13. Decisiones
 - **Un módulo, dos recursos:** `solicitudes` y `cotizaciones` viven juntos porque comparten estado y transacción; separarlos obligaría a una llamada entre módulos para cada cotización.
-- **Idempotencia en la base, no en Redis:** la clave única por persona es la garantía; Redis se caería y la promesa de “una sola solicitud” no puede depender de la caché.
 - **Tope en el servidor:** el porcentaje y la cuota de visita son configuración, no datos del cliente; así no se puede inflar el precio a voluntad.
 - **Dirección cifrada:** es un dato personal de alto riesgo; se guarda con la misma protección que la celular de Identity.
 - **Sin caché de solicitudes ni cotizaciones:** cambian al crear y una lista cacheada mostraría datos viejos (constitución §2.9 y spec 010).
@@ -265,12 +256,12 @@ El script `db/` de esta spec crea las colecciones y los índices; no borra ni ca
 Se tomaron de noche, con el criterio de la constitución; quien apruebe puede cambiarlas antes de firmar.
 
 1. **Se agrega `GET /api/v1/solicitudes`.** El insumo no lo lista, pero la app necesita la lista de “Actividad” y la spec 010 exige paginación. Alternativa: dejarla para otra spec y bloquear la pantalla.
-2. **`Idempotency-Key` entra ahora.** La spec 010 la dejó fuera de su alcance y HU-024 y HU-031 la exigen. Se define como encabezado obligatorio, no como campo del cuerpo; alternativa: un `idempotencyKey` dentro del cuerpo, que se confundiría con los datos de la solicitud.
+2. **`Idempotency-Key` queda fuera por ahora (decisión del 2026-11-10).** La spec 010 la dejó fuera de su alcance y aquí se retira de los requisitos de creación; ver §15.
 3. **La cotización se permite a cualquier técnico activo con el oficio, aunque las oleadas no existan.** Sin HU-025 no hay lista de solicitudes enviadas; restringirla más dejaría la cadena de la demo sin cotizaciones. Queda como deuda para la spec de oleadas.
 4. **422 para catálogo inválido y 400 para formato.** Es la misma separación de la spec 017 (colonia inexistente = 422); alternativa: 400 para todo, que mezcla “no existe” con “está mal escrito”.
 5. **La dirección se guarda en `solicitudes`, cifrada, en vez de pedirla a Identity.** El modelo del proyecto dice “colonia o dirección” en la solicitud y así Mercado no depende de una interfaz de Identidad que aún no existe. Alternativa: consultar `direcciones` de Identity por servicio, que agrega una llamada entre servicios y un permiso nuevo.
 6. **El teléfono del cliente no se revela al técnico en esta etapa.** La conversación va por el chat (spec 026); el teléfono del técnico sí se revela al cliente al elegir (spec 021). Alternativa: exponer el celular cifrado de Identity con una interfaz entre servicios, que se pospone.
-7. **La respuesta repetida de una creación es 200, no 201.** Distingue “la creé ahora” de “ya existía” sin un cuerpo distinto; el encabezado `Idempotent-Replay` lo hace explícito.
+7. **Una creación repetida crea otra solicitud.** Sin `Idempotency-Key` no hay respuesta repetida: cada petición válida responde 201 (ver §15).
 8. **La cuota de visita no se resta aquí.** El descuento de la visita al contratar es una regla de cobro (HU posterior); esta spec solo guarda el precio de la visita.
 
 **Agregadas en la revisión del 9 de noviembre**
@@ -280,7 +271,7 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 11. **Cupo de 5 cotizaciones vivas por solicitud.** La comparación (spec 021) muestra hasta 5 y no pagina; sin cupo habría cotizaciones invisibles. Alternativa: paginar la comparación, que la pantalla no contempla.
 12. **Convención de errores común (400, 422, 409) alineada con el filtro de validación existente (422 con `errors`).** El borrador usaba 400 para formato; el código vigente y `GET /colonias/*` responden 422. Se unifican las specs 020 a 026. Alternativa: 400 para formato como en la spec 017, que obligaría a cambiar el filtro común.
 13. **Códigos de negocio en español** (`solicitud_no_cotizable`), aunque las specs 015 a 018 usan inglés (`account_conflict`). Las pantallas de frontend 015 a 018 ya se escriben con estos nombres. Alternativa: pasarlos al inglés; se anota como hallazgo para que lo decida el equipo.
-14. **La clave de idempotencia no vence y se compara con la huella del cuerpo.** El «dentro de 24 h» del borrador no tenía mecanismo de vencimiento y dejaba ambiguo qué pasaba después. Alternativa: índice TTL de 24 h en una colección de claves, con una colección más.
+14. **Retirada:** ya no hay clave de idempotencia que vencer ni huella del cuerpo; ver la decisión 2.
 
 ## 15. Riesgos y dudas abiertas
 - **Las oleadas (HU-025) no existen:** cualquier técnico con el oficio puede cotizar si conoce el identificador. El riesgo se acota con la autorización por oficio y el límite de 3 por minuto, pero no es el reparto previsto.
@@ -290,7 +281,7 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **El tope depende de configuración que aún no está aprobada:** 20 %, 25 %, 10 %, 250 y 100 salen de la descripción del proyecto; si el equipo cambia las reglas de precio, se cambia la configuración y no el código.
 - **Los técnicos de la demo son semillas:** sin app de técnico, las cotizaciones se cargan con `db/`; el contrato es el mismo que usará la app.
 - **El módulo de archivos no está en este repositorio:** TT-API-05 (KNOCK-42, Listo) vive en `legacy/src/Knock.Api/Modules/Media` y la fase de Blob y enlaces de la spec 013 (KNOCK-208) sigue en revisión. Sin `IMediaApi` en Mercado no se puede crear una solicitud con fotos: es la dependencia que bloquea la cadena y la primera tarea del plan.
-- **Encabezado `Idempotent-Replay` no expuesto por CORS:** `docs/security-headers.md` solo expone `X-Correlation-Id`, `Retry-After` y `ETag`; para el panel web hay que agregarlo (dependencia: la política CORS de la spec 009 y la spec de encabezados 035 deben exponerlo; anotado como hallazgo).
+- **`Idempotency-Key` retirada por ahora (decisión del 2026-11-10).** Se quitó de los requisitos de creación de solicitud y de cotización. Sin ella, un reintento de red o un doble toque puede crear dos solicitudes; las cotizaciones del mismo técnico en la misma solicitud siguen acotadas por el índice único `{ solicitudId, tecnicoId }` y la respuesta 409 `cotizacion_duplicada`. Mitigaciones: la app desactiva el botón mientras envía, el límite de 10 solicitudes por hora por persona acota el daño y, si no llegó la respuesta, la app consulta `GET /api/v1/solicitudes` antes de reintentar. Se retoma con una spec propia si se decide volver a exigirla.
 - **Etiquetas de Jira:** KNOCK-74 tiene `servicio-mensajeria`, pero la cotización vive en Mercado (módulo Requests) por compartir transacción con la solicitud; conviene corregir la etiqueta.
 - **Transacciones de DocumentDB:** la creación de la cotización y el cambio de estado de la solicitud usan una transacción; si la instancia no las admite, todo falla (el mismo riesgo que la spec 015).
 

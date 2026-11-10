@@ -29,9 +29,9 @@ Que solo sigan abiertas las necesidades vigentes: el cliente puede cancelar una 
 
 ## 3. Requisitos
 - **R-01:** Los estados de la solicitud son los de la spec 020: `enviada`, `cotizando`, `cita_confirmada`, `terminada`, `calificada`, `cancelada` y `vencida`. Esta spec solo agrega dos transiciones: `enviada | cotizando → cancelada` (por el cliente) y `enviada | cotizando → vencida` (por el sistema). `cancelada` y `vencida` son finales: ninguna operación las reabre.
-- **R-02:** `POST /api/v1/solicitudes/{id}/cancelar` exige JWT del cliente dueño, el encabezado `Idempotency-Key` (1 a 64 caracteres visibles) y un cuerpo opcional `{ motivo? }`, con `motivo` en `ya_no_lo_necesito`, `lo_resolvi_por_otro_medio`, `tarda_mucho` u `otro`. Un `id` mal formado responde 400; una solicitud inexistente o ajena, 404.
-- **R-03:** Si la solicitud está en `enviada` o `cotizando`, la cancelación se hace en una sola transacción: la solicitud pasa a `cancelada` solo si sigue en uno de esos estados (actualización condicionada), con `canceladaEn`, `motivoCancelacion` y `cancelacionKey`; sus cotizaciones `enviada` pasan a `rechazada` con `motivoRechazo = solicitud_cancelada`; sus envíos `activo` o `cotizado` (spec 028) pasan a `cerrado` con `cerradoMotivo = solicitud_cancelada`; y se escribe `SolicitudCancelada` en el buzón. Responde 200 `{ id, estado: "cancelada", canceladaEn, motivo }`.
-- **R-04:** Cancelar es idempotente: si la solicitud ya está `cancelada`, responde 200 con el mismo cuerpo de la primera cancelación, con `Idempotent-Replay: true`, sin escribir nada ni emitir otro evento, sea cual sea la clave.
+- **R-02:** `POST /api/v1/solicitudes/{id}/cancelar` exige JWT del cliente dueño y un cuerpo opcional `{ motivo? }`, con `motivo` en `ya_no_lo_necesito`, `lo_resolvi_por_otro_medio`, `tarda_mucho` u `otro`. Un `id` mal formado responde 400; una solicitud inexistente o ajena, 404.
+- **R-03:** Si la solicitud está en `enviada` o `cotizando`, la cancelación se hace en una sola transacción: la solicitud pasa a `cancelada` solo si sigue en uno de esos estados (actualización condicionada), con `canceladaEn` y `motivoCancelacion`; sus cotizaciones `enviada` pasan a `rechazada` con `motivoRechazo = solicitud_cancelada`; sus envíos `activo` o `cotizado` (spec 028) pasan a `cerrado` con `cerradoMotivo = solicitud_cancelada`; y se escribe `SolicitudCancelada` en el buzón. Responde 200 `{ id, estado: "cancelada", canceladaEn, motivo }`.
+- **R-04:** Cancelar es idempotente: si la solicitud ya está `cancelada`, responde 200 con el mismo cuerpo de la primera cancelación, sin escribir nada ni emitir otro evento.
 - **R-05:** Si la solicitud tiene cita (`cita_confirmada`, `terminada` o `calificada`), responde 409 `solicitud_con_cita` con el detalle «Tu solicitud ya tiene una cita confirmada. Para cambiarla usa reprogramar o reportar.» y no cambia nada. Si está `vencida`, responde 409 `solicitud_vencida`.
 - **R-06:** Una cancelación y una elección (spec 021) simultáneas de la misma solicitud: gana la primera transacción que confirma. Si gana la elección, la cancelación responde 409 `solicitud_con_cita`; si gana la cancelación, la elección responde 409 `solicitud_cancelada` (código de la spec 021).
 - **R-07:** `SolicitudCancelada` lleva `{ solicitudId, tecnicosAvisar: [tecnicoId] }` con los técnicos que tenían una cotización `enviada` al cancelar (los que «cotizaron»). Los técnicos con envío sin cotizar no reciben aviso: la solicitud solo desaparece de su bandeja. El evento no lleva motivo, descripción, dirección ni nombres.
@@ -40,7 +40,7 @@ Que solo sigan abiertas las necesidades vigentes: el cliente puede cancelar una 
 - **R-10:** **Barrido de respaldo.** Cada `Solicitudes:MinutosBarrido` (10 por omisión) el ejecutor corre la tarea recurrente `BarrerVencidas`, que busca con el índice `{ estado: 1, venceEn: 1 }` hasta 100 solicitudes en `enviada` o `cotizando` con `venceEn <= ahora` y les aplica la misma lógica de R-09. Cubre las solicitudes creadas antes de esta spec y cualquier tarea perdida. La tarea recurrente se reserva como cualquier otra, así que una sola réplica la ejecuta a la vez.
 - **R-11:** Con dos o más réplicas, una solicitud vence una sola vez y emite un solo `SolicitudVencida`: la actualización condicionada es la garantía; la reserva de la tarea solo evita trabajo repetido.
 - **R-12:** Las operaciones sobre una solicitud vencida o cancelada responden con los códigos ya definidos: cotizar 409 `solicitud_no_cotizable` (spec 020), elegir 409 `solicitud_vencida` o `solicitud_cancelada` (spec 021), descartar 404 porque el envío ya está cerrado (spec 028). Mientras la tarea no corre, `venceEn` ya bloquea cotizar y elegir (specs 020 y 021).
-- **R-13:** **Volver a pedir.** El cliente dueño sigue viendo el detalle completo de su solicitud `cancelada` o `vencida` con `GET /api/v1/solicitudes/{id}` (spec 020), incluida su dirección, con el campo nuevo `puedeVolverAPedir: true` (falso en cualquier otro estado). La lista `GET /api/v1/solicitudes?estado=vencida` y `?estado=cancelada` las devuelve. Volver a pedir es crear una solicitud nueva con otra `Idempotency-Key`; el servidor no copia ni reabre la anterior. Los técnicos ya no ven el detalle de una solicitud cerrada en la que no fueron elegidos (404).
+- **R-13:** **Volver a pedir.** El cliente dueño sigue viendo el detalle completo de su solicitud `cancelada` o `vencida` con `GET /api/v1/solicitudes/{id}` (spec 020), incluida su dirección, con el campo nuevo `puedeVolverAPedir: true` (falso en cualquier otro estado). La lista `GET /api/v1/solicitudes?estado=vencida` y `?estado=cancelada` las devuelve. Volver a pedir es crear una solicitud nueva; el servidor no copia ni reabre la anterior. Los técnicos ya no ven el detalle de una solicitud cerrada en la que no fueron elegidos (404).
 - **R-14:** Límite de 10 cancelaciones por hora por persona, además de los del gateway; al pasarse, 429 con `Retry-After`.
 - **R-15:** Las respuestas de la cancelación llevan `Cache-Control: no-store`. Los errores usan ProblemDetails con `correlationId` y `traceId`. Los registros llevan solo conteos (canceladas, vencidas por tarea, vencidas por barrido) y la latencia; nunca el motivo, el `sub` ni la descripción.
 
@@ -48,7 +48,7 @@ Que solo sigan abiertas las necesidades vigentes: el cliente puede cancelar una 
 - **CA-01:** Dada una solicitud `cotizando` con dos cotizaciones `enviada` y tres envíos, cuando el dueño cancela, entonces responde 200 con `Cache-Control: no-store`, la solicitud queda `cancelada`, las dos cotizaciones `rechazada` con `solicitud_cancelada`, los envíos `cerrado` y hay un `SolicitudCancelada` con los dos técnicos que cotizaron.
 - **CA-02:** Dada una solicitud con cita confirmada, terminada o calificada, cuando el dueño intenta cancelar, entonces responde 409 `solicitud_con_cita` con la explicación y no cambia nada.
 - **CA-03:** Dada una solicitud de otra persona o inexistente, cuando se intenta cancelar, entonces responde 404.
-- **CA-04:** Dada una solicitud ya cancelada, cuando se cancela otra vez (con la misma clave o con otra), entonces responde 200 con el mismo cuerpo, `Idempotent-Replay: true` y no hay un segundo evento.
+- **CA-04:** Dada una solicitud ya cancelada, cuando se cancela otra vez, entonces responde 200 con el mismo cuerpo y no hay un segundo evento.
 - **CA-05:** Dada una cancelación y una elección simultáneas, cuando terminan, entonces exactamente una gana y la otra responde 409 con el código de R-06.
 - **CA-06:** Dada una solicitud `enviada` o `cotizando` que cumple 48 horas sin cita, cuando corre `VencerSolicitud`, entonces queda `vencida`, sus cotizaciones `enviada` pasan a `rechazada` con `solicitud_vencida`, sus envíos se cierran y hay un `SolicitudVencida` con el `clienteId`.
 - **CA-07:** Dada una solicitud que ya tiene cita, cuando llega la hora de `VencerSolicitud`, entonces no cambia y no hay evento.
@@ -56,7 +56,7 @@ Que solo sigan abiertas las necesidades vigentes: el cliente puede cancelar una 
 - **CA-09:** Dada una solicitud creada sin tarea de vencimiento y con `venceEn` pasado, cuando corre el barrido, entonces queda `vencida`; y dadas 150 solicitudes vencidas, cuando corre un barrido, entonces procesa 100 y el siguiente procesa las 50 restantes.
 - **CA-10:** Dada una solicitud vencida o cancelada, cuando el dueño pide su detalle, entonces responde 200 con descripción, fotos, oficio, colonia, franja, dirección y `puedeVolverAPedir: true`, y aparece en `GET /api/v1/solicitudes?estado=vencida` (o `cancelada`); y un técnico no elegido que pide el detalle recibe 404.
 - **CA-11:** Dada una solicitud vencida, cuando el dueño intenta cancelarla, entonces responde 409 `solicitud_vencida`; y cuando un técnico intenta cotizarla, 409 `solicitud_no_cotizable`.
-- **CA-12:** Dado un cuerpo con `motivo` fuera de la lista, un `id` mal formado o sin `Idempotency-Key`, cuando se cancela, entonces responde 400 y no cambia nada.
+- **CA-12:** Dado un cuerpo con `motivo` fuera de la lista o un `id` mal formado, cuando se cancela, entonces responde 400 y no cambia nada.
 - **CA-13:** Dada una petición sin token, cuando se cancela, entonces responde 401; y dadas 11 cancelaciones en una hora de la misma persona, cuando llega la 11, entonces responde 429 con `Retry-After`.
 - **CA-14:** Dado `Solicitudes:HorasVencimiento = 0` o `200`, cuando arranca el servicio, entonces falla; y con 24, una solicitud nueva tiene `venceEn = creadoEn + 24 h` y su tarea programada a esa hora.
 - **CA-15:** Dados los eventos y los registros de una cancelación y un vencimiento, cuando se inspeccionan, entonces no contienen motivo, descripción, dirección, nombres ni `sub` en texto libre.
@@ -84,7 +84,7 @@ Que solo sigan abiertas las necesidades vigentes: el cliente puede cancelar una 
 ## 5. Contrato
 | Método y ruta | Quién | Cuerpo | Respuestas |
 |---|---|---|---|
-| `POST /api/v1/solicitudes/{id}/cancelar` | cliente dueño | `{ motivo? }` + `Idempotency-Key` | 200 `{ id, estado, canceladaEn, motivo }` (con `Idempotent-Replay: true` si ya estaba cancelada), 400, 401, 404, 409, 429 |
+| `POST /api/v1/solicitudes/{id}/cancelar` | cliente dueño | `{ motivo? }` | 200 `{ id, estado, canceladaEn, motivo }` (el mismo cuerpo si ya estaba cancelada), 400, 401, 404, 409, 429 |
 | `GET /api/v1/solicitudes/{id}` (spec 020) | dueña | — | agrega `puedeVolverAPedir` |
 
 **Tabla de transiciones que agrega esta spec**
@@ -94,7 +94,7 @@ Que solo sigan abiertas las necesidades vigentes: el cliente puede cancelar una 
 | `enviada`, `cotizando` | `cancelada` | cliente dueño | sin cita |
 | `enviada`, `cotizando` | `vencida` | sistema | `venceEn <= ahora` y sin cita |
 
-**Códigos de error:** `solicitud_con_cita` (409, nuevo), `solicitud_vencida` (409, de la spec 021), `idempotency_key_requerida` (400). Errores de forma: 400 con `errors.motivo`.
+**Códigos de error:** `solicitud_con_cita` (409, nuevo), `solicitud_vencida` (409, de la spec 021). Errores de forma: 400 con `errors.motivo`.
 
 **Eventos (buzón de Mercado):** `SolicitudCancelada { solicitudId, tecnicosAvisar[] }`, `SolicitudVencida { solicitudId, clienteId, tecnicosAvisar[] }`. Tareas: `VencerSolicitud` (una por solicitud) y `BarrerVencidas` (recurrente).
 
@@ -106,7 +106,6 @@ Que solo sigan abiertas las necesidades vigentes: el cliente puede cancelar una 
 |---|---|---|
 | `canceladaEn` | date? | UTC |
 | `motivoCancelacion` | string? | uno de R-02; nunca se registra en logs |
-| `cancelacionKey` | string? | la primera `Idempotency-Key` |
 | `vencidaEn` | date? | UTC |
 
 Índices: se usa `{ estado: 1, venceEn: 1 }` (ya definido en la spec 020).
@@ -175,7 +174,7 @@ El script `db/` de esta spec no crea colecciones: solo comprueba que existan los
 - Cotizar o elegir una solicitud vencida.
 
 **Errores esperados**
-- 400 (`errors.motivo`, `idempotency_key_requerida`, id mal formado), 401, 404, 409 (`solicitud_con_cita`, `solicitud_vencida`), 429.
+- 400 (`errors.motivo`, id mal formado), 401, 404, 409 (`solicitud_con_cita`, `solicitud_vencida`), 429.
 
 **Casos límite**
 - Cancelación en el mismo segundo en que vence (gana la primera transacción; la otra no tiene efecto).
@@ -201,13 +200,14 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 
 1. **Las cotizaciones de una solicitud cerrada pasan a `rechazada` con un motivo, no a un estado nuevo `vencida`.** La ficha de HU-028 dice «sus cotizaciones también»; usar `rechazada` con `motivoRechazo` evita ampliar los estados de la spec 020. Alternativa: estado `vencida` en `cotizaciones`.
 2. **Solo se avisa a los técnicos que cotizaron.** Es lo que dice la ficha de HU-027; los que solo recibieron la solicitud dejan de verla en la bandeja. Alternativa: avisar a todos los envíos, que genera avisos sin valor.
-3. **`Idempotency-Key` obligatoria aunque cancelar es idempotente por naturaleza.** Mantiene la misma regla que las demás operaciones que cambian estado (specs 020 a 022). Alternativa: clave opcional.
+3. **Cancelar es idempotente por estado, sin clave.** Una segunda cancelación responde 200 con el mismo cuerpo y no repite el evento.
 4. **Motivo opcional y cerrado a una lista.** Sirve para métricas sin texto libre que haya que moderar. Alternativa: texto libre, que exigiría moderación (spec 031).
 5. **«Volver a pedir» no tiene ruta propia.** El detalle ya trae los datos y la creación ya existe; una ruta de «repetir» duplicaría la validación de la spec 020. Alternativa: `POST /solicitudes/{id}/repetir`.
 6. **Barrido cada 10 minutos de 100 en 100.** Con el volumen del piloto alcanza de sobra y acota la carga de cada pasada.
 7. **El plazo sale de configuración con rango de 1 a 168 horas.** La ficha pide «plazo configurable (48 h)»; el rango impide un valor que cierre todo al instante o nunca.
 
 ## 15. Riesgos y dudas abiertas
+- **`Idempotency-Key` retirada por ahora (decisión del 2026-11-10).** Se quitó de la cancelación, que ya es idempotente por estado. Se retoma con una spec propia si se decide volver a exigirla en las operaciones que cambian estado.
 - **Conflicto con la spec 020 (borrador):** el plazo deja de ser una constante (R-08), la creación programa `VencerSolicitud` en su transacción y el detalle agrega `puedeVolverAPedir`. Hay que reflejarlo en la 020.
 - **Conflicto con la spec 021 (borrador):** su `motivoRechazo` debe admitir `solicitud_cancelada` y `solicitud_vencida`; su elección ya responde `solicitud_cancelada` y `solicitud_vencida`, que se conservan.
 - **Depende del ejecutor de la spec 028:** si la 029 se implementa antes, el ejecutor se construye aquí (misma forma) y la 028 lo reutiliza.

@@ -35,7 +35,7 @@ Que una persona que se registra indique su zona con su ubicación o con su códi
 - **R-05:** `POST /api/v1/zonas/lista-espera` exige JWT y cuerpo `{ cp, municipio? }`. Responde 201 la primera vez y 200 al repetir el mismo `sub` con el mismo código postal, con el registro existente y `yaRegistrado: true`; no se duplica ni se modifica.
 - **R-06:** `cp` cumple la misma regla de cinco dígitos y responde 422 `errors.cp` si no. `municipio` es opcional, de 1 a 100 caracteres, letras (incluidas acentuadas y `ñ`), espacios, punto, guion y apóstrofo; cualquier otro carácter (dígitos, `<`, `>`, `$`, `{`, `}`, `;`, comillas, caracteres de control, CR/LF) o una longitud fuera del rango responde 422 `errors.municipio` sin repetir el valor y sin guardar nada.
 - **R-07:** La persona de la lista de espera es siempre la del `sub` del token; el cuerpo no acepta identificador de usuario. Un `usuarioId` enviado en el cuerpo se ignora.
-- **R-08:** La lista de espera no exige `Idempotency-Key`: es idempotente por el índice único `{ usuarioId: 1, cp: 1 }`, y la repetición responde 200 sin crear otro documento (excepción documentada al principio de idempotencia, decisión (f) del borrador anterior).
+- **R-08:** La lista de espera es idempotente por el índice único `{ usuarioId: 1, cp: 1 }`: la repetición responde 200 sin crear otro documento.
 - **R-09:** La lista de espera admite un código postal que no esté en el catálogo, porque su propósito es justamente ese; no se valida contra `colonias`. El `municipio` es opcional y no se deduce del catálogo cuando el código no existe.
 - **R-10:** El listado de colonias por código postal no se pagina: el conjunto está acotado por el catálogo (12 colonias en total y como máximo un puñado por código) y devolverlo entero evita una pantalla con cursor (excepción documentada al principio de paginación, decisión (e) del borrador anterior).
 - **R-11:** `listas_espera` no se cachea: liga a una persona con su código postal y es un dato personal (constitución §2.9 y spec 010). Sus lecturas y escrituras responden `Cache-Control: private, no-store`.
@@ -210,7 +210,7 @@ El script `db/` de esta spec crea la colección y sus índices de forma idempote
 - **Se conserva el contrato ya aprobado** (`/api/v1/zonas/cp/{cp}` y `/api/v1/zonas/lista-espera`) en vez de inventar rutas nuevas: el frontend 017 se escribe en paralelo y ya lo conoce; cambiarlo obligaría a dos contratos para lo mismo.
 - **Un módulo existente, no uno nuevo:** `Catalog` ya es dueño de `colonias`, de su caché y de la proyección; un módulo `Zonas` duplicaría el acceso a la misma colección.
 - **Cobertura por presencia del código postal:** es la regla aprobada (decisión (d) del borrador anterior) y no depende del campo `piloto`, que significa «tiene polígono» y no «está en cobertura».
-- **Idempotencia natural en la lista de espera:** un índice único hace innecesario el encabezado `Idempotency-Key` para un registro de un solo documento (decisión (f)).
+- **Idempotencia natural en la lista de espera:** un índice único basta para un registro de un solo documento.
 - **Sin eventos:** nada consume todavía el alta en la lista de espera; el aviso de cobertura es del panel y se especificará cuando exista.
 - **Caché negativa de 5 minutos:** protege a la base de códigos inventados sin dejar «fuera de cobertura» grabado 24 h cuando se abra una zona.
 

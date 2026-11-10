@@ -49,7 +49,7 @@ Que las imágenes públicas de Knock (foto de perfil y fotos de un trabajo termi
 - **R-16:** El componente `IEnlacesPrivados` emite enlaces de **lectura** para blobs de la cuenta privada: SAS de delegación de usuario con permiso `r` sobre un solo blob, solo HTTPS, 5 minutos, y con `Cache-Control: no-store` y `Content-Disposition: inline` forzados en la respuesta del almacenamiento. Solo lo llama código que ya autorizó al solicitante; recibe un `motivo` de una lista cerrada (`verificacion_revision`, `verificacion_dueno`) y deja un registro de acceso con el motivo, la fecha, el identificador interno del blob y la huella HMAC del `sub` de quien pidió. Nunca emite enlaces para la cuenta pública ni para `imagenes-cuarentena`.
 - **R-17:** Si el almacenamiento no responde, los dos endpoints responden 503 `almacenamiento_no_disponible` con `Retry-After`; `/health/ready` de Mercado **no** depende del almacenamiento, para que una falla de Blob no saque de rotación al resto de Mercado.
 - **R-18:** Los registros contienen solo códigos, tamaños, dimensiones, propósito y duraciones. Nunca contienen una SAS, una consulta de dirección, el `sub`, el nombre de un blob de cuarentena ni los bytes o metadatos de una imagen. Los errores usan ProblemDetails con `code`, `correlationId` y `traceId`.
-- **R-19:** El blob de cuarentena se borra al terminar cada confirmación (publicada, rechazada o inválida) y, como respaldo, una regla de ciclo de vida del contenedor `imagenes-cuarentena` borra todo blob con más de un día. Los documentos de `subidas_imagen` se eliminan solos a los 7 días de creados (índice TTL).
+- **R-19:** El blob de cuarentena se borra al terminar cada confirmación (publicada, rechazada o inválida) y, como respaldo, una regla de ciclo de vida del contenedor `imagenes-cuarentena` borra todo blob con más de un día. Los documentos de `subidas_imagen` en estado `pendiente`, `rechazada` o `invalida` se eliminan solos a los 7 días de creados (índice TTL sobre `expiraEn`); los de una subida `publicada` no vencen, porque permiten confirmar otra vez con el mismo resultado (R-12).
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dado un cuerpo válido con `proposito = trabajo`, cuando se pide un enlace, entonces responde 201 con una SAS de un solo blob de `imagenes-cuarentena`, permisos `cw`, solo HTTPS, que vence a los 5 minutos, y `Cache-Control: no-store`.
@@ -140,8 +140,9 @@ Que las imágenes públicas de Knock (foto de perfil y fotos de un trabajo termi
 | `url` | string? | solo en `publicada` |
 | `ancho`, `alto`, `bytes` | int? | solo en `publicada` |
 | `creadaEn`, `confirmarAntesDe` | fecha UTC | `confirmarAntesDe = creadaEn + 30 min` |
+| `expiraEn` | fecha UTC | `creadaEn + 7 días` en `pendiente`, `rechazada` e `invalida`; al publicar se fija a `9999-12-31T00:00:00Z` (no vence nunca) |
 
-**Índices:** `{ sub: 1, estado: 1, confirmarAntesDe: 1 }` para contar pendientes vigentes; TTL de 7 días sobre `creadaEn`. Script nuevo en `db/` con el siguiente número libre.
+**Índices:** `{ sub: 1, estado: 1, confirmarAntesDe: 1 }` para contar pendientes vigentes; índice TTL sobre `expiraEn` con `expireAfterSeconds: 0`, el mismo mecanismo que ya usa `sesiones.venceEn`. Se usa una fecha lejana en lugar de quitar el campo porque la documentación de Azure DocumentDB lista el TTL como soportado pero no describe qué pasa con los documentos sin el campo. Script nuevo en `db/` con el siguiente número libre.
 
 **Registro de acceso a privados:** colección `accesos_privados` (base `market`) con `{ motivo, blobId, subHmac, emitidoEn }`, solo inserción, TTL de 180 días. `subHmac` es HMAC-SHA256 del `sub` con la llave de búsqueda de Key Vault (spec 009, R-07). Si la spec 033 se aprueba, el registro del panel la complementa con la acción del panel; esta colección cubre a todo emisor.
 
@@ -270,7 +271,7 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 
 ## 15. Riesgos y dudas abiertas
 - **Riesgo académico:** el punto 15c pide CDN y no la hay (ADR-007). Se explica con el costo.
-- **Conflicto con la spec 013 (aprobada):** su R-04 dice que las imágenes públicas «se sirven por la CDN»; con el ADR-007 se sirven desde Blob. Se debe enmendar la 013 o aceptar que el ADR la precisa.
+- **Conflicto con la spec 013 (aprobada):** su R-04 decía que las imágenes públicas «se sirven por la CDN». Se resuelve con la enmienda de la 013 (sin CDN de pago, dos cuentas, 5 MB, WebP, 503 reintentable y vencimiento solo para lo pendiente o rechazado), pendiente de su nueva aprobación.
 - **El ADR-007 sigue como propuesta:** si el líder lo rechaza, cambian R-01 a R-03 y CA-23.
 - **Imágenes huérfanas:** una imagen publicada que nadie usa se queda para siempre; hace falta decidir una limpieza (por ejemplo, marcar las direcciones en uso y borrar las demás a los 30 días) y la retención al eliminar una cuenta (aviso de privacidad).
 - **Imágenes compartidas por huella:** si dos personas suben la misma imagen, comparten la dirección; borrar la de una afectaría a la otra. Por eso el borrado queda fuera hasta decidir la limpieza.

@@ -43,7 +43,7 @@ Que cada solicitud llegue a pocos técnicos adecuados y no a todos: una primera 
 - **R-11:** **Cotizar exige envío.** Con `Oleadas:Habilitado`, `POST /api/v1/solicitudes/{id}/cotizaciones` (spec 020) solo acepta al técnico con un envío `activo` de esa solicitud; cualquier otro técnico recibe 404, igual que una solicitud inexistente. Al cotizar, el envío pasa a `cotizado`.
 - **R-12:** **Tope de cotizaciones.** Una solicitud admite como máximo `Oleadas:MaximoCotizaciones` (5) cotizaciones en estado `enviada` o `aceptada`. La sexta responde 409 `cupo_de_cotizaciones_lleno` con el detalle «Esta solicitud ya tiene suficientes cotizaciones». La comprobación es parte de la transacción de la cotización con un contador `solicitudes.cotizacionesActivas` incrementado de forma condicionada (`< 5`), para que dos cotizaciones simultáneas no pasen del tope.
 - **R-13:** `GET /api/v1/tecnicos/me/solicitudes` exige JWT de técnico (403 `no_es_tecnico` si el `sub` no está en `tecnicos`) y devuelve sus envíos `activos` de solicitudes abiertas y no vencidas, de la más reciente a la más antigua, con paginación por cursor (`limit` de 1 a 20, 20 por omisión). Cada elemento es la vista acotada `{ solicitudId, oficio: { clave, nombre }, colonia: { nombre, cp }, descripcion, fotos[], dia, franja, modalidad, venceEn, oleada, recibidaEn, yaCotizo }`, **sin** dirección, nombre ni teléfono del cliente. Responde `Cache-Control: private, no-store`.
-- **R-14:** `POST /api/v1/solicitudes/{id}/descartar` exige JWT de técnico, cuerpo vacío y `Idempotency-Key`. Si el técnico tiene un envío `activo` de esa solicitud, lo marca `descartado` con `descartadoEn` y responde 204; repetirlo responde 204 sin cambios. Si no tiene envío, responde 404; si ya cotizó, 409 `solicitud_no_descartable`. Un técnico que descartó no vuelve a recibir esa solicitud. El descarte tiene un límite de 30 por hora por técnico (contador en Redis por `sub`, como los del gateway); al pasarse responde 429 con `Retry-After`.
+- **R-14:** `POST /api/v1/solicitudes/{id}/descartar` exige JWT de técnico y cuerpo vacío. Si el técnico tiene un envío `activo` de esa solicitud, lo marca `descartado` con `descartadoEn` y responde 204; repetirlo responde 204 sin cambios. Si no tiene envío, responde 404; si ya cotizó, 409 `solicitud_no_descartable`. Un técnico que descartó no vuelve a recibir esa solicitud. El descarte tiene un límite de 30 por hora por técnico (contador en Redis por `sub`, como los del gateway); al pasarse responde 429 con `Retry-After`.
 - **R-15:** La vista del técnico de `GET /api/v1/solicitudes/{id}` (spec 020, R-08) se amplía a quien tiene un envío `activo` o `cotizado` de la solicitud, con las mismas reglas: colonia sí, dirección solo si fue elegido. Un técnico con el envío `descartado` o `cerrado` recibe 404.
 - **R-16:** Los eventos `SolicitudEnviadaATecnico` (`{ solicitudId, tecnicoId, oleada }`) y `SolicitudSinTecnicos` (`{ solicitudId }`) se escriben en el buzón de salida en la misma transacción y no llevan descripción, dirección, nombres ni teléfonos. Se registran en `docs/events.md`.
 - **R-17:** Los registros llevan solo conteos (elegibles, enviados, oleada) y tiempos; nunca el `sub`, el `tecnicoId` en texto libre, la colonia ni la descripción. Los errores usan ProblemDetails con `correlationId` y `traceId`.
@@ -66,7 +66,7 @@ Que cada solicitud llegue a pocos técnicos adecuados y no a todos: una primera 
 - **CA-15:** Dada una tarea que falla, cuando se reintenta, entonces se reprograma con espera creciente y al quinto fallo queda `fallida`; y dada una tarea reservada por una réplica que se cayó, cuando pasa `reservadaHasta`, entonces otra réplica la toma.
 - **CA-16:** Dado `Oleadas:Habilitado` en falso, cuando se crea una solicitud, entonces no hay tareas de reparto y cualquier técnico con el oficio puede cotizar (regla de la spec 020); y dado `MejorOrdenados = 4` con `TamanoOleada = 5`, cuando arranca el servicio, entonces falla.
 - **CA-17:** Dados los eventos y los registros de un reparto, cuando se inspeccionan, entonces no contienen descripción, dirección, nombres, teléfonos ni `sub`.
-- **CA-18:** Dada una petición sin token a la bandeja o al descarte, cuando se llama, entonces responde 401; un descarte sin `Idempotency-Key` responde 400 `idempotency_key_requerida`; y el descarte 31 de un técnico en una hora responde 429 con `Retry-After`.
+- **CA-18:** Dada una petición sin token a la bandeja o al descarte, cuando se llama, entonces responde 401; y el descarte 31 de un técnico en una hora responde 429 con `Retry-After`.
 
 **4.1 Criterio → prueba prevista**
 
@@ -89,23 +89,23 @@ Que cada solicitud llegue a pocos técnicos adecuados y no a todos: una primera 
 | CA-15 | `Spec028EjecutorTests.Reintentos_Y_Reserva_Vencida_CA_028_15` |
 | CA-16 | `Spec028ConfiguracionTests.Interruptor_Y_Validacion_CA_028_16` |
 | CA-17 | `Spec028RegistrosTests.Sin_Datos_Personales_CA_028_17` |
-| CA-18 | `Spec028SeguridadTests.Exige_Sesion_E_Idempotencia_CA_028_18` |
+| CA-18 | `Spec028SeguridadTests.Exige_Sesion_Y_Limita_Descartes_CA_028_18` |
 
 ## 5. Contrato
 | Método y ruta | Quién | Cuerpo / consulta | Respuestas |
 |---|---|---|---|
 | `GET /api/v1/tecnicos/me/solicitudes` | técnico | `cursor?`, `limit?` (1–20) | 200 `CursorPage<SolicitudRecibida>`, 400, 401, 403, 429 |
-| `POST /api/v1/solicitudes/{id}/descartar` | técnico con envío | vacío + `Idempotency-Key` | 204, 400, 401, 403, 404, 409, 429 |
+| `POST /api/v1/solicitudes/{id}/descartar` | técnico con envío | vacío | 204, 400, 401, 403, 404, 409, 429 |
 | `POST /api/v1/solicitudes/{id}/cotizaciones` (spec 020) | técnico con envío activo | sin cambios | se agregan 404 (sin envío) y 409 `cupo_de_cotizaciones_lleno` |
 | `GET /api/v1/solicitudes/{id}` (spec 020) | dueña, técnico cotizante o con envío activo | sin cambios | sin cambios |
 
 **`SolicitudRecibida`:** `{ solicitudId, oficio: { clave, nombre }, colonia: { nombre, cp }, descripcion, fotos[], dia, franja, modalidad, venceEn, oleada, recibidaEn, yaCotizo }`.
 
-**Códigos de error nuevos:** `cupo_de_cotizaciones_lleno` (409), `solicitud_no_descartable` (409). Se reutilizan `no_es_tecnico` (403) e `idempotency_key_requerida` (400) de las specs 020 y 022.
+**Códigos de error nuevos:** `cupo_de_cotizaciones_lleno` (409), `solicitud_no_descartable` (409). Se reutiliza `no_es_tecnico` (403) de las specs 020 y 022.
 
 **Eventos (buzón de Mercado):** `SolicitudEnviadaATecnico { solicitudId, tecnicoId, oleada }`, `SolicitudSinTecnicos { solicitudId }`. Tareas: `RepartirOleada`, `RevisarOleada`.
 
-**Límites:** 5 técnicos por oleada, 3 oleadas, 15 minutos entre revisiones, 5 cotizaciones por solicitud, 20 elementos por página de la bandeja, 30 descartes por hora por técnico; `Idempotency-Key` de 1 a 64 caracteres visibles.
+**Límites:** 5 técnicos por oleada, 3 oleadas, 15 minutos entre revisiones, 5 cotizaciones por solicitud, 20 elementos por página de la bandeja, 30 descartes por hora por técnico.
 
 **Encabezados:** `Cache-Control: private, no-store` en la bandeja; `Retry-After` en 429.
 
@@ -122,7 +122,6 @@ Que cada solicitud llegue a pocos técnicos adecuados y no a todos: una primera 
 | `estado` | string | `activo`, `cotizado`, `descartado`, `cerrado` |
 | `cerradoMotivo` | string? | `solicitud_cancelada`, `solicitud_vencida`, `se_eligio_otra` (lo escriben las specs 021 y 029) |
 | `enviadoEn`, `descartadoEn?`, `actualizadoEn` | date | UTC |
-| `descarteKey` | string? | repetición idempotente del descarte |
 
 Índices: `{ solicitudId: 1, tecnicoId: 1 }` único; `{ tecnicoUsuarioId: 1, estado: 1, enviadoEn: -1 }` (bandeja); `{ solicitudId: 1, estado: 1 }`.
 
@@ -183,7 +182,7 @@ El script `db/` de esta spec crea `envios`, los índices nuevos y no borra ni ca
 |---|---|---|
 | Unitarias | Sí | `SeleccionDeOleada` (composición, relleno, determinismo), reglas de revisión, validación de opciones y política de reintentos |
 | Integración | Sí | MongoDB y Redis reales con `Testcontainers`: transacción de reparto, `$geoNear`, ejecutor con dos instancias sobre la misma base y tiempo simulado (`TimeProvider` falso) |
-| Seguridad negativa | Sí | Cotizar sin envío, bandeja con token de cliente, descarte ajeno, sin token, sin clave de idempotencia |
+| Seguridad negativa | Sí | Cotizar sin envío, bandeja con token de cliente, descarte ajeno, sin token |
 | Contrato | Sí | OpenAPI de Mercado regenerado con las dos rutas y los errores nuevos; `oasdiff` sin cambios incompatibles en las rutas de la 020 |
 | Base de datos | Sí | Script idempotente de `envios` e índices; comparación de índices |
 | Arquitectura | Sí | Controllers sin MongoDB; el ejecutor no referencia módulos de negocio (solo `IManejadorDeTarea`) |
@@ -208,7 +207,7 @@ El script `db/` de esta spec crea `envios`, los índices nuevos y no borra ni ca
 - Cliente que pide la bandeja: 403.
 
 **Errores esperados**
-- 400 (`idempotency_key_requerida`, cursor inválido), 401, 403 `no_es_tecnico`, 404, 409 (`cupo_de_cotizaciones_lleno`, `solicitud_no_descartable`), 429.
+- 400 (cursor inválido), 401, 403 `no_es_tecnico`, 404, 409 (`cupo_de_cotizaciones_lleno`, `solicitud_no_descartable`), 429.
 
 **Casos límite**
 - Exactamente 5 elegibles; 0 elegibles en las 3 oleadas; 4 cotizaciones y dos simultáneas; técnico con `disponibleHasta` igual a la hora del reparto (no elegible); réplica que se cae con la tarea reservada; solicitud que vence entre la reserva y la ejecución; técnico que descarta mientras cotiza (gana el primero que confirma; el otro recibe 409 o 404).
@@ -235,10 +234,11 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 4. **El ejecutor revisa cada 15 segundos.** El retraso máximo de una oleada es de 15 s más la duración de la tarea; menos intervalo aumenta las consultas a MongoDB sin beneficio visible. Alternativa: 5 s.
 5. **El aviso al técnico es un evento, no un push directo.** El servicio de Mensajería es el dueño de las notificaciones (constitución §4); Mercado no conoce los tokens de dispositivo.
 6. **La bandeja es una ruta propia (`/tecnicos/me/solicitudes`) y no la pestaña Trabajo completa.** Frontend 019 pide `GET /tecnicos/me/trabajo`, que agrega disponibilidad, verificación, visitas y resumen de otras historias sin spec; la bandeja es lo único que esta historia puede comprometer. Alternativa: escribir el agregado aquí, mezclando cinco historias.
-7. **El descarte responde 204 y es idempotente con `Idempotency-Key`,** como lo consume frontend 019.
+7. **El descarte responde 204 y es idempotente por estado,** como lo consume frontend 019.
 8. **Se agrega 409 `cupo_de_cotizaciones_lleno` a la ruta de la spec 020** en vez de crear otra ruta: el tope es una regla de la misma operación.
 
 ## 15. Riesgos y dudas abiertas
+- **`Idempotency-Key` retirada por ahora (decisión del 2026-11-10).** Se quitó del descarte, que ya es idempotente por estado: repetirlo responde 204 sin cambios. Se retoma con una spec propia si se decide volver a exigirla.
 - **Conflicto con la spec 020 (borrador):** R-11, R-12 y R-15 cambian su comportamiento (cotizar exige envío, tope de 5, vista del destinatario) y agregan los campos `oleadaActual` y `cotizacionesActivas`. Hay que reflejarlo en la 020 o aprobar ambas juntas.
 - **Conflicto con la spec 021 (borrador):** al elegir, los envíos restantes deben pasar a `cerrado` con `se_eligio_otra`; la 021 no lo menciona. Mientras no se agregue, la bandeja filtra por estado de la solicitud y no muestra solicitudes ya elegidas.
 - **Hueco:** `tecnicos` sin spec dueña (ver spec 027 §15) y HU-019 sin spec: `disponibleHasta` se siembra a mano para la demo.
