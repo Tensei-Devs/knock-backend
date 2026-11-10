@@ -1,6 +1,6 @@
 # Mapa de código
 
-> Generado por `scripts/codemap.py` el 2026-11-09T17:35:04Z. No editar a mano.
+> Generado por `scripts/codemap.py` el 2026-11-10T20:44:48Z. No editar a mano.
 > **Antes de crear una clase, método o archivo, busca aquí o corre `python scripts/codemap.py --query "<qué necesitas>"`.**
 
 ## Resumen
@@ -61,12 +61,12 @@
 - `src/Knock.Identity.Api/Hosting/CorsMiddleware.cs:51 CorsMiddleware.AnswerPreflightAsync` · `src/Knock.Market.Api/Hosting/CorsMiddleware.cs:50 CorsMiddleware.AnswerPreflightAsync`
 - `src/Knock.Identity.Api/Hosting/CorsMiddleware.cs:69 CorsMiddleware.IsGranted` · `src/Knock.Market.Api/Hosting/CorsMiddleware.cs:68 CorsMiddleware.IsGranted`
 - `src/Knock.Identity.Api/Hosting/CorsMiddleware.cs:96 CorsMiddleware.AddVaryOrigin` · `src/Knock.Market.Api/Hosting/CorsMiddleware.cs:95 CorsMiddleware.AddVaryOrigin`
-- `src/Knock.Identity.Api/Hosting/JsonCompressionMiddleware.cs:19 JsonCompressionMiddleware` · `src/Knock.Market.Api/Hosting/JsonCompressionMiddleware.cs:18 JsonCompressionMiddleware`
-- `src/Knock.Identity.Api/Hosting/JsonCompressionMiddleware.cs:26 JsonCompressionMiddleware.InvokeAsync` · `src/Knock.Market.Api/Hosting/JsonCompressionMiddleware.cs:25 JsonCompressionMiddleware.InvokeAsync`
-- `src/Knock.Identity.Api/Hosting/JsonCompressionMiddleware.cs:63 JsonCompressionMiddleware.ShouldSkipRequest` · `src/Knock.Market.Api/Hosting/JsonCompressionMiddleware.cs:62 JsonCompressionMiddleware.ShouldSkipRequest`
-- `src/Knock.Identity.Api/Hosting/JsonCompressionMiddleware.cs:100 JsonCompressionMiddleware.WriteBufferedAsync` · `src/Knock.Market.Api/Hosting/JsonCompressionMiddleware.cs:99 JsonCompressionMiddleware.WriteBufferedAsync`
-- `src/Knock.Identity.Api/Hosting/JsonCompressionMiddleware.cs:157 CappedBufferStream.WriteAsync` · `src/Knock.Market.Api/Hosting/JsonCompressionMiddleware.cs:156 CappedBufferStream.WriteAsync`
-- `src/Knock.Identity.Api/Hosting/JsonCompressionMiddleware.cs:176 CappedBufferStream.WriteCore` · `src/Knock.Market.Api/Hosting/JsonCompressionMiddleware.cs:175 CappedBufferStream.WriteCore`
+- `src/Knock.Identity.Api/Hosting/JsonCompressionMiddleware.cs:20 JsonCompressionMiddleware` · `src/Knock.Market.Api/Hosting/JsonCompressionMiddleware.cs:19 JsonCompressionMiddleware`
+- `src/Knock.Identity.Api/Hosting/JsonCompressionMiddleware.cs:27 JsonCompressionMiddleware.InvokeAsync` · `src/Knock.Market.Api/Hosting/JsonCompressionMiddleware.cs:26 JsonCompressionMiddleware.InvokeAsync`
+- `src/Knock.Identity.Api/Hosting/JsonCompressionMiddleware.cs:64 JsonCompressionMiddleware.ShouldSkipRequest` · `src/Knock.Market.Api/Hosting/JsonCompressionMiddleware.cs:63 JsonCompressionMiddleware.ShouldSkipRequest`
+- `src/Knock.Identity.Api/Hosting/JsonCompressionMiddleware.cs:105 JsonCompressionMiddleware.WriteBufferedAsync` · `src/Knock.Market.Api/Hosting/JsonCompressionMiddleware.cs:104 JsonCompressionMiddleware.WriteBufferedAsync`
+- `src/Knock.Identity.Api/Hosting/JsonCompressionMiddleware.cs:162 CappedBufferStream.WriteAsync` · `src/Knock.Market.Api/Hosting/JsonCompressionMiddleware.cs:161 CappedBufferStream.WriteAsync`
+- `src/Knock.Identity.Api/Hosting/JsonCompressionMiddleware.cs:181 CappedBufferStream.WriteCore` · `src/Knock.Market.Api/Hosting/JsonCompressionMiddleware.cs:180 CappedBufferStream.WriteCore`
 - `src/Knock.Identity.Api/Hosting/MongoExtensions.cs:76 KnockMongoOptionsValidator.Validate` · `src/Knock.Market.Api/Hosting/MongoExtensions.cs:74 KnockMongoOptionsValidator.Validate` · `src/Knock.Messaging.Api/Hosting/MongoExtensions.cs:76 KnockMongoOptionsValidator.Validate`
 - `src/Knock.Identity.Api/Hosting/MongoExtensions.cs:149 MongoExtensions.AddKnockMongo` · `src/Knock.Market.Api/Hosting/MongoExtensions.cs:147 MongoExtensions.AddKnockMongo` · `src/Knock.Messaging.Api/Hosting/MongoExtensions.cs:149 MongoExtensions.AddKnockMongo`
 - `src/Knock.Identity.Api/Hosting/MongoExtensions.cs:171 MongoExtensions.AddKnockMongoDatabase` · `src/Knock.Market.Api/Hosting/MongoExtensions.cs:169 MongoExtensions.AddKnockMongoDatabase` · `src/Knock.Messaging.Api/Hosting/MongoExtensions.cs:171 MongoExtensions.AddKnockMongoDatabase`
@@ -114,7 +114,7 @@
 - `HttpsSettings`: `src/Knock.Identity.Api/Hosting/SecuritySettings.cs:15`, `src/Knock.Market.Api/Hosting/SecuritySettings.cs:14`
 - `IgnoreIncomingTraceContextPropagator`: `src/Knock.Gateway/Hosting/ObservabilityExtensions.cs:194`, `src/Knock.Identity.Api/Hosting/ObservabilityExtensions.cs:194`, `src/Knock.Market.Api/Hosting/ObservabilityExtensions.cs:190`, `src/Knock.Messaging.Api/Hosting/ObservabilityExtensions.cs:194`
 - `InternalControllerFeatureProvider`: `src/Knock.Identity.Api/Hosting/AuthenticationExtensions.cs:72`, `src/Knock.Market.Api/Hosting/AuthenticationExtensions.cs:71`
-- `JsonCompressionMiddleware`: `src/Knock.Identity.Api/Hosting/JsonCompressionMiddleware.cs:19`, `src/Knock.Market.Api/Hosting/JsonCompressionMiddleware.cs:18`
+- `JsonCompressionMiddleware`: `src/Knock.Identity.Api/Hosting/JsonCompressionMiddleware.cs:20`, `src/Knock.Market.Api/Hosting/JsonCompressionMiddleware.cs:19`
 - `JwtSettings`: `src/Knock.Identity.Api/Common/Security/JwtSettings.cs:7`, `src/Knock.Market.Api/Common/Security/JwtSettings.cs:6`
 - `JwtSettingsFactory`: `src/Knock.Identity.Api/Common/Security/JwtSettingsFactory.cs:11`, `src/Knock.Market.Api/Common/Security/JwtSettingsFactory.cs:10`
 - `KnockApplicationExtensions`: `src/Knock.Identity.Api/Hosting/KnockApplicationExtensions.cs:7`, `src/Knock.Market.Api/Hosting/KnockApplicationExtensions.cs:6`
@@ -302,7 +302,7 @@
 - `src/Knock.Identity.Api/Hosting/HealthExtensions.cs` — class `HealthExtensions`
   - `MapKnockReadiness()`:16
 - `src/Knock.Identity.Api/Hosting/JsonCompressionMiddleware.cs` — class `JsonCompressionMiddleware`, class `CappedBufferStream`, class `IdentityJsonSerializerContext`
-  - `JsonCompressionMiddleware()`:19, `InvokeAsync()`:26, `ToMemoryStream()`:151, `Write()`:153, `Write()`:155, `WriteAsync()`:157, `FlushRemainingAsync()`:213, `Flush()`:236, `FlushAsync()`:244, `Read()`:247, `Seek()`:249, `SetLength()`:251, `Dispose()`:253
+  - `JsonCompressionMiddleware()`:20, `InvokeAsync()`:27, `ToMemoryStream()`:156, `Write()`:158, `Write()`:160, `WriteAsync()`:162, `FlushRemainingAsync()`:218, `Flush()`:241, `FlushAsync()`:249, `Read()`:252, `Seek()`:254, `SetLength()`:256, `Dispose()`:258
 - `src/Knock.Identity.Api/Hosting/KnockApplicationExtensions.cs` — class `KnockApplicationExtensions`
   - `AddKnockApi()`:9, `UseKnockApi()`:31
 - `src/Knock.Identity.Api/Hosting/LoggingExtensions.cs` — class `LoggingExtensions`, class `ScopeRequestPathEnricher`
@@ -367,7 +367,7 @@
 - `src/Knock.Market.Api/Hosting/HealthExtensions.cs` — class `HealthExtensions`
   - `AddKnockHealth()`:13, `MapKnockHealth()`:19
 - `src/Knock.Market.Api/Hosting/JsonCompressionMiddleware.cs` — class `JsonCompressionMiddleware`, class `CappedBufferStream`, class `MarketJsonSerializerContext`
-  - `JsonCompressionMiddleware()`:18, `InvokeAsync()`:25, `ToMemoryStream()`:150, `Write()`:152, `Write()`:154, `WriteAsync()`:156, `FlushRemainingAsync()`:212, `Flush()`:235, `FlushAsync()`:243, `Read()`:246, `Seek()`:248, `SetLength()`:250, `Dispose()`:252
+  - `JsonCompressionMiddleware()`:19, `InvokeAsync()`:26, `ToMemoryStream()`:155, `Write()`:157, `Write()`:159, `WriteAsync()`:161, `FlushRemainingAsync()`:217, `Flush()`:240, `FlushAsync()`:248, `Read()`:251, `Seek()`:253, `SetLength()`:255, `Dispose()`:257
 - `src/Knock.Market.Api/Hosting/KnockApplicationExtensions.cs` — class `KnockApplicationExtensions`
   - `AddKnockApi()`:8, `UseKnockApi()`:31
 - `src/Knock.Market.Api/Hosting/LoggingExtensions.cs` — class `LoggingExtensions`, class `ScopeRequestPathEnricher`

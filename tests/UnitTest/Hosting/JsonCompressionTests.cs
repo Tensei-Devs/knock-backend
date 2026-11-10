@@ -96,6 +96,18 @@ public sealed class JsonCompressionTests
     }
 
     [Theory]
+    [InlineData("gzip;q=0.8", "gzip")]
+    [InlineData("gzip;q=0.5", "gzip")]
+    [InlineData("br;q=1.0, gzip;q=0.8", "br")]
+    [InlineData("br;q=0.0, gzip;q=0.8", "gzip")]
+    public async Task OnlyZeroQualityRejectsAnEncoding_CA_010_04(string header, string expected)
+    {
+        var (context, _) = await RunMiddlewareAsync("/api/v1/oficios", header, 2048);
+
+        context.Response.Headers.ContentEncoding.ToString().Should().Be(expected, "solo q=0 rechaza una codificación (RFC 9110, 12.4.2)");
+    }
+
+    [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("identity")]
