@@ -1,6 +1,7 @@
 using System.Net;
 using Microsoft.AspNetCore.HttpOverrides;
 
+// jscpd:ignore-start -- EXC-020: copia de Market.Api hasta que exista la biblioteca compartida (KNOCK-251)
 namespace Knock.Messaging.Api.Hosting;
 
 internal static class ForwardedHeadersExtensions
@@ -44,3 +45,4 @@ internal static class ForwardedHeadersExtensions
         return services;
     }
 }
+// jscpd:ignore-end -- EXC-020
