@@ -1,4 +1,5 @@
 // jscpd:ignore-start -- EXC-015, EXC-018
+using System.Globalization;
 using System.IO.Compression;
 using System.Text.Json.Serialization;
 using Knock.Identity.Api.Modules.Sesiones.Dtos;
@@ -83,7 +84,11 @@ internal sealed class JsonCompressionMiddleware(RequestDelegate next)
             .Where(token =>
             {
                 var parts = token.Split(';');
-                return !parts.Skip(1).Any(part => part.Trim().StartsWith("q=0", StringComparison.OrdinalIgnoreCase));
+                // Solo q=0 (0, 0.0, 0.00, 0.000) rechaza la codificación; q=0.8 o q=0.5 la aceptan con menor preferencia.
+                return !parts.Skip(1).Select(part => part.Trim()).Any(part =>
+                    part.StartsWith("q=", StringComparison.OrdinalIgnoreCase)
+                    && double.TryParse(part.AsSpan(2), NumberStyles.Float, CultureInfo.InvariantCulture, out var quality)
+                    && quality <= 0);
             })
             .Select(token => token.Split(';')[0].Trim())
             .Any(token => string.Equals(token, encoding, StringComparison.OrdinalIgnoreCase));
@@ -116,13 +121,13 @@ internal sealed class JsonCompressionMiddleware(RequestDelegate next)
         var compressed = new MemoryStream();
         if (encoding == "br")
         {
-            await using var stream = new BrotliStream(compressed, CompressionLevel.SmallestSize, leaveOpen: true);
+            await using var stream = new BrotliStream(compressed, CompressionLevel.Optimal, leaveOpen: true);
             buffered.Position = 0;
             await buffered.CopyToAsync(stream, context.RequestAborted);
         }
         else
         {
-            await using var stream = new GZipStream(compressed, CompressionLevel.SmallestSize, leaveOpen: true);
+            await using var stream = new GZipStream(compressed, CompressionLevel.Optimal, leaveOpen: true);
             buffered.Position = 0;
             await buffered.CopyToAsync(stream, context.RequestAborted);
         }

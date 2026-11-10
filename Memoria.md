@@ -2,6 +2,10 @@
 
 > Registro del proyecto: estado, decisiones con su fecha y su porqué, y errores a evitar. Los agentes la leen al empezar y agregan una entrada al terminar cada cambio. Sin datos sensibles.
 
+## 2026-11-10 — KNOCK-205: vigencia HTTP del catálogo
+- **Decisión de Julián:** conservar `Cache-Control: public, max-age=86400` en `/oficios`; el catálogo casi no cambia y cuenta con ETag.
+- **Consecuencia:** un cliente o proxy puede conservar la respuesta hasta 24 horas sin revalidarla, incluso después de una siembra. La invalidación del servidor no actualiza inmediatamente esas copias.
+
 ## Estado actual
 - Constitución `1.0.0` en borrador, `AGENTS.md`, subagentes y skills creados.
 - 14 specs de la base (arquitectura, estructura del repositorio, infraestructura, rendimiento, observabilidad, versionamiento y seguridad) redactadas en **Borrador**; sus tareas **no se han ejecutado**.

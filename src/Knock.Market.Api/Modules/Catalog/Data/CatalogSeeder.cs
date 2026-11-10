@@ -98,25 +98,38 @@ internal sealed class CatalogSeeder(CatalogStore store, ICatalogCache cache)
                 await cache.RemoveColoniaExistsAsync(id, postalCode, cancellationToken);
             }
         }
-        catch
+        catch (Exception original)
         {
-            foreach (var postalCode in touchedPostalCodes)
+            // Invalidación de emergencia con CancellationToken.None: si la siembra falló por cancelación (apagado o timeout), el token ya
+            // cancelado impediría invalidar justo lo que este bloque debe cubrir. Una invalidación que falle no detiene a las demás.
+            var failures = new List<Exception>();
+            foreach (var postalCode in touchedPostalCodes.Concat(before.PostalCodes))
             {
-                await cache.RemoveNeighborhoodNamesAsync(postalCode, cancellationToken);
-            }
-
-            foreach (var postalCode in before.PostalCodes)
-            {
-                await cache.RemoveNeighborhoodNamesAsync(postalCode, cancellationToken);
+                await TryInvalidateAsync(cache.RemoveNeighborhoodNamesAsync(postalCode, CancellationToken.None), failures);
             }
 
             foreach (var (id, postalCode) in touchedPairs.Concat(before.Pairs))
             {
-                await cache.RemoveColoniaExistsAsync(id, postalCode, cancellationToken);
+                await TryInvalidateAsync(cache.RemoveColoniaExistsAsync(id, postalCode, CancellationToken.None), failures);
             }
 
-            await cache.RemoveOficiosAsync(cancellationToken);
+            await TryInvalidateAsync(cache.RemoveOficiosAsync(CancellationToken.None), failures);
+            if (failures.Count > 0)
+            {
+                throw new AggregateException("La siembra del catálogo falló y no se pudo invalidar toda la caché.", failures.Prepend(original));
+            }
+
             throw;
+        }
+    }
+
+    // Espera la invalidación sin lanzar: Task.WhenAny no propaga la excepción, así que se registra y se sigue con las demás claves.
+    private static async Task TryInvalidateAsync(Task invalidation, List<Exception> failures)
+    {
+        await Task.WhenAny(invalidation);
+        if (invalidation.Exception is { } error)
+        {
+            failures.Add(error.InnerExceptions.Count == 1 ? error.InnerExceptions[0] : error);
         }
     }
 
