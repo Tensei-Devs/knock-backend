@@ -7,6 +7,11 @@
 - 14 specs de la base (arquitectura, estructura del repositorio, infraestructura, rendimiento, observabilidad, versionamiento y seguridad) redactadas en **Borrador**; sus tareas **no se han ejecutado**.
 - Sin código de producto todavía.
 
+## 2026-11-08 — Despliegue de imágenes y credencial federada
+- **Decisión:** `id-knock-deploy` lleva dos credenciales federadas para `main` (`github-main` y `github-main-ids`), porque GitHub presenta el sujeto con dos formas; el perfil «Consumption» ya no produce diferencias en el plan.
+- **Porqué:** la primera corrida de `ci-deploy` en `main` falló con `AADSTS700213`; con la segunda credencial publicó las cuatro imágenes y el apply dejó las cuatro apps sanas.
+- **A evitar:** asumir que una credencial federada con el sujeto en forma corta basta; si el inicio de sesión falla, comparar el sujeto del error con el de la credencial.
+
 ## 2026-10-27 — Aclaración de «Uso de IA»
 - **Decisión:** la sección «Uso de IA» es del **pull request** (plantilla de PR), no de cada spec.
 - **Porqué:** `@constitution-reviewer` marcó FAIL a la spec 001 por leer «todo cambio» de forma literal; la redacción era ambigua.
@@ -295,3 +300,13 @@
 - **Verificación:** `dotnet build Knock.slnx -c Release -warnaserror` en verde; `dotnet restore --locked-mode` en verde; `ImageProcessorTests` (`..._CA_013_01`, reducción y firma falsa), `MediaServiceTests` (`_CA_013_04`/`_CA_013_05`) y las 2 pruebas de integración con Azurite (`MediaConfirmationBlobTests`: caso feliz y `.jpg` con firma PDF rechazado, cuarentena y contenedor final vacíos) en verde. La imagen de Market construye con Docker y contiene `libSkiaSharp.so` para linux-x64/arm64; no hizo falta un paquete del sistema.
 - **Pendiente:** OI-3 (SAS de delegación, controllers/rutas, OpenAPI, Terraform, moderación real, CA-02/CA-03); revisión por par y PR; no se hizo commit en esta rama.
 - **A evitar:** registrar los servicios de Media en un singleton si dependen de un cliente HTTP/`IOptions` con estado por petición; referenciar `Knock.Market.Api` desde `IntegrationTest` sin alias (choca el `Program` global con el de Gateway); dejar `packages.lock.json` vacíos tras un restore filtrado; y usar una imagen `azurite:latest` sin digest.
+## 2026-11-06 — Despliegue completo con un comando (KNOCK-34)
+- **Decisión:** `deploy/up.sh` ejecuta infra, database y apps en ese orden con `terraform init -backend-config=backend.hcl` y `plan`; por defecto solo hace plan y aplica únicamente con `--apply`, usando el plan guardado de cada directorio. Se detiene si algún plan destruye o reemplaza recursos, exige que existan los ocho secretos de Key Vault antes de desplegar las apps (solo lee sus nombres) y no imprime valores. Procedimiento en `deploy/README.md`.
+- **Por qué:** el entorno debía poder crearse desde cero con un solo comando sin arriesgar la base de datos (`prevent_destroy`) ni aplicar por accidente.
+- **Verificación:** `bash -n` y ShellCheck sin hallazgos; ejecutado en modo plan contra `rg-knock-dev` con `-lock=false`: infra 0 por agregar, 1 por cambiar, 0 por destruir; database sin cambios; apps 0 por agregar, 5 por cambiar, 0 por destruir (todos por `workload_profile`, sin efecto real). No se aplicó nada.
+- **A evitar:** usar `--no-lock` con `--apply`; crear el grupo de recursos desde Terraform (lo crea una persona); pasar secretos al script.
+
+## 2026-11-09 — EXC-019: huella de Gitleaks de una cadena sintética en la rama de KNOCK-205
+- **Decisión:** se registra la huella del commit 0b7a866 (`tests/perf/README.md`, línea 23) en `.gitleaksignore`, respaldada por EXC-019 hasta el 2026-12-04, sin reescribir el historial.
+- **Porqué:** el CI descarga todas las ramas, así que un commit con una cadena de conexión sintética en una rama de trabajo hacía fallar el chequeo de secretos de todos los PR del repositorio.
+- **A evitar:** poner ejemplos con credenciales, aunque sean del entorno local, en la documentación; escribirlas como `<usuario>:<contraseña>`. Retirar la huella y la excepción al fusionar la rama.
