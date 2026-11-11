@@ -17,6 +17,12 @@
 - 14 specs de la base (arquitectura, estructura del repositorio, infraestructura, rendimiento, observabilidad, versionamiento y seguridad) redactadas en **Borrador**; sus tareas **no se han ejecutado**.
 - Sin código de producto todavía.
 
+## 2026-11-11 — KNOCK-241 (BUG-004): Mensajería valida JWT, pone encabezados y limita por IP
+- **Decisión:** Mensajería copia de Mercado y del gateway el JWT propio, los encabezados de seguridad, el límite por IP y el cliente de Redis (EXC-021, temporal, vence 2026-12-15 y se paga con KNOCK-251). Lo que no declare `[AllowAnonymous]` exige sesión (política por defecto; `/health` y `/health/ready` son anónimos). La sesión cancelada se lee de `sesion-cancelada:{sid}` en Redis y, si Redis no responde, responde 503 con `Retry-After` en vez de dejar pasar.
+- **Porqué:** el servicio solo estaba protegido por el ingreso interno; la spec 026 (KNOCK-62) exige que valide el token por su cuenta antes de exponer el hub. Mercado no comprueba sesiones canceladas (solo el gateway), así que este control se construyó para Mensajería, con la llave de `Knock.Contracts`.
+- **Dependencias y pendientes:** `ForwardedHeaders` lo trae el #61 (no se copió); el secreto del JWT y la cadena de Redis de Mensajería van en `deploy/apps/main.tf` después del #61. Una ruta inexistente responde 401 (la política por defecto no revela qué rutas existen).
+- **A evitar:** probar un 401 con una ruta que no existe: la prueba usa una ruta protegida de mentira (`/sonda/protegida`); y copiar `ForwardedHeaders` por segunda vez.
+
 ## 2026-11-10 — KNOCK-240 (BUG-003): el gateway y Mensajería ya no envían `Server: Kestrel`
 - **Decisión:** `builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false)` en `Knock.Gateway` y `Knock.Messaging.Api`, igual que Identidad y Mercado. El middleware del gateway ya quitaba `Server` en `OnStarting`, pero Kestrel lo agrega después.
 - **Porqué se prueba la opción y no solo la respuesta:** `TestServer` no usa Kestrel y nunca escribe `Server`; una prueba de encabezado pasa con o sin el arreglo. `ServerHeaderTests` (SecurityTest/Gateway y Messaging) lee `KestrelServerOptions.AddServerHeader`: falla sin el arreglo y pasa con él. Se agregó `InternalsVisibleTo Knock.SecurityTest` y la referencia a ambos proyectos.
