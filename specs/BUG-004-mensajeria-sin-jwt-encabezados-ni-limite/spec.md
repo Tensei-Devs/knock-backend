@@ -29,7 +29,7 @@ Mensajería no valida JWT, no agrega encabezados de seguridad y no limita petici
 - Encabezados de seguridad y `AddServerHeader = false`.
 - Límite de peticiones global por IP con `Retry-After` y `ProblemDetails` (mismo mecanismo que Mercado), configurable.
 - Comprobación de sesión cancelada en Redis (si Mensajería no tiene Redis hoy, se agrega solo lectura).
-- `ForwardedHeaders` solo de la red del gateway.
+- `ForwardedHeaders` solo de la red del gateway: se reutiliza `ForwardedHeadersExtensions` del PR #61 (KNOCK-201), no se implementa de nuevo. **BUG-004 depende de #61**: si todavía no está fusionado cuando se implemente, se espera a que entre o se coordina con su autor antes de escribir una segunda copia.
 - Pruebas de seguridad con un host real y una fábrica de pruebas de Mensajería.
 - **Out:**
 - Endpoints de negocio y el hub (spec 026, KNOCK-62, y HU-029).
