@@ -412,6 +412,50 @@
           ]
         ]
       }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "El Carmen",
+        "cp": "42830",
+        "municipio": "Tula de Allende",
+        "precision": "aproximado_no_oficial",
+        "autor": "José Julián Hernández Hernández",
+        "fecha_elaboracion": "2026-11-10",
+        "piloto": true,
+        "tipo_asentamiento": "Colonia",
+        "estado": "Hidalgo",
+        "aproximado": true
+      },
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [
+                -99.346708,
+                20.005084
+              ],
+              [
+                -99.339308,
+                20.005084
+              ],
+              [
+                -99.339308,
+                20.012084
+              ],
+              [
+                -99.346708,
+                20.012084
+              ],
+              [
+                -99.346708,
+                20.005084
+              ]
+            ]
+          ]
+        ]
+      }
     }
   ]
 }
