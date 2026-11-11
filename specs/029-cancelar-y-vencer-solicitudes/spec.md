@@ -56,7 +56,7 @@ Que solo sigan abiertas las necesidades vigentes: el cliente puede cancelar una 
 - **CA-09:** Dada una solicitud creada sin tarea de vencimiento y con `venceEn` pasado, cuando corre el barrido, entonces queda `vencida`; y dadas 150 solicitudes vencidas, cuando corre un barrido, entonces procesa 100 y el siguiente procesa las 50 restantes.
 - **CA-10:** Dada una solicitud vencida o cancelada, cuando el dueño pide su detalle, entonces responde 200 con descripción, fotos, oficio, colonia, franja, dirección y `puedeVolverAPedir: true`, y aparece en `GET /api/v1/solicitudes?estado=vencida` (o `cancelada`); y un técnico no elegido que pide el detalle recibe 404.
 - **CA-11:** Dada una solicitud vencida, cuando el dueño intenta cancelarla, entonces responde 409 `request_expired`; y cuando un técnico intenta cotizarla, 409 `request_not_quotable`.
-- **CA-12:** Dado un cuerpo con `motivo` fuera de la lista o un `id` mal formado, cuando se cancela, entonces responde 400 y no cambia nada.
+- **CA-12:** Dado un cuerpo con `motivo` fuera de la lista, cuando se cancela, entonces responde 422 con `errors.motivo`; dado un `id` mal formado, 400; en ambos casos no cambia nada.
 - **CA-13:** Dada una petición sin token, cuando se cancela, entonces responde 401; y dadas 11 cancelaciones en una hora de la misma persona, cuando llega la 11, entonces responde 429 con `Retry-After`.
 - **CA-14:** Dado `Solicitudes:HorasVencimiento = 0` o `200`, cuando arranca el servicio, entonces falla; y con 24, una solicitud nueva tiene `venceEn = creadoEn + 24 h` y su tarea programada a esa hora.
 - **CA-15:** Dados los eventos y los registros de una cancelación y un vencimiento, cuando se inspeccionan, entonces no contienen motivo, descripción, dirección, nombres ni `sub` en texto libre.
@@ -84,7 +84,7 @@ Que solo sigan abiertas las necesidades vigentes: el cliente puede cancelar una 
 ## 5. Contrato
 | Método y ruta | Quién | Cuerpo | Respuestas |
 |---|---|---|---|
-| `POST /api/v1/solicitudes/{id}/cancelar` | cliente dueño | `{ motivo? }` | 200 `{ id, estado, canceladaEn, motivo }` (el mismo cuerpo si ya estaba cancelada), 400, 401, 404, 409, 429 |
+| `POST /api/v1/solicitudes/{id}/cancelar` | cliente dueño | `{ motivo? }` | 200 `{ id, estado, canceladaEn, motivo }` (el mismo cuerpo si ya estaba cancelada), 400 (`id` mal formado), 401, 404, 409, 422 (`errors.motivo`), 429 |
 | `GET /api/v1/solicitudes/{id}` (spec 020) | dueña | — | agrega `puedeVolverAPedir` |
 
 **Tabla de transiciones que agrega esta spec**
@@ -94,7 +94,7 @@ Que solo sigan abiertas las necesidades vigentes: el cliente puede cancelar una 
 | `enviada`, `cotizando` | `cancelada` | cliente dueño | sin cita |
 | `enviada`, `cotizando` | `vencida` | sistema | `venceEn <= ahora` y sin cita |
 
-**Códigos de error:** `request_with_appointment` (409, nuevo), `request_expired` (409, de la spec 021). Errores de forma: 400 con `errors.motivo`.
+**Códigos de error:** `request_with_appointment` (409, nuevo), `request_expired` (409, de la spec 021). Errores de forma: 422 con `errors.motivo`; `id` mal formado: 400.
 
 **Eventos (buzón de Mercado):** `SolicitudCancelada { solicitudId, tecnicosAvisar[] }`, `SolicitudVencida { solicitudId, clienteId, tecnicosAvisar[] }`. Tareas: `VencerSolicitud` (una por solicitud) y `BarrerVencidas` (recurrente).
 
@@ -174,7 +174,7 @@ El script `db/` de esta spec no crea colecciones: solo comprueba que existan los
 - Cotizar o elegir una solicitud vencida.
 
 **Errores esperados**
-- 400 (`errors.motivo`, id mal formado), 401, 404, 409 (`request_with_appointment`, `request_expired`), 429.
+- 400 (id mal formado), 401, 404, 409 (`request_with_appointment`, `request_expired`), 422 (`errors.motivo`), 429.
 
 **Casos límite**
 - Cancelación en el mismo segundo en que vence (gana la primera transacción; la otra no tiene efecto).
