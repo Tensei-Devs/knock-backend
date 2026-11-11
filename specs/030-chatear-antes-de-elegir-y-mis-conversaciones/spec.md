@@ -43,7 +43,7 @@ Que el cliente y un técnico que recibió su solicitud conversen dentro de Knock
 - **R-07:** `avisoSeguridad` es el texto fijo: «Por tu seguridad, no hagas pagos por adelantado ni compartas tu número antes de elegir. Paga solo cuando el trabajo esté hecho.» Vive en la configuración del módulo, no en cada documento.
 - **R-08:** `POST /api/v1/conversaciones/{id}/mensajes` exige JWT de un participante y cuerpo `{ texto }`. Los pasos, en orden: permiso vigente (R-09); conversación abierta, si no 409 `conversation_closed`; texto válido (R-10); límite (R-11); ocultamiento de contacto (R-12); moderación (R-13); guardado (R-14). Responde 201 `{ mensajeId, autorRol, texto, contactoOculto, enviadoEn }`. Sin clave de idempotencia, un reintento tras un corte de red puede duplicar un mensaje (ver §15).
 - **R-09:** El permiso se consulta a Mercado reenviando la sesión, con la dirección y el tiempo límite de la spec 026 (`Services:Market:BaseUrl`, 3 segundos), y se guarda en Redis 60 segundos (`conv:permiso:{conversacionId}`). Si Mercado no responde y no hay permiso en caché, responde 503 `market_unavailable`; nunca se asume que la conversación está abierta. Al guardar el permiso se actualizan `estado`, `motivoCierre`, `elegido` y `visitaId` de la conversación.
-- **R-10:** `texto` se recorta y debe medir de 1 a 1 000 caracteres, sin caracteres de control salvo el salto de línea; el cuerpo no puede pasar de 4 KB. Si no cumple, 400 con `errors.texto`.
+- **R-10:** `texto` se recorta y debe medir de 1 a 1 000 caracteres, sin caracteres de control salvo el salto de línea; el cuerpo no puede pasar de 4 KB. Si no cumple, 422 con `errors.texto`.
 - **R-11:** Límite de 30 mensajes por minuto por persona, con ventana fija de 60 segundos y contador en Redis `chat:limite:{sub}` (la misma llave que el chat de visita, spec 026 R-14) incrementado y con vencimiento en una sola operación atómica (el mismo patrón de la spec 026). Al pasarse responde 429 `message_limit` con `Retry-After`. Crear conversaciones tiene un límite de 20 por hora por persona.
 - **R-12:** Mientras `elegido` sea falso, antes de moderar y de guardar se reemplazan en el texto los teléfonos (10 dígitos con o sin lada, espacios, guiones o puntos, o con `+52`), los correos y los enlaces de WhatsApp o Telegram por «[dato de contacto oculto]», con los patrones del filtro de datos personales de la spec 024. Si se reemplazó algo, el mensaje guarda `contactoOculto = true` y la respuesta lo indica para que la app muestre el aviso «El número se comparte al elegir una cotización; te sugerimos no compartirlo antes». El texto original nunca se guarda ni se registra. Con `elegido` verdadero no se oculta nada.
 - **R-13:** El texto ya ocultado pasa por la moderación de la spec 031 antes de guardarse. Si se rechaza, 422 `content_rejected` y no se guarda nada; si la moderación no responde, 503 `moderation_unavailable` y no se guarda nada (constitución §2.13); si la persona agotó su tope diario de moderación, 429 `moderation_limit` (traducción de la spec 031, R-13).
@@ -59,7 +59,7 @@ Que el cliente y un técnico que recibió su solicitud conversen dentro de Knock
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dado un técnico con envío activo de una solicitud, cuando crea la conversación y escribe, entonces responde 201, el mensaje queda guardado y el cliente conectado recibe `mensajeConversacion` y `noLeidos` en vivo; y si el cliente no está conectado, hay un `MensajeNuevo` en el buzón con su `destinatarioUsuarioId` y sin texto.
-- **CA-02:** Dado un texto de 1 y de 1 000 caracteres, cuando se envía, entonces la otra parte lo ve en `GET …/mensajes` y queda guardado; con 0, con 1 001 o con caracteres de control, responde 400 y no se guarda.
+- **CA-02:** Dado un texto de 1 y de 1 000 caracteres, cuando se envía, entonces la otra parte lo ve en `GET …/mensajes` y queda guardado; con 0, con 1 001 o con caracteres de control, responde 422 con `errors.texto` y no se guarda.
 - **CA-03:** Dada una persona que no es parte del par, cuando intenta crear, leer, listar mensajes, marcar leído, enviar o unirse por el hub a esa conversación, entonces recibe 404 (o `unauthorized` en el hub) y nada revela que existe.
 - **CA-04:** Dado un mensaje antes de elegir con «llámame al 771 123 4567» o «escríbeme a correo@ejemplo.com», cuando se envía, entonces se guarda y se entrega con «[dato de contacto oculto]», `contactoOculto = true` y la respuesta lo indica; y con el técnico ya elegido, el mismo texto no se oculta.
 - **CA-05:** Dados 30 mensajes de la misma persona en un minuto, cuando envía el 31, entonces responde 429 `message_limit` con `Retry-After` y no se guarda; con dos réplicas el total sigue siendo 30.
@@ -107,13 +107,13 @@ Que el cliente y un técnico que recibió su solicitud conversen dentro de Knock
 
 | Método y ruta | Quién | Cuerpo / consulta | Respuestas |
 |---|---|---|---|
-| `POST /api/v1/conversaciones` | cliente dueño o técnico del par | `{ solicitudId, tecnicoId? }` | 201 / 200 `Conversacion`, 400, 401, 404, 409, 429, 503 |
-| `GET /api/v1/conversaciones` | persona con sesión | `cursor?`, `limit?` (1–20) | 200 `{ items[], totalNoLeidos, nextCursor }`, 400, 401, 429 |
+| `POST /api/v1/conversaciones` | cliente dueño o técnico del par | `{ solicitudId, tecnicoId? }` | 201 / 200 `Conversacion`, 400 (cuerpo ilegible), 401, 404, 409, 422 (`errors.solicitudId`, `errors.tecnicoId`), 429, 503 |
+| `GET /api/v1/conversaciones` | persona con sesión | `cursor?`, `limit?` (1–20) | 200 `{ items[], totalNoLeidos, nextCursor }`, 400 (cursor mal formado), 401, 422 (`limit`), 429 |
 | `GET /api/v1/conversaciones/no-leidas` | persona con sesión | — | 200 `{ total }`, 401, 429 |
 | `GET /api/v1/conversaciones/{id}` | participante | — | 200 `Conversacion`, 400, 401, 404, 429 |
-| `GET /api/v1/conversaciones/{id}/mensajes` | participante | `cursor?`, `limit?` (1–50) | 200 `{ items[], nextCursor }`, 400, 401, 404, 429 |
-| `POST /api/v1/conversaciones/{id}/mensajes` | participante | `{ texto }` | 201 `Mensaje`, 400, 401, 404, 409, 422, 429, 503 |
-| `POST /api/v1/conversaciones/{id}/leido` | participante | `{ hasta }` | 204, 400, 401, 404, 429 |
+| `GET /api/v1/conversaciones/{id}/mensajes` | participante | `cursor?`, `limit?` (1–50) | 200 `{ items[], nextCursor }`, 400 (cursor o `id` mal formado), 401, 404, 422 (`limit`), 429 |
+| `POST /api/v1/conversaciones/{id}/mensajes` | participante | `{ texto }` | 201 `Mensaje`, 400 (cuerpo ilegible), 401, 404, 409, 422 (`errors.texto`), 429, 503 |
+| `POST /api/v1/conversaciones/{id}/leido` | participante | `{ hasta }` | 204, 400 (cuerpo ilegible o `id` mal formado), 401, 404, 422 (`errors.hasta`), 429 |
 
 **Mercado (no publicada en el gateway; solo red interna)**
 
@@ -135,7 +135,7 @@ Que el cliente y un técnico que recibió su solicitud conversen dentro de Knock
 - `Mensaje`: `{ mensajeId, autorRol, texto, contactoOculto, enviadoEn }`.
 - `PermisoConversacion`: `{ solicitudId, tecnicoId, clienteId, tecnicoUsuarioId, rol, abierta, motivoCierre?, elegido, visitaId?, servicio, coloniaNombre, tecnicoPublico: { nombre, fotoUrl } }`.
 
-**Códigos de error:** `conversation_closed` (409), `content_rejected` (422), `moderation_unavailable` (503), `market_unavailable` (503), `message_limit` (429), `moderation_limit` (429, spec 031). Errores de forma: 400 con `errors.texto`, `errors.hasta`, `errors.solicitudId`, `errors.tecnicoId`.
+**Códigos de error:** `conversation_closed` (409), `content_rejected` (422), `moderation_unavailable` (503), `market_unavailable` (503), `message_limit` (429), `moderation_limit` (429, spec 031). Errores de forma: 422 con `errors.texto`, `errors.hasta`, `errors.solicitudId`, `errors.tecnicoId`; cuerpo ilegible, `id` o cursor mal formado: 400.
 
 **Límites:** texto de 1 a 1 000 caracteres y 4 KB por cuerpo; 30 mensajes por minuto por persona; 20 conversaciones nuevas por hora por persona; 20 conversaciones y 50 mensajes por página; permiso en caché 60 segundos; 3 segundos de espera a Mercado; retención de 180 días.
 
@@ -246,7 +246,7 @@ El script `db/` de esta spec crea las dos colecciones y sus índices en `messagi
 - Un técnico que descartó la solicitud intenta seguir escribiendo.
 
 **Errores esperados**
-- 400 (`errors.*`), 401, 404, 409 `conversation_closed`, 422 `content_rejected`, 429 `message_limit`, 503 (`moderation_unavailable`, `market_unavailable`).
+- 400 (cuerpo ilegible, `id` o cursor mal formado), 401, 404, 409 `conversation_closed`, 422 (`errors.*`, `content_rejected`), 429 `message_limit`, 503 (`moderation_unavailable`, `market_unavailable`).
 
 **Casos límite**
 - Texto de exactamente 1 000 caracteres; mensaje 30 y 31 de la ventana.
