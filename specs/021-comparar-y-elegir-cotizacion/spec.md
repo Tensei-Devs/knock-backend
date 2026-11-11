@@ -192,7 +192,7 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 
 **Negativos**
 - Elegir una cotización de otra solicitud.
-- Elegir dos veces la misma solicitud (la segunda responde 409 `solicitud_ya_elegida`).
+- Elegir dos veces la misma solicitud (la segunda responde 409 `request_already_chosen`).
 - Intentar ver el listado con el token del técnico.
 - Solicitud cancelada o vencida.
 
@@ -204,7 +204,7 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 - Empate de tope y de calificación.
 - Cotización retirada entre el listado y la elección.
 - Elección en el segundo exacto del vencimiento.
-- Repetición de la elección sobre una solicitud ya elegida (409 `solicitud_ya_elegida`) y repetición tras un 503 (termina bien).
+- Repetición de la elección sobre una solicitud ya elegida (409 `request_already_chosen`) y repetición tras un 503 (termina bien).
 
 ## 12. Definición de terminado
 - Los 18 criterios tienen prueba en verde y la tabla 4.1 coincide con los nombres reales (`python scripts/sdd_lint.py --trace 021` sin faltantes).
