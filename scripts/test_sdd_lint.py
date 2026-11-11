@@ -50,6 +50,50 @@ class NumberedSpecTests(unittest.TestCase):
         self.assertTrue(any(n in "def test_x_CA_006_01(): ..." for n in sdd_lint.needles("CA-01", "006")))
 
 
+class RootBugSpecTests(unittest.TestCase):
+    """KNOCK-261: la traza encuentra las specs BUG-NNN-* de la raíz de specs/, que antes daban «no existe»."""
+
+    def setUp(self) -> None:
+        import tempfile
+
+        self.tmp = tempfile.TemporaryDirectory()
+        root = Path(self.tmp.name)
+        folder = root / "specs" / "BUG-003-el-gateway-expone-server"
+        folder.mkdir(parents=True)
+        (folder / "spec.md").write_text("> **Estado:** Aprobada" + chr(10) * 2 + "| TC-BUG-003-01 | Dado A | Gateway_TC_BUG_003_01 |" + chr(10), encoding="utf-8")
+        (root / "specs" / "_legacy").mkdir()
+        (root / "specs" / "015-registro").mkdir()
+        self.old_root, self.old_specs = sdd_lint.ROOT, sdd_lint.SPECS
+        sdd_lint.ROOT, sdd_lint.SPECS = root, root / "specs" / "_legacy"
+
+    def tearDown(self) -> None:
+        sdd_lint.ROOT, sdd_lint.SPECS = self.old_root, self.old_specs
+        self.tmp.cleanup()
+
+    def test_root_dirs_lists_bug_specs_but_not_numbered_ones(self) -> None:
+        self.assertEqual(["BUG-003-el-gateway-expone-server"], [d.name for d in sdd_lint.root_dirs()])
+
+    def test_trace_finds_a_bug_spec_in_the_specs_root(self) -> None:
+        import contextlib
+        import io
+
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = sdd_lint.trace("BUG-003")
+        self.assertEqual(0, code, out.getvalue())
+        self.assertNotIn("no existe", out.getvalue())
+
+    def test_trace_still_fails_for_a_spec_that_does_not_exist(self) -> None:
+        import contextlib
+        import io
+
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = sdd_lint.trace("BUG-099")
+        self.assertEqual(1, code)
+        self.assertIn("no existe", out.getvalue())
+
+
 class FindSpecTests(unittest.TestCase):
     DIRS = [Path("001-arquitectura"), Path("010-cache"), Path("015-registro")]
 
