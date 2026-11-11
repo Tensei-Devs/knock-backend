@@ -1,6 +1,6 @@
 # plan.md — BUG-004 — Mensajería sin JWT, encabezados de seguridad ni límite de peticiones propios
 
-> Borrador. Falta la aprobación de la spec (KNOCK-241); no hay nada implementado.
+> Spec aprobada el 2026-11-10 (KNOCK-241). Nada implementado todavía: el código y las pruebas de BUG-004 están por hacer.
 
 ## 1. Mapeo de archivos
 - **Reutilizar:** `Hosting/AuthenticationExtensions`, `SecurityExtensions`, `RateLimitingExtensions` y `RevokedSessions` de Identidad/Mercado/gateway; `SecurityMarketFactory` y `SecurityHostConfiguration` como molde de pruebas. Antes de crear: `python scripts/codemap.py --query "jwt authentication rate limiting security headers"`.
