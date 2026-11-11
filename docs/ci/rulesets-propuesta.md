@@ -22,7 +22,7 @@
 | `Smoke + DAST (ZAP baseline)` | `ci-pr.yml` / `dast` | No | Lo cubre `gate`; hoy nunca corre (BUG-001, KNOCK-238). |
 | `Mutación incremental (Stryker, informativa)` | `ci-pr.yml` / `mutation-pr` | No | Informativo; `gate` no depende de él. |
 
-Exigir cada job por separado obligaría a tocar el ruleset cada vez que cambie un nombre o la matriz de contenedores; `gate` agrupa todo con un nombre estable.
+Exigir cada job por separado obligaría a tocar el ruleset cada vez que cambie un nombre o la matriz de contenedores; `gate` agrupa todo con un nombre estable. Ojo: `gate` acepta `success` y `skipped`, así que un job que se salte por una condición mal escrita también pasa; hoy las condiciones dependen de `detect`, pero conviene revisarlas al cambiarlas.
 
 ## Diff propuesto
 
@@ -49,6 +49,8 @@ No tiene la regla de comprobaciones; se agrega completa en `rules`:
 +      }
 +    }
 ```
+
+Al aplicarlo, la regla anterior de `rules` debe terminar en coma (`}` pasa a `},`); si no, el JSON no se puede leer.
 
 ### Ramas `sprint-*`
 Hoy no tienen ruleset. Si se quiere la misma protección, un ruleset nuevo con `ref_name.include: ["refs/heads/sprint-*"]`, las reglas `deletion`, `non_fast_forward`, `pull_request` (1 aprobación) y `required_status_checks` con `gate`.
