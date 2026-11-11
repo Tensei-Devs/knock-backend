@@ -37,13 +37,13 @@ Que una persona del equipo de Knock entre al panel web interno con su celular ve
 - **R-03:** Cada cuenta tiene `estado` (`activa` o `deshabilitada`) y `permisosVersion`, un entero que aumenta en uno con cada cambio de roles, estado o TOTP.
 
 **Primer paso: celular**
-- **R-04:** `POST /api/v1/panel/sesion/celular` es público en el gateway, con el límite por IP de las rutas de autenticación. Cuerpo `{ idToken }` de 1 a 4 096 caracteres; cuerpo máximo de 8 KB. Un cuerpo inválido responde 400 con `errors` sin llamar a Firebase.
+- **R-04:** `POST /api/v1/panel/sesion/celular` es público en el gateway, con el límite por IP de las rutas de autenticación. Cuerpo `{ idToken }` de 1 a 4 096 caracteres; cuerpo máximo de 8 KB. Un cuerpo inválido responde 422 con `errors` (uno ilegible, 400) sin llamar a Firebase.
 - **R-05:** El servicio valida `idToken` con el mismo verificador de Firebase de la spec 015 (firma, emisor, destinatario, vencimiento y celular verificado) y deriva el `sub` igual que ella. Un token inválido responde 401 `invalid_credentials`.
 - **R-06:** Si no existe una cuenta del panel con ese `sub`, si está `deshabilitada`, si la cuenta de la app está suspendida o si no tiene secreto TOTP, responde 403 `no_panel_access`, con el mismo cuerpo en todos los casos. No se crea nada.
 - **R-07:** Si la cuenta procede, crea un desafío de un solo uso en Redis (`panel:desafio:{desafioId}`, `desafioId` de 128 bits aleatorios en base64url) con el `sub` y un contador de intentos, que vence a los 5 minutos, y responde 200 `{ desafioId, requiereTotp: true, venceEn }`.
 
 **Segundo paso: TOTP**
-- **R-08:** `POST /api/v1/panel/sesion/totp` es público en el gateway, con el mismo límite por IP. Cuerpo `{ desafioId, codigo }`; `codigo` son exactamente 6 dígitos; cuerpo máximo de 1 KB. Un cuerpo inválido responde 400.
+- **R-08:** `POST /api/v1/panel/sesion/totp` es público en el gateway, con el mismo límite por IP. Cuerpo `{ desafioId, codigo }`; `codigo` son exactamente 6 dígitos; cuerpo máximo de 1 KB. Un cuerpo inválido responde 422 (uno ilegible, 400).
 - **R-09:** El TOTP sigue RFC 6238: HMAC-SHA1, 6 dígitos, pasos de 30 segundos y una ventana de ±1 paso. Un paso ya aceptado no se vuelve a aceptar: la cuenta guarda `totpUltimoPaso` y la aceptación es una actualización condicionada a que el paso nuevo sea mayor (protege contra la repetición del mismo código y contra dos peticiones simultáneas). El código se compara en tiempo constante.
 - **R-10:** Un desafío inexistente, vencido o ya usado, o un código incorrecto o repetido, responde 401 `invalid_credentials` con el mismo cuerpo, sin decir cuál falló. Cada código incorrecto suma un intento al desafío; al quinto el desafío se borra.
 - **R-11:** Los fallos se cuentan también por cuenta (`panel:fallos:{sub}`) y por IP (`panel:fallos-ip:{ip}`) en una ventana fija de 15 minutos compartida entre réplicas. Con 5 fallos de la cuenta o 10 de la IP en la ventana, todo intento de los dos pasos para esa cuenta o IP responde 429 `limit_exceeded` con `Retry-After` hasta que la ventana termina, aunque el código sea correcto. Un acceso exitoso no reinicia el contador de la IP.
@@ -77,7 +77,7 @@ Que una persona del equipo de Knock entre al panel web interno con su celular ve
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dada una cuenta del panel con rol `administrador` y TOTP registrado, cuando envía un `idToken` válido y después el código TOTP vigente, entonces recibe 200 con `accessToken` de destinatario `knock-panel`, los cinco permisos, su nombre y la cookie de renovación con `HttpOnly`, `Secure`, `SameSite=None`, `Partitioned` y la ruta de sesión, y queda una sesión y dos registros de auditoría de acceso.
-- **CA-02:** Dado un desafío vigente, cuando el código TOTP falta, no tiene 6 dígitos, es incorrecto o es de un paso fuera de la ventana, entonces responde 400 (los dos primeros) o 401 `invalid_credentials` (los dos últimos) con el mismo cuerpo, sin token ni cookie.
+- **CA-02:** Dado un desafío vigente, cuando el código TOTP falta, no tiene 6 dígitos, es incorrecto o es de un paso fuera de la ventana, entonces responde 422 (los dos primeros) o 401 `invalid_credentials` (los dos últimos) con el mismo cuerpo, sin token ni cookie.
 - **CA-03:** Dado un celular cuya cuenta de la app no tiene cuenta del panel, o una cuenta del panel deshabilitada, cuando envía su `idToken`, entonces responde 403 `no_panel_access` con el mismo cuerpo en ambos casos y no se crea desafío.
 - **CA-04:** Dada una sesión con solo el rol `moderador`, cuando pide un endpoint de prueba que exige `verification:review`, entonces responde 403 `insufficient_permission` y queda un registro de auditoría con resultado `denegado`; con un endpoint que exige `reviews:moderate`, responde 200 y queda uno `permitido`.
 - **CA-05:** Dada una sesión abierta, cuando la herramienta interna cambia los roles de la cuenta, entonces la siguiente petición con el token anterior responde 401 `permissions_changed`, la sesión queda revocada y la renovación con su cookie responde 401.
@@ -135,8 +135,8 @@ Que una persona del equipo de Knock entre al panel web interno con su celular ve
 ## 5. Contrato
 | Método y ruta | Quién | Entrada | Respuestas |
 |---|---|---|---|
-| `POST /api/v1/panel/sesion/celular` | público (límite por IP) | `{ idToken }` | 200 `{ desafioId, requiereTotp: true, venceEn }`; 400, 401 `invalid_credentials`, 403 `no_panel_access`, 429 `limit_exceeded`, 503 `unavailable` |
-| `POST /api/v1/panel/sesion/totp` | público (límite por IP) | `{ desafioId, codigo }` | 200 `{ accessToken, expiraEn, permisos[], nombre }` + `Set-Cookie`; 400, 401 `invalid_credentials`, 403 `no_panel_access`, 429 `limit_exceeded`, 503 `unavailable` o `audit_unavailable` |
+| `POST /api/v1/panel/sesion/celular` | público (límite por IP) | `{ idToken }` | 200 `{ desafioId, requiereTotp: true, venceEn }`; 400 (cuerpo ilegible), 401 `invalid_credentials`, 403 `no_panel_access`, 429 `limit_exceeded`, 503 `unavailable` |
+| `POST /api/v1/panel/sesion/totp` | público (límite por IP) | `{ desafioId, codigo }` | 200 `{ accessToken, expiraEn, permisos[], nombre }` + `Set-Cookie`; 400 (cuerpo ilegible), 401 `invalid_credentials`, 403 `no_panel_access`, 429 `limit_exceeded`, 503 `unavailable` o `audit_unavailable` |
 | `POST /api/v1/panel/sesion/renovar` | cookie de renovación + `X-Knock-Panel: 1` + `Origin` del panel | sin cuerpo | 200 como `totp` + `Set-Cookie` nueva; 401 `invalid_session` o `permissions_changed`, 403 `origin_not_allowed`, 429, 503 |
 | `POST /api/v1/panel/sesion/cerrar` | token del panel + `X-Knock-Panel: 1` | sin cuerpo | 204 (borra la cookie); 401, 403 `origin_not_allowed` |
 | Cualquier endpoint futuro del panel | token del panel con el permiso declarado | según su spec | además de los suyos: 401 `permissions_changed`, 403 `insufficient_permission`, 503 `audit_unavailable` |
@@ -250,7 +250,7 @@ Que una persona del equipo de Knock entre al panel web interno con su celular ve
 | Integración | Sí | Identity y gateway con MongoDB y Redis reales (`Testcontainers`), emulador o doble de Firebase, dos hosts para límites y simultaneidad |
 | Contrato | Sí | Los cuatro endpoints, sus códigos y la cookie en el OpenAPI de Identity; comparación con lo que consume la spec 023 de frontend |
 | Seguridad negativa | Sí | Tokens cruzados, CSRF en renovar, reuso, fuerza bruta, cuenta deshabilitada o suspendida, permisos cambiados, alta con datos inválidos |
-| Humo | Sí | En el entorno de evaluación, con una cuenta de prueba creada con la herramienta: las rutas del panel sin token responden 401 y `/api/v1/panel/sesion/celular` con cuerpo inválido responde 400; el recorrido completo está en «Aceptación de punta a punta» |
+| Humo | Sí | En el entorno de evaluación, con una cuenta de prueba creada con la herramienta: las rutas del panel sin token responden 401 y `/api/v1/panel/sesion/celular` con cuerpo inválido responde 422; el recorrido completo está en «Aceptación de punta a punta» |
 | Regresión | Sí | Suites de las specs 015 a 018 sin cambios: el inicio de sesión de la app no se ve afectado por el esquema del panel |
 | Arquitectura | Sí | Todo controller del panel declara permiso; `TotpService` sin dependencias de HTTP ni de MongoDB; el modo de herramienta no registra Kestrel |
 | Mutación | Sí | Ventana del TOTP, condición de paso mayor, comparación de `pv`, límites de fallos y mapa de roles (meta de la spec 008) |
@@ -274,7 +274,7 @@ Que una persona del equipo de Knock entre al panel web interno con su celular ve
 - Se presenta el token de la app en `/api/v1/panel/...`.
 
 **Errores esperados**
-- 400 por cuerpos inválidos; 401 `invalid_credentials`, `invalid_session` y `permissions_changed`; 403 `no_panel_access`, `insufficient_permission` y `origin_not_allowed`; 429 `limit_exceeded`; 503 `unavailable` y `audit_unavailable`.
+- 400 por cuerpos ilegibles; 422 por cuerpos inválidos; 401 `invalid_credentials`, `invalid_session` y `permissions_changed`; 403 `no_panel_access`, `insufficient_permission` y `origin_not_allowed`; 429 `limit_exceeded`; 503 `unavailable` y `audit_unavailable`.
 
 **Casos límite**
 - Código del paso anterior, del actual y del siguiente (aceptados) y de dos pasos atrás (rechazado).
