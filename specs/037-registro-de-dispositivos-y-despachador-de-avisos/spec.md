@@ -45,6 +45,8 @@ Que el teléfono de cada persona reciba un aviso de Knock cuando pasa algo en su
 | `POST /api/v1/dispositivos` | persona con sesión | `{ identificador, plataforma }` | `201` primera vez; `200` si el token ya estaba registrado para esa persona | `400`, `401`, `422`, `429` |
 | `DELETE /api/v1/dispositivos/{id}` | dueño | — | `204` | `401`, `404`, `429` |
 
+**Códigos de error:** no hay códigos de negocio propios; los errores de campo (por ejemplo, una `plataforma` fuera de la lista) salen como 422 con `errors`, el cuerpo ilegible como 400, y 401 y 429 como en la convención de la spec 002 (R-08 a R-12).
+
 **Eventos que despacha** (frontend 024 §4.2): `solicitud_nueva`, `solicitud_sin_tecnicos`, `cotizacion_nueva`, `cotizacion_aceptada`, `solicitud_cancelada`, `solicitud_vencida`, `cotizacion_vencida`, `mensaje_nuevo`. Cada uno con su `tipo` y su `recurso` según esa tabla.
 
 ## 5. Seguridad

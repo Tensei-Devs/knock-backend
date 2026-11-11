@@ -99,7 +99,7 @@ Que una persona que se registra indique su zona con su ubicación o con su códi
 
 **Límites:** 5 registros en la lista de espera por hora y por persona; 100 caracteres de municipio; cuerpo de 2 KB; caché de 24 h en Redis para el código con colonias y de 5 minutos para el vacío; `max-age` de 1 hora en el cliente. Se registran en `docs/rate-limit-matrix.md`.
 
-**Convención de errores:** la común de las specs 020 a 026 (spec 020, §5): formato inválido 422 con `errors`, sin sesión 401, cuerpo grande 413, límite 429 con `Retry-After`.
+**Convención de errores:** la de la spec 002 (R-08 a R-12) y la común de las specs 020 a 026 (spec 020, §5): formato inválido 422 con `errors`, sin sesión 401, cuerpo grande 413, límite 429 con `Retry-After`.
 
 ## 6. Modelo de datos
 **`colonias`** (existente, de TT-BD-06; esta spec no la modifica)
