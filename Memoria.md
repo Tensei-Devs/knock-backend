@@ -2,6 +2,12 @@
 
 > Registro del proyecto: estado, decisiones con su fecha y su porqué, y errores a evitar. Los agentes la leen al empezar y agregan una entrada al terminar cada cambio. Sin datos sensibles.
 
+## 2026-11-11 — Baseline de clones de #52 aceptado por el Tech Lead y seguimiento de EXC-018 (KNOCK-205)
+- **Decisión:** el Tech Lead aceptó `docs/architecture/clones-baseline.json` del PR #52 (65 → 72 grupos: 65 − 1 + 8). Las 8 huellas nuevas coinciden exactamente con EXC-018 (aprobada el 2026-11-08, vigente hasta el 2026-12-04): 6 de `JsonCompressionMiddleware` (Identity y Market), 1 de `Matches` (MeController y OficiosController) y 1 de los validadores `ProfileCacheOptionsValidator.Validate` y `CatalogCacheOptionsValidator.Validate`. Sale la huella de `CorsMiddleware` entre Identity y Market, que dejó de ser idéntica porque Market cambió sus `AllowedHeaders`. Se verificó ejecutando `scripts/codemap.py` sobre `sprint-04` y sobre esta rama.
+- **Porqué:** son duplicados que EXC-018 ya cubre; el baseline solo refleja el estado real. Nota: el middleware de compresión no «ya estaba duplicado»; el archivo de Market es nuevo en este PR.
+- **Seguimiento:** cumplir la extracción de esos duplicados (biblioteca compartida, KNOCK-251) **antes del 2026-12-04**, que es cuando vence EXC-018; si no se cumple, se renueva con constancia o se corrige el código.
+- **A evitar:** aceptar un cambio al baseline sin comprobar qué huellas entran y salen; dejar vencer EXC-018 sin extraer o renovar.
+
 ## 2026-11-10 — KNOCK-205: vigencia HTTP del catálogo
 - **Decisión de Julián:** conservar `Cache-Control: public, max-age=86400` en `/oficios`; el catálogo casi no cambia y cuenta con ETag.
 - **Consecuencia:** un cliente o proxy puede conservar la respuesta hasta 24 horas sin revalidarla, incluso después de una siembra. La invalidación del servidor no actualiza inmediatamente esas copias.
