@@ -38,6 +38,9 @@ public class TelemetryRedactorTests
     [InlineData("?id_token=i-secret-1&x=1", "i-secret-1")]
     [InlineData("access_token: a-secret-2", "a-secret-2")]
     [InlineData("{\"refresh_token\":\"r-secret-2\"}", "r-secret-2")]
+    [InlineData("contacto persona.ficticia@ejemplo.com fin", "persona.ficticia@ejemplo.com")]
+    [InlineData("email=persona.ficticia@ejemplo.com", "persona.ficticia@ejemplo.com")]
+    [InlineData("correo: persona.ficticia@ejemplo.com", "persona.ficticia@ejemplo.com")]
     [InlineData("password=p-secret-1", "p-secret-1")]
     [InlineData("secret: s-secret-1", "s-secret-1")]
     [InlineData("Cookie: session=c-secret-1; theme=c-secret-2", "c-secret-1")]
@@ -80,6 +83,8 @@ public class TelemetryRedactorTests
     [InlineData("refresh_token", "tok")]
     [InlineData("password", "p")]
     [InlineData("secret", "s")]
+    [InlineData("email", "persona.ficticia@ejemplo.com")]
+    [InlineData("correo", "persona.ficticia@ejemplo.com")]
     public void RedactAttribute_KnownKey_IsAlwaysReplaced_TC_TT_OBS_01_12(string key, object value) =>
         TelemetryRedactor.RedactAttribute(key, value).Should().Be(TelemetryRedactor.Placeholder);
 
