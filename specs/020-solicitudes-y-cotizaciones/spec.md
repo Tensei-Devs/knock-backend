@@ -186,7 +186,7 @@ El script `db/` de esta spec crea las colecciones y los índices; no borra ni ca
 | Ver o cotizar solicitudes ajenas | Todo se filtra por el `sub` del token; la solicitud ajena responde 404 | CA-12, CA-09 |
 | Suplantar a un técnico | El técnico se resuelve por `sub` en `tecnicos`; no se recibe su identificador | CA-16 |
 | Manipular el precio o el tope | El tope y el porcentaje se calculan en el servidor; el cliente no los envía | CA-11 |
-| Doble envío por reintento de la red | Sin clave de idempotencia por ahora (riesgo aceptado, §15); el límite de 10 solicitudes por hora acota el daño; en las cotizaciones, el índice único y la 409 | CA-07 |
+| Doble envío por reintento de la red | Sin clave de idempotencia por ahora (riesgo aceptado, §15); el límite de 10 solicitudes por hora acota el daño; en las cotizaciones, el índice único y la 409 | CA-07 (solo cotizaciones; la creación repetida es riesgo aceptado y no tiene criterio propio) |
 | Fuga de la dirección | Se guarda cifrada y solo se descifra para el dueño o el técnico elegido | CA-13 |
 | Contenido inapropiado | Moderación previa que falla cerrada | CA-15 |
 | Usar fotos ajenas o sin moderar (IDOR sobre archivos) | Solo `archivoId` del mismo `sub`, `uso = solicitud` y `listo`; error uniforme | CA-18 |
@@ -221,7 +221,7 @@ El script `db/` de esta spec crea las colecciones y los índices; no borra ni ca
 **Positivos**
 - Crear una solicitud de plomería a domicilio con tres fotos y recibir tres cotizaciones.
 - Crear una solicitud de mecánica en taller sin dirección y recibir una cotización con rango.
-- Reintentar el envío con la misma clave y obtener la misma solicitud.
+- Reintentar el envío tras un corte de red: la app consulta `GET /api/v1/solicitudes` antes de volver a enviar (§15).
 
 **Negativos**
 - Persona sin sesión, o con sesión de otra persona, pidiendo el detalle.
@@ -234,7 +234,7 @@ El script `db/` de esta spec crea las colecciones y los índices; no borra ni ca
 - 400 por formato, 401 sin sesión, 403 por rol, 404 por recurso ajeno, 409 por estado o duplicado, 422 por catálogo o moderación, 429 por límite, 503 por moderación o base no disponible.
 
 **Casos límite**
-- 1 y 5 fotos; 8 y 500 caracteres; día de hoy y día + 5; cotización el mismo día y + 7 días; precio 1 y 200 000; tope con diferencia exacta de 100 pesos; dos cotizaciones simultáneas de técnicos distintos; dos creaciones simultáneas con la misma clave; solicitud que vence mientras se cotiza.
+- 1 y 5 fotos; 8 y 500 caracteres; día de hoy y día + 5; cotización el mismo día y + 7 días; precio 1 y 200 000; tope con diferencia exacta de 100 pesos; dos cotizaciones simultáneas de técnicos distintos; dos creaciones simultáneas de la misma persona (crean dos solicitudes; las acota el límite de 10 por hora); solicitud que vence mientras se cotiza.
 
 ## 12. Definición de terminado
 - Los 22 criterios tienen prueba en verde y la tabla 4.1 coincide con los nombres reales (`python scripts/sdd_lint.py --trace 020` sin faltantes).
