@@ -119,7 +119,7 @@ Que todo texto e imagen que una persona publica en Knock se revise con Azure AI 
 | `servicio` | string | `market` o `messaging` |
 | `contexto` | string | uno de R-01 |
 | `tipo` | string | `texto` o `imagen` |
-| `decision` | string | `aprobado`, `rechazado`, `no_disponible` |
+| `decision` | string | `approved`, `rejected`, `unavailable` |
 | `origen` | string | `azure`, `lista_local`, `cache` |
 | `categorias` | string[] | solo las que alcanzaron el umbral |
 | `reasonCode` | string? | `not_moderable`, `unavailable`, `quota_exhausted`, `per_person_limit`, `limit_unavailable` |
