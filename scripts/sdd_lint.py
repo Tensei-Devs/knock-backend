@@ -118,6 +118,11 @@ def numbered_dirs() -> list[Path]:
     return sorted(p for p in (ROOT / "specs").glob("*") if p.is_dir() and NUMBERED.match(p.name))
 
 
+def root_dirs() -> list[Path]:
+    """Specs HU/TT/BUG que viven en la raíz de specs/ (p. ej. BUG-003-...), fuera de specs/_legacy."""
+    return sorted(p for p in (ROOT / "specs").glob("*") if p.is_dir() and not p.name.startswith(("_", ".")) and FOLDER.match(p.name))
+
+
 def numbered_cases(text: str) -> list[str]:
     return NUMBERED_CASE.findall(text)
 
@@ -143,6 +148,8 @@ def trace(spec_id: str) -> int:
     if not folder:
         folder = find_spec(numbered_dirs(), spec_id)
         number = NUMBERED.match(folder.name).group(1) if folder else None
+    if not folder:
+        folder = find_spec(root_dirs(), spec_id)  # BUG-NNN-* en la raíz de specs/: sus casos son TC-BUG-NNN-NN, como en las legadas
     if not folder:
         print(f"ERROR: no existe specs/{spec_id}* ni specs/_legacy/{spec_id}*")
         return 1
