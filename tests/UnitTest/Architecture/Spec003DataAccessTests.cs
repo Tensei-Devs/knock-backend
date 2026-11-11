@@ -54,7 +54,6 @@ public sealed class Spec003DataAccessTests
     [Fact]
     public void RedisClientOnlyInHostingAndModuleData_CA_003_02()
     {
-        var moduleData = $"^{Regex.Escape($"{_root}.Modules")}[.][^.]+[.]Data([.]|$)";
         var hosting = $"^{Regex.Escape($"{_root}.Hosting")}([.]|$)";
 
         Types.InAssembly(ModuleCatalog.ApiAssembly)
@@ -63,25 +62,18 @@ public sealed class Spec003DataAccessTests
             .GetTypes()
             .Should().NotBeEmpty("el cliente de Redis vive en Hosting; si no, la regla pasaría en vacío");
 
-        var result = Types.InAssembly(ModuleCatalog.ApiAssembly)
-            .That().DoNotResideInNamespaceMatching(moduleData)
-            .And().DoNotResideInNamespaceMatching(hosting)
-            .ShouldNot().HaveDependencyOnAny(_redisNamespace)
-            .GetResult();
+        var result = RedisAccessRule.Evaluate(ModuleCatalog.ApiAssembly, _root);
 
-        (result.FailingTypes ?? []).Select(type => type.FullName).Should().BeEmpty();
+        result.FailingTypes.Should().BeEmpty();
         result.IsSuccessful.Should().BeTrue();
     }
 
     [Fact]
     public void RedisRule_WithServiceUsingRedis_Fails_CA_003_02()
     {
-        var result = Types.InAssembly(typeof(Spec003DataAccessTests).Assembly)
-            .That().ResideInNamespace("Knock.UnitTest.Architecture.Fixtures.Redis.Violating.Modules.Alpha.Services")
-            .ShouldNot().HaveDependencyOnAny(_redisNamespace)
-            .GetResult();
+        var result = RedisAccessRule.Evaluate(typeof(Spec003DataAccessTests).Assembly, "Knock.UnitTest.Architecture.Fixtures.Redis.Violating");
 
         result.IsSuccessful.Should().BeFalse();
-        (result.FailingTypes ?? []).Select(type => type.Name).Should().Contain("AlphaServiceReadsRedis");
+        result.FailingTypes.Should().Contain(name => name.EndsWith(".AlphaServiceReadsRedis", StringComparison.Ordinal));
     }
 }

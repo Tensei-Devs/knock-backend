@@ -65,6 +65,22 @@ public sealed class Spec003IndexScriptTests
         }
     }
 
+    [Fact]
+    public async Task IndexScript_WithInvalidDatabaseName_FailsWithoutCreatingDatabases_CA_003_01()
+    {
+        var documentDb = await DocumentDbFixture.SharedAsync();
+        await using var tools = await MongoToolsContainer.StartAsync(documentDb, new Dictionary<string, string>
+        {
+            ["KNOCK_DB_MARKET"] = "mala;base",
+        });
+        var script = $"{MongoToolsContainer.DbDirectory}/001_indices.js";
+
+        var result = await tools.RunAsync("mongosh", "--nodb", "--quiet", "--file", script);
+
+        result.ExitCode.Should().NotBe(0, result.Output);
+        result.Output.Should().Contain("Nombre de base no válido");
+    }
+
     /// <summary>
     /// CA-01: la comparación de índices incluye <c>expireAfterSeconds</c>; si un índice TTL lo pierde o lo cambia, la descripción
     /// cambia y la comparación falla. Hoy <c>db/001_indices.js</c> no crea TTL; el índice de esta prueba es sintético.
