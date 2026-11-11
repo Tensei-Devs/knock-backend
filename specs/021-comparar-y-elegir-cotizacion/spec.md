@@ -68,7 +68,7 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 - **CA-13:** Dado el registro de una elección, cuando se inspecciona, entonces no contiene nombre, teléfono, dirección ni código.
 - **CA-14:** Dadas dos cotizaciones del mismo tipo y tope, cuando se ordena por `recomendadas`, entonces el orden es estable y el verificado va primero.
 - **CA-15:** Dado `?orden=barato` o un `id` que no es `ObjectId`, cuando se pide el listado, entonces responde 422 con `errors.orden` o 400, respectivamente.
-- **CA-17:** Dada una falla de la base durante la transacción (simulada), cuando se elige, entonces responde 503 `service_unavailable`, la solicitud sigue en `cotizando`, no hay `visita` ni eventos, y repetir con la misma clave termina bien.
+- **CA-17:** Dada una falla de la base durante la transacción (simulada), cuando se elige, entonces responde 503 `service_unavailable`, la solicitud sigue en `cotizando`, no hay `visita` ni eventos, y repetir la elección termina bien.
 - **CA-18:** Dado el listado de cualquier solicitud (antes o después de elegir), cuando se inspecciona la respuesta, entonces no contiene `telefono`, `whatsapp` ni direcciones.
 
 ## 5. Contrato
@@ -192,7 +192,7 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 
 **Negativos**
 - Elegir una cotización de otra solicitud.
-- Elegir dos veces con claves distintas.
+- Elegir dos veces la misma solicitud (la segunda responde 409 `solicitud_ya_elegida`).
 - Intentar ver el listado con el token del técnico.
 - Solicitud cancelada o vencida.
 
@@ -204,7 +204,7 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 - Empate de tope y de calificación.
 - Cotización retirada entre el listado y la elección.
 - Elección en el segundo exacto del vencimiento.
-- Repetición de la elección con la misma clave y con clave distinta.
+- Repetición de la elección sobre una solicitud ya elegida (409 `solicitud_ya_elegida`) y repetición tras un 503 (termina bien).
 
 ## 12. Definición de terminado
 - Los 18 criterios tienen prueba en verde y la tabla 4.1 coincide con los nombres reales (`python scripts/sdd_lint.py --trace 021` sin faltantes).
@@ -236,7 +236,7 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 **Agregadas en la revisión del 9 de noviembre**
 
 9. **El listado no se pagina.** El cupo de 5 cotizaciones vivas de la spec 020 lo acota; se documenta como excepción a la spec 010, igual que el catálogo de oficios. Alternativa: cursor sobre 5 elementos, que complica la pantalla sin beneficio.
-10. **503 en lugar de 500 cuando la transacción falla.** Es una falla de dependencia y la operación es repetible con la misma clave; 500 sugiere un error del programa. Alternativa: 500, que la app trataría como no recuperable.
+10. **503 en lugar de 500 cuando la transacción falla.** Es una falla de dependencia y la operación es repetible sin cambiar nada; 500 sugiere un error del programa. Alternativa: 500, que la app trataría como no recuperable.
 11. **`motivo` usa los mismos nombres que los errores.** El borrador tenía `sin_cotizaciones` y `ya_elegida` en el listado y `request_without_quotes` y `request_already_chosen` en la elección; con un solo nombre la app usa un solo texto.
 12. **KNOCK-81 (HU-032) se cubre aquí del lado del backend.** La ficha es de pantalla, pero el orden y las etiquetas son reglas del servidor. Alternativa: una spec aparte solo para el listado, que duplicaría el modelo.
 
