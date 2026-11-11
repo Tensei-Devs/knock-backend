@@ -144,7 +144,7 @@ Que una persona que no sabe qué oficio elegir escriba con sus palabras («boile
 | `palabrasBusqueda` | string[] normalizado del nombre público y del negocio (R-06) |
 | `oficios` | string[] de claves |
 | `estado`, `oculto` | filtro de R-07 |
-| `nivelVerificacion` | `ninguno`, `basico`, `completo`; `verificado` = distinto de `ninguno` |
+| `nivelVerificacion` | `ninguno`, `basica`, `completa`; `verificado` = distinto de `ninguno` |
 | `calificacion`, `totalResenas` | orden y respuesta |
 | `coloniaBaseId`, `coloniaBaseNombre` | colonia base y caso sin `centro` |
 | `ubicacionBase` | GeoJSON `Point` del centro de la colonia base; nunca se devuelve |
