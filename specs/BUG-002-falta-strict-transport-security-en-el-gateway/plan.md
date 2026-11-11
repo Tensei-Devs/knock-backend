@@ -1,6 +1,6 @@
 # plan.md — BUG-002 — Falta el encabezado Strict-Transport-Security en el gateway
 
-> Borrador. Falta la aprobación de la spec (KNOCK-239); no hay nada implementado.
+> Spec aprobada el 2026-11-10 (KNOCK-239). Nada implementado todavía: el código y las pruebas de BUG-002 están por hacer.
 
 ## 1. Mapeo de archivos
 - **Reutilizar:** `SecurityHeadersMiddleware` del gateway (ya fija los demás encabezados), `Security:Hsts:MaxAge` de la configuración, `SecurityHostConfiguration` y las fábricas de las pruebas de seguridad. Antes de crear: `python scripts/codemap.py --query "hsts security headers gateway"`.
