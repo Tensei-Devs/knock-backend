@@ -14,7 +14,7 @@ Las respuestas del gateway desplegado incluyen `server: Kestrel`, y `docs/securi
 
 | Caso | Criterio (Dado / Cuando / Entonces) | Verificación |
 |---|---|---|
-| TC-BUG-003-01 | Dado el gateway, cuando responde cualquier ruta (`/health`, anónima, 401, 404, 429, proxy) → no incluye el encabezado `Server` | SecurityTest/Gateway/ServerHeaderTests.Gateway_NeverSendsServer_TC_BUG_003_01 |
+| TC-BUG-003-01 | Dado el gateway, cuando responde las rutas que recorre la prueba (`/health`, una ruta anónima, una inexistente y el proxy) → no incluye el encabezado `Server` | SecurityTest/Gateway/ServerHeaderTests.Gateway_NeverSendsServer_TC_BUG_003_01 |
 | TC-BUG-003-02 | Dado Mensajería, cuando responde `/health` o una ruta inexistente → no incluye el encabezado `Server` | SecurityTest/Messaging/ServerHeaderTests.Messaging_NeverSendsServer_TC_BUG_003_02 |
 | TC-BUG-003-03 | Dado el gateway → tampoco salen `X-Powered-By` ni `X-AspNet-Version` | SecurityTest/Gateway/ServerHeaderTests.Gateway_NeverSendsOtherLeakyHeaders_TC_BUG_003_03 |
 | TC-BUG-003-04 | Dado `docs/security-headers.md` → coincide con lo desplegado (el encabezado ausente en los cuatro servicios) y el modelo de amenazas marca H-02 como cerrado | (comando) curl -D tras el despliegue · docs |

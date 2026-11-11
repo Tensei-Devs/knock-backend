@@ -17,9 +17,10 @@ Mensajería no valida JWT, no agrega encabezados de seguridad y no limita petici
 | TC-BUG-004-01 | Dado Mensajería, cuando llega una petición a una ruta protegida sin token, con token expirado, con firma inválida, `alg=none`, otra audiencia o emisor → 401 `ProblemDetails` sin repetir datos | SecurityTest/Messaging/AuthenticationTests.NoValidToken_Returns401_TC_BUG_004_01 |
 | TC-BUG-004-02 | Dado un token válido de Knock → pasa la autenticación (la identidad sale de `sub`) y las rutas anónimas (`/health`) siguen respondiendo | SecurityTest/Messaging/AuthenticationTests.ValidToken_Passes_TC_BUG_004_02 |
 | TC-BUG-004-03 | Dado cualquier respuesta de Mensajería → lleva `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Content-Security-Policy` y `Cache-Control: no-store`, sin `Server` | SecurityTest/Messaging/SecurityHeadersTests.EveryResponse_CarriesTheHeaders_TC_BUG_004_03 |
-| TC-BUG-004-04 | Dado más peticiones que el límite configurado en la ventana → 429 con `Retry-After` y `ProblemDetails`; otra IP no se ve afectada | SecurityTest/Messaging/RateLimitTests.OverTheLimit_Returns429_TC_BUG_004_04 |
+| TC-BUG-004-04 | Dado más peticiones que el límite configurado en la ventana → 429 con `Retry-After` y `ProblemDetails`; otra IP no se ve afectada (la IP que cuenta es la reenviada en `X-Forwarded-For` desde la red del gateway, no la del propio gateway) | SecurityTest/Messaging/RateLimitTests.OverTheLimit_Returns429_TC_BUG_004_04 |
 | TC-BUG-004-05 | Dado una sesión cancelada (`sesion-cancelada:{sid}` en Redis) → 401 igual que en Identidad y Mercado | SecurityTest/Messaging/AuthenticationTests.RevokedSession_Returns401_TC_BUG_004_05 |
 | TC-BUG-004-06 | Dado Mensajería sin llave de firma o con la configuración inválida → no arranca (falla rápido), igual que los otros servicios | UnitTest/Messaging/AuthenticationStartupTests.InvalidConfiguration_FailsFast_TC_BUG_004_06 |
+| TC-BUG-004-08 | Dado Redis que no responde (caído o con tiempo agotado) al revisar `sesion-cancelada:{sid}` → 503 `ProblemDetails` y la petición no pasa, igual que en el gateway (no se deja pasar sin saber si la sesión sigue viva) | SecurityTest/Messaging/AuthenticationTests.RedisUnavailable_Returns503_TC_BUG_004_08 |
 | TC-BUG-004-07 | Dado el modelo de amenazas y `docs/rate-limit-matrix.md` → H-03 cerrado y la matriz incluye Mensajería | (comando) sdd_lint + revisión de docs |
 
 ## 3. Alcance / No-alcance
@@ -28,7 +29,7 @@ Mensajería no valida JWT, no agrega encabezados de seguridad y no limita petici
 - Encabezados de seguridad y `AddServerHeader = false`.
 - Límite de peticiones global por IP con `Retry-After` y `ProblemDetails` (mismo mecanismo que Mercado), configurable.
 - Comprobación de sesión cancelada en Redis (si Mensajería no tiene Redis hoy, se agrega solo lectura).
-- `ForwardedHeaders` solo de la red del gateway.
+- `ForwardedHeaders` solo de la red del gateway: se reutiliza `ForwardedHeadersExtensions` del PR #61 (KNOCK-201), no se implementa de nuevo. **BUG-004 depende de #61**: si todavía no está fusionado cuando se implemente, se espera a que entre o se coordina con su autor antes de escribir una segunda copia.
 - Pruebas de seguridad con un host real y una fábrica de pruebas de Mensajería.
 - **Out:**
 - Endpoints de negocio y el hub (spec 026, KNOCK-62, y HU-029).
@@ -46,8 +47,9 @@ Mensajería no valida JWT, no agrega encabezados de seguridad y no limita petici
 |---|---|---|
 | Suplantación: llamar a Mensajería sin sesión si alguien llega a la red interna | JWT obligatorio; mismos emisor, audiencia y llave | TC-BUG-004-01, 02 |
 | Fuga de información por encabezados | Encabezados de seguridad y sin `Server` | TC-BUG-004-03 |
-| Denegación por exceso de peticiones | Límite global por IP con 429 y `Retry-After` | TC-BUG-004-04 |
+| Denegación por exceso de peticiones | Límite global por IP con 429 y `Retry-After`. Con varias réplicas el límite en memoria es por réplica: riesgo aceptado, igual que en Identidad y Mercado, que pasa a Redis en el Sprint 5 | TC-BUG-004-04 |
 | Sesión cancelada sigue siendo válida | Comprobación de `sesion-cancelada:{sid}` | TC-BUG-004-05 |
+| Redis caído y la sesión se acepta sin comprobarla (fallar abierto) | Si Redis no responde al revisar la sesión cancelada, responde 503 y cierra el paso, como el gateway | TC-BUG-004-08 |
 | Configuración débil (llave corta o ausente) | Arranque con falla rápida | TC-BUG-004-06 |
 
 ## 7. Pantallas

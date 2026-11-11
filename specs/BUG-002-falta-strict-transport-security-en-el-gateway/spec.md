@@ -30,6 +30,7 @@ Ninguna respuesta del gateway desplegado incluye `Strict-Transport-Security`, au
 - Cambiar la red de confianza (`ForwardedHeaders__KnownNetworks__0`) o el Terraform; si el diagnóstico muestra que está mal, se reporta al líder.
 - HSTS en Identidad y Mercado (no tienen salida pública).
 - Precarga en la lista HSTS preload del navegador.
+- **Dependencia con BUG-001:** el humo del CI (job `dast`, BUG-001 / KNOCK-238) corre contra `http://localhost`, donde HSTS no sale a propósito (TC-BUG-002-04); solo podrá comprobarlo cuando BUG-002 esté desplegado y el humo apunte al gateway desplegado.
 
 ## 4. Contratos API y eventos
 - Ninguno (solo un encabezado de respuesta).

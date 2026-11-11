@@ -1,6 +1,6 @@
 # plan.md — BUG-003 — El gateway y Mensajería exponen el encabezado Server: Kestrel
 
-> Borrador. Falta la aprobación de la spec (KNOCK-240); no hay nada implementado.
+> Spec aprobada el 2026-11-10 (KNOCK-240). El código y las pruebas están en el PR #78, todavía sin fusionar; falta la verificación en vivo (`curl -D`) tras el despliegue.
 
 ## 1. Mapeo de archivos
 - **Reutilizar:** `Hosting/SecurityExtensions.cs` de Identidad y Mercado (patrón), `SecurityHeadersMiddleware` del gateway, `SecurityMarketFactory` como molde. Antes de crear: `python scripts/codemap.py --query "AddServerHeader kestrel security"`.
