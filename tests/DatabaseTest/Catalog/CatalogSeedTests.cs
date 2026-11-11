@@ -60,7 +60,7 @@ public sealed class CatalogSeedTests
         var after = await SnapshotAsync(database);
 
         before.Oficios.Should().HaveCount(3);
-        before.Colonias.Should().HaveCount(12);
+        before.Colonias.Should().HaveCount(13);
         after.Oficios.Should().Equal(before.Oficios, "mismos _id y misma version: el contenido no cambió");
         after.Colonias.Should().Equal(before.Colonias);
         after.Oficios.Select(o => o.Key).Should().OnlyHaveUniqueItems();
