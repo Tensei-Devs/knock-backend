@@ -2,6 +2,10 @@
 
 > Registro del proyecto: estado, decisiones con su fecha y su porqué, y errores a evitar. Los agentes la leen al empezar y agregan una entrada al terminar cada cambio. Sin datos sensibles.
 
+## 2026-11-09 — Seguimientos de revisión #8 (spec 003) y #10 (spec 011) en test/KNOCK-198-206-review-follow-ups
+- **Estado:** obs. 5 de Erick (spec 003): nueva `RedisAccessRule.Evaluate` en `tests/UnitTest/Architecture/RedisAccessRule.cs` con el mismo predicado de la prueba positiva (Redis solo en `Modules/*/Data` y `Hosting`); la prueba positiva `RedisClientOnlyInHostingAndModuleData_CA_003_02` y la negativa `RedisRule_WithServiceUsingRedis_Fails_CA_003_02` la usan, como `MongoAccessRule.Evaluate`. Obs. 7 (spec 003): `db/001_indices.js` y `deploy/backup/mongo-backup.sh` ya validaban el nombre de base (`^[A-Za-z0-9_-]{1,63}$`), así que solo se agregaron pruebas negativas `IndexScript_WithInvalidDatabaseName_FailsWithoutCreatingDatabases_CA_003_01` y `Backup_WithInvalidDatabaseName_FailsWithoutRunningTools_CA_003_04` (nombre `mala;base`, salida «Nombre de base no válido», sin crear bases ni correr mongodump). Spec 011: `SensitiveText` compartido de `Spec011ObservabilityTests` suma `?id_token=i-secret-1`, `access_token: a-secret-2` y `maps 19.4326,-99.1332` (mismos datos que `TelemetryRedactorTests` de Market, que ya los cubría) para Identity/Messaging/Gateway sin duplicar la Theory. R-04 (correos): claves `email`/`correo` en `_sensitiveKeys` y en `KeyValue`, patrón `Email()` de texto libre disparado solo por `@`, en las 4 copias de `TelemetryRedactor` (aviso previo al líder y «sí, procede»: ~4 líneas idénticas por copia bajo EXC-007 existente, sin exención nueva), con pruebas en `TelemetryRedactorTests` (Market) y en la Theory/atributos compartidos de las otras tres.
+- **Verificación:** `dotnet build Knock.slnx -c Release -warnaserror` (0 advertencias/errores), `dotnet format Knock.slnx --verify-no-changes`, `dotnet test tests/UnitTest` (796) y `tests/DatabaseTest` (56, Docker una vez) en verde. Sin commit, a la espera de codemap.
+
 ## Estado actual
 - Constitución `1.0.0` en borrador, `AGENTS.md`, subagentes y skills creados.
 - 14 specs de la base (arquitectura, estructura del repositorio, infraestructura, rendimiento, observabilidad, versionamiento y seguridad) redactadas en **Borrador**; sus tareas **no se han ejecutado**.
@@ -292,3 +296,8 @@
 - **Decisión:** se registra la huella del commit 0b7a866 (`tests/perf/README.md`, línea 23) en `.gitleaksignore`, respaldada por EXC-019 hasta el 2026-12-04, sin reescribir el historial.
 - **Porqué:** el CI descarga todas las ramas, así que un commit con una cadena de conexión sintética en una rama de trabajo hacía fallar el chequeo de secretos de todos los PR del repositorio.
 - **A evitar:** poner ejemplos con credenciales, aunque sean del entorno local, en la documentación; escribirlas como `<usuario>:<contraseña>`. Retirar la huella y la excepción al fusionar la rama.
+
+## 2026-11-10 — Colonia de la UTTT en las semillas del catálogo (KNOCK-249)
+- **Decisión:** se agrega la colonia «El Carmen» (código postal 42830, por confirmar) con un polígono piloto aproximado de unos 800 metros de lado centrado en el campus de la UTTT, en `colonias_tula.geojson`, el extracto de SEPOMEX y `colonias.json`; las pruebas que cuentan colonias pasan de 12 a 13 y de 8 a 9 con polígono.
+- **Porqué:** las ocho colonias sembradas cubren el centro de Tula; desde el campus (carretera Tula-Tepeji) `GET /colonias/en-punto` respondía «fuera de cobertura» y la demo no mostraba la zona de quien la prueba allí.
+- **A evitar:** tomar el polígono como límite oficial (es aproximado y no oficial); olvidar cargar la semilla en la base de Azure (`db/entrega.js`) después de fusionar.
