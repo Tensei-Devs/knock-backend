@@ -7,6 +7,11 @@
 - 14 specs de la base (arquitectura, estructura del repositorio, infraestructura, rendimiento, observabilidad, versionamiento y seguridad) redactadas en **Borrador**; sus tareas **no se han ejecutado**.
 - Sin código de producto todavía.
 
+## 2026-11-11 — Las specs BUG-002, BUG-003 y BUG-004 pasan de «Borrador» a su estado real (KNOCK-239)
+- **Decisión:** `plan.md`, `task.md` y `specs/README.md` de BUG-002, BUG-003 y BUG-004 dejan de decir «Borrador / pendiente de aprobación» y reflejan que las specs están aprobadas (2026-11-10). BUG-002 y BUG-004 siguen sin implementar; BUG-003 no se marca como implementada: su código y pruebas viven en el PR #78, todavía sin fusionar, y su verificación en vivo (`curl -D`) sigue pendiente. BUG-004 agrega TC-BUG-004-08: si Redis no responde al revisar `sesion-cancelada:{sid}`, la respuesta es 503 y la petición no pasa, como en el gateway (propuesta de Erick, tomada como decisión técnica menor; cambia una spec aprobada). TC-BUG-003-01 deja de mencionar 401 y 429, que su prueba no recorre. BUG-002 anota que el humo de BUG-001 solo podrá comprobar HSTS cuando BUG-002 esté desplegado.
+- **Porqué:** revisión de par de Erick y Alexis sobre #73; los documentos de seguimiento contradecían el estado real de las specs, y fallar abierto con Redis caído dejaría pasar una sesión cancelada.
+- **A evitar:** dejar un plan o un índice en «Borrador» con la spec ya aprobada; marcar como implementado lo que solo existe en un PR sin fusionar; dar por cerrado H-02 sin el `curl -D` contra el gateway desplegado.
+
 ## 2026-11-08 — Despliegue de imágenes y credencial federada
 - **Decisión:** `id-knock-deploy` lleva dos credenciales federadas para `main` (`github-main` y `github-main-ids`), porque GitHub presenta el sujeto con dos formas; el perfil «Consumption» ya no produce diferencias en el plan.
 - **Porqué:** la primera corrida de `ci-deploy` en `main` falló con `AADSTS700213`; con la segunda credencial publicó las cuatro imágenes y el apply dejó las cuatro apps sanas.
