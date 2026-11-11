@@ -20,6 +20,7 @@ Mensajería no valida JWT, no agrega encabezados de seguridad y no limita petici
 | TC-BUG-004-04 | Dado más peticiones que el límite configurado en la ventana → 429 con `Retry-After` y `ProblemDetails`; otra IP no se ve afectada | SecurityTest/Messaging/RateLimitTests.OverTheLimit_Returns429_TC_BUG_004_04 |
 | TC-BUG-004-05 | Dado una sesión cancelada (`sesion-cancelada:{sid}` en Redis) → 401 igual que en Identidad y Mercado | SecurityTest/Messaging/AuthenticationTests.RevokedSession_Returns401_TC_BUG_004_05 |
 | TC-BUG-004-06 | Dado Mensajería sin llave de firma o con la configuración inválida → no arranca (falla rápido), igual que los otros servicios | UnitTest/Messaging/AuthenticationStartupTests.InvalidConfiguration_FailsFast_TC_BUG_004_06 |
+| TC-BUG-004-08 | Dado Redis que no responde (caído o con tiempo agotado) al revisar `sesion-cancelada:{sid}` → 503 `ProblemDetails` y la petición no pasa, igual que en el gateway (no se deja pasar sin saber si la sesión sigue viva) | SecurityTest/Messaging/AuthenticationTests.RedisUnavailable_Returns503_TC_BUG_004_08 |
 | TC-BUG-004-07 | Dado el modelo de amenazas y `docs/rate-limit-matrix.md` → H-03 cerrado y la matriz incluye Mensajería | (comando) sdd_lint + revisión de docs |
 
 ## 3. Alcance / No-alcance
@@ -48,6 +49,7 @@ Mensajería no valida JWT, no agrega encabezados de seguridad y no limita petici
 | Fuga de información por encabezados | Encabezados de seguridad y sin `Server` | TC-BUG-004-03 |
 | Denegación por exceso de peticiones | Límite global por IP con 429 y `Retry-After` | TC-BUG-004-04 |
 | Sesión cancelada sigue siendo válida | Comprobación de `sesion-cancelada:{sid}` | TC-BUG-004-05 |
+| Redis caído y la sesión se acepta sin comprobarla (fallar abierto) | Si Redis no responde al revisar la sesión cancelada, responde 503 y cierra el paso, como el gateway | TC-BUG-004-08 |
 | Configuración débil (llave corta o ausente) | Arranque con falla rápida | TC-BUG-004-06 |
 
 ## 7. Pantallas

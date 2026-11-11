@@ -4,7 +4,7 @@
 
 ## T1 — Autenticación JWT y sesión cancelada
 - **Estado:** por hacer (spec aprobada). Esquema, `[Authorize]` por defecto, comprobación en Redis y arranque con falla rápida.
-- **Verificar:** TC-BUG-004-01 · 02 · 05 · 06
+- **Verificar:** TC-BUG-004-01 · 02 · 05 · 06 · 08
 
 ## T2 — Encabezados de seguridad y sin Server
 - **Estado:** por hacer (spec aprobada). Middleware de encabezados y `AddServerHeader = false`.
