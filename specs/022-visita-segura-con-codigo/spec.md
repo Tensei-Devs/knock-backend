@@ -185,7 +185,7 @@ Que la persona vea su visita a domicilio con el código de cuatro dígitos que r
 - Se comparte el código con un tercero y se agotan los intentos.
 
 **Errores esperados**
-- 400 por identificador o clave, 401 sin sesión, 403 por rol, 404 por visita ajena, 409 por estado, 422 por código incorrecto, 429 por límite.
+- 400 por identificador mal formado, 401 sin sesión, 403 por rol, 404 por visita ajena, 409 por estado, 422 por código incorrecto, 429 por límite.
 
 **Casos límite**
 - Código con ceros a la izquierda.
