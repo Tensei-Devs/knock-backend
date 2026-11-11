@@ -40,6 +40,28 @@ variable "log_daily_quota_gb" {
   default     = 0.5
 }
 
+variable "alert_email_receiver" {
+  description = "Correo que recibe las alertas del grupo de acciones (spec 011, CA-03). Sin valor por defecto real: vacío crea el grupo sin receptores. La dirección nunca vive en el repositorio."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = can(regex("^$|^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", var.alert_email_receiver))
+    error_message = "alert_email_receiver debe estar vacío o ser un correo válido (texto@dominio.tld)."
+  }
+}
+
+variable "alert_failed_requests_threshold" {
+  description = "Peticiones fallidas (requests/failed) en la ventana de 5 minutos que disparan la alerta (spec 011, CA-03)."
+  type        = number
+  default     = 10
+
+  validation {
+    condition     = var.alert_failed_requests_threshold >= 1
+    error_message = "alert_failed_requests_threshold debe ser al menos 1."
+  }
+}
+
 variable "vnet_cidr" {
   type    = string
   default = "10.20.0.0/16"
