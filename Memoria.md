@@ -11,6 +11,11 @@
 - 14 specs de la base (arquitectura, estructura del repositorio, infraestructura, rendimiento, observabilidad, versionamiento y seguridad) redactadas en **Borrador**; sus tareas **no se han ejecutado**.
 - Sin código de producto todavía.
 
+## 2026-11-11 — Propuesta de rulesets: exigir solo `gate` (KNOCK-233)
+- **Decisión:** `docs/ci/rulesets-propuesta.md` propone exigir como comprobación obligatoria solo `gate` (con `integration_id` 15368) en `main` y `develop`, y no aplica nada: los JSON de `.github/rulesets/` no cambian. Se incorporaron dos detalles de la revisión de Erick: la coma de la regla anterior al aplicar el diff de `develop.json` y la nota de que `gate` también acepta `skipped`.
+- **Porqué:** `gate` corre siempre y agrupa todas las verificaciones bloqueantes con un nombre estable; exigir cada job obligaría a tocar el ruleset cuando cambie un nombre o la matriz de contenedores.
+- **A evitar:** aplicar el diff sin la coma; asumir que `skipped` en `gate` siempre es correcto sin revisar las condiciones de cada job; aplicar los rulesets sin un plan compatible y un rol de administrador.
+
 ## 2026-11-08 — Despliegue de imágenes y credencial federada
 - **Decisión:** `id-knock-deploy` lleva dos credenciales federadas para `main` (`github-main` y `github-main-ids`), porque GitHub presenta el sujeto con dos formas; el perfil «Consumption» ya no produce diferencias en el plan.
 - **Porqué:** la primera corrida de `ci-deploy` en `main` falló con `AADSTS700213`; con la segunda credencial publicó las cuatro imágenes y el apply dejó las cuatro apps sanas.
