@@ -223,3 +223,17 @@ excepciones:
     creada: 2026-11-09
     vence: 2026-12-04
     plan: fusionar la rama de KNOCK-205 con squash, borrar la rama y retirar la huella y esta excepción cuando el commit ya no exista en ninguna rama.
+  - id: EXC-021
+    herramienta: jscpd, codemap
+    regla: código duplicado (jscpd:ignore y línea base de clones de docs/architecture/clones-baseline.json)
+    alcance: src/Knock.Messaging.Api/Hosting/{RedisExtensions,JwtSettings,SecurityHeadersMiddleware,RateLimitingExtensions}.cs (4 archivos, entre «// jscpd:ignore-start -- EXC-021» y su cierre)
+    justificacion: >-
+      BUG-004 (KNOCK-241): Mensajería necesita el mismo JWT, encabezados de seguridad, límite por IP y cliente de Redis que Identidad, Mercado y el gateway antes de publicar su
+      primer endpoint y de la spec 026 (KNOCK-62). Aún no existe la biblioteca técnica compartida y un servicio no referencia a otro, así que se copian estas clases de
+      src/Knock.Market.Api/Hosting, src/Knock.Market.Api/Common/Security y src/Knock.Gateway/Hosting cambiando solo el espacio de nombres y quitando lo que Mensajería no usa. EXC-007 y
+      EXC-008 no las amparan; ForwardedHeadersExtensions no se incluye (la cubre EXC-020, PR 61). Las copias se prueban por separado en tests/SecurityTest/Messaging y
+      tests/UnitTest/Messaging. Aprobada por el líder el 2026-11-11, temporal y ligada a KNOCK-251.
+    responsable: José Guillermo Rangel Hernández
+    creada: 2026-11-11
+    vence: 2026-12-15
+    plan: KNOCK-251 lleva estas clases a la biblioteca técnica compartida; al fusionarlo se quitan los marcadores de Messaging.Api y se retira la excepción antes de vencer.

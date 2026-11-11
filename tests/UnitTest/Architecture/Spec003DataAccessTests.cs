@@ -13,7 +13,7 @@ namespace Knock.UnitTest.Architecture;
 /// <summary>
 /// Spec 003, CA-02 (R-04): solo la capa <c>Data</c> de cada módulo usa MongoDB y Redis; el cliente compartido vive en <c>Hosting</c>.
 /// En Market, la parte de MongoDB ya la prueban <see cref="MongoAccessTests"/> (regla y fixtures que fallan); aquí se agrega Redis
-/// y los demás servicios: Identity (MongoDB y Redis), Messaging (solo MongoDB) y el Gateway (solo Redis).
+/// y los demás servicios: Identity (MongoDB y Redis), Messaging (MongoDB y, desde BUG-004, Redis para leer las sesiones canceladas) y el Gateway (solo Redis).
 /// </summary>
 public sealed class Spec003DataAccessTests
 {
@@ -24,7 +24,7 @@ public sealed class Spec003DataAccessTests
     private static readonly Dictionary<string, (Assembly Assembly, bool Mongo, bool Redis)> _services = new()
     {
         ["Knock.Identity.Api"] = (typeof(identity::Knock.Identity.Api.Hosting.DataExtensions).Assembly, true, true),
-        ["Knock.Messaging.Api"] = (typeof(messaging::Knock.Messaging.Api.Hosting.DataExtensions).Assembly, true, false),
+        ["Knock.Messaging.Api"] = (typeof(messaging::Knock.Messaging.Api.Hosting.DataExtensions).Assembly, true, true),
         ["Knock.Gateway"] = (typeof(gateway::Knock.Gateway.Hosting.DataExtensions).Assembly, false, true),
     };
 
