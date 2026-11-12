@@ -13,10 +13,12 @@ builder.Services.AddOpenApi();
 // Spec 011: Serilog estructurado y OpenTelemetry con redacción; Azure Monitor solo si hay APPLICATIONINSIGHTS_CONNECTION_STRING.
 builder.Services.AddKnockLogging(builder.Configuration);
 builder.Services.AddKnockObservability(builder.Configuration, builder.Environment);
+builder.Services.AddKnockForwardedHeaders();
 builder.Services.AddKnockData();
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
 app.UseKnockCorrelationId();
 
 if (app.Environment.IsDevelopment())
