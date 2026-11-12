@@ -75,6 +75,22 @@ public sealed class Spec003BackupRestoreTests
         result.Output.Should().Contain("KNOCK_BACKUP_MONGO_URI");
     }
 
+    [Fact]
+    public async Task Backup_WithInvalidDatabaseName_FailsWithoutRunningTools_CA_003_04()
+    {
+        var documentDb = await DocumentDbFixture.SharedAsync();
+        await using var tools = await MongoToolsContainer.StartAsync(documentDb, new Dictionary<string, string>
+        {
+            ["KNOCK_BACKUP_SOURCE_DB"] = "mala;base",
+            ["KNOCK_BACKUP_TARGET_DB"] = "s003_any",
+        });
+
+        var result = await tools.RunAsync("bash", $"{MongoToolsContainer.BackupDirectory}/mongo-backup.sh", "dump", "/tmp/x.gz");
+
+        result.ExitCode.Should().Be(2, result.Output);
+        result.Output.Should().Contain("Nombre de base no válido");
+    }
+
     private static async Task SeedAsync(IMongoDatabase database)
     {
         var now = new DateTime(2026, 11, 4, 12, 0, 0, DateTimeKind.Utc);
