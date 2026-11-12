@@ -324,6 +324,11 @@
 - **Porqué:** el CI descarga todas las ramas, así que un commit con una cadena de conexión sintética en una rama de trabajo hacía fallar el chequeo de secretos de todos los PR del repositorio.
 - **A evitar:** poner ejemplos con credenciales, aunque sean del entorno local, en la documentación; escribirlas como `<usuario>:<contraseña>`. Retirar la huella y la excepción al fusionar la rama.
 
+## 2026-11-10 — Enmienda propuesta de la spec 011: el formato compacto de Serilog cumple el contrato de registros (KNOCK-206)
+- **Decisión:** se propone que la §5 de la spec 011 acepte el formato compacto de Serilog y diga a qué campo corresponde cada campo lógico: `timestamp` = `@t`, `level` = `@l` (omitido en `Information`), `message` = `@m`, `correlationId` = la propiedad `CorrelationId`, y `service` = `service.name` del recurso (no va en la línea de consola).
+- **Por qué:** el PR #60 observó que la §5 pedía los campos `timestamp`, `level`, `service`, `correlationId` y `message`, pero el código emite `@t`, `@l` y `@m`. Un formateador propio solo para renombrar campos no aporta información.
+- **Pendiente de firma:** la nueva aprobación de la 011 la edita José a mano; este cambio no toca la aprobación.
+- **A evitar:** pedir nombres literales de campo en una spec cuando el formato de una biblioteca ya los entrega con otro nombre; escribir un formateador propio solo para renombrarlos.
 ## 2026-11-10 — Enmienda propuesta de la spec 013: sin CDN de pago y alineada con la spec 032 (KNOCK-208)
 - **Decisión:** se propone enmendar la spec 013 para que diga lo que ya deciden el ADR-007 (opción D, Blob público sin CDN de pago, dos cuentas de almacenamiento) y el contrato de la spec 032 (5 MB; JPEG, PNG y WebP; moderación caída = 503 reintentable; el registro de subidas vence a los 7 días solo si quedó pendiente o rechazada). Se ajustan `plan.md`, `task.md` (T-01, T-03 a T-06), el índice de `specs/README.md` y la fila 15c de `docs/CUMPLIMIENTO_LINEAMIENTOS.md`. Texto del título: «entrega con caché» en lugar de «CDN»; la carpeta conserva su nombre.
 - **Por qué:** la 013 (Aprobada) decía que las imágenes públicas se sirven por una CDN y la 032 (borrador) y el ADR-007 dicen que no hay CDN de pago (Front Door Standard cuesta unos 35 USD al mes). Mientras tanto el PR de OI-2 no podía exponer rutas sin saber cuál prevalece.
