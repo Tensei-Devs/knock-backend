@@ -391,6 +391,9 @@
 - **Porqué:** las ocho colonias sembradas cubren el centro de Tula; desde el campus (carretera Tula-Tepeji) `GET /colonias/en-punto` respondía «fuera de cobertura» y la demo no mostraba la zona de quien la prueba allí.
 - **A evitar:** tomar el polígono como límite oficial (es aproximado y no oficial); olvidar cargar la semilla en la base de Azure (`db/entrega.js`) después de fusionar.
 
+## 2026-11-12 — Revisión de BUG-001 por Erick (KNOCK-238)
+- **Decisión:** el borrador aclara que Azurite 3.37.0 se agregará por digest al compose local antes de reutilizarlo en CI, y excluye Postgres, sin uso actual en `src/`. TC-02 espera el readiness de los cuatro servicios, no solo Redis en el gateway. El smoke enumera los cuatro encabezados existentes y exige ausencia de `Server: Kestrel`; HSTS se comprueba tras desplegar BUG-002 por HTTPS real, no por HTTP local. Julián aplicará los cambios protegidos de `.github/` para TC-01 y TC-06 después de aprobar la spec.
+- **Pendiente:** la spec sigue en Borrador; no se implementó la pila ni se ejecutaron sus casos.
 ## 2026-11-11 — Los agentes implementan las tareas de las specs aprobadas (KNOCK-243)
 - **Decisión:** `AGENTS.md` y `.opencode/agents/implementer.md` dejan de decir «esta primera etapa es solo de especificación: no ejecutes las tareas». Ahora dicen que, si la spec está **Aprobada**, el agente implementa solo las tareas de su `task.md`, de una en una y con sus pruebas escritas primero. Una persona decide qué spec o grupo de tareas se activa; el agente no aprueba, no firma y no fusiona.
 - **Porqué:** las specs 020 a 037 de backend y 015 a 028 de la app quedaron aprobadas el 11 de noviembre y el plazo del proyecto exige implementarlas; la regla anterior hacía que los agentes se negaran a programar aunque la spec estuviera aprobada. La autorización del cambio es del Tech Lead.
