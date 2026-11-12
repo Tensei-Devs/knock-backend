@@ -8,7 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
 
 builder.Services.AddControllers();
-// BUG-004: JWT, encabezados de seguridad y límite por IP como en Identidad y Mercado, antes del primer endpoint. El reenvío de encabezados (ForwardedHeaders) lo trae el #61 (KNOCK-201).
+// BUG-004: JWT, encabezados de seguridad y límite por IP como en Identidad y Mercado, antes del primer endpoint.
 builder.Services
     .AddKnockProblemDetails()
     .AddKnockRateLimiting()
@@ -18,10 +18,12 @@ builder.Services.AddOpenApi();
 // Spec 011: Serilog estructurado y OpenTelemetry con redacción; Azure Monitor solo si hay APPLICATIONINSIGHTS_CONNECTION_STRING.
 builder.Services.AddKnockLogging(builder.Configuration);
 builder.Services.AddKnockObservability(builder.Configuration, builder.Environment);
+builder.Services.AddKnockForwardedHeaders();
 builder.Services.AddKnockData();
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
 app.UseKnockCorrelationId();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseExceptionHandler();
