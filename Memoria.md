@@ -332,3 +332,7 @@
 - **Decisión:** se agrega la colonia «El Carmen» (código postal 42830, por confirmar) con un polígono piloto aproximado de unos 800 metros de lado centrado en el campus de la UTTT, en `colonias_tula.geojson`, el extracto de SEPOMEX y `colonias.json`; las pruebas que cuentan colonias pasan de 12 a 13 y de 8 a 9 con polígono.
 - **Porqué:** las ocho colonias sembradas cubren el centro de Tula; desde el campus (carretera Tula-Tepeji) `GET /colonias/en-punto` respondía «fuera de cobertura» y la demo no mostraba la zona de quien la prueba allí.
 - **A evitar:** tomar el polígono como límite oficial (es aproximado y no oficial); olvidar cargar la semilla en la base de Azure (`db/entrega.js`) después de fusionar.
+
+## 2026-11-12 — Revisión de BUG-001 por Erick (KNOCK-238)
+- **Decisión:** el borrador aclara que Azurite 3.37.0 se agregará por digest al compose local antes de reutilizarlo en CI, y excluye Postgres, sin uso actual en `src/`. TC-02 espera el readiness de los cuatro servicios, no solo Redis en el gateway. El smoke enumera los cuatro encabezados existentes y exige ausencia de `Server: Kestrel`; HSTS se comprueba tras desplegar BUG-002 por HTTPS real, no por HTTP local. Julián aplicará los cambios protegidos de `.github/` para TC-01 y TC-06 después de aprobar la spec.
+- **Pendiente:** la spec sigue en Borrador; no se implementó la pila ni se ejecutaron sus casos.
