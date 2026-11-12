@@ -10,6 +10,7 @@
       "**/Knock.Identity.Api/Modules/Sesiones/**/*.cs",
       "**/Knock.Identity.Api/Modules/Usuarios/**/*.cs",
       "**/Knock.Market.Api/Modules/Catalog/**/*.cs",
+      "**/Knock.Market.Api/Modules/Requests/**/*.cs",
       "**/Knock.Gateway/**/*.cs",
       "!**/obj/**",
       "!**/bin/**",
