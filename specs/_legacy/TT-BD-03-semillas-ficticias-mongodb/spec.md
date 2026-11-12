@@ -1,3 +1,4 @@
+> Reemplazada por `specs/038-semillas-de-demo-de-clientes/spec.md`.
 # TT-BD-03 — Semillas ficticias en JSON para MongoDB: clientes de prueba
 
 > **Jira:** KNOCK-40 · **Área:** Base de datos · **Servicio:** Identidad y confianza (clientes, base `identity`) (ADR-001) · **Módulo:** Identity · **Responsable:** Ángel Alexis Blas Castillo · **Sprint:** la ficha dice S1; `docs/PLAN_ADAPTACION.md` §D la mueve a **S2** · **Puntos:** 1 (se mantiene con el alcance recortado, decisión D1) · **Capas:** BD

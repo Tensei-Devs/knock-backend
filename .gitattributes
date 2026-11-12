@@ -5,3 +5,6 @@
 # Fin de línea LF en todo el repositorio: el CI corre en Linux y genera archivos (OpenAPI, mapa de código) que deben coincidir byte a byte.
 * text=auto eol=lf
 *.ps1 text eol=crlf
+
+# Memoria.md es un registro al que cada PR agrega su entrada al final: el driver «union» junta las dos versiones en lugar de marcar conflicto.
+Memoria.md merge=union
