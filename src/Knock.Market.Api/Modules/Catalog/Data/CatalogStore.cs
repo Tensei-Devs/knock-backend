@@ -116,12 +116,37 @@ internal sealed class CatalogStore(
     public async Task<bool> ColoniaExistsAsync(ObjectId id, string postalCode, CancellationToken cancellationToken) =>
         await ColoniaExistsQuery(id, postalCode).FirstOrDefaultAsync(cancellationToken) is not null;
 
+    /// <summary>Nombre y modalidad del oficio activo con esa clave (spec 020, R-02).</summary>
+    public async Task<OficioListing?> FindActiveOficioAsync(string clave, CancellationToken cancellationToken)
+    {
+        var document = await ActiveOficioQuery(clave).FirstOrDefaultAsync(cancellationToken);
+        return document is null
+            ? null
+            : new OficioListing(document[ClaveField].AsString, document[NombreField].AsString, document[ModalidadField].AsString);
+    }
+
+    /// <summary>La colonia con ese <c>_id</c> (spec 020, R-02).</summary>
+    public async Task<Colonia?> FindColoniaAsync(ObjectId id, CancellationToken cancellationToken) =>
+        ToColonia(await ColoniaByIdQuery(id).FirstOrDefaultAsync(cancellationToken));
+
     // Las consultas se arman aparte para que las pruebas lean sus opciones (maxTimeMS) sin servidor.
     internal IFindFluent<BsonDocument, BsonDocument> ActiveOficiosQuery() =>
         Oficios
             .Find(_filter.Eq(ActivoField, true), _findOptions)
             .Project(_oficioProjection)
             .Sort(Builders<BsonDocument>.Sort.Ascending(NombreBusquedaField).Ascending(ClaveField));
+
+    internal IFindFluent<BsonDocument, BsonDocument> ActiveOficioQuery(string clave) =>
+        Oficios
+            .Find(_filter.Eq(ClaveField, clave) & _filter.Eq(ActivoField, true), _findOptions)
+            .Project(_oficioProjection)
+            .Limit(1);
+
+    internal IFindFluent<BsonDocument, BsonDocument> ColoniaByIdQuery(ObjectId id) =>
+        Colonias
+            .Find(_filter.Eq(IdField, id), _findOptions)
+            .Project(_coloniaProjection)
+            .Limit(1);
 
     internal IFindFluent<BsonDocument, BsonDocument> IntersectingQuery(GeoPosition position) =>
         Colonias

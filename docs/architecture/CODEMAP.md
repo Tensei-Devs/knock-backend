@@ -1,13 +1,13 @@
 # Mapa de código
 
-> Generado por `scripts/codemap.py` el 2026-11-12T19:06:08Z. No editar a mano.
+> Generado por `scripts/codemap.py` el 2026-11-12T21:54:24Z. No editar a mano.
 > **Antes de crear una clase, método o archivo, busca aquí o corre `python scripts/codemap.py --query "<qué necesitas>"`.**
 
 ## Resumen
 
 | Módulo | Capas | Archivos | Tipos | Métodos públicos |
 |---|---|---|---|---|
-| `Catalog` | -, controllers, data, domain, dtos, services, validators | 26 | 29 | 34 |
+| `Catalog` | -, controllers, data, domain, dtos, services, validators | 26 | 29 | 40 |
 | `Knock.Contracts` | - | 5 | 7 | 7 |
 | `Knock.Gateway` | -, hosting | 13 | 37 | 46 |
 | `Knock.Identity.Api` | -, common, hosting | 28 | 58 | 71 |
@@ -171,7 +171,7 @@
 - `src/Knock.Market.Api/Modules/Catalog/Data/CatalogSeeder.cs` — class `CatalogSeeder`
   - `CatalogSeeder()`:13, `SeedAsync()`:19, `SeedAsync()`:29
 - `src/Knock.Market.Api/Modules/Catalog/Data/CatalogStore.cs` — class `CatalogStore`
-  - `EnsureIndexesAsync()`:66, `FindActiveOficiosAsync()`:89, `FindIntersectingAsync()`:99, `FindNearestCenterAsync()`:103, `FindNamesByPostalCodeAsync()`:106, `ColoniaNameExistsAsync()`:113, `ColoniaExistsAsync()`:116, `ActiveOficiosQuery()`:120, `IntersectingQuery()`:126, `NearestCenterQuery()`:133, `NamesByPostalCodeQuery()`:139, `ColoniaNameExistsQuery()`:145, `ColoniaExistsQuery()`:151
+  - `EnsureIndexesAsync()`:66, `FindActiveOficiosAsync()`:89, `FindIntersectingAsync()`:99, `FindNearestCenterAsync()`:103, `FindNamesByPostalCodeAsync()`:106, `ColoniaNameExistsAsync()`:113, `ColoniaExistsAsync()`:116, `FindActiveOficioAsync()`:120, `FindColoniaAsync()`:129, `ActiveOficiosQuery()`:133, `ActiveOficioQuery()`:139, `ColoniaByIdQuery()`:145, `IntersectingQuery()`:151, `NearestCenterQuery()`:158, `NamesByPostalCodeQuery()`:164, `ColoniaNameExistsQuery()`:170, `ColoniaExistsQuery()`:176
 
 **domain**
 
@@ -196,7 +196,7 @@
 **services**
 
 - `src/Knock.Market.Api/Modules/Catalog/Services/CatalogApi.cs` — class `CatalogApi`
-  - `FindNeighborhoodAtAsync()`:11, `FindNeighborhoodsByPostalCodeAsync()`:14, `NeighborhoodExistsAsync()`:25
+  - `FindNeighborhoodAtAsync()`:11, `FindNeighborhoodsByPostalCodeAsync()`:14, `NeighborhoodExistsAsync()`:25, `FindActiveTradeAsync()`:41, `FindNeighborhoodAsync()`:52
 - `src/Knock.Market.Api/Modules/Catalog/Services/INeighborhoodLocator.cs` — interface `INeighborhoodLocator`
 - `src/Knock.Market.Api/Modules/Catalog/Services/INeighborhoodNames.cs` — interface `INeighborhoodNames`
 - `src/Knock.Market.Api/Modules/Catalog/Services/NeighborhoodLocator.cs` — class `NeighborhoodLocator`
