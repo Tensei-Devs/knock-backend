@@ -3,7 +3,8 @@
 > **Estado:** pendientes. No se ejecutan hasta que la spec esté Aprobada y una persona lo indique.
 
 ## T1 — Pila del CI [CI]
-- **Crear:** `deploy/docker-compose.ci.yml`.
+- **Modificar primero:** `deploy/docker-compose.local.yml`, agregar Azurite 3.37.0 por digest como en los PR de Media.
+- **Crear después:** `deploy/docker-compose.ci.yml`, sin Postgres; esperar el readiness de los cuatro servicios.
 - **Verificar:** TC-BUG-001-02 y TC-BUG-001-08 (`docker compose config --quiet`, arranque local, digests).
 - **No hacer:** publicar puertos de las bases; escribir credenciales; llamar a Azure.
 - **Agente:** db-builder o api-builder.
@@ -11,7 +12,7 @@
 ## T2 — Prueba de humo [Pruebas]
 - **Crear:** `tests/smoke/smoke.sh` y `tests/smoke/smoke_test.sh`.
 - **Verificar:** TC-BUG-001-03 y TC-BUG-001-04.
-- **No hacer:** imprimir cuerpos ni encabezados con valores sensibles; comprobar encabezados que dependen de KNOCK-239 y KNOCK-240 antes de que se fusionen (según la decisión de §8).
+- **No hacer:** imprimir cuerpos ni encabezados con valores sensibles; exigir HSTS en HTTP local. Sí comprobar la ausencia de `Server: Kestrel` y los cuatro encabezados de TC-03.
 - **Agente:** api-builder.
 
 ## T3 — Reglas de ZAP [Seguridad]
@@ -21,7 +22,7 @@
 - **Agente:** security-reviewer (revisa); api-builder (escribe).
 
 ## T4 — `gate` y nombres de pasos [CI] (persona)
-- **Modificar:** `.github/workflows/ci-pr.yml` (protegido; lo aplica una persona).
+- **Modificar:** `.github/workflows/ci-pr.yml` (protegido). TC-01 y TC-06 dependen de `.github/`; Julián, Tech Lead, aplica esos cambios después de aprobar la spec.
 - **Verificar:** TC-BUG-001-06 y TC-BUG-001-01.
 - **No hacer:** cambiar otros jobs ni sus condiciones.
 - **Agente:** ninguno; el agente puede preparar el diff en el PR.
