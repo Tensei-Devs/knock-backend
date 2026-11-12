@@ -28,20 +28,20 @@ variable "image_tag" {
 
 variable "replicas" {
   description = <<-EOT
-    Réplicas por servicio (ADR-006, spec 006 R-01 y R-06). Por defecto —la ventana de evaluación, del 25-nov al 5-dic de 2026—
-    el gateway y los servicios de negocio corren con min = max = 2, sin reglas de autoescalado. Redis siempre 1 (se fija en main.tf).
-    Fuera de la ventana, para cuidar el costo (R-06): bajar a una réplica por servicio con un tfvars de entorno
-    (p. ej. `envs/dev.tfvars`) o con `-var 'replicas={gateway={min=1,max=1},identity={min=1,max=1},messaging={min=1,max=1},market={min=1,max=1}}'`.
+    Réplicas por servicio (ADR-006, spec 006 R-01 y R-06). Por defecto una réplica por servicio, sin autoescalado, para cuidar
+    el costo (R-06). Para la ventana de evaluación (25-nov al 5-dic de 2026) se suben a min = max = 2 con el tfvars de ese
+    entorno o con `-var 'replicas={gateway={min=2,max=2},identity={min=2,max=2},messaging={min=2,max=2},market={min=2,max=2}}'`.
+    Redis siempre 1 (se fija en main.tf).
   EOT
   type = map(object({
     min = number
     max = number
   }))
   default = {
-    gateway   = { min = 2, max = 2 }
-    identity  = { min = 2, max = 2 }
-    messaging = { min = 2, max = 2 }
-    market    = { min = 2, max = 2 }
+    gateway   = { min = 1, max = 1 }
+    identity  = { min = 1, max = 1 }
+    messaging = { min = 1, max = 1 }
+    market    = { min = 1, max = 1 }
   }
 
   validation {
