@@ -258,6 +258,6 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 - **El código de cuatro dígitos tiene 10 000 combinaciones:** el control real es el límite de intentos y el bloqueo de la spec 022, no la entropía.
 
 ## Aprobación
-- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-12
 - [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

@@ -249,6 +249,6 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **Sin app del técnico:** la bandeja y el descarte se prueban con semillas y llamadas directas.
 
 ## Aprobación
-- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-12
 - [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

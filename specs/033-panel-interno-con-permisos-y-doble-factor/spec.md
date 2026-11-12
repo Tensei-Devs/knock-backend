@@ -352,6 +352,6 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **Sprint:** Jira la tiene en Sprint 5; la spec 023 de frontend también. No es requisito de la demo del Sprint 4.
 
 ## Aprobación
-- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-12
 - [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

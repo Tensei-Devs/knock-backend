@@ -293,6 +293,6 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **Transacciones de DocumentDB:** la creación de la cotización y el cambio de estado de la solicitud usan una transacción; si la instancia no las admite, todo falla (el mismo riesgo que la spec 015).
 
 ## Aprobación
-- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-12
 - [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

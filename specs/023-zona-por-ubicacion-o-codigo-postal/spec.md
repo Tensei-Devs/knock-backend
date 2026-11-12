@@ -239,6 +239,6 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **Mercado no tiene host de integración:** esta spec necesita `MarketApiFactory` con `Testcontainers`, igual que 020, 021 y 022.
 
 ## Aprobación
-- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-12
 - [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)
