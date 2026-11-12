@@ -41,6 +41,11 @@
 - 14 specs de la base (arquitectura, estructura del repositorio, infraestructura, rendimiento, observabilidad, versionamiento y seguridad) redactadas en **Borrador**; sus tareas **no se han ejecutado**.
 - Sin código de producto todavía.
 
+## 2026-11-12 — Terraform: Mensajería recibe el secreto del JWT y la cadena de Redis (KNOCK-241)
+- **Decisión:** `deploy/apps/main.tf` pasa a Mensajería `Jwt__SigningKey` (`jwt-signing-key`) y `ConnectionStrings__KnockRedis` (`redis-connection-string`), los mismos secretos de Key Vault que ya usan Identidad y el gateway; no hay secretos nuevos. Solo está editado, no aplicado.
+- **Porqué:** desde BUG-004 Mensajería valida el JWT y lee `sesion-cancelada:{sid}` en Redis, y falla rápido al arrancar si falta cualquiera (sin llave de firma o sin cadena de Redis no levanta).
+- **A evitar:** desplegar la imagen de Mensajería de BUG-004 antes de aplicar este cambio: el servicio no arrancará. Orden: aplicar Terraform, luego la imagen. `ForwardedHeaders__KnownNetworks__0` de Mensajería lo agrega el #61.
+
 ## 2026-11-10 — KNOCK-240 (BUG-003): el gateway y Mensajería ya no envían `Server: Kestrel`
 - **Decisión:** `builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false)` en `Knock.Gateway` y `Knock.Messaging.Api`, igual que Identidad y Mercado. El middleware del gateway ya quitaba `Server` en `OnStarting`, pero Kestrel lo agrega después.
 - **Porqué se prueba la opción y no solo la respuesta:** `TestServer` no usa Kestrel y nunca escribe `Server`; una prueba de encabezado pasa con o sin el arreglo. `ServerHeaderTests` (SecurityTest/Gateway y Messaging) lee `KestrelServerOptions.AddServerHeader`: falla sin el arreglo y pasa con él. Se agregó `InternalsVisibleTo Knock.SecurityTest` y la referencia a ambos proyectos.
