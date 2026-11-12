@@ -53,6 +53,9 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 - **R-21:** Regla de privacidad: el contacto público del técnico y el lugar de la cita (dirección del cliente o del taller) solo se revelan al cliente dueño después de elegir, en esta respuesta o en la visita (spec 022). El técnico nunca recibe el teléfono del cliente.
 
 ## 4. Criterios de aceptación
+
+> Numeración: CA-16 se retiró el 2026-11-10 junto con `Idempotency-Key`. Su número no se reutiliza, para no cambiar los nombres de las pruebas previstas.
+
 - **CA-01:** Dada una solicitud con tres cotizaciones, cuando el dueño pide el listado, entonces recibe tres, con `cubre` y `etiquetas`, y `puedeElegir` verdadero.
 - **CA-02:** Dadas cotizaciones con tope 900, 1 100 y una visita de 250, cuando se ordena por `precio`, entonces quedan 900, 1 100 y la visita al final, y `mejor_precio` está en la de 900.
 - **CA-03:** Dada una solicitud de otra persona, cuando se pide el listado, entonces responde 404.
@@ -152,7 +155,7 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 | Arquitectura | Sí | El controller no toca MongoDB; el módulo no escribe en `tecnicos` |
 | Mutación | Sí | `ComparadorDeCotizaciones` y la condición de estado de la transacción |
 | Rendimiento | No | Máximo cinco cotizaciones por solicitud |
-| Aceptación | Sí | CA-01 a CA-18 con la tabla 4.1 |
+| Aceptación | Sí | CA-01 a CA-18 (salvo CA-16, retirado) con la tabla 4.1 |
 | Base de datos | Sí | `DatabaseTest`: `visitas` y sus índices (único `{ solicitudId }`) se crean de forma idempotente |
 | Regresión | Sí | Las suites de la spec 020 y de las specs 015 a 019 siguen en verde; `dotnet test Knock.slnx -c Release` completo en cada PR |
 | CI/CD | Sí | Job `gate` de `ci-pr.yml` (build-test, openapi-diff con `oasdiff`, sast, sca, secrets) en verde; smoke de `/health/ready` tras el despliegue |
