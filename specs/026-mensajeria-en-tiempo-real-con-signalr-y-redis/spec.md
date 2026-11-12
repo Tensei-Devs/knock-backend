@@ -22,7 +22,7 @@ Que el cliente y el técnico elegido puedan intercambiar mensajes en tiempo real
 - La salud del servicio cuando Redis no responde.
 
 **2.3 Fuera**
-- Guardar mensajes, historial, adjuntos, audios, fotos, marcas de leído, indicador de "escribiendo" y presencia: son de HU-029 y de una spec posterior.
+- Guardar mensajes, historial, adjuntos, audios, fotos, marcas de leído, indicador de "escribiendo" y presencia visible para otras personas: son de HU-029 y de una spec posterior. Lo único de presencia que esta spec escribe es la clave `chat:presencia:{sub}` (sección 6), que solo lee el despachador de avisos de la spec 037.
 - La moderación del texto del chat: solo aplica cuando el mensaje se guarda (spec 013); esta spec no guarda nada.
 - Las notificaciones por evento al cliente o al técnico (cotización nueva, cita confirmada): las entrega Mensajería con los avisos, en su propia spec.
 - El chat antes de elegir técnico: la app del técnico no existe y la conversación previa a la visita no tiene un dueño claro todavía.
@@ -123,7 +123,7 @@ Que el cliente y el técnico elegido puedan intercambiar mensajes en tiempo real
 |---|---|---|---|
 | `chat:limite:{sub}` | contador | mensajes de la ventana actual | 60 segundos, renovado en la misma operación atómica |
 | `chat:visita-cerrada:{visitaId}` | marca | visita cancelada, terminada, no presentada o bloqueada (*decisión automática, revisar*) | 30 días |
-| `chat:presencia:{sub}` | presencia | el hub la escribe al aceptar una conexión al grupo `usuario:{sub}` y la renueva en cada latido; la lee el despachador de avisos (spec 037 R-08) | 60 s (renovada por latido) |
+| `chat:presencia:{sub}` | presencia | el hub la escribe al aceptar una conexión al grupo `usuario:{sub}` y la renueva en cada latido; la lee el despachador de avisos (spec 037 R-08); es la única presencia de esta spec y no se muestra a otras personas | 60 s (renovada por latido) |
 | canal `knock:chat` | pub/sub del puente | entrega entre copias | no aplica |
 
 **Estado del proceso:** ninguna regla de negocio vive en la memoria de una copia. La única información local es la lista de salas de una conexión mientras está abierta, que se pierde al cerrarla y no se consulta por nadie más.
@@ -148,7 +148,7 @@ No hay script de `db/` para esta spec: no crea colecciones ni índices.
 - Spec 002 (estructura y estilo de la API), 003 (Redis, configuración y contraseña obligatoria; esta spec **cambia** la decisión de que Mensajería no usaba Redis y lo anota en `Memoria.md`), 006 (dos copias y salud), 009 (validación del token y límites del gateway), 011 (registro y trazas), 016 (renovación de la sesión).
 - Spec 021 y 022: la visita, sus participantes y su estado son la fuente de la pertenencia.
 - Spec 020: el cliente y el técnico llegan a la visita por la elección de cotización.
-- Dependencia nueva evaluada: `Microsoft.AspNetCore.SignalR.StackExchangeRedis` con la misma versión que ASP.NET Core del repositorio (11.0.0-rc.3 mientras dure el RC), licencia MIT. `StackExchange.Redis` ya está evaluado (spec 003). En pruebas, `Microsoft.AspNetCore.SignalR.Client` (MIT). SignalR y el servidor de WebSocket vienen en el marco compartido y no agregan paquete.
+- Dependencia nueva evaluada: `Microsoft.AspNetCore.SignalR.StackExchangeRedis` con la misma versión que ASP.NET Core del repositorio (11.0.0), licencia MIT. `StackExchange.Redis` ya está evaluado (spec 003). En pruebas, `Microsoft.AspNetCore.SignalR.Client` (MIT). SignalR y el servidor de WebSocket vienen en el marco compartido y no agregan paquete.
 - La app del cliente (frontend 016) consume el hub; la app del técnico aún no existe, así que la punta a punta con la app queda para después.
 - Redis ya es un requisito del despliegue (spec 005); el chat no agrega infraestructura nueva.
 
@@ -233,7 +233,7 @@ No hay script de `db/` para esta spec: no crea colecciones ni índices.
 - **Falla cerrado sin Redis:** un chat que acepta conexiones sin puente entrega mensajes solo a veces, que es peor que no entregarlos; además sin Redis no hay límite.
 - **Sin historial y sin moderación en esta spec:** guardar mensajes trae retención, borrado, denuncia y moderación obligatoria antes de guardar (regla 13 de la constitución); eso es HU-029 y merece su propia spec. Sin guardado, la moderación no aplica.
 - **WebSocket y eventos del servidor, sin sondeo largo:** el sondeo largo obliga a afinidad de sesión en el balanceador y multiplica las peticiones; la app es móvil y puede mantener un WebSocket.
-- **Sin presencia ni "escribiendo…":** son estado efímero que nadie pide todavía y que agrega llaves y tráfico; llegan con la spec del chat completo (HU-029).
+- **Sin presencia ni "escribiendo…":** son estado efímero que nadie pide todavía y que agrega llaves y tráfico; llegan con la spec del chat completo (HU-029). La única excepción es la clave `chat:presencia:{sub}` de la sección 6, que solo usa el despachador de avisos.
 - **`Chat:Habilitado` con valor explícito:** sin valor por omisión el servicio no arranca, así el interruptor no se queda encendido por olvido en un entorno donde no se quiere chat.
 
 ## 14. Decisiones tomadas sin consulta
@@ -262,7 +262,7 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **El límite del gateway no ve las invocaciones del hub:** después del saludo, los mensajes no pasan por el gateway; el único control es el contador de Redis del servicio. Una persona que reinicia la conexión cada minuto vuelve a empezar su ventana solo si el contador vence, que es lo previsto.
 - **El token viaja en la URL del cliente:** aunque el gateway lo quite antes de reenviar, el cliente lo tiene en su propia URL. La app no debe registrar sus peticiones; el riesgo residual queda del lado del dispositivo.
 - **Dos copias y el puente:** la prueba de integración usa dos hosts en el mismo proceso de pruebas; no demuestra una red real entre réplicas de Container Apps. La comprobación en Azure queda para el despliegue (spec 005).
-- **La versión del paquete del puente:** debe seguir la versión del marco (hoy RC); al pasar a .NET 11 final hay que actualizarla junto con el resto.
+- **La versión del paquete del puente:** debe seguir la versión del marco (hoy 11.0.0); al actualizar el marco hay que actualizarla junto con el resto.
 - **Redis es ahora un requisito de disponibilidad de Mensajería:** antes el servicio arrancaba sin Redis; con esta spec, sin Redis no está listo. Es coherente con la spec 006, pero cambia la operación del servicio y hay que avisarlo al líder.
 - **Sin app del técnico:** la punta a punta real se prueba con el cliente de SignalR y semillas; el técnico no tiene pantalla todavía.
 - **La vista de la visita se consulta en cada unión:** una reconexión en bucle de una app defectuosa produce una llamada a Mercado por intento; el límite por usuario del gateway en el saludo es lo que lo acota.
