@@ -33,7 +33,7 @@ locals {
   kv           = { redis = "redis-password", redis_cs = "redis-connection-string" }
   redis_secret = { ConnectionStrings__KnockRedis = local.kv.redis_cs }
 
-  # Red de confianza para X-Forwarded-For (gateway, Identity y Market limitan por IP; spec 009, R-04).
+  # Red de confianza para X-Forwarded-For (gateway, Identity, Market y Messaging; spec 009 R-04 y spec 006 R-03).
   forwarded = { ForwardedHeaders__KnownNetworks__0 = var.container_apps_subnet_cidr }
 
   services = {
@@ -65,8 +65,8 @@ locals {
     }
     # BUG-004 (KNOCK-241): Mensajería valida el JWT de Knock y lee la lista de sesiones canceladas en Redis; sin estos dos secretos no arranca.
     messaging = {
-      external   = false
-      env        = {}
+      external = false
+      env      = local.forwarded
       secret_env = merge(local.redis_secret, {
         ConnectionStrings__KnockMongo = "mongo-messaging"
         Jwt__SigningKey               = "jwt-signing-key"
