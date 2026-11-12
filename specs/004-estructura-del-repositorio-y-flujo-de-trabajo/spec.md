@@ -21,7 +21,7 @@ Fijar cómo está organizado el repositorio, cómo se nombran las ramas y los co
 - **R-01:** `main` contiene solo código listo para publicar y `develop` integra los cambios.
 - **R-02:** Cada cambio vive en una rama `<tipo>/<descripcion-en-ingles>` creada desde `develop`.
 - **R-03:** Los commits siguen Conventional Commits en inglés.
-- **R-04:** Todo cambio entra por pull request con descripción, pruebas ejecutadas y **una** revisión de otra persona, que es obligatoria; una segunda revisión es opcional. Los pull request del líder técnico los puede aprobar él mismo, y la revisión es opcional cuando el cambio es urgente o no hay nadie disponible; en ese caso el PR anota el motivo.
+- **R-04:** Todo cambio entra por pull request con descripción, pruebas ejecutadas y la revisión del líder técnico, que es otra persona respecto de quien escribió el cambio y es la obligatoria; el comentario de un integrante es opcional y no bloquea la fusión. Los cambios de seguridad, infraestructura, CI, scripts y Terraform conservan además un comentario de otra persona con contexto, salvo que sea urgente o no haya nadie disponible. Los pull request del líder técnico los puede aprobar él mismo; en esas zonas sensibles pide a otra persona la revisión, y si es urgente el PR anota el motivo.
 - **R-05:** Una spec aprobada precede al código de cada cambio.
 - **R-06:** `Memoria.md` se actualiza al cerrar cada cambio.
 - **R-07:** La plantilla de pull request tiene las secciones Descripción, Pruebas, Seguridad, Riesgos y «Uso de IA» (qué generó la IA y qué revisó una persona).
@@ -56,7 +56,8 @@ No aplica. Interfaces que fija: el formato `tipo(alcance): descripcion` de los c
 - **Un repositorio de backend:** contiene los tres servicios, el gateway, la infraestructura, los scripts de base de datos y las pruebas, y cada servicio se construye y despliega por separado.
 - **Flujo con `develop`:** permite integrar y probar antes de tocar `main`.
 - **Commits en inglés y documentación en español.**
-- **Una revisión obligatoria, la segunda opcional (2026-11-04):** pedir dos revisiones frenaba el flujo con cuatro personas; con una basta para detectar lo importante y la segunda queda a criterio de quien abre el PR. El líder técnico puede aprobar sus propios cambios para no bloquear lo urgente; queda el rastro en el PR.
+- **La revisión del líder técnico es la obligatoria; la de pares, opcional (2026-11-11):** esperar el comentario de otro integrante frenaba el flujo y el equipo prefiere enfocarse en sus tareas; la revisión del líder técnico, con el reporte de la pre-revisión del agente, cumple «revisión de otra persona» de la constitución para el PR de cualquier integrante. Antes: **una** revisión de otra persona obligatoria.
+- **Una revisión obligatoria, la segunda opcional (2026-11-04, reemplazada por la anterior):** pedir dos revisiones frenaba el flujo con cuatro personas; con una basta para detectar lo importante y la segunda queda a criterio de quien abre el PR. El líder técnico puede aprobar sus propios cambios para no bloquear lo urgente; queda el rastro en el PR.
 
 ## 9. Riesgos y dudas abiertas
 - Ninguna duda abierta por ahora; se agregan aquí las que surjan al revisar la spec.
