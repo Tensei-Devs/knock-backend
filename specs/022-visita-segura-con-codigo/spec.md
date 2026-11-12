@@ -237,6 +237,6 @@ Que la persona vea su visita a domicilio con el código de cuatro dígitos que r
 - **El aviso por WhatsApp o SMS depende del sistema operativo:** la app puede no tener WhatsApp instalado; el texto debe seguir siendo legible si se copia y pega.
 
 ## Aprobación
-- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-12
 - [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

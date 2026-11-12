@@ -139,5 +139,5 @@ Que el teléfono de cada persona reciba un aviso de Knock cuando pasa algo en su
 
 ## Aprobación
 
-- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-12
 - [x] Sin conflicto con la constitución
