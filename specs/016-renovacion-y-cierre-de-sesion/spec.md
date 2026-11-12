@@ -42,7 +42,7 @@ Mantener la sesión viva mientras la persona use la app, sin pedirle otro códig
 - **CA-10:** Dadas más peticiones que el límite desde una IP, cuando se renueva, entonces responde 429.
 
 ## 5. Contrato
-- `POST /api/v1/auth/refresh` · público · cuerpo `{ refreshToken }` · 200 `{ accessToken, expiresIn, refreshToken }`, 400, 401, 429.
+- `POST /api/v1/auth/refresh` · público · cuerpo `{ refreshToken }` · 200 `{ accessToken, expiresIn, refreshToken }`, 400 (cuerpo ilegible), 401, 422 (`errors.refreshToken`: ausente o con formato inválido), 429.
 - `POST /api/v1/auth/logout` · persona · sin cuerpo · 204, 401.
 - Clave de Redis `sesion-cancelada:{sid}` que el gateway consulta en cada petición con token.
 
@@ -72,6 +72,7 @@ Mantener la sesión viva mientras la persona use la app, sin pedirle otro códig
 - **La cancelación vive en Redis:** el JWT dura solo 15 minutos, así que la lista nunca crece más de lo que se emite en ese tiempo.
 
 ## 9. Decisiones de la revisión, riesgos y dudas
+- **Nota (2026-11-12, spec 037 R-13):** la 037 pide que Identidad avise `sesion_revocada { sid }` al cerrar una sesión (R-06) y al revocarlas por reuso del token de renovación (R-04), para borrar los dispositivos de avisos ligados a ese `sid`. Esta spec no cambia su contrato HTTP; el evento es un requisito nuevo que se concreta al implementar la 037.
 Decisiones tomadas en la revisión del 2026-11-04. Quien aprueba la spec las acepta; si alguna no convence, se cambia aquí antes de aprobar.
 
 - **Renovación perdida por la señal (decidido): se acepta el riesgo y se mide.** Si el servidor ya rotó el token y la respuesta no llegó, el reintento cuenta como reuso y cierra las sesiones. Es raro y seguro; una tolerancia de segundos se agrega solo si las pruebas muestran que ocurre.
@@ -79,6 +80,6 @@ Decisiones tomadas en la revisión del 2026-11-04. Quien aprueba la spec las ace
 - **Riesgo:** el gateway consulta Redis en cada petición con token; el costo se confirma con las pruebas de carga.
 
 ## Aprobación
-- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-04
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
 - [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)
