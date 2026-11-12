@@ -1,6 +1,6 @@
 # Spec 024 — Cliente de IA con Azure OpenAI y plantillas locales de respaldo
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Claves de trabajo (verificadas en Jira el 2026-11-09):** KNOCK-63 «TT-IA-01 · Cliente de Azure OpenAI con filtro de datos personales, límites de costo y respaldo manual»
 > **Responsable sugerido:** José Julián (decisión del tope y ADR en el Sprint 4; implementación en el Sprint 5) · **Ola:** C · **Prioridad:** P2
 > **Servicio:** Mercado · **Módulo:** Assistant · **Colecciones:** `uso_ia` (nueva)
@@ -254,6 +254,6 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **Sin prueba contra el servicio real en el CI:** el contrato se prueba con el simulador; un cambio de formato del proveedor se detectaría en la prueba manual, no en el pipeline.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

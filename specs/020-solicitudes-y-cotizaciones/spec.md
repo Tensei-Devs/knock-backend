@@ -1,6 +1,6 @@
 # Spec 020 — Solicitudes y cotizaciones (pedir y enviar)
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Claves de trabajo (verificadas en Jira el 2026-11-09):** KNOCK-59 «HU-024 · Pedir una cotización (categoría, descripción, 1 a 5 fotos, día y franja)» y KNOCK-74 «HU-031 · Enviar una cotización (precio fijo o rango, día y hora, nota)»; datos de demo en KNOCK-246 «Datos de demo: solicitudes y cotizaciones ficticias en las semillas»
 > **Responsables sugeridos:** Guillermo (HU-024, solicitudes) · Alexis (HU-031, cotizaciones; KNOCK-246, semillas) · **Ola:** A · **Sprint:** 4 · **Prioridad:** P1
 > **Servicio:** Mercado · **Módulo:** Requests · **Colecciones:** `solicitudes`, `cotizaciones`
@@ -289,6 +289,6 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **Transacciones de DocumentDB:** la creación de la cotización y el cambio de estado de la solicitud usan una transacción; si la instancia no las admite, todo falla (el mismo riesgo que la spec 015).
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

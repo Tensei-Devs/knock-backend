@@ -1,6 +1,6 @@
 # Spec 035 — Redacción de registros con parámetros de consulta y encabezados reenviados
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Claves de trabajo:** KNOCK-186 (TT-API-11 · Redactar los logs de petición con query) y KNOCK-180 (TT-AZ-06 · Fijar las redes conocidas de ForwardedHeaders en el despliegue)
 > **Servicio:** gateway y los tres servicios (`Hosting/`); infraestructura (`deploy/apps`) · **Colecciones:** ninguna
 > **Sprint:** KNOCK-186 en Sprint 4 (Jira e insumo); KNOCK-180 propuesta para Sprint 5 (insumo §3; Jira la etiqueta `sprint-4`) · **Responsables sugeridos:** Guillermo (KNOCK-186) y José Julián (KNOCK-180), como asigna Jira
@@ -207,6 +207,6 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **El borrador de la spec 027 (búsqueda por texto) se escribe en paralelo:** si define parámetros de consulta, quedan cubiertos por la redacción completa sin cambios aquí.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

@@ -1,6 +1,6 @@
 # Spec 026 — Mensajería en tiempo real con SignalR y Redis
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Claves de trabajo (verificadas en Jira el 2026-11-09):** KNOCK-62 «TT-RT-01 · SignalR con Redis como backplane»; relacionada: KNOCK-241 «BUG-004 · Mensajería sin JWT, encabezados de seguridad ni límite de peticiones propios» (la validación propia del token de R-03 la cubre en parte; el resto del BUG queda en su tarea)
 > **Responsable sugerido:** Guillermo · Erick consume el hub (frontend 016) · **Ola:** C · **Sprint:** 4 (si no cabe, pasa al 5 sin romper la ruta crítica) · **Prioridad:** P3
 > **Servicio:** Mensajería y notificaciones · **Módulo:** Chat · **Colecciones:** ninguna nueva; llaves de Redis `chat:limite:{sub}`
@@ -268,6 +268,6 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **La vista de la visita se consulta en cada unión:** una reconexión en bucle de una app defectuosa produce una llamada a Mercado por intento; el límite por usuario del gateway en el saludo es lo que lo acota.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

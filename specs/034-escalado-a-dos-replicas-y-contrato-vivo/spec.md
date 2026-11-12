@@ -1,6 +1,6 @@
 # Spec 034 — Escalado a dos réplicas y contrato vivo
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Claves de trabajo:** KNOCK-76 (TT-CD-02) y KNOCK-137 (TT-CI-02) · **Otra parte en:** knock-frontend (spec 006, contrato vendorizado)
 > **Servicio:** los tres servicios y el gateway; infraestructura (`deploy/`) y flujos de CI (`.github/workflows/`) · **Colecciones:** ninguna
 > **Sprint:** propuesto Sprint 5 (insumo §3 y calendario: «contrato vivo, dos réplicas» del 17 al 20 de noviembre); Jira las etiqueta `sprint-4` · **Responsable sugerido:** José Julián (asignado en Jira a las dos)
@@ -234,6 +234,6 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **Criterios pendientes de la spec 006:** su CA-01 y su CA-02 siguen sin prueba automática hasta que KNOCK-201 se cierre; el humo de esta spec las ejecuta a mano.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

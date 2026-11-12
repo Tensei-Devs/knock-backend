@@ -1,6 +1,6 @@
 # Spec 031 — Moderación de contenido con Azure
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Clave de trabajo:** KNOCK-171 (TT-IA-02) · **Sprint:** 4 (etiqueta en Jira); implementación sujeta a la decisión de gasto de Azure
 > **Servicios:** Mercado y Mensajería y notificaciones (`Common/Moderation/` en cada uno) · **Colecciones:** `uso_moderacion` (nueva, en `market` y en `messaging`); llaves de Redis `mod:*`
 > **Se apoya en:** la spec 013 (contrato de moderación, falla cerrada, Azure AI Content Safety) y la spec 024 (filtro de datos personales, topes en Redis, reintento y cortacircuito). No usa Azure OpenAI.
@@ -239,6 +239,6 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **Duplicación entre servicios:** hasta llevarla a una biblioteca técnica, un cambio en la moderación se hace dos veces; la prueba de listas idénticas solo cubre la lista.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

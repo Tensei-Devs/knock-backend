@@ -1,6 +1,6 @@
 # Spec 029 — Cancelar y vencer solicitudes
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Claves de trabajo:** KNOCK-70 (HU-027) y KNOCK-71 (HU-028) · **Sprint:** 5 (la spec se deja lista en el Sprint 4)
 > **Servicio:** Mercado · **Módulo:** Requests · **Colecciones:** `solicitudes`, `cotizaciones` y `envios` (se amplían), `tareas_programadas` (técnica, spec 003)
 
@@ -215,6 +215,6 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **Retraso de hasta 15 segundos entre `venceEn` y el estado `vencida`:** mientras tanto `venceEn` ya bloquea cotizar y elegir; la lista puede mostrar la solicitud abierta unos segundos.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

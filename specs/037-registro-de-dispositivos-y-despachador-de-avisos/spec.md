@@ -1,6 +1,6 @@
 # Spec 037 — Registro de dispositivos y despachador de avisos push
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Origen:** HU-050 (KNOCK-60, «Recibir notificaciones push», capa Mobile, con su parte de backend). Fija el hueco de frontend 024 §13 (envío y registro de dispositivos) y la carga v1 que esa spec define. **Clave de Jira:** KNOCK-60 (parte de backend; crear subtarea si hace falta).
 > **Servicio:** Mensajería y notificaciones · **Módulo:** Avisos · **Colecciones:** `notifications.dispositivos`, `notifications.enviados`, `notifications.pendientes`
 > **Sprint:** 5 (propuesto) · **Responsable:** Alexis
@@ -117,5 +117,5 @@ Que el teléfono de cada persona reciba un aviso de Knock cuando pasa algo en su
 
 ## Aprobación
 
-- [ ] Revisor 1 — pendiente (José)
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Sin conflicto con la constitución

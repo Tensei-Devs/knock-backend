@@ -1,6 +1,6 @@
 # Spec 025 — Verificación de identidad con consentimiento
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Claves de trabajo (verificadas en Jira el 2026-11-09):** KNOCK-79 «HU-021 · Verificar mi identidad (opcional, consentimiento biométrico)» y KNOCK-80 «HU-022 · Ver mi estado de verificación y reintentar» (ambas `candidata-recorte`); relacionadas, fuera de esta spec: KNOCK-86 «HU-067 · Revisar verificaciones (registro de quién ve las fotos)» y KNOCK-87 «HU-068 · Borrar fotos de verificación al decidir o a los 7 días (alerta a las 24 h)»
 > **Responsable sugerido:** Guillermo (reasignación propuesta en el plan del sprint; hoy KNOCK-79 tiene `resp-julian`) · Erick consume el contrato (frontend 018) · **Ola:** C · **Sprint:** 4 · **Prioridad:** P3
 > **Servicio:** Identidad y confianza · **Módulo:** Trust · **Colecciones:** `verificaciones`, `consentimientos` (ambas nuevas)
@@ -288,6 +288,6 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **El límite de 3 creaciones por hora puede molestar a quien se equivoca tres veces:** se puede subir sin cambiar el código; el valor está en configuración.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

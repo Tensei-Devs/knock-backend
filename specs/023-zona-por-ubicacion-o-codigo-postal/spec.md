@@ -1,6 +1,6 @@
 # Spec 023 — Zona por ubicación o código postal, con lista de espera
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Claves de trabajo (verificadas en Jira el 2026-11-09):** KNOCK-47 «HU-009 · Indicar mi zona por ubicación o código postal (lista de espera fuera de la ciudad piloto)»; consume KNOCK-141 «TT-API-07 · Endpoint de colonia por punto» (Listo) y el catálogo de KNOCK-156 «TT-BD-06 · Migración del catálogo a MongoDB» (Listo)
 > **Responsable sugerido:** Alexis (backend) · Erick consume el contrato (frontend 017) · **Ola:** B · **Sprint:** 4 · **Prioridad:** P2
 > **Servicio:** Mercado · **Módulo:** Catalog · **Colecciones:** `colonias` (existente), `listas_espera` (nueva)
@@ -238,6 +238,6 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **Mercado no tiene host de integración:** esta spec necesita `MarketApiFactory` con `Testcontainers`, igual que 020, 021 y 022.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

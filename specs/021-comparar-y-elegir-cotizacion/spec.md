@@ -1,6 +1,6 @@
 # Spec 021 — Comparar y elegir cotización
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Claves de trabajo (verificadas en Jira el 2026-11-09):** KNOCK-82 «HU-033 · Elegir una cotización (cita confirmada; se revelan teléfono y dirección)» y KNOCK-81 «HU-032 · Comparar cotizaciones (recomendadas, precio, calificación, más pronto)» (el listado de esta spec es el contrato de su pantalla)
 > **Responsables sugeridos:** Guillermo (backend de HU-032 y HU-033) · Erick consume el contrato (frontend 015) · **Ola:** A · **Sprint:** 4 · **Prioridad:** P1
 > **Servicio:** Mercado · **Módulo:** Requests · **Colecciones:** `solicitudes`, `cotizaciones`, `visitas`, `tecnicos`
@@ -255,6 +255,6 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 - **El código de cuatro dígitos tiene 10 000 combinaciones:** el control real es el límite de intentos y el bloqueo de la spec 022, no la entropía.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)
