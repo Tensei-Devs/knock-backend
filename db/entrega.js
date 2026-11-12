@@ -124,18 +124,27 @@ async function deliver() {
     invalidate.push([`catalog:colonias:existe:${id}:${cp}`, `catalog:gen:colonias:existe:${id}:${cp}`]);
   }
 
-  if (!invalidate.length) {
+  // Con KNOCK_REDIS_HOST siempre se invalida, aunque no haya escrituras: reaplicar repara una caché que una corrida anterior dejó vieja.
+  // Sin KNOCK_REDIS_HOST solo se exige Redis si esta corrida escribió algo; si no, avisa por si una corrida anterior terminó en 2 o 3.
+  const writes = writtenOficios.length + writtenColonias.length;
+  if (!env.KNOCK_REDIS_HOST && writes === 0) {
+    print('Sin cambios en MongoDB: no hace falta invalidar Redis. Si una corrida anterior terminó con código 2 o 3, córrelo con KNOCK_REDIS_HOST.');
     print('Entrega de la base lista.');
     return;
   }
 
   if (!env.KNOCK_REDIS_HOST) {
-    print(`Falta KNOCK_REDIS_HOST: el script escribió ${invalidate.length} clave(s) que requieren invalidación y no puede garantizarla sin Redis.`);
+    print(`Falta KNOCK_REDIS_HOST: el script escribió ${writes} documento(s) y ${invalidate.length} clave(s) requieren invalidación; no puede garantizarla sin Redis.`);
     print('Define KNOCK_REDIS_HOST (y KNOCK_REDIS_PORT / KNOCK_REDIS_PASSWORD / KNOCK_REDIS_TLS) y vuelve a correrlo.');
     quit(2);
   }
 
-  await invalidateRedisKeys(invalidate, env);
+  try {
+    await invalidateRedisKeys(invalidate, env);
+  } catch (error) {
+    print(`No se pudo invalidar Redis (${error.message}); MongoDB ya fue modificado: vuelve a correr el script con Redis disponible.`);
+    quit(3);
+  }
   print('Entrega de la base lista.');
 }
 
@@ -166,6 +175,17 @@ async function invalidateRedisKeys(pairs, env) {
   const send = (parts) => new Promise((resolve, reject) => {
     const msg = `*${parts.length}\r\n` + parts.map(encodeArg).join('');
     let timer;
+    // Cada envío quita sus propios listeners al terminar (respuesta, error o tiempo agotado): sin eso se acumulan y Node avisa
+    // MaxListenersExceededWarning con cientos de claves.
+    const cleanup = () => {
+      clearTimeout(timer);
+      socket.removeListener('data', onData);
+      socket.removeListener('error', onError);
+    };
+    const onError = (error) => {
+      cleanup();
+      reject(error);
+    };
     const onData = (chunk) => {
       buffer += chunk.toString('utf8');
       const end = buffer.indexOf('\r\n');
@@ -174,8 +194,7 @@ async function invalidateRedisKeys(pairs, env) {
       }
       const line = buffer.slice(0, end);
       buffer = buffer.slice(end + 2);
-      socket.removeListener('data', onData);
-      clearTimeout(timer);
+      cleanup();
       if (line.startsWith('-')) {
         reject(new Error(`Redis respondió error: ${line.slice(1)}`));
       } else {
@@ -183,9 +202,9 @@ async function invalidateRedisKeys(pairs, env) {
       }
     };
     socket.on('data', onData);
-    socket.once('error', reject);
+    socket.on('error', onError);
     timer = setTimeout(() => {
-      socket.removeListener('data', onData);
+      cleanup();
       reject(new Error('Tiempo agotado esperando respuesta de Redis'));
     }, 10000);
     socket.write(msg);
@@ -214,7 +233,7 @@ async function invalidateRedisKeys(pairs, env) {
 deliver().then(
   () => {},
   (error) => {
-    print(`No se pudo invalidar Redis (${error.message}); MongoDB ya fue modificado: vuelve a correr el script con Redis disponible.`);
-    quit(3);
+    print(`La entrega falló (${error.message}). Revisa el mensaje; si MongoDB ya se modificó, vuelve a correr el script.`);
+    quit(1);
   },
 );

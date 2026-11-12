@@ -270,4 +270,85 @@ public sealed class JsonCompressionTests
         context.Response.Headers.ContentEncoding.ToString().Should().BeEmpty();
         responseBody.ToArray().Length.Should().Be(2048);
     }
+
+    [Theory]
+    [InlineData(null, 2048)]
+    [InlineData("identity", 2048)]
+    [InlineData("br", 100)]
+    public async Task UncompressedJsonVariant_AlsoSendsVary_CA_010_04(string? acceptEncoding, int size)
+    {
+        var (context, body) = await RunMiddlewareAsync("/api/v1/oficios", acceptEncoding, size, cacheControl: "public, max-age=86400");
+
+        context.Response.Headers.ContentEncoding.ToString().Should().BeEmpty();
+        body.Length.Should().Be(size);
+        context.Response.Headers["Vary"].ToString().Should().Be("Accept-Encoding", "una caché pública no puede entregar esta variante a quien pidió br o gzip");
+    }
+
+    [Fact]
+    public async Task NotModified_SendsVary_CA_010_04()
+    {
+        var (context, _) = await RunMiddlewareAsync("/api/v1/oficios", null, 0, status: StatusCodes.Status304NotModified);
+
+        context.Response.Headers["Vary"].ToString().Should().Be("Accept-Encoding");
+    }
+
+    [Fact]
+    public async Task VaryIsNotDuplicated_CA_010_04()
+    {
+        var (context, _) = await RunMiddlewareAsync("/api/v1/oficios", "br", 2048);
+
+        context.Response.Headers["Vary"].Count.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task AuthenticationGetsNoVary_CA_010_04()
+    {
+        var (context, _) = await RunMiddlewareAsync("/api/v1/auth/refresh", "br", 2048);
+
+        context.Response.Headers.ContainsKey("Vary").Should().BeFalse("la autenticación no pasa por el middleware");
+    }
+
+    [Fact]
+    public async Task ExceptionBeforeOverflow_DiscardsBufferSoTheErrorHandlerCanWrite_CA_010_04()
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Path = "/api/v1/oficios";
+        context.Request.Headers["Accept-Encoding"] = "br";
+        var responseBody = new MemoryStream();
+        context.Response.Body = responseBody;
+        var middleware = new JsonCompressionMiddleware(async ctx =>
+        {
+            ctx.Response.StatusCode = StatusCodes.Status200OK;
+            ctx.Response.ContentType = "application/json";
+            await ctx.Response.Body.WriteAsync(new byte[512], CancellationToken.None);
+            throw new InvalidOperationException("falla a mitad de la respuesta");
+        });
+
+        var act = () => middleware.InvokeAsync(context);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        responseBody.Length.Should().Be(0, "lo bufferizado se descarta y la respuesta no empieza");
+        context.Response.Body.Should().BeSameAs(responseBody, "el cuerpo real queda restaurado para el manejador de excepciones");
+    }
+
+    [Fact]
+    public async Task IdentityExceptionBeforeOverflow_AlsoDiscardsBuffer_CA_010_04()
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Path = "/api/v1/me";
+        var responseBody = new MemoryStream();
+        context.Response.Body = responseBody;
+        var middleware = new IdentityHosting.JsonCompressionMiddleware(async ctx =>
+        {
+            ctx.Response.StatusCode = StatusCodes.Status200OK;
+            ctx.Response.ContentType = "application/json";
+            await ctx.Response.Body.WriteAsync(new byte[512], CancellationToken.None);
+            throw new InvalidOperationException("falla a mitad de la respuesta");
+        });
+
+        var act = () => middleware.InvokeAsync(context);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        responseBody.Length.Should().Be(0);
+    }
 }

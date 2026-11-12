@@ -125,6 +125,11 @@ public sealed class Spec014DeliveryScriptTests
             var result = await tools.RunAsync("mongosh", "--nodb", "--quiet", "--file", script);
             result.ExitCode.Should().Be(2, "sin KNOCK_REDIS_HOST no puede garantizar la invalidación y no debe terminar en éxito: " + result.Output);
             result.Output.Should().Contain("KNOCK_REDIS_HOST");
+
+            // Reaplicar sin cambios no escribe nada en MongoDB, así que no exige Redis; sí avisa que una corrida anterior fallida se repite con Redis.
+            var unchanged = await tools.RunAsync("mongosh", "--nodb", "--quiet", "--file", script);
+            unchanged.ExitCode.Should().Be(0, "sin escrituras no hay nada que invalidar: " + unchanged.Output);
+            unchanged.Output.Should().Contain("Sin cambios en MongoDB").And.Contain("Entrega de la base lista");
         }
         finally
         {

@@ -15,12 +15,12 @@ namespace Knock.Market.Api.Modules.Catalog.Controllers.V1;
 [Route("api/v{version:apiVersion}/oficios")]
 internal sealed class OficiosController(OficioQueries oficios, IOptions<Knock.Market.Api.Modules.Catalog.Data.CatalogCacheOptions> cacheOptions) : ControllerBase
 {
+    private static readonly System.Text.Json.JsonSerializerOptions _payloadOptions = new() { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
+
     /// <summary>
     /// Oficios activos como arreglo sin paginar: excepción documentada a la constitución §11 (catálogo acotado, D9).
     /// <c>[AllowAnonymous]</c> explícito para que siga público aunque se agregue una política de autorización global (D3).
     /// </summary>
-    private static readonly System.Text.Json.JsonSerializerOptions _payloadOptions = new() { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
-
     [HttpGet]
     [AllowAnonymous]
     [ProducesResponseType<IReadOnlyList<OficioResponse>>(StatusCodes.Status200OK, "application/json")]
