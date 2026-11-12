@@ -16,13 +16,14 @@ Cada carpeta tiene `spec.md`, `plan.md` y `task.md`. Estados: Borrador → Aprob
 | 010 | Caché en tres niveles y paginación | Aprobada | [`010-cache-en-tres-niveles-y-paginacion`](010-cache-en-tres-niveles-y-paginacion/spec.md) |
 | 011 | Observabilidad y registro | Aprobada | [`011-observabilidad-y-registro`](011-observabilidad-y-registro/spec.md) |
 | 012 | Versionamiento por puntos | Aprobada | [`012-versionamiento-por-puntos`](012-versionamiento-por-puntos/spec.md) |
-| 013 | Almacenamiento de archivos, CDN y moderación | Aprobada | [`013-almacenamiento-de-archivos-y-moderacion`](013-almacenamiento-de-archivos-y-moderacion/spec.md) |
+| 013 | Almacenamiento de archivos, entrega con caché y moderación | Aprobada | [`013-almacenamiento-de-archivos-y-moderacion`](013-almacenamiento-de-archivos-y-moderacion/spec.md) |
 | 014 | Entrega del proyecto y reproducibilidad | Aprobada | [`014-entrega-del-proyecto-y-reproducibilidad`](014-entrega-del-proyecto-y-reproducibilidad/spec.md) |
 | 015 | Registro e inicio de sesión (SES-01) | Aprobada | [`015-registro-e-inicio-de-sesion`](015-registro-e-inicio-de-sesion/spec.md) |
 | 016 | Renovación y cierre de sesión (SES-02, SES-03) | Aprobada | [`016-renovacion-y-cierre-de-sesion`](016-renovacion-y-cierre-de-sesion/spec.md) |
 | 017 | Perfil de la persona (USR-01, USR-02) | Aprobada | [`017-perfil-de-la-persona`](017-perfil-de-la-persona/spec.md) |
 | 018 | Sesiones por dispositivo (SES-04, SES-05) | Aprobada | [`018-sesiones-por-dispositivo`](018-sesiones-por-dispositivo/spec.md) |
 | 019 | MCP del proyecto | Aprobada | [`019-mcp-del-proyecto`](019-mcp-del-proyecto/spec.md) |
+| BUG-005 | Market sin redacción de registros de consola (KNOCK-255) | Borrador | [`BUG-005-market-sin-redaccion-de-registros`](BUG-005-market-sin-redaccion-de-registros/spec.md) |
 | 020 | Solicitudes y cotizaciones (pedir y enviar) | Borrador | [`020-solicitudes-y-cotizaciones`](020-solicitudes-y-cotizaciones/spec.md) |
 | 021 | Comparar y elegir cotización | Borrador | [`021-comparar-y-elegir-cotizacion`](021-comparar-y-elegir-cotizacion/spec.md) |
 | 022 | Visita segura con código de 4 dígitos | Borrador | [`022-visita-segura-con-codigo`](022-visita-segura-con-codigo/spec.md) |

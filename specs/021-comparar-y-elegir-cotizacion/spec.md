@@ -51,6 +51,7 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 - **R-19:** Los errores usan ProblemDetails con `correlationId`, `traceId` y `code` (convención de errores de la spec 020, §5). Los registros no incluyen nombres, teléfonos, direcciones ni el código.
 - **R-20:** Si la transacción se aborta por un conflicto transitorio, se reintenta una vez; si vuelve a fallar o la base no responde, responde 503 `service_unavailable` sin haber cambiado nada, y la app puede repetir la elección (si la solicitud ya quedó con cita, responde 409 `request_already_chosen`).
 - **R-21:** Regla de privacidad: el contacto público del técnico y el lugar de la cita (dirección del cliente o del taller) solo se revelan al cliente dueño después de elegir, en esta respuesta o en la visita (spec 022). El técnico nunca recibe el teléfono del cliente.
+- **R-22:** La lista `GET /api/v1/solicitudes` (spec 020, R-09) agrega a cada elemento `visitaId?`, presente solo cuando la solicitud ya tiene una visita (después de elegir una cotización, R-14). Es el identificador que consume «Ver visita» de frontend 020 y solo se devuelve al cliente dueño; la spec 020 no lo define.
 
 ## 4. Criterios de aceptación
 
@@ -73,6 +74,7 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 - **CA-15:** Dado `?orden=barato` o un `id` que no es `ObjectId`, cuando se pide el listado, entonces responde 422 con `errors.orden` o 400, respectivamente.
 - **CA-17:** Dada una falla de la base durante la transacción (simulada), cuando se elige, entonces responde 503 `service_unavailable`, la solicitud sigue en `cotizando`, no hay `visita` ni eventos, y repetir la elección termina bien.
 - **CA-18:** Dado el listado de cualquier solicitud (antes o después de elegir), cuando se inspecciona la respuesta, entonces no contiene `telefono`, `whatsapp` ni direcciones.
+- **CA-19:** Dado un cliente con una solicitud con cotización elegida y otra sin elegir, cuando pide su lista, entonces la primera trae `visitaId` y la segunda no; la lista de otra persona nunca incluye ese identificador.
 
 ## 5. Contrato
 | Método y ruta | Quién | Cuerpo / consulta | Respuestas |
@@ -155,7 +157,7 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 | Arquitectura | Sí | El controller no toca MongoDB; el módulo no escribe en `tecnicos` |
 | Mutación | Sí | `ComparadorDeCotizaciones` y la condición de estado de la transacción |
 | Rendimiento | No | Máximo cinco cotizaciones por solicitud |
-| Aceptación | Sí | CA-01 a CA-18 (salvo CA-16, retirado) con la tabla 4.1 |
+| Aceptación | Sí | CA-01 a CA-19 (salvo CA-16, retirado) con la tabla 4.1 |
 | Base de datos | Sí | `DatabaseTest`: `visitas` y sus índices (único `{ solicitudId }`) se crean de forma idempotente |
 | Regresión | Sí | Las suites de la spec 020 y de las specs 015 a 019 siguen en verde; `dotnet test Knock.slnx -c Release` completo en cada PR |
 | CI/CD | Sí | Job `gate` de `ci-pr.yml` (build-test, openapi-diff con `oasdiff`, sast, sca, secrets) en verde; smoke de `/health/ready` tras el despliegue |
@@ -184,6 +186,7 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 | CA-15 | `Spec021ValidacionTests.Orden_E_Id_Invalidos_CA_021_15` |
 | CA-17 | `Spec021EleccionTests.Falla_De_Transaccion_CA_021_17` |
 | CA-18 | `Spec021ContactoTests.Listado_Sin_Contacto_CA_021_18` |
+| CA-19 | `Spec021ListadoTests.Incluye_VisitaId_Solo_Elegida_CA_021_19` |
 
 **Gates:** los de `AGENTS.md`; contrato de Mercado regenerado y `oasdiff` sin cambios incompatibles; la prueba de concurrencia se corre con dos peticiones reales en paralelo.
 
@@ -210,7 +213,7 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 - Repetición de la elección sobre una solicitud ya elegida (409 `request_already_chosen`) y repetición tras un 503 (termina bien).
 
 ## 12. Definición de terminado
-- Los 18 criterios tienen prueba en verde y la tabla 4.1 coincide con los nombres reales (`python scripts/sdd_lint.py --trace 021` sin faltantes).
+- Los 19 criterios tienen prueba en verde y la tabla 4.1 coincide con los nombres reales (`python scripts/sdd_lint.py --trace 021` sin faltantes).
 - La prueba de concurrencia demuestra una sola cita y un solo conjunto de eventos.
 - Las colecciones y los índices se crean de forma idempotente y la prueba de base de datos los compara.
 - OpenAPI regenerado, `docs/endpoints.md` actualizado, `Memoria.md` con la entrada.
@@ -255,6 +258,6 @@ Que el cliente compare hasta cinco cotizaciones con la información que necesita
 - **El código de cuatro dígitos tiene 10 000 combinaciones:** el control real es el límite de intentos y el bloqueo de la spec 022, no la entropía.
 
 ## Aprobación
-- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-12
 - [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)
