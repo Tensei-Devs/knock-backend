@@ -42,7 +42,7 @@ Mantener la sesión viva mientras la persona use la app, sin pedirle otro códig
 - **CA-10:** Dadas más peticiones que el límite desde una IP, cuando se renueva, entonces responde 429.
 
 ## 5. Contrato
-- `POST /api/v1/auth/refresh` · público · cuerpo `{ refreshToken }` · 200 `{ accessToken, expiresIn, refreshToken }`, 400, 401, 429.
+- `POST /api/v1/auth/refresh` · público · cuerpo `{ refreshToken }` · 200 `{ accessToken, expiresIn, refreshToken }`, 400 (cuerpo ilegible), 401, 422 (`errors.refreshToken`: ausente o con formato inválido), 429.
 - `POST /api/v1/auth/logout` · persona · sin cuerpo · 204, 401.
 - Clave de Redis `sesion-cancelada:{sid}` que el gateway consulta en cada petición con token.
 
@@ -79,6 +79,6 @@ Decisiones tomadas en la revisión del 2026-11-04. Quien aprueba la spec las ace
 - **Riesgo:** el gateway consulta Redis en cada petición con token; el costo se confirma con las pruebas de carga.
 
 ## Aprobación
-- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-04
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
 - [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)
