@@ -29,7 +29,7 @@ const TOKEN = __ENV.TOKEN || '';
 export const options = {
   scenarios: {
     dos_replicas: {
-      executor: 'constant-arrivals',
+      executor: 'constant-arrival-rate', // tasa constante de llegadas (el nombre válido del executor de k6)
       rate: Number(__ENV.RATE || 20), // peticiones por segundo
       timeUnit: '1s',
       duration: __ENV.DURATION || '1m',
