@@ -83,6 +83,7 @@ Permitir que una persona entre a Knock con su celular: el teléfono verifica el 
 - **Sin SMS propio:** lo envía Firebase; el backend nunca ve el código.
 
 ## 9. Decisiones de la revisión, riesgos y dudas
+- **Nota (2026-11-12, spec 037 R-13):** la expulsión de la sesión más antigua al abrir la 11.ª (R-10) también debe emitir `sesion_revocada { sid }`, para que la 037 borre los dispositivos de avisos ligados a ese `sid`. Esta spec no cambia su contrato HTTP; el evento es un requisito nuevo que se concreta al implementar la 037.
 Decisiones tomadas en la revisión del 2026-11-04. Quien aprueba la spec las acepta; si alguna no convence, se cambia aquí antes de aprobar.
 
 - **`sesiones` y no `refresh_tokens` (decidido).** Es una sola colección: un documento por dispositivo con la huella vigente del token de renovación, `huellasUsadas`, `deviceId` y `venceEn`. La «familia de rotación» de HU-001 equivale a la sesión: `familiaId` = `sid`. Mantiene una sola fuente para renovar (016) y listar o cerrar sesiones (018).
