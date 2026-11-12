@@ -23,6 +23,7 @@ Cada carpeta tiene `spec.md`, `plan.md` y `task.md`. Estados: Borrador → Aprob
 | 017 | Perfil de la persona (USR-01, USR-02) | Aprobada | [`017-perfil-de-la-persona`](017-perfil-de-la-persona/spec.md) |
 | 018 | Sesiones por dispositivo (SES-04, SES-05) | Aprobada | [`018-sesiones-por-dispositivo`](018-sesiones-por-dispositivo/spec.md) |
 | 019 | MCP del proyecto | Aprobada | [`019-mcp-del-proyecto`](019-mcp-del-proyecto/spec.md) |
+| BUG-005 | Market sin redacción de registros de consola (KNOCK-255) | Borrador | [`BUG-005-market-sin-redaccion-de-registros`](BUG-005-market-sin-redaccion-de-registros/spec.md) |
 | 020 | Solicitudes y cotizaciones (pedir y enviar) | Borrador | [`020-solicitudes-y-cotizaciones`](020-solicitudes-y-cotizaciones/spec.md) |
 | 021 | Comparar y elegir cotización | Borrador | [`021-comparar-y-elegir-cotizacion`](021-comparar-y-elegir-cotizacion/spec.md) |
 | 022 | Visita segura con código de 4 dígitos | Borrador | [`022-visita-segura-con-codigo`](022-visita-segura-con-codigo/spec.md) |
