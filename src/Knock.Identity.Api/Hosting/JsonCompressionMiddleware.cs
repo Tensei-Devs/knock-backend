@@ -12,8 +12,9 @@ namespace Knock.Identity.Api.Hosting;
 /// Compresión de JSON superior a 1 KB (spec 010, R-09 y CA-04): la compresión estándar de ASP.NET Core no garantiza umbral, así que este
 /// middleware comprime solo respuestas <c>application/json</c> 200 con más de <see cref="MinimumBytes"/> bytes y <c>Accept-Encoding</c>
 /// compatible (<c>br</c> preferido, luego <c>gzip</c>). Nunca comprime rutas de autenticación (llevan tokens; amenaza BREACH/CRIME), ni
-/// 304/204 ni respuestas sin cuerpo, ni respuestas pequeñas ni las que ya llegan codificadas. Al comprimir conserva <c>ETag</c> y
-/// <c>Cache-Control</c> y agrega <c>Vary: Accept-Encoding</c>. El Gateway no comprime (deja pasar el <c>Content-Encoding</c> tal cual).
+/// 304/204 ni respuestas sin cuerpo, ni respuestas pequeñas ni las que ya llegan codificadas. Conserva <c>ETag</c> y <c>Cache-Control</c>
+/// y agrega <c>Vary: Accept-Encoding</c> a toda respuesta JSON 200 y a los 304, se compriman o no, para que una caché pública no
+/// entregue una variante a quien pidió otra. El Gateway no comprime (deja pasar el <c>Content-Encoding</c> tal cual).
 /// La respuesta se bufferiza solo hasta <see cref="MaximumBufferedBytes"/>: si es mayor, el resto pasa sin comprimir y no se tocan las
 /// cabeceras ya enviadas (el consumo máximo en memoria es el techo más lo que se escribe en esa pasada).
 /// </summary>
@@ -44,8 +45,10 @@ internal sealed class JsonCompressionMiddleware(RequestDelegate next)
         }
         catch
         {
+            // Lo bufferizado se descarta: si se volcara, la respuesta empezaría con 200 y el manejador de excepciones ya no podría
+            // escribir el 500 de ProblemDetails. Si ya hubo desbordamiento, la respuesta empezó y no hay nada que descartar.
             context.Response.Body = originalBody;
-            await buffered.FlushRemainingAsync(originalBody);
+            await buffered.DisposeAsync();
             throw;
         }
 
@@ -61,11 +64,9 @@ internal sealed class JsonCompressionMiddleware(RequestDelegate next)
         await buffered.DisposeAsync();
     }
 
+    // Sin Accept-Encoding compatible la respuesta también pasa por el búfer: así lleva Vary igual que la variante comprimida.
     private static bool ShouldSkipRequest(HttpContext context) =>
-        context.Request.Path.StartsWithSegments("/api/v1/auth", StringComparison.OrdinalIgnoreCase)
-        || string.IsNullOrWhiteSpace(context.Request.Headers.AcceptEncoding)
-        || context.Response.Headers.ContainsKey("Content-Encoding")
-        || PickEncoding(context) is null;
+        context.Request.Path.StartsWithSegments("/api/v1/auth", StringComparison.OrdinalIgnoreCase);
 
     private static string? PickEncoding(HttpContext context)
     {
@@ -106,7 +107,14 @@ internal sealed class JsonCompressionMiddleware(RequestDelegate next)
     {
         var response = context.Response;
         var length = buffered.Length;
-        var compressible = response.StatusCode == StatusCodes.Status200OK
+        if (VariesByEncoding(response))
+        {
+            AddVaryAcceptEncoding(response);
+        }
+
+        var encoding = PickEncoding(context);
+        var compressible = encoding is not null
+            && response.StatusCode == StatusCodes.Status200OK
             && length > MinimumBytes
             && IsJson(response.ContentType)
             && !response.Headers.ContainsKey("Content-Encoding");
@@ -117,7 +125,6 @@ internal sealed class JsonCompressionMiddleware(RequestDelegate next)
             return;
         }
 
-        var encoding = PickEncoding(context)!;
         var compressed = new MemoryStream();
         if (encoding == "br")
         {
@@ -134,10 +141,21 @@ internal sealed class JsonCompressionMiddleware(RequestDelegate next)
 
         response.Headers.Remove("Content-Length");
         response.Headers.ContentEncoding = encoding;
-        response.Headers.Append("Vary", "Accept-Encoding");
         response.ContentLength = compressed.Length;
         compressed.Position = 0;
         await compressed.CopyToAsync(destination, context.RequestAborted);
+    }
+
+    private static bool VariesByEncoding(HttpResponse response) =>
+        response.StatusCode == StatusCodes.Status304NotModified
+        || (response.StatusCode == StatusCodes.Status200OK && IsJson(response.ContentType) && !response.Headers.ContainsKey("Content-Encoding"));
+
+    private static void AddVaryAcceptEncoding(HttpResponse response)
+    {
+        if (!response.Headers.Vary.Any(value => value is not null && value.Contains("Accept-Encoding", StringComparison.OrdinalIgnoreCase)))
+        {
+            response.Headers.Append("Vary", "Accept-Encoding");
+        }
     }
 
     private static bool IsJson(string? contentType) =>
@@ -212,15 +230,6 @@ internal sealed class JsonCompressionMiddleware(RequestDelegate next)
             {
                 _inner.Position = 0;
                 await _inner.CopyToAsync(destination, cancellationToken);
-            }
-        }
-
-        internal async Task FlushRemainingAsync(Stream rest)
-        {
-            if (!Overflowed && _inner.Length > 0)
-            {
-                _inner.Position = 0;
-                await _inner.CopyToAsync(rest);
             }
         }
 

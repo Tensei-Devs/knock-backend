@@ -266,6 +266,37 @@ public sealed class CatalogCacheTests
     }
 
     [Fact]
+    public async Task SeedCancelledMidway_StillInvalidatesWithFreshToken_CA_010_02()
+    {
+        await using var database = await CatalogDatabase.CreateAsync(seeded: true, useRedisCache: true);
+        var cache = database.Get<ICatalogCache>();
+        var store = database.Get<CatalogStore>();
+        var centroId = CatalogSeedData.Colonia("Centro")["_id"].AsObjectId;
+
+        await store.FindActiveOficiosAsync(CancellationToken.None);
+        await store.FindNamesByPostalCodeAsync("42800", CancellationToken.None);
+        await store.ColoniaExistsAsync(centroId, "42800", CancellationToken.None);
+        (await database.Redis.KeyExistsAsync(RedisCatalogCache.NeighborhoodNamesKey("42800"))).Should().BeTrue();
+        (await database.Redis.KeyExistsAsync(RedisCatalogCache.ColoniaExistsKey(centroId, "42800"))).Should().BeTrue();
+        var namesBefore = await cache.GetNeighborhoodNamesGenerationAsync("42800", CancellationToken.None);
+        var existsBefore = await cache.GetColoniaExistsGenerationAsync(centroId, "42800", CancellationToken.None);
+
+        // El token se cancela justo después de la primera escritura (el primer oficio): la siembra se corta antes de tocar colonias,
+        // así que solo el bloque de emergencia puede invalidar las claves de colonias. Si ese bloque usara el token cancelado, no lo haría.
+        using var cancellation = new CancellationTokenSource();
+        var seeder = new CatalogSeeder(store, new CancelAfterFirstWriteCache(cache, cancellation));
+
+        var act = () => seeder.SeedAsync(CatalogSeedData.Oficios, CatalogSeedData.Colonias, cancellation.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>("se relanza la cancelación original, sin AggregateException");
+        (await database.Redis.KeyExistsAsync(RedisCatalogCache.OficiosKey)).Should().BeFalse();
+        (await database.Redis.KeyExistsAsync(RedisCatalogCache.NeighborhoodNamesKey("42800"))).Should().BeFalse("la invalidación de emergencia corre aunque el token esté cancelado");
+        (await database.Redis.KeyExistsAsync(RedisCatalogCache.ColoniaExistsKey(centroId, "42800"))).Should().BeFalse();
+        (await cache.GetNeighborhoodNamesGenerationAsync("42800", CancellationToken.None)).Should().BeGreaterThan(namesBefore, "la generación subió: un lector lento no resucita el dato");
+        (await cache.GetColoniaExistsGenerationAsync(centroId, "42800", CancellationToken.None)).Should().BeGreaterThan(existsBefore);
+    }
+
+    [Fact]
     public async Task RedisDown_ReadsFallBackToMongo_CA_010_01()
     {
         await using var database = await CatalogDatabase.CreateAsync(
@@ -397,5 +428,46 @@ public sealed class CatalogCacheTests
             { "aproximado", false },
         });
         return invalid;
+    }
+
+    /// <summary>Caché real que cancela el token de la siembra después de la primera invalidación (la que sigue a la primera escritura).</summary>
+    private sealed class CancelAfterFirstWriteCache(ICatalogCache inner, CancellationTokenSource cancellation) : ICatalogCache
+    {
+        public async Task RemoveOficiosAsync(CancellationToken cancellationToken)
+        {
+            await inner.RemoveOficiosAsync(cancellationToken);
+            await cancellation.CancelAsync();
+        }
+
+        public Task<IReadOnlyList<OficioListing>?> GetOficiosAsync(CancellationToken cancellationToken) => inner.GetOficiosAsync(cancellationToken);
+
+        public Task<long> GetOficiosGenerationAsync(CancellationToken cancellationToken) => inner.GetOficiosGenerationAsync(cancellationToken);
+
+        public Task<bool> SetOficiosIfGenerationAsync(IReadOnlyList<OficioListing> oficios, long expectedGeneration, CancellationToken cancellationToken) =>
+            inner.SetOficiosIfGenerationAsync(oficios, expectedGeneration, cancellationToken);
+
+        public Task<IReadOnlyList<string>?> GetNeighborhoodNamesAsync(string postalCode, CancellationToken cancellationToken) =>
+            inner.GetNeighborhoodNamesAsync(postalCode, cancellationToken);
+
+        public Task RemoveNeighborhoodNamesAsync(string postalCode, CancellationToken cancellationToken) =>
+            inner.RemoveNeighborhoodNamesAsync(postalCode, cancellationToken);
+
+        public Task<long> GetNeighborhoodNamesGenerationAsync(string postalCode, CancellationToken cancellationToken) =>
+            inner.GetNeighborhoodNamesGenerationAsync(postalCode, cancellationToken);
+
+        public Task<bool> SetNeighborhoodNamesIfGenerationAsync(string postalCode, IReadOnlyList<string> names, long expectedGeneration, CancellationToken cancellationToken) =>
+            inner.SetNeighborhoodNamesIfGenerationAsync(postalCode, names, expectedGeneration, cancellationToken);
+
+        public Task<bool?> GetColoniaExistsAsync(ObjectId id, string postalCode, CancellationToken cancellationToken) =>
+            inner.GetColoniaExistsAsync(id, postalCode, cancellationToken);
+
+        public Task RemoveColoniaExistsAsync(ObjectId id, string postalCode, CancellationToken cancellationToken) =>
+            inner.RemoveColoniaExistsAsync(id, postalCode, cancellationToken);
+
+        public Task<long> GetColoniaExistsGenerationAsync(ObjectId id, string postalCode, CancellationToken cancellationToken) =>
+            inner.GetColoniaExistsGenerationAsync(id, postalCode, cancellationToken);
+
+        public Task<bool> SetColoniaExistsIfGenerationAsync(ObjectId id, string postalCode, bool exists, long expectedGeneration, CancellationToken cancellationToken) =>
+            inner.SetColoniaExistsIfGenerationAsync(id, postalCode, exists, expectedGeneration, cancellationToken);
     }
 }
