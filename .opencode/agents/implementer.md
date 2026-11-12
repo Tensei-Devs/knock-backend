@@ -1,5 +1,5 @@
 ---
-description: Implementa las tareas de una spec Aprobada. No se usa todavía: esta etapa es solo de especificación.
+description: Implementa las tareas de una spec Aprobada, de una en una y con sus pruebas. No aprueba specs, no firma y no fusiona.
 mode: subagent
 permission:
   edit: allow
