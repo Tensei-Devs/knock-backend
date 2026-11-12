@@ -332,3 +332,8 @@
 - **Decisión:** se agrega la colonia «El Carmen» (código postal 42830, por confirmar) con un polígono piloto aproximado de unos 800 metros de lado centrado en el campus de la UTTT, en `colonias_tula.geojson`, el extracto de SEPOMEX y `colonias.json`; las pruebas que cuentan colonias pasan de 12 a 13 y de 8 a 9 con polígono.
 - **Porqué:** las ocho colonias sembradas cubren el centro de Tula; desde el campus (carretera Tula-Tepeji) `GET /colonias/en-punto` respondía «fuera de cobertura» y la demo no mostraba la zona de quien la prueba allí.
 - **A evitar:** tomar el polígono como límite oficial (es aproximado y no oficial); olvidar cargar la semilla en la base de Azure (`db/entrega.js`) después de fusionar.
+
+## 2026-11-11 — Los agentes implementan las tareas de las specs aprobadas (KNOCK-243)
+- **Decisión:** `AGENTS.md` y `.opencode/agents/implementer.md` dejan de decir «esta primera etapa es solo de especificación: no ejecutes las tareas». Ahora dicen que, si la spec está **Aprobada**, el agente implementa solo las tareas de su `task.md`, de una en una y con sus pruebas escritas primero. Una persona decide qué spec o grupo de tareas se activa; el agente no aprueba, no firma y no fusiona.
+- **Porqué:** las specs 020 a 037 de backend y 015 a 028 de la app quedaron aprobadas el 11 de noviembre y el plazo del proyecto exige implementarlas; la regla anterior hacía que los agentes se negaran a programar aunque la spec estuviera aprobada. La autorización del cambio es del Tech Lead.
+- **A evitar:** implementar una spec en Borrador o lo que no esté en sus tareas, activar todas las specs a la vez (son más de 250 tareas y no caben en el plazo: se activan por grupos), o que un agente apruebe, firme o fusione.
