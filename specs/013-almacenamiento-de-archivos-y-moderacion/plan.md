@@ -1,9 +1,9 @@
-# Plan 013 — Almacenamiento de archivos, CDN y moderación
+# Plan 013 — Almacenamiento de archivos, entrega con caché y moderación
 
 > Parte de `spec.md` (estado Borrador). Este plan se confirma cuando la spec esté Aprobada.
 
 ## Enfoque
-1. Crear los contenedores y la CDN en Terraform.
+1. Crear las dos cuentas de almacenamiento y sus contenedores en Terraform (sin CDN, ADR-007).
 2. Implementar el servicio de enlaces firmados.
 3. Implementar la limpieza y reducción de imágenes.
 4. Implementar el cliente de moderación compartido.
@@ -15,12 +15,12 @@
 
 ## Dependencias
 - Azure Blob Storage
-- Azure CDN
 - Azure AI Content Safety
 
 ## Decisiones de la spec que este plan sigue
 - **Subida directa a Blob:** el servidor no carga con los archivos.
-- **CDN solo para lo público:** acerca las imágenes a quien las consulta sin exponer lo privado.
+- **Sin CDN de pago (ADR-007):** caché larga e inmutable desde Blob y dirección base configurable.
+- **Dos cuentas de almacenamiento:** lo público no comparte cuenta con lo privado.
 - **Moderación que falla cerrada:** es preferible no publicar a dejar pasar contenido sin revisar.
 - **Moderador falso en las pruebas de carga:** evita agotar la cuota gratuita.
 
