@@ -9,7 +9,9 @@ name: ci-deploy
 # - Sin `az acr build` ni ACR Tasks: el build sale del runner (docker/build-push-action).
 # - Solo se construye el servicio que cambió en el commit (detect; Knock.Contracts afecta a todos).
 # - Sin etiqueta `latest`: la única etiqueta es el SHA completo.
-# - No despliega a Container Apps: queda fuera de KNOCK-202 (requiere autorización adicional).
+# - Después del push actualiza los Container Apps que cambiaron y corre la prueba de humo contra el
+#   gateway (CA-03 de la spec 007; autorizado por el Tech Lead el 2026-11-10). Costo cero: solo az CLI
+#   en el runner, sin recursos ni secretos nuevos. El grupo de recursos se descubre por nombre de app.
 # - Acciones fijadas por SHA (scripts/ci/pin_actions.py).
 
 on:
@@ -138,3 +140,70 @@ jobs:
       - name: "Push a ACR (etiqueta: SHA completo del commit)"
         if: needs.detect.outputs[matrix.salida] == 'true'
         run: docker push "${IMAGEN}"
+
+  deploy:
+    name: Desplegar en Container Apps
+    needs: [detect, publish]
+    if: success()
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - name: Login en Azure (OIDC)
+        uses: Azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Actualizar la imagen de los servicios que cambiaron
+        env:
+          CAMBIOS: ${{ toJSON(needs.detect.outputs) }}
+        run: |
+          set -euo pipefail
+          az config set extension.use_dynamic_install=yes_without_prompt --only-show-errors
+          for svc in gateway identity messaging market; do
+            if [ "$(jq -r --arg s "$svc" '.[$s]' <<<"$CAMBIOS")" != "true" ]; then
+              echo "knock-$svc sin cambios: no se actualiza."; continue
+            fi
+            rg=$(az containerapp list --query "[?name=='knock-$svc'].resourceGroup | [0]" -o tsv)
+            if [ -z "$rg" ]; then echo "::error::No existe el Container App knock-$svc"; exit 1; fi
+            az containerapp update --name "knock-$svc" --resource-group "$rg" \
+              --image "${ACR_REGISTRY}/knock-$svc:${SHA}" --output none
+            echo "::notice::knock-$svc desplegado con la imagen ${SHA}"
+          done
+
+  smoke:
+    name: Prueba de humo (gateway)
+    needs: deploy
+    if: success()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Login en Azure (OIDC)
+        uses: Azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      # Reintenta hasta 5 minutos: con réplicas mínimas en 0 la primera petición puede tardar (arranque en frío).
+      - name: GET /health y /health/ready por el gateway
+        run: |
+          set -euo pipefail
+          az config set extension.use_dynamic_install=yes_without_prompt --only-show-errors
+          fqdn=$(az containerapp list --query "[?name=='knock-gateway'].properties.configuration.ingress.fqdn | [0]" -o tsv)
+          if [ -z "$fqdn" ]; then echo "::error::El gateway no tiene ingreso público"; exit 1; fi
+          for i in $(seq 1 20); do
+            if curl -fsS --max-time 10 "https://${fqdn}/health" >/dev/null \
+               && curl -fsS --max-time 10 "https://${fqdn}/health/ready" >/dev/null; then
+              echo "::notice::Prueba de humo correcta en el intento ${i}"; exit 0
+            fi
+            echo "Intento ${i}: todavía no responde; reintento en 15 s."; sleep 15
+          done
+          echo "::error::La prueba de humo no respondió en 5 minutos"; exit 1
