@@ -347,6 +347,16 @@
 - **Por qué:** observaciones de revisión de #69 y #72 (residuos de la clave, 029 y 030 con 400 contra R-09 y R-10 de la 002, valores de datos mezclados, nombres de nivel distintos entre specs).
 - **Pendiente:** frontend debe alinear 019 (motivos de cancelación), 023 (400 a 422 en el panel) y 021 (nivel de verificación si usa otro nombre); queda abierta la regla de términos de dominio (`oficio` y `colonia` dentro de un `code`, R-08 de #71) y cuándo usar `unavailable`, `service_unavailable` y `market_unavailable`.
 - **A evitar:** volver a mezclar idiomas en valores de datos que la app muestra o compara; usar 400 para validar campos.
+## 2026-11-10 — Enmienda propuesta de la spec 011: el formato compacto de Serilog cumple el contrato de registros (KNOCK-206)
+- **Decisión:** se propone que la §5 de la spec 011 acepte el formato compacto de Serilog y diga a qué campo corresponde cada campo lógico: `timestamp` = `@t`, `level` = `@l` (omitido en `Information`), `message` = `@m`, `correlationId` = la propiedad `CorrelationId`, y `service` = `service.name` del recurso (no va en la línea de consola).
+- **Por qué:** el PR #60 observó que la §5 pedía los campos `timestamp`, `level`, `service`, `correlationId` y `message`, pero el código emite `@t`, `@l` y `@m`. Un formateador propio solo para renombrar campos no aporta información.
+- **Pendiente de firma:** la nueva aprobación de la 011 la edita José a mano; este cambio no toca la aprobación.
+- **A evitar:** pedir nombres literales de campo en una spec cuando el formato de una biblioteca ya los entrega con otro nombre; escribir un formateador propio solo para renombrarlos.
+## 2026-11-10 — Enmienda propuesta de la spec 013: sin CDN de pago y alineada con la spec 032 (KNOCK-208)
+- **Decisión:** se propone enmendar la spec 013 para que diga lo que ya deciden el ADR-007 (opción D, Blob público sin CDN de pago, dos cuentas de almacenamiento) y el contrato de la spec 032 (5 MB; JPEG, PNG y WebP; moderación caída = 503 reintentable; el registro de subidas vence a los 7 días solo si quedó pendiente o rechazada). Se ajustan `plan.md`, `task.md` (T-01, T-03 a T-06), el índice de `specs/README.md` y la fila 15c de `docs/CUMPLIMIENTO_LINEAMIENTOS.md`. Texto del título: «entrega con caché» en lugar de «CDN»; la carpeta conserva su nombre.
+- **Por qué:** la 013 (Aprobada) decía que las imágenes públicas se sirven por una CDN y la 032 (borrador) y el ADR-007 dicen que no hay CDN de pago (Front Door Standard cuesta unos 35 USD al mes). Mientras tanto el PR de OI-2 no podía exponer rutas sin saber cuál prevalece.
+- **Pendiente de firma:** la nueva aprobación de la 013 y el estado del ADR-007 los edita José a mano; este cambio no toca ninguna aprobación.
+- **A evitar:** implementar rutas de imágenes antes de que la 013 esté re-aprobada; dejar «CDN» en el título de la spec o del plan mientras no exista ninguna.
 
 ## 2026-11-10 — Corrección de la alerta de la spec 011 (KNOCK-206)
 - **Decisión:** `requests/failed` usa `Count`, la agregación publicada por Microsoft; la prueba estática la exige. La raíz de infraestructura valida `alert_email_receiver` igual que el módulo. Un pico de 404 o 422 puede disparar la alerta; Julián decide si se filtra por código.
@@ -356,3 +366,10 @@
 - **Decisión:** se agrega la colonia «El Carmen» (código postal 42830, por confirmar) con un polígono piloto aproximado de unos 800 metros de lado centrado en el campus de la UTTT, en `colonias_tula.geojson`, el extracto de SEPOMEX y `colonias.json`; las pruebas que cuentan colonias pasan de 12 a 13 y de 8 a 9 con polígono.
 - **Porqué:** las ocho colonias sembradas cubren el centro de Tula; desde el campus (carretera Tula-Tepeji) `GET /colonias/en-punto` respondía «fuera de cobertura» y la demo no mostraba la zona de quien la prueba allí.
 - **A evitar:** tomar el polígono como límite oficial (es aproximado y no oficial); olvidar cargar la semilla en la base de Azure (`db/entrega.js`) después de fusionar.
+
+## 2026-11-10 — Convención de errores propuesta: 422 para validación de campos, 400 para lo ilegible, códigos en inglés (KNOCK-253)
+- **Decisión:** se propone que la spec 002 diga que **422** es el código de toda validación de campos (formato, longitud, tipo, rango y reglas de contenido) y **400** solo el de un cuerpo ilegible, un identificador de ruta mal formado o un cursor mal formado, y que todo `code` de error esté en inglés y en `snake_case`. Se alinean las specs 016 (`/auth/refresh` agrega 422) y 017 (CA-06 pasa de 400 a 422). La 018 ya cumple (identificador mal formado = 400).
+- **Por qué:** es lo que ya hacen el filtro de validación de Identity y Market y la spec 015, y deja a la app con un solo nombre por error. La única pieza que no cumple es la validación manual de `PUT /me`, que responde 400: va en una tarea de código aparte.
+- **Pendiente de firma:** la nueva aprobación de las specs 002, 016 y 017 la edita José a mano; este cambio no toca ninguna aprobación.
+- **A evitar:** validar a mano en un controller con otro código que el del filtro de validación; mezclar nombres de error en español y en inglés.
+- **Seguimiento de la revisión de Alexis (2026-11-10):** se agrega R-12 (409 si la petición choca con el estado actual del recurso; 422 si el contenido no sirve sin importar el estado) y CA-08, y CA-07 pasa a verificarse con una prueba de arquitectura que recorra las constantes de `code`. Queda abierto qué términos de dominio se conservan en español dentro de un `code` (`colonia` frente a `oficio`).
