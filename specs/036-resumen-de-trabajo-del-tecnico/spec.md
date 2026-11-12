@@ -2,7 +2,7 @@
 
 > **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Origen:** HU-020 (backlog, «Back (API): `GET /api/v1/tecnicos/me/trabajo` (agregado por secciones)»); fija el hueco de backend 028 §15 y de frontend 019 §13. **Clave de Jira:** pendiente de crear.
-> **Servicio:** Mercado (técnicos, solicitudes, cotizaciones y visitas), con la verificación leída de Identidad por la red interna · **Módulo:** Técnicos · **Colecciones:** ninguna nueva (lee `tecnicos`, `cotizaciones`, `visitas`, `solicitudes`)
+> **Servicio:** Mercado (técnicos, solicitudes, cotizaciones y visitas), con la verificación y el nivel leídos de `tecnicos` · **Módulo:** Técnicos · **Colecciones:** ninguna nueva (lee `tecnicos`, `cotizaciones`, `visitas`, `solicitudes`)
 > **Sprint:** 5 (propuesto) · **Responsable:** Guillermo (módulo de Mercado)
 > **Consumidora:** frontend 019 «Pestaña Trabajo» (R-02, R-07) y frontend 025 (etiqueta por `motivoRechazo`)
 
@@ -36,8 +36,8 @@ Que la pestaña Trabajo del técnico reciba en una sola respuesta sus visitas pr
 - **R-03:** `proximasVisitas[].lugar.direccion` aparece solo si la visita está `confirmada` o `en_curso` (la dirección se revela cuando el técnico ya fue elegido, spec 022 R-05). `cliente` lleva solo `colonia`. Ninguna sección lleva nombre, teléfono ni `sub` del cliente.
 - **R-04:** Cada cotización enviada lleva `motivoRechazo` cuando su estado es `rechazada` o `retirada`, con los valores que define la spec 021 (*decisión de revisión, confirmar*: esta spec no inventa valores nuevos; si la 021 no los define, se añaden allí).
 - **R-05:** `disponibleHoy` se lee del campo de `tecnicos` y, si no existe, vale `false`. Esta spec no lo escribe.
-- **R-06:** `verificacion.estado` se lee de Identidad (spec 025) por la red interna, como `GET /colonias/existe` (spec 017). `nivel` se lee de `tecnicos`.
-- **R-07:** Si cualquier parte del resumen falla (Identidad no responde, la base no responde o falla una de las cuatro consultas), la respuesta entera es `503 unavailable`. Nunca se devuelve una respuesta parcial (*decisión de revisión, confirmar*: la app trata la pestaña como una sola carga; una falla deja toda la pestaña en error, y así el contrato queda simple).
+- **R-06:** `verificacion.estado` y `nivel` se leen del documento del técnico en `tecnicos`. Mercado los mantiene al consumir el evento de la decisión de verificación que publica la spec 025, que no expone ningún endpoint interno de consulta. Esta spec no los escribe.
+- **R-07:** Si cualquier parte del resumen falla (la base no responde o falla una de las cuatro consultas), la respuesta entera es `503 unavailable`. Nunca se devuelve una respuesta parcial (*decisión de revisión, confirmar*: la app trata la pestaña como una sola carga; una falla deja toda la pestaña en error, y así el contrato queda simple).
 - **R-08:** La respuesta lleva `Cache-Control: private, no-store` (spec 010, R-04): contiene datos personales y cambia con cada solicitud.
 - **R-09:** Ninguna sección lleva el código de la visita, el nombre ni el teléfono del cliente, ni la dirección fuera de R-03.
 - **R-10:** El límite de lectura del gateway (spec 009) aplica; con exceso, `429` con `Retry-After`.
@@ -70,10 +70,10 @@ Que la pestaña Trabajo del técnico reciba en una sola respuesta sus visitas pr
 - **CA-02:** Dada una persona que no es técnico activo (cliente o técnico dado de baja), cuando pide el resumen, entonces responde `403 not_a_technician`. (R-01)
 - **CA-03:** Dado un técnico con 25 trabajos terminados, cuando pide la lista, entonces recibe 20 y `nextCursor`, y con el cursor recibe los 5 restantes sin repetir. (R-02)
 - **CA-04:** Dada una cotización rechazada porque el cliente eligió a otro técnico, cuando el técnico pide su resumen, entonces esa cotización lleva `motivoRechazo`. (R-04)
-- **CA-05:** Dado Identidad sin responder, cuando se pide el resumen, entonces responde `503 unavailable` sin secciones parciales y con `Cache-Control: private, no-store`. (R-07, R-08)
+- **CA-05:** Dada la base sin responder o una de las cuatro consultas fallando, cuando se pide el resumen, entonces responde `503 unavailable` sin secciones parciales y con `Cache-Control: private, no-store`. (R-07, R-08)
 - **CA-06:** Dada cualquier respuesta, cuando se revisa, entonces no contiene nombre, teléfono ni `sub` del cliente, ni la dirección de una visita no aceptada. (R-03, R-09)
 - **CA-07:** Dado un técnico sin el campo `disponibleHoy`, cuando pide el resumen, entonces `disponibleHoy` es `false` y el resumen no escribe ese campo. (R-05)
-- **CA-08:** Dado un técnico con su nivel en `tecnicos` y su verificación en Identidad, cuando pide el resumen, entonces `verificacion.estado` viene de Identidad y `nivel` de `tecnicos`. (R-06)
+- **CA-08:** Dado un técnico con su nivel y su verificación en `tecnicos`, cuando pide el resumen, entonces `verificacion.estado` y `nivel` vienen de `tecnicos`. (R-06)
 - **CA-09:** Dado un técnico que excede el límite de lectura del gateway, cuando pide el resumen, entonces responde `429` con `Retry-After`. (R-10)
 
 ## 7. Pruebas
@@ -81,10 +81,10 @@ Que la pestaña Trabajo del técnico reciba en una sola respuesta sus visitas pr
 | Tipo | ¿Aplica? | Qué cubre |
 |---|---|---|
 | Unitarias | Sí | Reglas de R-03 (dirección según estado), orden y desempate de `terminadas`, `motivoRechazo`, valor por omisión de `disponibleHoy` |
-| Integración | Sí | MongoDB real con visitas, cotizaciones y técnicos; Redis real para el límite de R-10; Identidad simulada |
-| Seguridad negativa | Sí | Cliente, técnico inactivo, cursor manipulado, Identidad caída |
+| Integración | Sí | MongoDB real con visitas, cotizaciones y técnicos; Redis real para el límite de R-10 |
+| Seguridad negativa | Sí | Cliente, técnico inactivo, cursor manipulado, base caída |
 | Contrato (CON) | Sí | `openapi-diff` contra `contracts/openapi.v1.json` y cliente de frontend 019 |
-| Arquitectura | Sí | Mercado lee la verificación solo por la API interna de Identidad (spec 025), nunca por su base |
+| Arquitectura | Sí | Mercado lee la verificación y el nivel solo de `tecnicos` (su propia base), nunca de la base de Identidad |
 | Regresión | Sí | Suites de specs 020, 021 y 025 en verde; pestaña Trabajo (frontend 019) sin cambios de contrato |
 | Mutación | No aplica | Lectura agregada sin cálculo de dinero ni de estado; las reglas de R-03 y R-04 tienen casos negativos en unitarias |
 | Humo | Sí | En el entorno de evaluación: `GET /api/v1/tecnicos/me/trabajo` responde 401 sin token y 403 para una cuenta de cliente |
@@ -107,12 +107,13 @@ Que la pestaña Trabajo del técnico reciba en una sola respuesta sus visitas pr
 | CA-02 | `Spec036ResumenTests.Cliente_O_Tecnico_Inactivo_CA_036_02` |
 | CA-03 | `Spec036ResumenTests.Terminadas_Paginadas_CA_036_03` |
 | CA-04 | `Spec036ResumenTests.Motivo_Rechazo_En_Cotizacion_CA_036_04` |
-| CA-05 | `Spec036ResumenTests.Identidad_Caida_503_Sin_Parciales_CA_036_05` |
+| CA-05 | `Spec036ResumenTests.Base_Caida_503_Sin_Parciales_CA_036_05` |
 | CA-06 | `Spec036ResumenTests.Sin_Datos_De_Contacto_CA_036_06` |
 | CA-07 | `Spec036ResumenTests.DisponibleHoy_Por_Omision_CA_036_07` |
-| CA-08 | `Spec036ResumenTests.Verificacion_De_Identidad_Y_Nivel_CA_036_08` |
+| CA-08 | `Spec036ResumenTests.Verificacion_Y_Nivel_Desde_Tecnicos_CA_036_08` |
 | CA-09 | `Spec036ResumenTests.Limite_De_Lectura_429_CA_036_09` |
 
 ## Aprobación
 
 - [ ] Revisor 1 — pendiente (José)
+- [ ] Sin conflicto con la constitución
