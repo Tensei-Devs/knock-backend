@@ -60,6 +60,7 @@ No expone endpoints. Interfaces que fija: variables de Terraform (réplicas, tam
 - **Una sola región para el backend:** replicarlo multiplicaría el costo; la CDN reparte las imágenes públicas.
 
 ## 9. Riesgos y dudas abiertas
+- **Nota (2026-11-12, spec 037 R-11):** la entrega interna de avisos agrega dos secretos al Key Vault (`avisos-key-market` y `avisos-key-identity`) y exige que cada servicio solo lea el suyo (el módulo `service` ya asigna el rol «Key Vault Secrets User» por secreto, `deploy/modules/service/main.tf`) y que el gateway no enrute `/api/v1/interno/*`. Esta spec no cambia su contrato; los secretos y las variables se agregan en `deploy/apps/main.tf` al implementar la 037. **KNOCK-180** (fijar las redes conocidas de `ForwardedHeaders` en el despliegue) sigue por hacer y es un riesgo aparte: sin ella el límite por IP del gateway puede ver la IP del proxy.
 - Ninguna duda abierta por ahora; se agregan aquí las que surjan al revisar la spec.
 
 ## Aprobación
