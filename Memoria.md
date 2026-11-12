@@ -362,9 +362,23 @@
 - **Decisión:** se registra `EXC-020` (jscpd, vence 2026-12-15) y se marca con `jscpd:ignore-start/end` la copia de `ForwardedHeadersExtensions` de Messaging.Api, que el PR 61 agrega y que duplica la de Market.Api (un clon de 42 líneas). El retiro es KNOCK-251: mover la clase a una biblioteca compartida.
 - **Porqué:** `.jscpd.json` tiene `exitCode: 1` y el job de gobierno falla con cualquier clon, aunque la duplicación sea del 0.22 % y esté bajo el umbral de 3 %. Un servicio no referencia a otro y aún no existe la biblioteca técnica compartida; es la misma situación de EXC-007, EXC-008, EXC-015 y EXC-018.
 - **A evitar:** dejar vencer la excepción sin haber hecho KNOCK-251, copiar la clase a un cuarto servicio sin registrar su excepción, o quitar los marcadores sin retirar antes la excepción.
+## 2026-11-10 — Migración documental de TT-BD-03 (KNOCK-40)
+- **Decisión:** la spec 038 traslada los once casos de semillas ficticias de clientes a Identidad y confianza; queda en Borrador para revisión de Julián. El plan y las tareas son propuestas, sin implementación.
+- **Pendiente:** conciliar estado, perfil y consentimientos con la 015; resolver acceso a datos actual, detección de entorno local, atomicidad ante concurrencia, caché, códigos de error y ubicación del nombre (spec 038 §9).
+- **Por qué:** la fuente heredada describe un módulo antiguo; se prevé reutilizar los componentes de Identidad existentes, sin crear duplicados por esta migración.
+
+## 2026-11-10 — Decisiones de Julián para la spec 038 (KNOCK-40)
+- **Decisión:** cuentas demo activas, con perfil completo, consentimientos vigentes y nombres ficticios; el cargador solo escribe con host `localhost`, `127.0.0.1` o `documentdb-local`, sin opción de omitir la guarda. Azure se carga aparte y a mano con `db/entrega.js`. Técnicos y solicitudes van en KNOCK-246, después de la spec 020.
+- **Pendiente:** resolver la frontera de datos y las propuestas sobre nombre, atomicidad, caché y errores con Julián; conciliar el upsert propuesto con la ausencia de escrituras parciales ante concurrencia. La spec continúa en Borrador.
 ## 2026-11-10 — Convención de errores propuesta: 422 para validación de campos, 400 para lo ilegible, códigos en inglés (KNOCK-253)
 - **Decisión:** se propone que la spec 002 diga que **422** es el código de toda validación de campos (formato, longitud, tipo, rango y reglas de contenido) y **400** solo el de un cuerpo ilegible, un identificador de ruta mal formado o un cursor mal formado, y que todo `code` de error esté en inglés y en `snake_case`. Se alinean las specs 016 (`/auth/refresh` agrega 422) y 017 (CA-06 pasa de 400 a 422). La 018 ya cumple (identificador mal formado = 400).
 - **Por qué:** es lo que ya hacen el filtro de validación de Identity y Market y la spec 015, y deja a la app con un solo nombre por error. La única pieza que no cumple es la validación manual de `PUT /me`, que responde 400: va en una tarea de código aparte.
 - **Pendiente de firma:** la nueva aprobación de las specs 002, 016 y 017 la edita José a mano; este cambio no toca ninguna aprobación.
 - **A evitar:** validar a mano en un controller con otro código que el del filtro de validación; mezclar nombres de error en español y en inglés.
 - **Seguimiento de la revisión de Alexis (2026-11-10):** se agrega R-12 (409 si la petición choca con el estado actual del recurso; 422 si el contenido no sirve sin importar el estado) y CA-08, y CA-07 pasa a verificarse con una prueba de arquitectura que recorra las constantes de `code`. Queda abierto qué términos de dominio se conservan en español dentro de un `code` (`colonia` frente a `oficio`).
+
+## 2026-11-12 — Memoria.md se fusiona sin conflictos al agregar entradas (KNOCK-265)
+- **Decisión:** `.gitattributes` marca `Memoria.md` con `merge=union`. Cuando dos ramas agregan entradas distintas al final, `git merge` en local conserva las dos y ya no marca conflicto.
+- **Por qué:** casi todos los conflictos de los PR de las últimas semanas eran de `Memoria.md`, porque cada PR agrega su entrada en el mismo lugar. Se probó en un repositorio de prueba: dos ramas con entradas distintas se fusionaron sin conflicto y quedaron las dos.
+- **Límite (sin verificar en GitHub):** `merge=union` lo aplica Git en la máquina de quien hace `git merge origin/sprint-04`. No se verificó si el botón «Merge» de GitHub también lo aplica; si no, la ficha del PR puede seguir mostrando conflicto hasta que se traiga `sprint-04` a la rama con `git merge`. Se mide con el primer PR que lo necesite.
+- **A evitar:** editar una entrada ya existente de `Memoria.md` en dos ramas a la vez (el driver duplica o mezcla líneas); fusionar sin revisar que la entrada nueva quedó entera y separada de la anterior por una línea en blanco.
