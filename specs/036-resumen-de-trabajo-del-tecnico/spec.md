@@ -1,6 +1,6 @@
 # Spec 036 — Resumen de trabajo del técnico (`GET /api/v1/tecnicos/me/trabajo`)
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Origen:** HU-020 (backlog, «Back (API): `GET /api/v1/tecnicos/me/trabajo` (agregado por secciones)»); fija el hueco de backend 028 §15 y de frontend 019 §13. **Clave de Jira:** pendiente de crear.
 > **Servicio:** Mercado (técnicos, solicitudes, cotizaciones y visitas), con la verificación y el nivel leídos de `tecnicos` · **Módulo:** Técnicos · **Colecciones:** ninguna nueva (lee `tecnicos`, `cotizaciones`, `visitas`, `solicitudes`)
 > **Sprint:** 5 (propuesto) · **Responsable:** Guillermo (módulo de Mercado)
@@ -115,5 +115,5 @@ Que la pestaña Trabajo del técnico reciba en una sola respuesta sus visitas pr
 
 ## Aprobación
 
-- [ ] Revisor 1 — pendiente (José)
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Sin conflicto con la constitución

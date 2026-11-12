@@ -1,6 +1,6 @@
 # Spec 022 — Visita segura con código de 4 dígitos
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Claves de trabajo (verificadas en Jira el 2026-11-09):** KNOCK-83 «HU-036 · Ver mi visita con el código de 4 dígitos o la cita en el taller», KNOCK-85 «HU-038 · Confirmar mi llegada con el código ("Ya llegué")» y KNOCK-84 «HU-037 · Avisar a alguien de confianza» (etiquetada `candidata-recorte`)
 > **Responsables sugeridos:** Guillermo (backend de HU-036, HU-037 y HU-038) · Erick consume el contrato (frontend 016) · **Ola:** B · **Sprint:** 4 · **Prioridad:** P2 (HU-037, P3)
 > **Servicio:** Mercado · **Módulo:** Requests · **Colecciones:** `visitas`, `solicitudes`, `cotizaciones`
@@ -237,6 +237,6 @@ Que la persona vea su visita a domicilio con el código de cuatro dígitos que r
 - **El aviso por WhatsApp o SMS depende del sistema operativo:** la app puede no tener WhatsApp instalado; el texto debe seguir siendo legible si se copia y pega.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

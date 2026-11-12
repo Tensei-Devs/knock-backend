@@ -1,6 +1,6 @@
 # Spec 032 — CDN de imágenes: entrega con caché y enlaces firmados
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Clave de trabajo:** KNOCK-172 (TT-API-10) · **Relacionadas:** KNOCK-182 (TT-GES-10, ADR-007, en Listo) y spec 013 (archivos y moderación)
 > **Servicio:** Mercado (módulo nuevo `Media`) e infraestructura compartida · **Colecciones:** `subidas_imagen` (nueva) · **Llaves de Redis:** `img:subidas:{sub}`, `img:confirmaciones:{sub}`
 > **Sprint:** propuesto Sprint 5 (insumo §3; Jira la etiqueta `sprint-4`) · **Responsable sugerido:** José Julián (asignado en Jira)
@@ -283,6 +283,6 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **Ninguna pantalla de frontend consume aún estos endpoints:** las specs de frontend que suben fotos deben alinearse.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

@@ -1,6 +1,6 @@
 # Spec 027 — Buscar un experto por texto
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Clave de trabajo:** KNOCK-66 (HU-012) · **Sprint:** 5 (la spec se deja lista en el Sprint 4)
 > **Servicio:** Mercado · **Módulo:** Catalog · **Colecciones:** `sinonimos` (nueva), `busquedas_sin_resultado` (nueva), `tecnicos` y `colonias` (lectura)
 > **Otra parte en:** knock-frontend, spec 021 «Buscar un experto por texto» (consume `GET /api/v1/busqueda`)
@@ -256,6 +256,6 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **`$geoNear` en Azure DocumentDB:** se comprueba en el despliegue igual que la búsqueda por punto de TT-API-07.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

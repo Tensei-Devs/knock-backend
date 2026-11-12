@@ -1,6 +1,6 @@
 # Spec 028 — Repartir la solicitud por oleadas
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Clave de trabajo:** KNOCK-68 (HU-025) · **Sprint:** 5 (la spec se deja lista en el Sprint 4)
 > **Servicio:** Mercado · **Módulo:** Requests · **Colecciones:** `envios` (nueva), `solicitudes` y `cotizaciones` (se amplían), `tareas_programadas` (técnica, spec 003), `tecnicos` y `colonias` (lectura)
 > **Otra parte en:** knock-frontend, spec 019 «Pestaña Trabajo» (consume la bandeja y el descarte)
@@ -249,6 +249,6 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **Sin app del técnico:** la bandeja y el descarte se prueban con semillas y llamadas directas.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

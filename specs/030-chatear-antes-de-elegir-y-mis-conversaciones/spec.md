@@ -1,6 +1,6 @@
 # Spec 030 — Chatear antes de elegir y mis conversaciones
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Claves de trabajo:** KNOCK-72 (HU-029) y KNOCK-73 (HU-030) · **Sprint:** 5 (la spec se deja lista en el Sprint 4)
 > **Servicio:** Mensajería y notificaciones (módulo `Conversaciones`, nuevo) y Mercado (módulo Requests, una ruta de permiso) · **Colecciones:** `conversaciones` y `mensajes` (nuevas, base `messaging`); llaves de Redis `chat:limite:{sub}` (compartida con la spec 026) y `conv:permiso:{conversacionId}`
 > **Se apoya en:** la spec 026 (hub `/hubs/chat`, puente de Redis, autenticación del canal y salud) sin repetirla.
@@ -294,6 +294,6 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **Moderación con cuota:** cada mensaje consume una llamada de la spec 031; con la cuota gratuita agotada, nadie puede escribir (falla cerrada).
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ________ fecha: ________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)
