@@ -29,25 +29,42 @@ internal sealed class SecurityHeadersMiddleware(RequestDelegate next, IHostEnvir
     private Task Apply(HttpContext context)
     {
         var headers = context.Response.Headers;
+        SetFixedHeaders(headers);
+        SetStrictTransportSecurity(headers);
+        SetDefaultCacheControl(headers);
+        RemoveLeakyHeaders(headers);
+        return Task.CompletedTask;
+    }
+
+    private static void SetFixedHeaders(IHeaderDictionary headers)
+    {
         headers.XContentTypeOptions = "nosniff";
         headers.XFrameOptions = "DENY";
         headers["Referrer-Policy"] = "no-referrer";
         headers.ContentSecurityPolicy = ContentSecurityPolicy;
+    }
+
+    private void SetStrictTransportSecurity(IHeaderDictionary headers)
+    {
         if (_strictTransportSecurity is not null)
         {
             headers.StrictTransportSecurity = _strictTransportSecurity;
         }
+    }
 
+    private static void SetDefaultCacheControl(IHeaderDictionary headers)
+    {
         if (StringValues.IsNullOrEmpty(headers.CacheControl))
         {
             headers.CacheControl = "no-store";
         }
+    }
 
+    private static void RemoveLeakyHeaders(IHeaderDictionary headers)
+    {
         foreach (var leaky in _leakyHeaders)
         {
             headers.Remove(leaky);
         }
-
-        return Task.CompletedTask;
     }
 }
