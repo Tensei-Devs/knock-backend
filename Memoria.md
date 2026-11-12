@@ -344,6 +344,14 @@
 - **Porqué:** las ocho colonias sembradas cubren el centro de Tula; desde el campus (carretera Tula-Tepeji) `GET /colonias/en-punto` respondía «fuera de cobertura» y la demo no mostraba la zona de quien la prueba allí.
 - **A evitar:** tomar el polígono como límite oficial (es aproximado y no oficial); olvidar cargar la semilla en la base de Azure (`db/entrega.js`) después de fusionar.
 
+## 2026-11-10 — Migración documental de TT-BD-03 (KNOCK-40)
+- **Decisión:** la spec 038 traslada los once casos de semillas ficticias de clientes a Identidad y confianza; queda en Borrador para revisión de Julián. El plan y las tareas son propuestas, sin implementación.
+- **Pendiente:** conciliar estado, perfil y consentimientos con la 015; resolver acceso a datos actual, detección de entorno local, atomicidad ante concurrencia, caché, códigos de error y ubicación del nombre (spec 038 §9).
+- **Por qué:** la fuente heredada describe un módulo antiguo; se prevé reutilizar los componentes de Identidad existentes, sin crear duplicados por esta migración.
+
+## 2026-11-10 — Decisiones de Julián para la spec 038 (KNOCK-40)
+- **Decisión:** cuentas demo activas, con perfil completo, consentimientos vigentes y nombres ficticios; el cargador solo escribe con host `localhost`, `127.0.0.1` o `documentdb-local`, sin opción de omitir la guarda. Azure se carga aparte y a mano con `db/entrega.js`. Técnicos y solicitudes van en KNOCK-246, después de la spec 020.
+- **Pendiente:** resolver la frontera de datos y las propuestas sobre nombre, atomicidad, caché y errores con Julián; conciliar el upsert propuesto con la ausencia de escrituras parciales ante concurrencia. La spec continúa en Borrador.
 ## 2026-11-10 — Convención de errores propuesta: 422 para validación de campos, 400 para lo ilegible, códigos en inglés (KNOCK-253)
 - **Decisión:** se propone que la spec 002 diga que **422** es el código de toda validación de campos (formato, longitud, tipo, rango y reglas de contenido) y **400** solo el de un cuerpo ilegible, un identificador de ruta mal formado o un cursor mal formado, y que todo `code` de error esté en inglés y en `snake_case`. Se alinean las specs 016 (`/auth/refresh` agrega 422) y 017 (CA-06 pasa de 400 a 422). La 018 ya cumple (identificador mal formado = 400).
 - **Por qué:** es lo que ya hacen el filtro de validación de Identity y Market y la spec 015, y deja a la app con un solo nombre por error. La única pieza que no cumple es la validación manual de `PUT /me`, que responde 400: va en una tarea de código aparte.
