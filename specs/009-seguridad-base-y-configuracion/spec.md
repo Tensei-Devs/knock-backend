@@ -63,6 +63,7 @@ Fija las cabeceras de seguridad de toda respuesta, el esquema de autenticación 
 - **Secretos fuera del código:** protege al repositorio aunque se haga público.
 
 ## 9. Decisiones de la revisión, riesgos y dudas
+- **Nota (2026-11-12, specs 033 y 037):** hoy no hay autenticación entre servicios: la única llamada interna reenvía el `Authorization` del usuario y `jwt-signing-key` es una sola clave compartida por el gateway, Identidad y Mercado. La 037 (R-11) agrega claves HMAC por emisor para la entrega interna de avisos, sin reutilizar `jwt-signing-key`, y la 033 (R-11) mueve el conteo de fallos de TOTP a MongoDB porque Redis no persiste. Esta spec no cambia su contrato; si se quiere una regla general de llamadas internas, va en una spec propia.
 Decisiones tomadas en la revisión del 2026-11-04. Quien aprueba la spec las acepta; si alguna no convence, se cambia aquí antes de aprobar.
 
 - **Cancelar por `sid` y no por `jti` (decidido).** Cada renovación emite un JWT nuevo con otro `jti`; cancelar un `jti` solo cierra el último token, y cerrar la sesión de otro dispositivo (spec 018) es imposible sin conocer su `jti`. Con `sid`, una sola clave en Redis cierra toda la sesión, sea cual sea el JWT que lleve el dispositivo. Esto reemplaza lo que decía la constitución del equipo (`jti`); se corrige al fusionar las constituciones.
