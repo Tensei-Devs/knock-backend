@@ -350,3 +350,9 @@
 - **Pendiente de firma:** la nueva aprobación de las specs 002, 016 y 017 la edita José a mano; este cambio no toca ninguna aprobación.
 - **A evitar:** validar a mano en un controller con otro código que el del filtro de validación; mezclar nombres de error en español y en inglés.
 - **Seguimiento de la revisión de Alexis (2026-11-10):** se agrega R-12 (409 si la petición choca con el estado actual del recurso; 422 si el contenido no sirve sin importar el estado) y CA-08, y CA-07 pasa a verificarse con una prueba de arquitectura que recorra las constantes de `code`. Queda abierto qué términos de dominio se conservan en español dentro de un `code` (`colonia` frente a `oficio`).
+
+## 2026-11-12 — Memoria.md se fusiona sin conflictos al agregar entradas (KNOCK-265)
+- **Decisión:** `.gitattributes` marca `Memoria.md` con `merge=union`. Cuando dos ramas agregan entradas distintas al final, `git merge` en local conserva las dos y ya no marca conflicto.
+- **Por qué:** casi todos los conflictos de los PR de las últimas semanas eran de `Memoria.md`, porque cada PR agrega su entrada en el mismo lugar. Se probó en un repositorio de prueba: dos ramas con entradas distintas se fusionaron sin conflicto y quedaron las dos.
+- **Límite (sin verificar en GitHub):** `merge=union` lo aplica Git en la máquina de quien hace `git merge origin/sprint-04`. No se verificó si el botón «Merge» de GitHub también lo aplica; si no, la ficha del PR puede seguir mostrando conflicto hasta que se traiga `sprint-04` a la rama con `git merge`. Se mide con el primer PR que lo necesite.
+- **A evitar:** editar una entrada ya existente de `Memoria.md` en dos ramas a la vez (el driver duplica o mezcla líneas); fusionar sin revisar que la entrada nueva quedó entera y separada de la anterior por una línea en blanco.
