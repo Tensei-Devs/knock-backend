@@ -1,6 +1,6 @@
 # Mapa de código
 
-> Generado por `scripts/codemap.py` el 2026-11-09T20:03:32Z. No editar a mano.
+> Generado por `scripts/codemap.py` el 2026-11-12T02:39:32Z. No editar a mano.
 > **Antes de crear una clase, método o archivo, busca aquí o corre `python scripts/codemap.py --query "<qué necesitas>"`.**
 
 ## Resumen
@@ -9,7 +9,7 @@
 |---|---|---|---|---|
 | `Catalog` | -, controllers, data, domain, dtos, services, validators | 26 | 29 | 34 |
 | `Knock.Contracts` | - | 5 | 7 | 7 |
-| `Knock.Gateway` | -, hosting | 13 | 37 | 46 |
+| `Knock.Gateway` | -, hosting | 14 | 39 | 47 |
 | `Knock.Identity.Api` | -, common, hosting | 28 | 58 | 71 |
 | `Knock.Market.Api` | -, common, hosting | 26 | 55 | 69 |
 | `Knock.Messaging.Api` | -, hosting | 7 | 21 | 29 |
@@ -103,7 +103,7 @@
 - `DomainExceptionHandler`: `src/Knock.Identity.Api/Hosting/DomainExceptionHandler.cs:13`, `src/Knock.Market.Api/Hosting/DomainExceptionHandler.cs:12`
 - `ForwardedHeadersExtensions`: `src/Knock.Identity.Api/Hosting/ForwardedHeadersExtensions.cs:7`, `src/Knock.Market.Api/Hosting/ForwardedHeadersExtensions.cs:6`
 - `HealthExtensions`: `src/Knock.Gateway/Hosting/HealthExtensions.cs:10`, `src/Knock.Identity.Api/Hosting/HealthExtensions.cs:10`, `src/Knock.Market.Api/Hosting/HealthExtensions.cs:5`, `src/Knock.Messaging.Api/Hosting/HealthExtensions.cs:10`
-- `HstsSettings`: `src/Knock.Identity.Api/Hosting/SecuritySettings.cs:7`, `src/Knock.Market.Api/Hosting/SecuritySettings.cs:6`
+- `HstsSettings`: `src/Knock.Gateway/Hosting/HstsExtensions.cs:10`, `src/Knock.Identity.Api/Hosting/SecuritySettings.cs:7`, `src/Knock.Market.Api/Hosting/SecuritySettings.cs:6`
 - `HttpsSettings`: `src/Knock.Identity.Api/Hosting/SecuritySettings.cs:15`, `src/Knock.Market.Api/Hosting/SecuritySettings.cs:14`
 - `IgnoreIncomingTraceContextPropagator`: `src/Knock.Gateway/Hosting/ObservabilityExtensions.cs:194`, `src/Knock.Identity.Api/Hosting/ObservabilityExtensions.cs:194`, `src/Knock.Market.Api/Hosting/ObservabilityExtensions.cs:190`, `src/Knock.Messaging.Api/Hosting/ObservabilityExtensions.cs:194`
 - `InternalControllerFeatureProvider`: `src/Knock.Identity.Api/Hosting/AuthenticationExtensions.cs:72`, `src/Knock.Market.Api/Hosting/AuthenticationExtensions.cs:71`
@@ -134,7 +134,7 @@
 - `RequestBodyLimitMiddleware`: `src/Knock.Identity.Api/Hosting/RequestBodyLimitMiddleware.cs:37`, `src/Knock.Market.Api/Hosting/RequestBodyLimitMiddleware.cs:30`
 - `ScopeRequestPathEnricher`: `src/Knock.Gateway/Hosting/LoggingExtensions.cs:114`, `src/Knock.Identity.Api/Hosting/LoggingExtensions.cs:114`, `src/Knock.Market.Api/Hosting/LoggingExtensions.cs:113`, `src/Knock.Messaging.Api/Hosting/LoggingExtensions.cs:114`
 - `SecurityExtensions`: `src/Knock.Identity.Api/Hosting/SecurityExtensions.cs:7`, `src/Knock.Market.Api/Hosting/SecurityExtensions.cs:6`
-- `SecurityHeadersMiddleware`: `src/Knock.Gateway/Hosting/SecurityHeadersMiddleware.cs:10`, `src/Knock.Identity.Api/Hosting/SecurityHeadersMiddleware.cs:12`, `src/Knock.Market.Api/Hosting/SecurityHeadersMiddleware.cs:11`
+- `SecurityHeadersMiddleware`: `src/Knock.Gateway/Hosting/SecurityHeadersMiddleware.cs:13`, `src/Knock.Identity.Api/Hosting/SecurityHeadersMiddleware.cs:12`, `src/Knock.Market.Api/Hosting/SecurityHeadersMiddleware.cs:11`
 - `SecuritySettings`: `src/Knock.Identity.Api/Hosting/SecuritySettings.cs:29`, `src/Knock.Market.Api/Hosting/SecuritySettings.cs:28`
 - `SecuritySettingsValidator`: `src/Knock.Identity.Api/Hosting/SecuritySettings.cs:41`, `src/Knock.Market.Api/Hosting/SecuritySettings.cs:40`
 - `SerilogLogState`: `src/Knock.Gateway/Hosting/ObservabilityExtensions.cs:255`, `src/Knock.Identity.Api/Hosting/ObservabilityExtensions.cs:255`, `src/Knock.Market.Api/Hosting/ObservabilityExtensions.cs:251`, `src/Knock.Messaging.Api/Hosting/ObservabilityExtensions.cs:255`
@@ -240,6 +240,8 @@
   - `AddKnockData()`:9
 - `src/Knock.Gateway/Hosting/HealthExtensions.cs` — class `HealthExtensions`
   - `MapKnockReadiness()`:16
+- `src/Knock.Gateway/Hosting/HstsExtensions.cs` — class `HstsSettings`, class `HstsExtensions`
+  - `AddKnockGatewayHsts()`:26
 - `src/Knock.Gateway/Hosting/LoggingExtensions.cs` — class `LoggingExtensions`, class `ScopeRequestPathEnricher`
   - `AddKnockLogging()`:20, `ConfigureRequestLogging()`:35, `RoutePath()`:53, `Enrich()`:118
 - `src/Knock.Gateway/Hosting/ObservabilityExtensions.cs` — class `ObservabilityOptions`, record `AzureMonitorSignalSettings`, class `AzureMonitorExportStatus`, class `ObservabilityExtensions`, class `TelemetryExceptionRecorder`, class `IgnoreIncomingTraceContextPropagator`, class `OpenTelemetryLogSink`, class `SerilogLogState`
@@ -253,7 +255,7 @@
 - `src/Knock.Gateway/Hosting/RevokedSessions.cs` — interface `IRevokedSessions`, class `RedisRevokedSessions`
   - `IsRevokedAsync()`:20
 - `src/Knock.Gateway/Hosting/SecurityHeadersMiddleware.cs` — class `SecurityHeadersMiddleware`
-  - `SecurityHeadersMiddleware()`:10, `InvokeAsync()`:16
+  - `SecurityHeadersMiddleware()`:13, `InvokeAsync()`:22
 - `src/Knock.Gateway/Hosting/TelemetryRedactor.cs` — class `TelemetryRedactor`, class `CoordinatePairs`, class `TelemetryRedactionProcessor`, class `LogRedactionProcessor`, class `RedactingJsonFormatter`
   - `IsSensitiveKey()`:42, `Redact()`:44, `RedactAttribute()`:75, `RedactUrl()`:99, `ExceptionEvent()`:121, `Redact()`:171, `OnEnd()`:289, `OnEnd()`:322, `Format()`:353
 

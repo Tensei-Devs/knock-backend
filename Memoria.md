@@ -17,6 +17,12 @@
 - 14 specs de la base (arquitectura, estructura del repositorio, infraestructura, rendimiento, observabilidad, versionamiento y seguridad) redactadas en **Borrador**; sus tareas **no se han ejecutado**.
 - Sin código de producto todavía.
 
+## 2026-11-12 — KNOCK-239 (BUG-002): el gateway fija HSTS sin depender del esquema
+- **Decisión:** `Strict-Transport-Security` se fija en `SecurityHeadersMiddleware` del gateway fuera de Development, con `Security:Hsts` propio (365 días, `includeSubDomains`, nunca `preload`; `MaxAge` ≤ 0 impide arrancar) y se quita `UseHsts()`.
+- **Porqué:** `UseHsts` solo emite con `Request.IsHttps` y no a `localhost`; detrás del ingreso la petición llega como HTTP, así que el encabezado no salía nunca. Fijarlo siempre es inofensivo por HTTP (los navegadores lo ignoran) y no confía en `X-Forwarded-Proto`. **La causa exacta en Azure no se comprobó** (sin acceso al ingreso); el arreglo no depende de ella.
+- **Verificación:** las pruebas fallan sin el arreglo (3 de 4; la de Development es una guarda y pasa en ambos casos). Falta el `curl -D` tras el despliegue (TC-BUG-002-05), que corre el líder; el humo del CI (`localhost`) no verá HSTS a propósito.
+- **A evitar:** probar HSTS con `TestServer` sin simular el ingreso (el host se llama `localhost`, donde `UseHsts` nunca emite); dar por cerrado H-01 sin el `curl` en vivo.
+
 ## 2026-11-10 — KNOCK-240 (BUG-003): el gateway y Mensajería ya no envían `Server: Kestrel`
 - **Decisión:** `builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false)` en `Knock.Gateway` y `Knock.Messaging.Api`, igual que Identidad y Mercado. El middleware del gateway ya quitaba `Server` en `OnStarting`, pero Kestrel lo agrega después.
 - **Porqué se prueba la opción y no solo la respuesta:** `TestServer` no usa Kestrel y nunca escribe `Server`; una prueba de encabezado pasa con o sin el arreglo. `ServerHeaderTests` (SecurityTest/Gateway y Messaging) lee `KestrelServerOptions.AddServerHeader`: falla sin el arreglo y pasa con él. Se agregó `InternalsVisibleTo Knock.SecurityTest` y la referencia a ambos proyectos.
