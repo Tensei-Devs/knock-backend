@@ -33,7 +33,7 @@ Que el teléfono de cada persona reciba un aviso de Knock cuando pasa algo en su
 - **R-04:** La carga v1 tiene estos campos y ningún otro: `v` (siempre `1`), `tipo` (`cotizaciones`, `mensajes`, `visitas` o `sistema`), `evento` (uno de los ocho de frontend 024 §4.2), `recurso` (`ObjectId` de 24 hexadecimales; omitido en `sistema`), `aviso` (UUID del envío) y `conversacion` (solo en `mensaje_nuevo`). Nunca lleva nombres, teléfonos, direcciones, montos, fechas de la cita, códigos ni texto de mensajes (frontend 024 R-02 y §4.1).
 - **R-05:** Los avisos se envían como mensajes solo de datos, con prioridad alta y sin el bloque `notification` de Firebase, para que el texto lo arme la app (frontend 024 D-02).
 - **R-06:** El despachador deduplica por `evento`, `recurso` y persona destinataria: un mismo evento a la misma persona se envía una sola vez, aunque el buzón lo entregue dos veces. Los envíos se registran en `notifications.enviados` con `evento`, `tipo` y el resultado, sin texto ni identificadores de recurso en claro.
-- **R-07:** `mensaje_nuevo` se agrupa por conversación y persona en ventanas de 5 minutos. El primer aviso de la ventana se envía; los mensajes que lleguen después dentro de la misma ventana no generan otro aviso, y al cerrarla se envía un único aviso más si hubo mensajes nuevos (*decisión de revisión, confirmar*: frontend 024 propone «cada pocos minutos»; el valor de 5 minutos lo confirma José).
+- **R-07:** `mensaje_nuevo` se agrupa por conversación y persona en ventanas de 5 minutos. El primer aviso de la ventana se envía; los mensajes que lleguen después dentro de la misma ventana no generan otro aviso, y al cerrarla se envía un único aviso más si hubo mensajes nuevos (decisión 3 de la sección 8: frontend 024 propone «cada pocos minutos» y se fija el valor de 5 minutos).
 - **R-08:** No se envía `mensaje_nuevo` a una persona con presencia activa. El hub escribe la clave `chat:presencia:{sub}` en Redis al aceptar una conexión al grupo `usuario:{sub}` (spec 030 R-15), con vencimiento de 60 segundos que el hub renueva en cada latido de SignalR (cada 15 segundos). Si la clave venció, se envía el aviso (*decisión de revisión, confirmar*).
 - **R-09:** Un fallo de Firebase se reintenta con espera creciente hasta 3 veces; después queda registrado en `notifications.enviados` como fallido. Un fallo no reintenta el evento de dominio ni cambia la visita ni la solicitud.
 - **R-10:** Las credenciales de Firebase se leen de la configuración segura del despliegue (almacén de secretos), nunca del repositorio ni de un registro. Esta spec no nombra valores.
@@ -43,7 +43,7 @@ Que el teléfono de cada persona reciba un aviso de Knock cuando pasa algo en su
 | Método y ruta | Quién | Cuerpo | Respuesta | Errores |
 |---|---|---|---|---|
 | `POST /api/v1/dispositivos` | persona con sesión | `{ identificador, plataforma }` | `201` primera vez; `200` si el token ya estaba registrado para esa persona | `400`, `401`, `422`, `429` |
-| `DELETE /api/v1/dispositivos/{id}` | dueño | — | `204` | `401`, `404`, `429` |
+| `DELETE /api/v1/dispositivos/{id}` | dueño | — | `204` | `401`, `429` |
 
 **Códigos de error:** no hay códigos de negocio propios; los errores de campo (por ejemplo, una `plataforma` fuera de la lista) salen como 422 con `errors`, el cuerpo ilegible como 400, y 401 y 429 como en la convención de la spec 002 (R-08 a R-12).
 
@@ -94,7 +94,7 @@ Que el teléfono de cada persona reciba un aviso de Knock cuando pasa algo en su
 
 1. **Dependencia del transporte entre servicios.** El despachador necesita los eventos de Mercado y de Mensajería. La decisión de revisión es que salen por el buzón de salida (outbox, spec 003) de cada servicio emisor, en la misma transacción que el cambio. Riesgo abierto: si el buzón no alcanza para el volumen de avisos, hace falta una spec de transporte; sin ella, CA-03 no se puede cerrar de punta a punta. Responsable: Alexis. *Decisión de revisión, confirmar.*
 2. **Mensajes solo de datos (R-05).** Garantiza que el servidor no escriba texto para la persona, a costa de que la app debe armar el aviso siempre (frontend 024 D-02). *Decisión de revisión, confirmar.*
-3. **Ventana de 5 minutos para `mensaje_nuevo` (R-07).** Evita ráfagas; el valor exacto lo confirma José. *Decisión de revisión, confirmar.*
+3. **Ventana de 5 minutos para `mensaje_nuevo` (R-07).** Evita ráfagas sin retrasar el primer aviso, que sale de inmediato; solo se agrupan los siguientes. Es un valor por defecto: cambiarlo no altera ninguna otra regla de la spec.
 4. **Presencia en Redis (R-08).** La clave `chat:presencia:{sub}` la escribe el hub con TTL de 60 segundos renovado por latido. Si Redis no responde, se envía el aviso aunque la persona esté conectada: es el fallo más barato (un aviso de más, nunca uno de menos).
 
 ## Trazabilidad CA → prueba
@@ -118,3 +118,4 @@ Que el teléfono de cada persona reciba un aviso de Knock cuando pasa algo en su
 ## Aprobación
 
 - [ ] Revisor 1 — pendiente (José)
+- [ ] Sin conflicto con la constitución
