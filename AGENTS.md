@@ -21,7 +21,7 @@ docker compose up
 ```
 
 ## Reglas para el agente
-- No escribas código si la spec no está Aprobada. Esta primera etapa es solo de especificación: **no ejecutes las tareas**.
+- No escribas código si la spec no está **Aprobada**. Si lo está, implementa solo las tareas de su `task.md`, de una en una y con sus pruebas escritas primero (TDD); lo que no esté en la spec no entra. Una persona decide qué spec o grupo de tareas se activa.
 - No inventes requisitos: lo que no sepas va a la sección «Riesgos y dudas abiertas» de la spec.
 - Haz cambios pequeños y explica qué cambiaste y por qué.
 - Nunca incluyas secretos, claves ni datos personales reales.
@@ -38,7 +38,7 @@ docker compose up
 | `plan-writer` | Redacta el `plan.md` de una spec aprobada |
 | `task-writer` | Divide el plan en `task.md` con pasos verificables |
 | `constitution-reviewer` | Revisa que specs, planes y tareas sean coherentes con la constitución (solo lectura) |
-| `implementer` | Implementa las tareas de una spec aprobada (no se usa en esta etapa) |
+| `implementer` | Implementa las tareas de una spec aprobada, de una en una y con sus pruebas |
 
 ## Skills (`.opencode/skills/`)
 `sdd-workflow`, `writing-specs`, `writing-plans`, `writing-tasks`, `security-basics` y las de este repositorio: `microservices-gateway`, `mongodb-redis-data-access`, `terraform-azure`.

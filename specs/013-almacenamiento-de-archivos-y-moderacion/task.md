@@ -1,16 +1,19 @@
-# Tareas 013 — Almacenamiento de archivos, CDN y moderación
+# Tareas 013 — Almacenamiento de archivos, entrega con caché y moderación
 
 > **Estado:** OI-1 implementada (contratos/estructura) · OI-2 y OI-3 pendientes.
 
-| Tarea | Qué se hace | Cubre | Fase | Estado |
-|---|---|---|---|---|
-| T-01 | Crear los contenedores y la CDN en Terraform | R-01, R-04 | OI-3 | pendiente |
-| T-02 | Implementar el servicio de enlaces firmados | R-02 · CA-02 | OI-3 | pendiente (OI-1 solo define la constante `SasLifetime` de 5 minutos, sin generar enlaces) |
-| T-03 | Implementar la limpieza de metadatos y la reducción de tamaño | R-03 · CA-01 | OI-2 | pendiente (OI-1 solo incluye reglas puras de formato y dimensiones, sin procesamiento) |
-| T-04 | Implementar el cliente de moderación compartido con falla cerrada | R-05, R-06, R-07 · CA-04, CA-05 | OI-1 (contrato) / OI-2 (falso) / OI-3 (real) | parcial: contrato `IContentModerator` con `Unavailable` como bloqueo en OI-1; implementación pendiente |
-| T-05 | Escribir las pruebas de seguridad negativa | R-04 · CA-03 | OI-2 / OI-3 | pendiente (OI-1 solo incluye pruebas unitarias de validación y reglas) |
+| Tarea | Qué se hace | Cubre | Estado |
+|---|---|---|---|
+| T-01 | Crear las dos cuentas de almacenamiento y sus contenedores en Terraform, sin CDN | R-01, R-04 | pendiente |
+| T-02 | Implementar el servicio de enlaces firmados | R-02 · CA-02 | pendiente |
+| T-03 | Implementar la validación (5 MB, JPEG/PNG/WebP), la limpieza de metadatos y la reducción de tamaño | R-03 · CA-01, CA-06 | parcial: OI-1 valida 5 MB y JPEG/PNG/WebP; la limpieza y la reducción van en OI-2 |
+| T-04 | Implementar el cliente de moderación compartido con falla cerrada y 503 reintentable | R-05, R-06, R-07 · CA-04, CA-05 | parcial: OI-1 deja el contrato `IContentModerator` con `Unavailable` como bloqueo |
+| T-05 | Escribir las pruebas de seguridad negativa (incluida la petición anónima a la cuenta privada) | R-04 · CA-03 | pendiente |
+| T-06 | Crear el índice TTL de `subidas_imagen` (vence solo lo pendiente o rechazado) | R-08 · CA-07 | pendiente |
 
-## Fases de implementación
+## Avance de la implementación (KNOCK-208)
+
+### Fases
 
 | Fase | Alcance | Estado |
 |---|---|---|
@@ -29,7 +32,7 @@ Las pruebas de OI-1 se nombran `*_OI1_NN` y no `*_CA_013_NN`, porque ninguna cub
 
 ## Notas de revisión (OI-1)
 - **Excepción de «Media» en `ModuleSurfaceTests`:** la rama de `tests/UnitTest/Architecture/ModuleSurfaceTests.cs` que acepta una sola clase pública (`MediaModuleExtensions`) se quita cuando OI-2 agregue la interfaz del módulo (el test vuelve a exigir las dos superficies: clase de registro e interfaz). OI-1 no expone interfaz porque todavía no hay consumidor interno real del módulo.
-- **Origen de 12 000 px por lado y 24 MP totales:** TT-API-05 legacy (`specs/_legacy/TT-API-05-servicio-de-fotos-privadas-blob-sas/spec.md`, donde `MaxPixels` baja de 40 a 24 MP, y `docs/migracion/Memoria_origen.md`, decisión de Guillermo del 2026-10-23, punto 2; `MediaRules.MaxPixels` / `MediaRules.MaxSidePixels` en `src/Knock.Market.Api/Modules/Media/Domain/MediaRules.cs`). En OI-1 se reutilizan esos límites de TT-API-05 para rechazar antes de decodificar.
+- **Límites de las fotos:** 5 MB, 40 MP y 8 000 px por lado, en JPEG, PNG o WebP (decisión del Tech Lead, 2026-11-12; `MediaRules` en `src/Knock.Market.Api/Modules/Media/Domain/MediaRules.cs`). Reemplazan los 12 000 px y 24 MP de TT-API-05 legacy. Se rechaza antes de decodificar. La réplica de Market queda en 1 Gi con `MaxConcurrentProcessing=1` (se aplica en #63).
 
 ## Definición de terminado
 - Los criterios de aceptación de `spec.md` están cubiertos por pruebas en verde.

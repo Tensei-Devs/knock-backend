@@ -64,6 +64,7 @@ Que la persona vea en qué dispositivos tiene la sesión abierta y pueda cerrar 
 - **Mismo mecanismo de cancelación que el logout:** una sola clave por `sid` en Redis, definida en la spec 016.
 
 ## 9. Decisiones de la revisión, riesgos y dudas
+- **Nota (2026-11-12, spec 037 R-13):** el cierre de una sesión desde otro dispositivo también debe emitir `sesion_revocada { sid }` para que la 037 borre los dispositivos de avisos ligados a ese `sid`. Esta spec no cambia su contrato HTTP; el evento es un requisito nuevo que se concreta al implementar la 037.
 Decisiones tomadas en la revisión del 2026-11-04. Quien aprueba la spec las acepta; si alguna no convence, se cambia aquí antes de aprobar.
 
 - **Sesión ajena (decidido): 404, no 403.** Responder lo mismo que para una sesión inexistente evita confirmar que un identificador existe. Se diferencia del Excel, que pedía 403; hay que actualizar la hoja de endpoints.
