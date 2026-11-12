@@ -16,7 +16,7 @@ Que una persona que se registra indique su zona con su ubicación o con su códi
 **2.2 Dentro**
 - Listar las colonias de un código postal, con la marca de cobertura y el nombre de la ciudad piloto.
 - Registrar a la persona en la lista de espera de un código postal fuera de cobertura, una sola vez por persona y código.
-- Respetar el catálogo SEPOMEX ya sembrado (12 colonias de Tula de Allende, Hidalgo) y su caché de 24 h.
+- Respetar el catálogo SEPOMEX ya sembrado (13 colonias de Tula de Allende, Hidalgo) y su caché de 24 h.
 - Garantizar por diseño y por prueba que las coordenadas no se guardan, no se registran y no se devuelven.
 
 **2.3 Fuera**
@@ -37,7 +37,7 @@ Que una persona que se registra indique su zona con su ubicación o con su códi
 - **R-07:** La persona de la lista de espera es siempre la del `sub` del token; el cuerpo no acepta identificador de usuario. Un `usuarioId` enviado en el cuerpo se ignora.
 - **R-08:** La lista de espera es idempotente por el índice único `{ usuarioId: 1, cp: 1 }`: la repetición responde 200 sin crear otro documento.
 - **R-09:** La lista de espera admite un código postal que no esté en el catálogo, porque su propósito es justamente ese; no se valida contra `colonias`. El `municipio` es opcional y no se deduce del catálogo cuando el código no existe.
-- **R-10:** El listado de colonias por código postal no se pagina: el conjunto está acotado por el catálogo (12 colonias en total y como máximo un puñado por código) y devolverlo entero evita una pantalla con cursor (excepción documentada al principio de paginación, decisión (e) del borrador anterior).
+- **R-10:** El listado de colonias por código postal no se pagina: el conjunto está acotado por el catálogo (13 colonias en total y como máximo un puñado por código) y devolverlo entero evita una pantalla con cursor (excepción documentada al principio de paginación, decisión (e) del borrador anterior).
 - **R-11:** `listas_espera` no se cachea: liga a una persona con su código postal y es un dato personal (constitución §2.9 y spec 010). Sus lecturas y escrituras responden `Cache-Control: private, no-store`.
 - **R-12:** Ni la API ni sus registros guardan, escriben o devuelven coordenadas. El módulo no recibe `lat` ni `lon` en ninguna ruta nueva; la ubicación se convierte en colonia en `/colonias/en-punto` y se descarta allí.
 - **R-13:** Los errores usan ProblemDetails con `correlationId` y `traceId`. Los registros no incluyen el código postal junto a la persona, el municipio ni las coordenadas; el registro de la petición lleva método, ruta, estado y correlación.
@@ -139,7 +139,7 @@ El script `db/` de esta spec crea la colección y sus índices de forma idempote
 ## 8. Dependencias
 - Spec 002 (estructura y estilo de API), 003 (MongoDB, Redis, outbox), 009 (JWT, límites), 010 (caché y paginación), 017 (la colonia que se guarda en el perfil).
 - `GET /api/v1/colonias/en-punto` de KNOCK-141 (TT-API-07): la ubicación se resuelve ahí; esta spec no la toca.
-- Catálogo SEPOMEX de Tula de Allende (TT-BD-06): 12 colonias, 8 con polígono.
+- Catálogo SEPOMEX de Tula de Allende (TT-BD-06): 13 colonias, 9 con polígono.
 - `IColoniaCatalog` de `Knock.Contracts` que consume Identidad (spec 017) ya responde «¿existe esta colonia?» con `/colonias/existe`; esta spec no lo cambia.
 - La app (frontend 017) consume los dos endpoints de esta spec.
 
@@ -234,7 +234,7 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **La lista de espera no avisa a nadie:** el registro se guarda y ahí termina. Avisar cuando se abra la cobertura requiere un proceso y una plantilla de mensajería que no están en este sprint.
 - **El código postal no se valida contra SEPOMEX:** un código inventado de cinco dígitos entra a la lista de espera. La consecuencia es ruido en el reporte de demanda, no un riesgo de seguridad.
 - **Los textos de ciudad piloto están duplicados en la documentación:** `DECISIONES.md` todavía dice Pachuca en algunos puntos; esta spec usa Tula de Allende, como el catálogo y el borrador aprobado.
-- **El catálogo tiene 12 colonias de una sola ciudad:** la regla de cobertura por presencia no se ha probado con varias ciudades; al abrir la segunda, habrá que decidir si la cobertura pasa a un campo explícito.
+- **El catálogo tiene 13 colonias de una sola ciudad:** la regla de cobertura por presencia no se ha probado con varias ciudades; al abrir la segunda, habrá que decidir si la cobertura pasa a un campo explícito.
 - **Mercado no tiene host de integración:** esta spec necesita `MarketApiFactory` con `Testcontainers`, igual que 020, 021 y 022.
 
 ## Aprobación
