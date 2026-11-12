@@ -55,6 +55,9 @@ Que una persona describa su problema con fotos y reciba cotizaciones de técnico
 - **R-22:** Privacidad: el teléfono del cliente nunca se entrega al técnico por estas rutas y la dirección del cliente solo sale en la vista del cliente dueño; la revelación al técnico elegido ocurre únicamente en la visita (spec 022) después de elegir (spec 021).
 
 ## 4. Criterios de aceptación
+
+> Numeración: CA-03 y CA-20 se retiraron el 2026-11-10 junto con `Idempotency-Key`. Sus números no se reutilizan, para no cambiar los nombres de las pruebas previstas.
+
 - **CA-01:** Dado un cliente con sesión, cuando crea una solicitud válida, entonces responde 201, queda en `enviada`, vence en 48 h y hay un `SolicitudCreada` en el buzón.
 - **CA-02:** Dada una solicitud sin fotos, con 6 fotos, con fotos repetidas o con descripción de 7 caracteres, cuando se crea, entonces responde 422 con `errors` por campo y no guarda nada.
 - **CA-04:** Dado un oficio inactivo o una colonia que no existe, cuando se crea, entonces responde 422 y no guarda nada.
@@ -207,7 +210,7 @@ El script `db/` de esta spec crea las colecciones y los índices; no borra ni ca
 | Arquitectura | Sí | El controller no accede a MongoDB ni a Key Vault; el módulo no lee colecciones de Catalog |
 | Mutación | Sí | `CotizacionTopeCalculator` y la transición `enviada → cotizando` |
 | Rendimiento | No | El volumen del piloto no lo exige; el listado ya está paginado |
-| Aceptación | Sí | CA-01 a CA-22 con la tabla 4.1 |
+| Aceptación | Sí | CA-01 a CA-22 (salvo CA-03 y CA-20, retirados) con la tabla 4.1 |
 | Base de datos | Sí | `DatabaseTest`: el script `db/` crea colecciones e índices (incluidos los únicos parciales) de forma idempotente |
 | Regresión | Sí | Las suites de las specs 015 a 019 y de Catalog siguen en verde; `dotnet test Knock.slnx -c Release` completo en cada PR |
 | CI/CD | Sí | Job `gate` de `ci-pr.yml` (build-test, openapi-diff con `oasdiff`, sast, sca, secrets) en verde; tras el despliegue, smoke de `/health/ready` y de `GET /api/v1/solicitudes` con 401 sin token |
