@@ -43,7 +43,7 @@ Que la persona vea su visita a domicilio con el código de cuatro dígitos que r
 - **R-10:** Repetir una llegada ya exitosa responde 409 `code_used` y no vuelve a emitir el evento ni a cambiar `llegadaEn`. Un intento fallido repetido vuelve a contar como intento.
 - **R-11:** Si la visita no existe o el técnico no es el elegido, responde 404, incluso si el código es correcto. Un cliente que llama a `/llegada` recibe 403 `not_a_technician`.
 - **R-12:** `POST /api/v1/visitas/{id}/aviso` exige JWT del cliente dueño y cuerpo vacío. Responde 200 `{ texto, incluyeCodigo: false, incluyeDireccion: false }`; el texto incluye el nombre público del técnico, su estado de verificación, el día, la hora y la recomendación de pedir el código en la puerta. No guarda contactos ni envía mensajes.
-- **R-13:** El aviso solo se prepara con la visita en `confirmada` o `en_curso`; en otro estado responde 409 `visit_not_notifiable`. Cada aviso incrementa `avisosEnviados` y emite `AvisoConfianzaPreparado` con identificadores, sin teléfonos ni texto.
+- **R-13:** El aviso solo se prepara con la visita en `confirmada` o `en_curso`; en otro estado responde 409 `visit_not_notifiable`. Cada aviso incrementa `avisosEnviados` y emite `AvisoConfianzaPreparado` con identificadores, sin teléfonos ni texto. `avisosEnviados` es solo informativo (cuenta cuántas veces se preparó el texto, no cuántos se enviaron): ninguna regla lo usa como límite ni bloquea el endpoint.
 - **R-14:** Las respuestas llevan `Cache-Control: private, no-store`, sin `ETag`. El código y la dirección no se registran en los logs; los errores usan ProblemDetails con `correlationId`, `traceId` y `code` (convención de errores de la spec 020, §5); las respuestas 429 llevan `Retry-After`.
 - **R-15:** El código se guarda cifrado (AES-256-GCM) con llave versionada en Key Vault y vence a las 23:59:59 del día de la cita más 24 horas. La comparación usa `CryptographicOperations.FixedTimeEquals`; nunca se registra ni se devuelve al técnico.
 - **R-16:** El contador de intentos y el bloqueo son parte de la visita y no se reinician al reconectar. Un bloqueo solo lo levanta una persona del equipo (fuera de esta spec).
@@ -81,7 +81,7 @@ Que la persona vea su visita a domicilio con el código de cuatro dígitos que r
 
 **Caché:** ninguna respuesta se cachea (`Cache-Control: private, no-store`).
 
-**Límites:** 3 intentos de código por visita; 5 peticiones de llegada por minuto por técnico; 10 avisos por hora por cliente.
+**Límites:** 3 intentos de código por visita; 5 peticiones de llegada por minuto por técnico. El aviso no tiene límite propio (decisión del 2026-11-12): preparar el texto no envía nada y bloquear una función de seguridad por contar toques sería peor que el abuso que evita; rige solo el límite general por usuario del gateway.
 
 ## 6. Modelo de datos
 **`visitas`** (creada en la spec 021; esta spec la completa)
@@ -237,6 +237,6 @@ Que la persona vea su visita a domicilio con el código de cuatro dígitos que r
 - **El aviso por WhatsApp o SMS depende del sistema operativo:** la app puede no tener WhatsApp instalado; el texto debe seguir siendo legible si se copia y pega.
 
 ## Aprobación
-- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-12
 - [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

@@ -144,6 +144,13 @@ resource "azurerm_container_app" "this" {
     }
   }
 
+  # La imagen la manda ci-deploy (KNOCK-202, CA-03 de la spec 007): despliega el SHA de cada commit de main.
+  # Sin esto, un terraform apply posterior regresaría los servicios a var.image. Aplica también a Redis,
+  # que usa este módulo: su imagen se actualiza a mano (ver deploy/README.md, «Imagen de los Container Apps»).
+  lifecycle {
+    ignore_changes = [template[0].container[0].image]
+  }
+
   depends_on = [
     azurerm_role_assignment.acr_pull,
     azurerm_role_assignment.secret_reader,

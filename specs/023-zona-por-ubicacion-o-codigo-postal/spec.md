@@ -37,13 +37,13 @@ Que una persona que se registra indique su zona con su ubicación o con su códi
 - **R-07:** La persona de la lista de espera es siempre la del `sub` del token; el cuerpo no acepta identificador de usuario. Un `usuarioId` enviado en el cuerpo se ignora.
 - **R-08:** La lista de espera es idempotente por el índice único `{ usuarioId: 1, cp: 1 }`: la repetición responde 200 sin crear otro documento.
 - **R-09:** La lista de espera admite un código postal que no esté en el catálogo, porque su propósito es justamente ese; no se valida contra `colonias`. El `municipio` es opcional y no se deduce del catálogo cuando el código no existe.
-- **R-10:** El listado de colonias por código postal no se pagina: el conjunto está acotado por el catálogo (13 colonias en total y como máximo un puñado por código) y devolverlo entero evita una pantalla con cursor (excepción documentada al principio de paginación, decisión (e) del borrador anterior).
+- **R-10:** El listado de colonias por código postal no se pagina: el conjunto está acotado por el catálogo (13 colonias en total y como máximo un puñado por código) y devolverlo entero evita una pantalla con cursor (excepción documentada al principio de paginación, decisión (e) del borrador anterior). Un código devuelve como máximo 50 colonias; si el catálogo crece por encima de ese tope, se pagina. Esta excepción a la paginación de la spec 010 la aprueba quien firma esta spec.
 - **R-11:** `listas_espera` no se cachea: liga a una persona con su código postal y es un dato personal (constitución §2.9 y spec 010). Sus lecturas y escrituras responden `Cache-Control: private, no-store`.
 - **R-12:** Ni la API ni sus registros guardan, escriben o devuelven coordenadas. El módulo no recibe `lat` ni `lon` en ninguna ruta nueva; la ubicación se convierte en colonia en `/colonias/en-punto` y se descarta allí.
 - **R-13:** Los errores usan ProblemDetails con `correlationId` y `traceId`. Los registros no incluyen el código postal junto a la persona, el municipio ni las coordenadas; el registro de la petición lleva método, ruta, estado y correlación.
 - **R-14:** Sin token, cualquier ruta responde 401; por encima del límite, 429. La lista de espera tiene además 5 peticiones por hora por persona y la consulta por código postal queda sujeta al límite global por IP y al de usuario del gateway.
-- **R-15:** Un código postal que no existe en el catálogo responde 200 con `enCobertura: false` y la ciudad piloto: no se distingue «no existe» de «no está en cobertura», para no habilitar la enumeración del catálogo por prueba y error.
-- **R-16:** `GET /api/v1/zonas/cp/{cp}` responde con `ETag` débil calculado sobre el cuerpo y `Cache-Control: private, max-age=3600` (es catálogo, pero exige sesión); con un `If-None-Match` vigente responde 304 sin cuerpo (spec 010, R-03). Las respuestas de la lista de espera llevan `Cache-Control: private, no-store`.
+- **R-15:** Un código postal que no existe en el catálogo responde 200 con `enCobertura: false` y la ciudad piloto: no se distingue «no existe» de «no está en cobertura», para no habilitar la enumeración del catálogo por prueba y error. Los códigos postales piloto son información pública de la ciudad: el barrido lo acotan los límites del gateway por IP y por usuario (hoy 100 y 120 por minuto) y la ruta exige sesión, pero no lo impiden; el riesgo se acepta (§15).
+- **R-16:** `GET /api/v1/zonas/cp/{cp}` responde con `ETag` débil calculado sobre el cuerpo y `Cache-Control: private, no-cache` (siempre revalida; es catálogo, pero exige sesión; el 304 es barato porque la respuesta sale de Redis); con un `If-None-Match` vigente responde 304 sin cuerpo (spec 010, R-03). Las respuestas de la lista de espera llevan `Cache-Control: private, no-store`.
 - **R-17:** El cuerpo de `POST /api/v1/zonas/lista-espera` se limita a 2 KB; uno mayor responde 413. Los campos desconocidos del cuerpo se ignoran. Las respuestas 429 llevan `Retry-After` (spec 009).
 
 ## 4. Criterios de aceptación
@@ -61,7 +61,7 @@ Que una persona que se registra indique su zona con su ubicación o con su códi
 - **CA-12:** Dado el registro de una consulta o de una lista de espera, cuando se inspecciona, entonces no contiene coordenadas ni el código postal asociado a la persona.
 - **CA-13:** Dado un código postal consultado dos veces seguidas, cuando llega la segunda, entonces se responde desde la caché y la base recibe una sola consulta.
 - **CA-14:** Dado un código postal inventado consultado dos veces en menos de 5 minutos, cuando llega la segunda, entonces se responde «fuera de cobertura» desde la caché negativa.
-- **CA-15:** Dada una consulta por código postal ya respondida, cuando se repite con su `ETag` en `If-None-Match`, entonces responde 304 sin cuerpo y con `Cache-Control: private, max-age=3600`.
+- **CA-15:** Dada una consulta por código postal ya respondida, cuando se repite con su `ETag` en `If-None-Match`, entonces responde 304 sin cuerpo y con `Cache-Control: private, no-cache`.
 - **CA-16:** Dado un cuerpo de lista de espera de más de 2 KB, cuando se envía, entonces responde 413 y no se guarda nada.
 
 **4.1 Criterio → prueba prevista**
@@ -147,7 +147,7 @@ El script `db/` de esta spec crea la colección y sus índices de forma idempote
 | Amenaza | Control | Caso que lo prueba |
 |---|---|---|
 | Saber dónde vive la persona por sus coordenadas | Esta spec no recibe ni guarda coordenadas; la ubicación se descarta en `/colonias/en-punto` | CA-04, CA-12 |
-| Enumerar el catálogo probando códigos postales | 200 uniforme para «no existe» y «fuera de cobertura», límite global y caché negativa | CA-02, CA-14 |
+| Enumerar el catálogo probando códigos postales | 200 uniforme para «no existe» y «fuera de cobertura», límites del gateway por IP y por usuario, sesión obligatoria y caché negativa; riesgo aceptado porque el catálogo es público (R-15) | CA-02, CA-14 |
 | Inyección en el código postal o en el municipio | Validación estricta de formato y caracteres, filtros tipados del driver, 422 sin repetir el valor | CA-03, CA-08 |
 | Suplantar a la persona de la lista de espera (BOLA) | La persona sale del `sub`; el cuerpo no acepta identificador | CA-10 |
 | Llenar la lista de espera con registros falsos | Índice único por persona y código, límite de 5 por hora | CA-06, CA-11 |
@@ -226,7 +226,7 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 
 **Agregadas en la revisión del 9 de noviembre**
 
-7. **`ETag` y `max-age` de una hora en la consulta por código postal.** Es catálogo y la constitución pide caché en toda lectura; `private` porque la ruta exige sesión. Alternativa: `no-store` como `/colonias/en-punto`, que sí lleva coordenadas y por eso no se cachea.
+7. **`ETag` y `private, no-cache` en la consulta por código postal (decisión del 2026-11-12).** Es catálogo y la constitución pide caché en toda lectura; `private` porque la ruta exige sesión y `no-cache` para que siempre revalide con `If-None-Match` (spec 010, R-06): deja un solo valor HTTP y evita que la app y el servidor tengan vigencias distintas. Alternativas descartadas: `max-age=3600` (tres tiempos distintos) y `no-store`, como `/colonias/en-punto`, que sí lleva coordenadas.
 8. **422 para formato, como el resto de las specs 020 a 026.** Ya era el comportamiento aprobado de HU-009 y del filtro de validación; ahora es la convención común.
 
 ## 15. Riesgos y dudas abiertas
@@ -235,9 +235,10 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **El código postal no se valida contra SEPOMEX:** un código inventado de cinco dígitos entra a la lista de espera. La consecuencia es ruido en el reporte de demanda, no un riesgo de seguridad.
 - **Los textos de ciudad piloto están duplicados en la documentación:** `DECISIONES.md` todavía dice Pachuca en algunos puntos; esta spec usa Tula de Allende, como el catálogo y el borrador aprobado.
 - **El catálogo tiene 13 colonias de una sola ciudad:** la regla de cobertura por presencia no se ha probado con varias ciudades; al abrir la segunda, habrá que decidir si la cobertura pasa a un campo explícito.
+- **El límite por IP depende de KNOCK-180 (riesgo aparte):** el gateway solo ve la IP real del cliente si `ForwardedHeaders:KnownNetworks` apunta a la red de Container Apps. El Terraform la define con `container_apps_subnet_cidr`, pero KNOCK-180 (fijar esas redes en el despliegue) sigue por hacer y no se verificó el valor real. Sin eso el límite por IP contaría todo el tráfico como una sola IP.
 - **Mercado no tiene host de integración:** esta spec necesita `MarketApiFactory` con `Testcontainers`, igual que 020, 021 y 022.
 
 ## Aprobación
-- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-12
 - [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)
