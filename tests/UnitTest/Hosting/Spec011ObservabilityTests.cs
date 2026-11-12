@@ -23,7 +23,8 @@ namespace Knock.UnitTest.Hosting;
 /// Spec 011 en Identity, Messaging y el Gateway, con el mismo cableado que su <c>Program.cs</c> (<c>AddKnockLogging</c> y
 /// <c>AddKnockObservability</c>) y su <c>appsettings.json</c> del repositorio. Se mira lo que sale hacia OpenTelemetry (Application
 /// Insights) y lo que Serilog escribe en la consola, ya pasados por la redacción. El <c>correlationId</c> del contrato no se prueba aquí:
-/// llega con <c>Knock.Contracts</c> (PR #3). CA-03 (alerta) se verifica a mano en el PR, con la infraestructura de KNOCK-200.
+/// llega con <c>Knock.Contracts</c> (PR #3). CA-03 (alerta) se prueba estáticamente en <see cref="Infrastructure.Spec011AlertRuleTests"/>;
+/// el disparo real se comprueba tras desplegar.
 /// Las pruebas de esta clase corren en serie (una colección propia) porque la de consola cambia <see cref="Console.Out"/>; solo se revisa
 /// la línea del evento de la prueba, así que lo que escriban otras pruebas en paralelo no la afecta.
 /// </summary>
@@ -141,7 +142,7 @@ public sealed class Spec011ObservabilityTests
 
     [Theory]
     [MemberData(nameof(Services))]
-    public async Task Log_WrittenThroughServiceWiring_HasTimestampLevelServiceAndStructuredMessage_CA_011_01(string service)
+    public async Task Log_WrittenThroughServiceWiring_HasTimestampLevelServiceAndStructuredMessage_R_011_03(string service)
     {
         var records = await CaptureAsync(service, factory => _orderProcessed(factory.CreateLogger<Spec011ObservabilityTests>(), 3, null));
 
@@ -159,7 +160,7 @@ public sealed class Spec011ObservabilityTests
 
     [Theory]
     [MemberData(nameof(Services))]
-    public async Task Log_FrameworkInformation_IsFilteredByConfiguredLevel_CA_011_01(string service)
+    public async Task Log_FrameworkInformation_IsFilteredByConfiguredLevel_R_011_03(string service)
     {
         // appsettings.json: Serilog:MinimumLevel:Override:Microsoft.AspNetCore = Warning (evita llenar la cuota con el detalle del framework).
         var records = await CaptureAsync(service, factory =>
