@@ -1,3 +1,4 @@
+// jscpd:ignore-start -- EXC-021: copia de src/Knock.Market.Api/Hosting/AuthenticationExtensions.cs (KNOCK-241) más la comprobación de sesión cancelada; se unifica en la biblioteca técnica de KNOCK-251.
 using System.Security.Claims;
 using Knock.Contracts.Sessions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -126,3 +127,4 @@ internal sealed class AuthenticationStartupCheck(IServiceProvider services) : IH
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }
+// jscpd:ignore-end -- EXC-021

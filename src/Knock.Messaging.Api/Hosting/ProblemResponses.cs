@@ -1,3 +1,4 @@
+// jscpd:ignore-start -- EXC-021: escritura de ProblemDetails parecida a src/Knock.Market.Api/Hosting/RequestBodyLimitMiddleware.cs (KNOCK-241); se unifica en la biblioteca técnica de KNOCK-251.
 using Microsoft.AspNetCore.Mvc;
 
 namespace Knock.Messaging.Api.Hosting;
@@ -29,3 +30,4 @@ internal static class ProblemResponses
         });
     }
 }
+// jscpd:ignore-end -- EXC-021
