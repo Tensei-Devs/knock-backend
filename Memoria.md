@@ -329,6 +329,11 @@
 - **Por qué:** el PR #60 observó que la §5 pedía los campos `timestamp`, `level`, `service`, `correlationId` y `message`, pero el código emite `@t`, `@l` y `@m`. Un formateador propio solo para renombrar campos no aporta información.
 - **Pendiente de firma:** la nueva aprobación de la 011 la edita José a mano; este cambio no toca la aprobación.
 - **A evitar:** pedir nombres literales de campo en una spec cuando el formato de una biblioteca ya los entrega con otro nombre; escribir un formateador propio solo para renombrarlos.
+## 2026-11-10 — Enmienda propuesta de la spec 013: sin CDN de pago y alineada con la spec 032 (KNOCK-208)
+- **Decisión:** se propone enmendar la spec 013 para que diga lo que ya deciden el ADR-007 (opción D, Blob público sin CDN de pago, dos cuentas de almacenamiento) y el contrato de la spec 032 (5 MB; JPEG, PNG y WebP; moderación caída = 503 reintentable; el registro de subidas vence a los 7 días solo si quedó pendiente o rechazada). Se ajustan `plan.md`, `task.md` (T-01, T-03 a T-06), el índice de `specs/README.md` y la fila 15c de `docs/CUMPLIMIENTO_LINEAMIENTOS.md`. Texto del título: «entrega con caché» en lugar de «CDN»; la carpeta conserva su nombre.
+- **Por qué:** la 013 (Aprobada) decía que las imágenes públicas se sirven por una CDN y la 032 (borrador) y el ADR-007 dicen que no hay CDN de pago (Front Door Standard cuesta unos 35 USD al mes). Mientras tanto el PR de OI-2 no podía exponer rutas sin saber cuál prevalece.
+- **Pendiente de firma:** la nueva aprobación de la 013 y el estado del ADR-007 los edita José a mano; este cambio no toca ninguna aprobación.
+- **A evitar:** implementar rutas de imágenes antes de que la 013 esté re-aprobada; dejar «CDN» en el título de la spec o del plan mientras no exista ninguna.
 
 ## 2026-11-10 — Corrección de la alerta de la spec 011 (KNOCK-206)
 - **Decisión:** `requests/failed` usa `Count`, la agregación publicada por Microsoft; la prueba estática la exige. La raíz de infraestructura valida `alert_email_receiver` igual que el módulo. Un pico de 404 o 422 puede disparar la alerta; Julián decide si se filtra por código.
