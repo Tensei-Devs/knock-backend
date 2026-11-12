@@ -35,7 +35,7 @@ Que las imágenes públicas de Knock (foto de perfil y fotos de un trabajo termi
 - **R-02:** Las dos cuentas tienen deshabilitado el acceso con llave compartida (`shared_access_key_enabled = false`), TLS mínimo 1.2, solo HTTPS y ninguna regla de CORS. Los enlaces firmados son **SAS de delegación de usuario** firmados con la identidad administrada del servicio de Mercado; nunca SAS de cuenta ni de llave.
 - **R-03:** No se crea ningún recurso de CDN. La dirección base pública sale de `Imagenes:BaseUrlPublica` (esquema `https`, host y la ruta `/imagenes-publicas`, sin consulta, fragmento, puerto ni credenciales); si falta o está mal formada, Mercado no arranca. El despliegue llena con el mismo valor la lista de hosts permitidos de las specs consumidoras (`Perfil:HostsFoto` de la 017 y la de la 020 y la 024).
 - **R-04:** `POST /api/v1/imagenes/subidas` exige JWT de persona y el cuerpo `{ proposito, tipoContenido, tamanoBytes }`: `proposito` ∈ `perfil`, `trabajo` (*decisión automática, revisar*: las fotos de una solicitud son privadas y se suben por el flujo de archivos de la spec 013 con `uso: solicitud`, nunca al contenedor público); `tipoContenido` ∈ `image/jpeg`, `image/png`, `image/webp`; `tamanoBytes` entero de 1 a 5 242 880 (5 MB). Un cuerpo inválido responde 422 con `errors` por campo sin repetir el valor y sin emitir enlaces; un cuerpo ilegible, 400. El cuerpo no puede pasar de 1 KB.
-- **R-05:** La respuesta es 201 con `{ id, urlSubida, metodo: "PUT", encabezados, venceEn, confirmarAntesDe }`. `urlSubida` es una SAS de delegación de usuario con permisos solo de **crear y escribir** (`cw`) sobre **un solo blob** de `imagenes-cuarentena` cuyo nombre es el `id` (128 bits aleatorios de un generador criptográfico, en hexadecimal), solo HTTPS, inicio un minuto antes de la emisión (tolerancia de reloj) y vencimiento a los 5 minutos de la emisión. `encabezados` trae `x-ms-blob-type: BlockBlob` y el `Content-Type` declarado. `confirmarAntesDe` es la emisión más 30 minutos.
+- **R-05:** La respuesta es 201 con `{ id, urlSubida, metodo: "PUT", encabezados, venceEn, confirmarAntesDe }`. `urlSubida` es una SAS de delegación de usuario con permisos solo de **crear y escribir** (`cw`) sobre **un solo blob** de `imagenes-cuarentena` cuyo nombre es una clave propia de 128 bits aleatorios de un generador criptográfico, en hexadecimal, independiente del `id` (que es un UUID v7) y que no se deriva de él ni de la hora, solo HTTPS, inicio un minuto antes de la emisión (tolerancia de reloj) y vencimiento a los 5 minutos de la emisión. `encabezados` trae `x-ms-blob-type: BlockBlob` y el `Content-Type` declarado. `confirmarAntesDe` es la emisión más 30 minutos.
 - **R-06:** `POST /api/v1/imagenes/subidas/{id}/confirmar` exige JWT del dueño de la subida y no lleva cuerpo. Una subida ajena o inexistente responde el mismo 404 `upload_not_found`. Pasado `confirmarAntesDe` responde 409 `upload_expired`; si el blob no existe responde 409 `file_not_uploaded`.
 - **R-07:** Antes de descargar, la confirmación lee las propiedades del blob: si mide más de 5 242 880 bytes responde 422 `image_too_large` y borra el blob. Después valida el formato por sus bytes iniciales (JPEG, PNG o WebP; el declarado no basta) y responde 422 `format_not_supported` si no coincide con ninguno.
 - **R-08:** La decodificación tiene límites contra imágenes bomba: como máximo 8 000 píxeles por lado y 40 megapíxeles, leídos de la cabecera antes de reservar memoria, y un tiempo máximo de 5 segundos. Una imagen que no se puede decodificar o que excede los límites responde 422 `image_invalid` y su blob se borra.
@@ -131,7 +131,8 @@ Que las imágenes públicas de Knock (foto de perfil y fotos de un trabajo termi
 
 | Campo | Tipo | Regla |
 |---|---|---|
-| `_id` | string | 32 hexadecimales aleatorios (128 bits); también es el nombre del blob de cuarentena |
+| `_id` | string | identificador de la subida (UUID v7, 32 hexadecimales); no es el nombre del blob |
+| `claveBlob` | string | 32 hexadecimales aleatorios (128 bits de un generador criptográfico), independiente de `_id`; es el nombre del blob de cuarentena |
 | `sub` | string | dueño; nunca se devuelve |
 | `proposito` | string | `perfil`, `trabajo` |
 | `tipoDeclarado` | string | el de R-04 |
@@ -187,7 +188,7 @@ Que las imágenes públicas de Knock (foto de perfil y fotos de un trabajo termi
 | Usar la SAS para leer, listar o escribir otros blobs | SAS de delegación de usuario, permisos `cw`, un solo blob, 5 minutos, solo HTTPS | CA-03, CA-04 |
 | Acceso anónimo a fotos privadas | Cuenta separada con lectura anónima deshabilitada a nivel de cuenta | CA-08 |
 | Enumerar imágenes públicas | Contenedor sin listado y nombres por huella SHA-256 de 64 hexadecimales | CA-07 |
-| Enumerar o confirmar subidas ajenas | `id` de 128 bits y 404 uniforme para ajena o inexistente | CA-15 |
+| Enumerar o confirmar subidas ajenas | `id` UUID v7, nombre de blob de 128 bits aleatorios y 404 uniforme para ajena o inexistente | CA-15 |
 | Llave de cuenta robada | Acceso con llave compartida deshabilitado; solo identidades administradas | CA-23 |
 | Abuso de subidas (almacenamiento gratis para terceros) | 20 enlaces y 30 confirmaciones por hora, 10 pendientes y borrado de cuarentena en un día | CA-18 |
 | Fuga de la SAS por registros o caché intermedia | `no-store`, sin compresión, `sig` redactado y sin registrar direcciones | CA-01, CA-22 |
