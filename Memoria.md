@@ -452,3 +452,8 @@
 - **Decisión:** los 13 criterios pasan de tabla a lista reconocida por `--trace`; R-07 exige `MongoUrl.Servers`, todos los hosts locales permitidos, rechazo de SRV y ausencia de documentos no demo antes de escribir. R-05 distingue el conflicto detectado antes de escribir de una falla intermedia recuperable con upsert por `_id`; los índices únicos rechazan carreras. Plan y tareas quedan alineados, sin implementar ni aprobar la spec.
 - **Verificación:** `python3 scripts/sdd_lint.py` pasa (26 specs válidas); `python3 scripts/sdd_lint.py --trace 038` lista CA-01 a CA-13 y devuelve 1 con 13 FALTA: no hay pruebas implementadas, y el lint solo reconoce la marca de comando en filas de tabla, por lo que también señala CA-09 y CA-10. `git diff --check` pasa.
 - **A evitar:** interpretar un host local como prueba de que la base es local: la segunda barrera tampoco detecta un túnel a una base remota vacía o solo demo; no prometer atomicidad de toda la carga.
+
+## 2026-11-12 — Correo de la alerta de presupuesto verificado (KNOCK-250)
+- **Resultado:** `budget-knock-dev` envió el correo de gasto previsto al 100 % (11.10 USD previstos contra 10 USD) el 2026-11-12 a las 16:40 UTC. Con eso queda cubierta la parte de presupuesto de la R-05 de la spec 011. La evidencia y la captura están en `docs/evidencia/KNOCK-250-alerta-presupuesto.md`.
+- **A evitar:** confundir este correo con la alerta de peticiones fallidas (`requests/failed`, KNOCK-206), que se verifica aparte.
+
