@@ -63,6 +63,7 @@ internal sealed class SecurityMarketFactory(IReadOnlyDictionary<string, string?>
     public static async Task<SecurityMarketFactory> CreateAsync(IReadOnlyDictionary<string, string?>? overrides = null, string environment = "Production")
     {
         var mongo = await DocumentDbFixture.SharedAsync();
+        SecurityHostConfiguration.ClearFirebaseEmulatorHost();
         var values = new Dictionary<string, string?>
         {
             ["ConnectionStrings:KnockMongo"] = mongo.ConnectionString,

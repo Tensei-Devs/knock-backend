@@ -5,12 +5,16 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// BUG-003: Kestrel agrega «Server: Kestrel» al final de la respuesta, después de cualquier middleware; solo se apaga aquí.
+builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
+
 // La tabla de rutas y las direcciones de los servicios viven en la configuración (sección ReverseProxy),
 // para cambiarlas por entorno sin recompilar (spec 001, R-02). Cada ruta declara su política: `default` exige sesión
 // y `anonymous` deja pasar (specs 009 y 015).
 builder.Services.AddReverseProxy().LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 builder.Services
     .AddKnockGatewayProblemDetails()
+    .AddKnockGatewayHsts()
     .AddKnockGatewayForwardedHeaders()
     .AddKnockGatewayCors(builder.Configuration)
     .AddKnockData()
@@ -27,11 +31,6 @@ app.UseKnockCorrelationId();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseExceptionHandler();
 app.UseSerilogRequestLogging(LoggingExtensions.ConfigureRequestLogging);
-if (!app.Environment.IsDevelopment())
-{
-    app.UseHsts();
-}
-
 app.UseRouting();
 app.UseCors(CorsExtensions.PolicyName);
 app.UseMiddleware<IpRateLimitMiddleware>();

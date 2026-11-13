@@ -38,6 +38,55 @@ resource "azurerm_application_insights" "this" {
   tags                = local.tags
 }
 
+# Grupo de acciones que recibe las alertas (spec 011, R-05). El correo viene de una variable sin valor por
+# defecto real: si llega vacío, el grupo se crea sin receptores (la alerta se ve en el portal, pero nadie recibe
+# correos). La dirección no vive en el repositorio; quien la pasa en el -var la deja solo en el estado remoto.
+resource "azurerm_monitor_action_group" "this" {
+  name                = "ag-${local.prefix}"
+  resource_group_name = data.azurerm_resource_group.this.name
+  short_name          = "knock-alert"
+
+  dynamic "email_receiver" {
+    for_each = var.alert_email_receiver == "" ? [] : [var.alert_email_receiver]
+    content {
+      name                    = "errores"
+      email_address           = email_receiver.value
+      use_common_alert_schema = true
+    }
+  }
+
+  tags = local.tags
+}
+
+# Alerta de pico de errores (spec 011, R-05 y CA-03): peticiones fallidas del Application Insights
+# (requests/failed) por encima de var.alert_failed_requests_threshold en una ventana de 5 minutos, evaluada
+# cada minuto, severidad 2 (aviso), enlazada al grupo de acciones. La agregación Count cuenta las peticiones
+# fallidas de la ventana. Costo aproximado: 0.10 USD al mes por regla de alerta de métricas; los correos que
+# envía el grupo de acciones no se cobran.
+resource "azurerm_monitor_metric_alert" "failed_requests" {
+  name                = "alert-failed-requests-${local.prefix}"
+  resource_group_name = data.azurerm_resource_group.this.name
+  scopes              = [azurerm_application_insights.this.id]
+  description         = "Pico de peticiones fallidas en 5 minutos (spec 011, CA-03)."
+  severity            = 2
+  frequency           = "PT1M"
+  window_size         = "PT5M"
+
+  criteria {
+    metric_namespace = "Microsoft.Insights/components"
+    metric_name      = "requests/failed"
+    aggregation      = "Count"
+    operator         = "GreaterThan"
+    threshold        = var.alert_failed_requests_threshold
+  }
+
+  action {
+    action_group_id = azurerm_monitor_action_group.this.id
+  }
+
+  tags = local.tags
+}
+
 # ---- Red ----
 
 resource "azurerm_virtual_network" "this" {
@@ -74,6 +123,14 @@ resource "azurerm_container_app_environment" "this" {
   # Solo el gateway tiene ingreso externo; los demás servicios usan ingreso interno (spec 001, R-02).
   internal_load_balancer_enabled = false
   tags                           = local.tags
+
+  # Azure devuelve este perfil en los entornos existentes; se declara para que el plan no intente quitarlo (KNOCK-34, deploy/README.md).
+  workload_profile {
+    name                  = "Consumption"
+    workload_profile_type = "Consumption"
+    minimum_count         = 0
+    maximum_count         = 0
+  }
 }
 
 # ---- Imágenes ----

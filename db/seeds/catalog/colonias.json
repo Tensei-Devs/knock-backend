@@ -478,5 +478,52 @@
         20.0560665
       ]
     }
+  },
+  {
+    "_id": {
+      "$oid": "6adfe98098c94923823bf338"
+    },
+    "nombre": "El Carmen",
+    "nombreBusqueda": "EL CARMEN",
+    "cp": "42830",
+    "municipio": "Tula de Allende",
+    "piloto": true,
+    "aproximado": true,
+    "geom": {
+      "type": "MultiPolygon",
+      "coordinates": [
+        [
+          [
+            [
+              -99.346708,
+              20.005084
+            ],
+            [
+              -99.339308,
+              20.005084
+            ],
+            [
+              -99.339308,
+              20.012084
+            ],
+            [
+              -99.346708,
+              20.012084
+            ],
+            [
+              -99.346708,
+              20.005084
+            ]
+          ]
+        ]
+      ]
+    },
+    "centro": {
+      "type": "Point",
+      "coordinates": [
+        -99.343008,
+        20.008584
+      ]
+    }
   }
 ]

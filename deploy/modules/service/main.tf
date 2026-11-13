@@ -34,6 +34,8 @@ resource "azurerm_container_app" "this" {
   container_app_environment_id = var.environment_id
   revision_mode                = "Single"
   tags                         = var.tags
+  # Perfil que Azure asigna a las apps del entorno; declararlo evita un cambio sin efecto en cada plan (KNOCK-34, deploy/README.md).
+  workload_profile_name = "Consumption"
 
   identity {
     type         = "UserAssigned"
@@ -140,6 +142,13 @@ resource "azurerm_container_app" "this" {
         }
       }
     }
+  }
+
+  # La imagen la manda ci-deploy (KNOCK-202, CA-03 de la spec 007): despliega el SHA de cada commit de main.
+  # Sin esto, un terraform apply posterior regresaría los servicios a var.image. Aplica también a Redis,
+  # que usa este módulo: su imagen se actualiza a mano (ver deploy/README.md, «Imagen de los Container Apps»).
+  lifecycle {
+    ignore_changes = [template[0].container[0].image]
   }
 
   depends_on = [
