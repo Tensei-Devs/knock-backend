@@ -2,7 +2,7 @@ using Microsoft.Extensions.Options;
 
 namespace Knock.Market.Api.Modules.Catalog.Data;
 
-/// <summary>Vigencia de la caché del catálogo (spec 010, R-04): valor inicial de 24 horas, ajustable por configuración y validada al arrancar.</summary>
+/// <summary>Vigencia de la caché del catálogo en Redis, solo del servidor; no se usa en <c>Cache-Control</c> (spec 010, R-04): valor inicial de 24 horas, ajustable por configuración y validada al arrancar.</summary>
 internal sealed class CatalogCacheOptions
 {
     public const string SectionName = "Cache";

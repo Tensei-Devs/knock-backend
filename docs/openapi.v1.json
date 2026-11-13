@@ -182,7 +182,7 @@
         "tags": [
           "Oficios"
         ],
-        "summary": "Oficios activos como arreglo sin paginar: excepción documentada a la constitución §11 (catálogo acotado, D9).\n`[AllowAnonymous]` explícito para que siga público aunque se agregue una política de autorización global (D3).",
+        "summary": "Oficios activos como arreglo sin paginar: excepción documentada a la constitución §11 (catálogo acotado, D9).\n`[AllowAnonymous]` explícito para que siga público aunque se agregue una política de autorización global (D3).\nResponde con `ETag` débil, `Cache-Control: public, max-age=0, must-revalidate` y `Vary: Accept-Encoding` (la respuesta comprimida es otra variante);\ncon `If-None-Match` vigente responde 304 sin cuerpo.",
         "parameters": [
           {
             "name": "If-None-Match",

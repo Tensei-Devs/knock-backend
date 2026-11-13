@@ -5,7 +5,6 @@ using Knock.Market.Api.Modules.Catalog.Dtos;
 using Knock.Market.Api.Modules.Catalog.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 
 namespace Knock.Market.Api.Modules.Catalog.Controllers.V1;
 
@@ -13,13 +12,18 @@ namespace Knock.Market.Api.Modules.Catalog.Controllers.V1;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/oficios")]
-internal sealed class OficiosController(OficioQueries oficios, IOptions<Knock.Market.Api.Modules.Catalog.Data.CatalogCacheOptions> cacheOptions) : ControllerBase
+internal sealed class OficiosController(OficioQueries oficios) : ControllerBase
 {
+    /// <summary>Los clientes y proxies guardan la respuesta pero siempre revalidan con <c>If-None-Match</c> (304); la vigencia de 24 h es solo del servidor, en Redis.</summary>
+    private const string _cacheControl = "public, max-age=0, must-revalidate";
+
     private static readonly System.Text.Json.JsonSerializerOptions _payloadOptions = new() { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
 
     /// <summary>
     /// Oficios activos como arreglo sin paginar: excepción documentada a la constitución §11 (catálogo acotado, D9).
     /// <c>[AllowAnonymous]</c> explícito para que siga público aunque se agregue una política de autorización global (D3).
+    /// Responde con <c>ETag</c> débil, <c>Cache-Control: public, max-age=0, must-revalidate</c> y <c>Vary: Accept-Encoding</c> (la respuesta comprimida es otra variante);
+    /// con <c>If-None-Match</c> vigente responde 304 sin cuerpo.
     /// </summary>
     [HttpGet]
     [AllowAnonymous]
@@ -30,7 +34,7 @@ internal sealed class OficiosController(OficioQueries oficios, IOptions<Knock.Ma
         var items = await oficios.ListActiveAsync(cancellationToken);
         var etag = ETag(items);
         Response.Headers.ETag = etag;
-        Response.Headers.CacheControl = string.Create(System.Globalization.CultureInfo.InvariantCulture, $"public, max-age={(int)cacheOptions.Value.Lifetime.TotalSeconds}");
+        Response.Headers.CacheControl = _cacheControl;
         return Matches(ifNoneMatch ?? string.Empty, etag) ? StatusCode(StatusCodes.Status304NotModified) : Ok(items);
     }
 
