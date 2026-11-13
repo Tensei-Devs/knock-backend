@@ -74,7 +74,7 @@ internal sealed class AzureMediaBlobStore(BlobServiceClient blobs, IOptions<Medi
         await EnsureContainersAsync(cancellationToken);
         await _files.GetBlobClient(fileBlob).UploadAsync(
             BinaryData.FromBytes(content),
-            new BlobUploadOptions { HttpHeaders = new BlobHttpHeaders { ContentType = format == ImageFormat.Png ? "image/png" : "image/jpeg" } },
+            new BlobUploadOptions { HttpHeaders = new BlobHttpHeaders { ContentType = "image/jpeg" } },
             cancellationToken);
     }
 

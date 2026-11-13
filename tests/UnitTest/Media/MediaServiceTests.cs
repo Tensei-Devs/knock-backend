@@ -1,8 +1,10 @@
 using AwesomeAssertions;
 using Knock.Contracts.Moderation;
+using Knock.Market.Api.Modules.Media;
 using Knock.Market.Api.Modules.Media.Data;
 using Knock.Market.Api.Modules.Media.Domain;
 using Knock.Market.Api.Modules.Media.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using SkiaSharp;
 using Xunit;
@@ -15,6 +17,27 @@ public sealed class MediaServiceTests
     private const string _ownerId = "owner-1";
 
     [Fact]
+    public async Task Confirm_DevelopmentDefaultModerator_LeavesUploadPending_CA_013_05()
+    {
+        var registrations = new ServiceCollection();
+        registrations.AddMediaModule(isDevelopment: true);
+        using var provider = registrations.BuildServiceProvider();
+        using var processor = CreateProcessor();
+        var files = new InMemoryMediaFileStore();
+        var blobs = new CountingBlobStore(new InMemoryMediaBlobStore());
+        var service = new MediaService(files, blobs, processor, provider.GetRequiredService<IContentModerator>(), TimeProvider.System);
+        var ticket = await service.CreateUploadAsync(_ownerId, "perfil", "image/jpeg", 1000, CancellationToken.None);
+        var id = ticket.Value!.Id;
+        var key = (await files.FindAsync(id, CancellationToken.None))!.File.QuarantineBlob;
+        blobs.UploadRaw(key, Jpeg(400, 300));
+
+        (await service.ConfirmAsync(_ownerId, id, CancellationToken.None)).Status.Should().Be(MediaOutcomeStatus.Unavailable);
+        (await files.FindAsync(id, CancellationToken.None))!.File.State.Should().Be(MediaFileState.Pending);
+        blobs.ContainsQuarantine(key).Should().BeTrue();
+        blobs.CountFinalBlobs().Should().Be(0);
+    }
+
+    [Fact]
     public async Task Confirm_AllowedContent_PublishesReadyAndClearsQuarantine_OI2_02()
     {
         using var processor = CreateProcessor();
@@ -24,7 +47,7 @@ public sealed class MediaServiceTests
         ticket.Status.Should().Be(MediaOutcomeStatus.Success);
         ticket.Value.Should().NotBeNull();
         var ticketId = ticket.Value.Id;
-        string quarantine = ticketId.ToString("N");
+        string quarantine = (await harness.Files.FindAsync(ticketId, CancellationToken.None))!.File.QuarantineBlob;
         harness.Blobs.UploadRaw(quarantine, Jpeg(400, 300));
 
         var confirm = await harness.Service.ConfirmAsync(_ownerId, ticketId, CancellationToken.None);
@@ -47,7 +70,7 @@ public sealed class MediaServiceTests
         var ticket = await harness.Service.CreateUploadAsync(_ownerId, "perfil", "image/jpeg", 1000, CancellationToken.None);
         ticket.Value.Should().NotBeNull();
         var ticketId = ticket.Value.Id;
-        string quarantine = ticketId.ToString("N");
+        string quarantine = (await harness.Files.FindAsync(ticketId, CancellationToken.None))!.File.QuarantineBlob;
         harness.Blobs.UploadRaw(quarantine, Jpeg(400, 300));
 
         var confirm = await harness.Service.ConfirmAsync(_ownerId, ticketId, CancellationToken.None);
@@ -68,16 +91,34 @@ public sealed class MediaServiceTests
         var ticket = await harness.Service.CreateUploadAsync(_ownerId, "perfil", "image/jpeg", 1000, CancellationToken.None);
         ticket.Value.Should().NotBeNull();
         var ticketId = ticket.Value.Id;
-        string quarantine = ticketId.ToString("N");
+        string quarantine = (await harness.Files.FindAsync(ticketId, CancellationToken.None))!.File.QuarantineBlob;
         harness.Blobs.UploadRaw(quarantine, Jpeg(400, 300));
 
         var confirm = await harness.Service.ConfirmAsync(_ownerId, ticketId, CancellationToken.None);
 
-        confirm.Status.Should().Be(MediaOutcomeStatus.Unprocessable);
-        confirm.Detail.Should().Be(MediaRejection.ModerationRejected);
-        harness.Blobs.ContainsQuarantine(quarantine).Should().BeFalse("quarantine is removed when moderation fails closed");
+        confirm.Status.Should().Be(MediaOutcomeStatus.Unavailable);
+        harness.Blobs.ContainsQuarantine(quarantine).Should().BeTrue("a retry needs the uploaded image");
         harness.Blobs.CountFinalBlobs().Should().Be(0, "nothing is published when moderation is down");
-        (await harness.Files.FindAsync(ticketId, CancellationToken.None))!.File.State.Should().Be(MediaFileState.Rejected);
+        (await harness.Files.FindAsync(ticketId, CancellationToken.None))!.File.State.Should().Be(MediaFileState.Pending);
+    }
+
+    [Fact]
+    public async Task Confirm_ModeratorTimeout_CanRetrySuccessfully_CA_013_05()
+    {
+        using var processor = CreateProcessor();
+        var files = new InMemoryMediaFileStore();
+        var blobs = new CountingBlobStore(new InMemoryMediaBlobStore());
+        var moderator = new TimeoutThenAllowModerator();
+        var service = new MediaService(files, blobs, processor, moderator, TimeProvider.System);
+        var ticket = await service.CreateUploadAsync(_ownerId, "perfil", "image/jpeg", 1000, CancellationToken.None);
+        var id = ticket.Value!.Id;
+        var key = (await files.FindAsync(id, CancellationToken.None))!.File.QuarantineBlob;
+        blobs.UploadRaw(key, Jpeg(400, 300));
+        (await service.ConfirmAsync(_ownerId, id, CancellationToken.None)).Status.Should().Be(MediaOutcomeStatus.Unavailable);
+        blobs.ContainsQuarantine(key).Should().BeTrue();
+        blobs.CountFinalBlobs().Should().Be(0);
+        (await files.FindAsync(id, CancellationToken.None))!.File.State.Should().Be(MediaFileState.Pending);
+        (await service.ConfirmAsync(_ownerId, id, CancellationToken.None)).Status.Should().Be(MediaOutcomeStatus.Success);
     }
 
     [Fact]
@@ -89,7 +130,7 @@ public sealed class MediaServiceTests
         var ticket = await harness.Service.CreateUploadAsync(_ownerId, "perfil", "image/jpeg", 1000, CancellationToken.None);
         ticket.Value.Should().NotBeNull();
         var ticketId = ticket.Value.Id;
-        harness.Blobs.UploadRaw(ticketId.ToString("N"), Jpeg(400, 300));
+        harness.Blobs.UploadRaw((await harness.Files.FindAsync(ticketId, CancellationToken.None))!.File.QuarantineBlob, Jpeg(400, 300));
 
         var confirm = await harness.Service.ConfirmAsync("other-owner", ticketId, CancellationToken.None);
 
@@ -125,6 +166,22 @@ public sealed class MediaServiceTests
 
         public Task<ModerationResult> ReviewImageAsync(ReadOnlyMemory<byte> image, CancellationToken cancellationToken) =>
             Task.FromResult(new ModerationResult(outcome));
+    }
+
+    private sealed class TimeoutThenAllowModerator : IContentModerator
+    {
+        private bool _first = true;
+        public Task<ModerationResult> ReviewTextAsync(string text, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<ModerationResult> ReviewImageAsync(ReadOnlyMemory<byte> image, CancellationToken cancellationToken)
+        {
+            if (_first)
+            {
+                _first = false;
+                throw new TimeoutException();
+            }
+
+            return Task.FromResult(new ModerationResult(ModerationOutcome.Allowed));
+        }
     }
 
     /// <summary>Wraps the in-memory blob store and counts final-container uploads (blobs under an id prefix).</summary>

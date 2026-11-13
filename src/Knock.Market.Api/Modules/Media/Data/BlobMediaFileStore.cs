@@ -90,6 +90,7 @@ internal sealed class BlobMediaFileStore(BlobServiceClient blobs, IOptions<Media
     /// <summary>Persisted shape: same fields (snake_case, Spanish) as the <c>archivos</c> collection.</summary>
     private sealed record MediaFileRecord(
         Guid Id,
+        string BlobKey,
         string PropietarioId,
         string Uso,
         string Estado,
@@ -103,11 +104,11 @@ internal sealed class BlobMediaFileStore(BlobServiceClient blobs, IOptions<Media
         DateTimeOffset? ConfirmadoEn)
     {
         public static MediaFileRecord FromDomain(MediaFile file) => new(
-            file.Id, file.OwnerId, file.Usage.ToContractValue(), file.State.ToContractValue(), file.DeclaredContentType,
+            file.Id, file.BlobKey, file.OwnerId, file.Usage.ToContractValue(), file.State.ToContractValue(), file.DeclaredContentType,
             file.DeclaredSizeBytes, file.OriginalBlob, file.ReducedBlob, file.Width, file.Height, file.CreatedAt, file.ConfirmedAt);
 
         public MediaFile ToDomain() =>
-            new(Id, PropietarioId, ParseUsage(Uso), ParseState(Estado), ContentType, TamanoBytes, CreadoEn)
+            new(Id, BlobKey, PropietarioId, ParseUsage(Uso), ParseState(Estado), ContentType, TamanoBytes, CreadoEn)
             {
                 OriginalBlob = BlobOriginal,
                 ReducedBlob = BlobReducido,

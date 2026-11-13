@@ -65,7 +65,24 @@ internal sealed class MediaService(
             return await RejectAsync(stored, image.Detail ?? MediaRejection.InvalidFile, cancellationToken);
         }
 
-        var review = await moderator.ReviewImageAsync(image.Value!.Original, cancellationToken);
+        ModerationResult review;
+        try
+        {
+            review = await moderator.ReviewImageAsync(image.Value!.Original, cancellationToken);
+        }
+        catch (TimeoutException)
+        {
+            return MediaOutcome<ConfirmedFile>.Unavailable();
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return MediaOutcome<ConfirmedFile>.Unavailable();
+        }
+
+        if (review.Outcome == ModerationOutcome.Unavailable)
+        {
+            return MediaOutcome<ConfirmedFile>.Unavailable();
+        }
         if (review.Outcome != ModerationOutcome.Allowed)
         {
             return await RejectAsync(stored, MediaRejection.ModerationRejected, cancellationToken);
@@ -84,7 +101,7 @@ internal sealed class MediaService(
 
     /// <summary>
     /// Real size is checked before downloading, and the download only returns the consulted version (ETag) and at
-    /// most 8 MB + 1 byte. Client bytes are never stored as-is.
+    /// most 5 MB + 1 byte. Client bytes are never stored as-is.
     /// </summary>
     private async Task<MediaOutcome<ProcessedImage>> ReadImageAsync(MediaFile file, UploadedBlob uploaded, CancellationToken cancellationToken)
     {
@@ -99,7 +116,7 @@ internal sealed class MediaService(
             return MediaOutcome<ProcessedImage>.Unprocessable(MediaRejection.ChangedDuringConfirmation);
         }
 
-        return await processor.ProcessAsync(new ArraySegment<byte>(bytes), cancellationToken);
+        return await processor.ProcessAsync(new ArraySegment<byte>(bytes), file.Usage, cancellationToken);
     }
 
     private async Task<MediaOutcome<ConfirmedFile>> RejectAsync(StoredMediaFile stored, string detail, CancellationToken cancellationToken)
@@ -113,7 +130,7 @@ internal sealed class MediaService(
 
     private async Task<MediaOutcome<ConfirmedFile>> AcceptAsync(StoredMediaFile stored, ProcessedImage image, CancellationToken cancellationToken)
     {
-        var ready = stored.File.MarkReady(image.Format, image.Width, image.Height, timeProvider.GetUtcNow());
+        var ready = stored.File.MarkReady(image.Width, image.Height, timeProvider.GetUtcNow());
         await blobs.UploadFileAsync(ready.OriginalBlob!, image.Original, image.Format, cancellationToken);
         await blobs.UploadFileAsync(ready.ReducedBlob!, image.Reduced, image.Format, cancellationToken);
         await blobs.DeleteQuarantineAsync(ready.QuarantineBlob, cancellationToken);

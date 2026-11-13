@@ -6,7 +6,7 @@ using SkiaSharp;
 namespace Knock.Market.Api.Modules.Media.Services;
 
 /// <summary>
-/// Validates by real content and cleans the photo with SkiaSharp: JPEG/PNG signature, dimensions checked before decoding,
+/// Validates by real content and cleans the photo with SkiaSharp: JPEG/PNG/WebP signature, dimensions checked before decoding,
 /// full decode, EXIF orientation applied to pixels and re-encoding (which drops EXIF, GPS, XMP and IPTC).
 /// Only <see cref="MediaOptions.MaxConcurrentProcessing"/> photos are processed at once per replica; each peak is bounded
 /// by <see cref="MediaRules.MaxPixels"/>.
@@ -17,9 +17,12 @@ internal sealed class ImageProcessor(IOptions<MediaOptions> options) : IDisposab
 
     private readonly SemaphoreSlim _slots = new(options.Value.MaxConcurrentProcessing, options.Value.MaxConcurrentProcessing);
 
-    /// <summary>Processes when a slot is free; 422 (with a different detail for dimensions) if not a valid JPEG/PNG within limits.</summary>
+    /// <summary>Processes when a slot is free; rejects invalid JPEG/PNG/WebP or dimensions outside the limits.</summary>
     public Task<MediaOutcome<ProcessedImage>> ProcessAsync(ArraySegment<byte> content, CancellationToken cancellationToken) =>
-        RunLimitedAsync(() => Process(content), cancellationToken);
+        ProcessAsync(content, MediaUsage.Request, cancellationToken);
+
+    public Task<MediaOutcome<ProcessedImage>> ProcessAsync(ArraySegment<byte> content, MediaUsage usage, CancellationToken cancellationToken) =>
+        RunLimitedAsync(() => Process(content, usage), cancellationToken);
 
     /// <summary>Runs <paramref name="work"/> without exceeding the configured slots; callers wait asynchronously.</summary>
     internal async Task<T> RunLimitedAsync<T>(Func<T> work, CancellationToken cancellationToken)
@@ -38,7 +41,7 @@ internal sealed class ImageProcessor(IOptions<MediaOptions> options) : IDisposab
 
     public void Dispose() => _slots.Dispose();
 
-    private MediaOutcome<ProcessedImage> Process(ArraySegment<byte> content)
+    private MediaOutcome<ProcessedImage> Process(ArraySegment<byte> content, MediaUsage usage)
     {
         var format = MediaRules.DetectFormat(content);
         if (format is null)
@@ -64,15 +67,16 @@ internal sealed class ImageProcessor(IOptions<MediaOptions> options) : IDisposab
             return MediaOutcome<ProcessedImage>.Unprocessable(MediaRejection.InvalidFile);
         }
 
-        using var reduced = Reduce(oriented, options.Value.ReducedMaxSide);
+        using var reduced = Reduce(oriented, usage == MediaUsage.Profile ? options.Value.ProfileReducedMaxSide : options.Value.ReducedMaxSide);
         return MediaOutcome<ProcessedImage>.Ok(new ProcessedImage(
-            format.Value, Encode(oriented, format.Value), Encode(reduced, format.Value), oriented.Width, oriented.Height));
+            ImageFormat.Jpeg, Encode(oriented), Encode(reduced), oriented.Width, oriented.Height));
     }
 
     private static ImageFormat? ToFormat(SKEncodedImageFormat format) => format switch
     {
         SKEncodedImageFormat.Jpeg => ImageFormat.Jpeg,
         SKEncodedImageFormat.Png => ImageFormat.Png,
+        SKEncodedImageFormat.Webp => ImageFormat.WebP,
         _ => null,
     };
 
@@ -142,11 +146,13 @@ internal sealed class ImageProcessor(IOptions<MediaOptions> options) : IDisposab
     }
 
     /// <summary>Encodes directly from the bitmap pixels (no <c>SKImage.FromBitmap</c>, which copies a mutable bitmap).</summary>
-    private static byte[] Encode(SKBitmap bitmap, ImageFormat format)
+    private static byte[] Encode(SKBitmap bitmap)
     {
-        using var encoded = format == ImageFormat.Png
-            ? bitmap.Encode(SKEncodedImageFormat.Png, 100)
-            : bitmap.Encode(SKEncodedImageFormat.Jpeg, _jpegQuality);
+        using var opaque = new SKBitmap(new SKImageInfo(bitmap.Width, bitmap.Height, SKColorType.Rgba8888, SKAlphaType.Opaque));
+        using var canvas = new SKCanvas(opaque);
+        canvas.Clear(SKColors.White);
+        canvas.DrawBitmap(bitmap, 0, 0, SKSamplingOptions.Default, null);
+        using var encoded = opaque.Encode(SKEncodedImageFormat.Jpeg, _jpegQuality);
         return encoded?.ToArray() ?? throw new InvalidOperationException("SkiaSharp could not encode the image.");
     }
 }
