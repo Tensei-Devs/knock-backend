@@ -1,20 +1,20 @@
 # Mapa de código
 
-> Generado por `scripts/codemap.py` el 2026-11-13T18:25:20Z. No editar a mano.
+> Generado por `scripts/codemap.py` el 2026-11-13T19:22:10Z. No editar a mano.
 > **Antes de crear una clase, método o archivo, busca aquí o corre `python scripts/codemap.py --query "<qué necesitas>"`.**
 
 ## Resumen
 
 | Módulo | Capas | Archivos | Tipos | Métodos públicos |
 |---|---|---|---|---|
-| `Catalog` | -, controllers, data, domain, dtos, services, validators | 26 | 29 | 34 |
-| `Knock.Contracts` | - | 6 | 10 | 7 |
+| `Catalog` | -, controllers, data, domain, dtos, services, validators | 26 | 29 | 36 |
+| `Knock.Contracts` | - | 7 | 11 | 7 |
 | `Knock.Gateway` | -, hosting | 14 | 39 | 47 |
 | `Knock.Identity.Api` | -, common, hosting | 28 | 58 | 72 |
 | `Knock.Market.Api` | -, common, hosting | 26 | 56 | 70 |
 | `Knock.Messaging.Api` | -, hosting | 14 | 37 | 45 |
 | `Media` | -, data, domain, dtos, validators | 7 | 13 | 19 |
-| `Requests` | -, domain, services | 6 | 11 | 11 |
+| `Requests` | -, data, domain, services, validators | 9 | 21 | 15 |
 | `Sesiones` | -, controllers, data, domain, dtos, services, validators | 25 | 46 | 53 |
 | `Usuarios` | -, controllers, data, domain, dtos, services | 9 | 19 | 23 |
 
@@ -154,7 +154,7 @@
 **-**
 
 - `src/Knock.Market.Api/Modules/Catalog/CatalogModuleExtensions.cs` — class `CatalogModuleExtensions`
-  - `AddCatalogModule()`:13
+  - `AddCatalogModule()`:14
 - `src/Knock.Market.Api/Modules/Catalog/ICatalogApi.cs` — interface `ICatalogApi`
 - `src/Knock.Market.Api/Modules/Catalog/ModelBinders/SingleValueQueryModelBinder.cs` — class `SingleValueQueryModelBinder`, class `SingleValueFromQueryAttribute`
   - `BindModelAsync()`:16
@@ -173,7 +173,7 @@
 - `src/Knock.Market.Api/Modules/Catalog/Data/CatalogSeeder.cs` — class `CatalogSeeder`
   - `CatalogSeeder()`:13, `SeedAsync()`:19, `SeedAsync()`:29
 - `src/Knock.Market.Api/Modules/Catalog/Data/CatalogStore.cs` — class `CatalogStore`
-  - `EnsureIndexesAsync()`:66, `FindActiveOficiosAsync()`:89, `FindIntersectingAsync()`:99, `FindNearestCenterAsync()`:103, `FindNamesByPostalCodeAsync()`:106, `ColoniaNameExistsAsync()`:113, `ColoniaExistsAsync()`:116, `ActiveOficiosQuery()`:120, `IntersectingQuery()`:126, `NearestCenterQuery()`:133, `NamesByPostalCodeQuery()`:139, `ColoniaNameExistsQuery()`:145, `ColoniaExistsQuery()`:151
+  - `EnsureIndexesAsync()`:66, `FindActiveOficiosAsync()`:89, `FindIntersectingAsync()`:99, `FindNearestCenterAsync()`:103, `FindNamesByPostalCodeAsync()`:106, `ColoniaNameExistsAsync()`:113, `ColoniaExistsAsync()`:116, `FindCenterAsync()`:119, `ActiveOficiosQuery()`:131, `IntersectingQuery()`:137, `NearestCenterQuery()`:144, `NamesByPostalCodeQuery()`:150, `ColoniaNameExistsQuery()`:156, `ColoniaExistsQuery()`:162
 
 **domain**
 
@@ -198,7 +198,7 @@
 **services**
 
 - `src/Knock.Market.Api/Modules/Catalog/Services/CatalogApi.cs` — class `CatalogApi`
-  - `FindNeighborhoodAtAsync()`:11, `FindNeighborhoodsByPostalCodeAsync()`:14, `NeighborhoodExistsAsync()`:25
+  - `FindNeighborhoodCenterAsync()`:12, `FindNeighborhoodAtAsync()`:15, `FindNeighborhoodsByPostalCodeAsync()`:18, `NeighborhoodExistsAsync()`:29
 - `src/Knock.Market.Api/Modules/Catalog/Services/INeighborhoodLocator.cs` — interface `INeighborhoodLocator`
 - `src/Knock.Market.Api/Modules/Catalog/Services/INeighborhoodNames.cs` — interface `INeighborhoodNames`
 - `src/Knock.Market.Api/Modules/Catalog/Services/NeighborhoodLocator.cs` — class `NeighborhoodLocator`
@@ -218,6 +218,7 @@
 
 **-**
 
+- `src/Knock.Contracts/Catalog/INeighborhoodCenterCatalog.cs` — interface `INeighborhoodCenterCatalog`
 - `src/Knock.Contracts/Colonias/IColoniaCatalog.cs` — interface `IColoniaCatalog`
 - `src/Knock.Contracts/Correlation/CorrelationId.cs` — class `CorrelationId`
   - `IsValid()`:24, `Create()`:44, `Current()`:47
@@ -458,20 +459,31 @@
 
 - `src/Knock.Market.Api/Modules/Requests/IRequestsApi.cs` — interface `IRequestsApi`
 - `src/Knock.Market.Api/Modules/Requests/RequestsModuleExtensions.cs` — class `RequestsModuleExtensions`
-  - `AddRequestsModule()`:12
+  - `AddRequestsModule()`:15
+
+**data**
+
+- `src/Knock.Market.Api/Modules/Requests/Data/QuoteReaders.cs` — class `MongoTechnicianDirectory`, class `MongoQuoteRequestReader`
+  - `FindBySubAsync()`:16, `FindAsync()`:42
 
 **domain**
 
 - `src/Knock.Market.Api/Modules/Requests/Domain/QuotePricing.cs` — record `QuotePricingOptions`, record struct `QuoteCap`, class `QuotePricing`
   - `Calculate()`:37
 - `src/Knock.Market.Api/Modules/Requests/Domain/RequestRules.cs` — class `RequestRules`
-  - `ExpiresAt()`:12, `AcceptsQuotes()`:15, `AfterFirstQuote()`:18, `IsLive()`:20, `CanAddQuote()`:22
+  - `ExpiresAt()`:17, `AcceptsQuotes()`:25, `AfterFirstQuote()`:28, `IsLive()`:32, `CanAddQuote()`:34
 - `src/Knock.Market.Api/Modules/Requests/Domain/RequestStates.cs` — enum `RequestState`, enum `QuoteState`, enum `PriceType`, class `RequestStates`
   - `ToStored()`:35, `ToStored()`:47, `ParseRequest()`:56, `ParseQuote()`:68
 
 **services**
 
+- `src/Knock.Market.Api/Modules/Requests/Services/QuoteService.cs` — record `Technician`, record `QuoteRequestSnapshot`, interface `ITechnicianDirectory`, interface `IQuoteRequestReader`, enum `QuoteCheckResult`, class `QuoteService`
+  - `QuoteService()`:25, `SendAsync()`:27
 - `src/Knock.Market.Api/Modules/Requests/Services/RequestsApi.cs` — class `RequestsApi`
+
+**validators**
+
+- `src/Knock.Market.Api/Modules/Requests/Validators/QuoteValidator.cs` — record `QuoteValidationInput`, class `QuoteValidator`
 
 ### Sesiones
 
