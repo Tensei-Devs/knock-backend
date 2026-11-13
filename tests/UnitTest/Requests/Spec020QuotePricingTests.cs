@@ -10,31 +10,13 @@ public class Spec020TopeTests
     private static readonly QuotePricingOptions _options = new();
 
     [Theory]
-    [InlineData(1000, 1100, true)]
-    [InlineData(50, 55, false)]
-    public void Calcula_Tope_CA_020_11(int price, int expected, bool approval)
+    [InlineData("ele", 1000, 1100, true)]
+    [InlineData("plo", 50, 55, false)]
+    public void Calcula_Tope_CA_020_11(string oficio, int price, int expected, bool approval)
     {
-        var cap = QuotePricing.Calculate(PriceType.Fijo, "ele", price, null, null, _options);
+        var cap = QuotePricing.Calculate(PriceType.Fijo, oficio, price, null, null, _options);
         cap.Tope.Should().Be(expected);
         cap.RequiereAprobacion.Should().Be(approval);
-    }
-
-    [Fact]
-    public void FixedPriceOf1000HasCapOf1100AndRequiresApproval_CA_020_11()
-    {
-        var cap = QuotePricing.Calculate(PriceType.Fijo, "ele", 1000, null, null, _options);
-
-        cap.Tope.Should().Be(1100);
-        cap.RequiereAprobacion.Should().BeTrue();
-    }
-
-    [Fact]
-    public void FixedPriceOf50HasCapOf55AndDoesNotRequireApproval_CA_020_11()
-    {
-        var cap = QuotePricing.Calculate(PriceType.Fijo, "plo", 50, null, null, _options);
-
-        cap.Tope.Should().Be(55);
-        cap.RequiereAprobacion.Should().BeFalse();
     }
 
     [Fact]
