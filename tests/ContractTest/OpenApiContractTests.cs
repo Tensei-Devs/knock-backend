@@ -5,7 +5,7 @@ namespace Knock.ContractTest;
 /// <summary>TT-CI-02 (KNOCK-137): los contratos publicados en <c>docs/</c> son OpenAPI 3.x válidos, todas sus operaciones declaran respuestas y los errores con cuerpo usan ProblemDetails.</summary>
 public sealed class OpenApiContractTests
 {
-    private static readonly HashSet<string> HttpMethods = new(["get", "put", "post", "delete", "options", "head", "patch", "trace"], StringComparer.Ordinal);
+    private static readonly HashSet<string> _httpMethods = new(["get", "put", "post", "delete", "options", "head", "patch", "trace"], StringComparer.Ordinal);
 
     private static JsonDocument Load(string fileName)
     {
@@ -23,7 +23,7 @@ public sealed class OpenApiContractTests
     {
         foreach (var path in root.GetProperty("paths").EnumerateObject())
         {
-            foreach (var item in path.Value.EnumerateObject().Where(property => HttpMethods.Contains(property.Name)))
+            foreach (var item in path.Value.EnumerateObject().Where(property => _httpMethods.Contains(property.Name)))
             {
                 yield return (path.Name, item.Name, item.Value);
             }
