@@ -1,6 +1,6 @@
 # Mapa de código
 
-> Generado por `scripts/codemap.py` el 2026-11-13T04:35:35Z. No editar a mano.
+> Generado por `scripts/codemap.py` el 2026-11-13T05:54:26Z. No editar a mano.
 > **Antes de crear una clase, método o archivo, busca aquí o corre `python scripts/codemap.py --query "<qué necesitas>"`.**
 
 ## Resumen
@@ -13,7 +13,7 @@
 | `Knock.Identity.Api` | -, common, hosting | 28 | 58 | 71 |
 | `Knock.Market.Api` | -, common, hosting | 26 | 55 | 69 |
 | `Knock.Messaging.Api` | -, hosting | 14 | 37 | 45 |
-| `Requests` | -, domain, services, validators | 7 | 13 | 12 |
+| `Requests` | -, domain, services, validators | 7 | 13 | 11 |
 | `Sesiones` | -, controllers, data, domain, dtos, services, validators | 25 | 46 | 53 |
 | `Usuarios` | -, controllers, data, domain, dtos, services | 9 | 19 | 23 |
 
@@ -436,7 +436,7 @@
 - `src/Knock.Market.Api/Modules/Requests/Domain/QuotePricing.cs` — record `QuotePricingOptions`, record struct `QuoteCap`, class `QuotePricing`
   - `Calculate()`:37
 - `src/Knock.Market.Api/Modules/Requests/Domain/RequestRules.cs` — class `RequestRules`
-  - `ExpiresAt()`:16, `ExpiresAt()`:18, `AcceptsQuotes()`:27, `AfterFirstQuote()`:30, `IsLive()`:36, `CanAddQuote()`:38
+  - `ExpiresAt()`:17, `AcceptsQuotes()`:25, `AfterFirstQuote()`:28, `IsLive()`:32, `CanAddQuote()`:34
 - `src/Knock.Market.Api/Modules/Requests/Domain/RequestStates.cs` — enum `RequestState`, enum `QuoteState`, enum `PriceType`, class `RequestStates`
   - `ToStored()`:35, `ToStored()`:47, `ParseRequest()`:56, `ParseQuote()`:68
 
