@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
 using AwesomeAssertions;
 using Knock.IntegrationTest.Support;
@@ -11,45 +10,64 @@ using Xunit;
 
 namespace Knock.IntegrationTest.Requests;
 
+/// <summary>
+/// Spec 023 sobre contenedores: lo que se guarda en MongoDB. Los errores 401, 413, 422, 400 y 429 y sus encabezados se prueban sin contenedores en
+/// <see cref="Spec023WaitlistProblemTests"/>.
+/// </summary>
 public sealed class Spec023WaitlistHttpTests
 {
-    [Fact]
-    public async Task Usuario_Del_Token_Y_Limite_CA_023_10_CA_023_11_CA_023_16()
+    private static readonly Uri _route = new("/api/v1/zonas/lista-espera", UriKind.Relative);
+
+    private static async Task<(MarketApiFactory Factory, IMongoCollection<BsonDocument> Collection)> CreateHostAsync()
     {
-        using var factory = await MarketApiFactory.CreateAsync();
+        var factory = await MarketApiFactory.CreateAsync();
         var collection = factory.Database.GetCollection<BsonDocument>("listas_espera");
         await collection.Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(
             Builders<BsonDocument>.IndexKeys.Ascending("usuarioId").Ascending("cp"), new CreateIndexOptions { Unique = true }));
-        using var client = factory.CreateClient();
-        var route = new Uri("/api/v1/zonas/lista-espera", UriKind.Relative);
-        using var anonymous = await client.PostAsJsonAsync(route, new { cp = "91000" });
-        anonymous.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        return (factory, collection);
+    }
 
-        var subject = Guid.NewGuid().ToString("D");
+    private static HttpClient SignedIn(MarketApiFactory factory, string subject)
+    {
+        var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", GatewayTestSupport.IssueToken(sub: subject, key: Convert.FromBase64String(MarketApiFactory.SigningKeyBase64)));
-        using var content = new StringContent("{\"cp\":\"91000\",\"extra\":\"" + new string('a', 2048) + "\"}", Encoding.UTF8, "application/json");
-        using var oversized = await client.PostAsync(route, content);
-        oversized.StatusCode.Should().Be(HttpStatusCode.RequestEntityTooLarge);
-        (await collection.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(0);
+        return client;
+    }
 
-        using var first = await client.PostAsJsonAsync(route, new { cp = "91000", municipio = "Tula", usuarioId = "other", lat = 19 });
-        first.StatusCode.Should().Be(HttpStatusCode.Created);
+    [Fact]
+    public async Task FirstJoin_Stores_TheSubjectOfTheToken_AndOnlyTheAllowedFields_CA_023_10()
+    {
+        var (factory, collection) = await CreateHostAsync();
+        using var host = factory;
+        var subject = Guid.NewGuid().ToString("D");
+        using var client = SignedIn(factory, subject);
+
+        using var response = await client.PostAsJsonAsync(_route, new { cp = "91000", municipio = "Tula", usuarioId = "other", lat = 19 });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
         var document = await collection.Find(FilterDefinition<BsonDocument>.Empty).SingleAsync();
         document["usuarioId"].AsString.Should().Be(subject);
         document.Names.Should().BeEquivalentTo("_id", "usuarioId", "cp", "municipio", "creadoEn");
-        using var second = await client.PostAsJsonAsync(route, new { cp = "91000", municipio = "Other" });
+    }
+
+    [Fact]
+    public async Task RepeatedJoin_Returns200_KeepsTheFirstEntry_AndDoesNotMixPeople_CA_023_11()
+    {
+        var (factory, collection) = await CreateHostAsync();
+        using var host = factory;
+        using var client = SignedIn(factory, Guid.NewGuid().ToString("D"));
+        using var first = await client.PostAsJsonAsync(_route, new { cp = "91000", municipio = "Tula" });
+
+        using var second = await client.PostAsJsonAsync(_route, new { cp = "91000", municipio = "Other" });
+        using var otherClient = SignedIn(factory, Guid.NewGuid().ToString("D"));
+        using var otherPerson = await otherClient.PostAsJsonAsync(_route, new { cp = "91000" });
+
+        first.StatusCode.Should().Be(HttpStatusCode.Created);
         second.StatusCode.Should().Be(HttpStatusCode.OK);
         (await second.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("yaRegistrado").GetBoolean().Should().BeTrue();
-        (await collection.Find(FilterDefinition<BsonDocument>.Empty).SingleAsync())["municipio"].AsString.Should().Be("Tula");
-        using var fourth = await client.PostAsJsonAsync(route, new { cp = "91001" });
-        using var fifth = await client.PostAsJsonAsync(route, new { cp = "91002" });
-        using var sixth = await client.PostAsJsonAsync(route, new { cp = "91003" });
-        sixth.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
-        sixth.Headers.RetryAfter.Should().NotBeNull();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", GatewayTestSupport.IssueToken(key: Convert.FromBase64String(MarketApiFactory.SigningKeyBase64)));
-        using var otherPerson = await client.PostAsJsonAsync(route, new { cp = "91000" });
         otherPerson.StatusCode.Should().Be(HttpStatusCode.Created);
-        otherPerson.Headers.CacheControl!.Private.Should().BeTrue();
-        otherPerson.Headers.CacheControl.NoStore.Should().BeTrue();
+        var stored = await collection.Find(Builders<BsonDocument>.Filter.Eq("municipio", "Tula")).ToListAsync();
+        stored.Should().ContainSingle("la segunda petición no reemplaza el municipio de la primera");
+        (await collection.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(2);
     }
 }
