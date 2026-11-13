@@ -15,7 +15,7 @@ namespace Knock.DatabaseTest.Scripts;
 public sealed class Spec014DeliveryScriptTests
 {
     private const int _oficios = 3;
-    private const int _colonias = 12;
+    private const int _colonias = 13;
 
     [Fact]
     public async Task DeliveryScript_OnAnEmptyInstance_LeavesCollectionsIndexesAndSampleData_AndReapplyingChangesNothing_CA_014_01()
@@ -54,10 +54,13 @@ public sealed class Spec014DeliveryScriptTests
             var identityCollections = await (await client.GetDatabase(names["KNOCK_DB_IDENTITY"]).ListCollectionNamesAsync()).ToListAsync();
             identityCollections.Should().Contain(["usuarios", "sesiones"], "el script 002 de la spec 015 también corre en la entrega");
 
+            var marketCollections = await (await market.ListCollectionNamesAsync()).ToListAsync();
+            marketCollections.Should().Contain(["solicitudes", "cotizaciones"], "el script 020 de la spec 020 también corre en la entrega");
+
             var electricity = await market.GetCollection<BsonDocument>("oficios").Find(new BsonDocument("clave", "ele")).SingleAsync();
             electricity["_id"].AsObjectId.ToString().Should().Be("6adfe9802fb81ddc3fc17f73", "las semillas conservan sus _id fijos");
             var withPolygon = await market.GetCollection<BsonDocument>("colonias").CountDocumentsAsync(new BsonDocument("geom", new BsonDocument("$exists", true)));
-            withPolygon.Should().Be(8, "ocho colonias traen su polígono; las otras cuatro solo se ven por código postal");
+            withPolygon.Should().Be(9, "nueve colonias traen su polígono; las otras cuatro solo se ven por código postal");
             var before = await SnapshotAsync(market);
 
             var second = await tools.RunAsync("mongosh", "--nodb", "--quiet", "--file", script);

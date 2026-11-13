@@ -59,7 +59,7 @@ public sealed class NeighborhoodSeedTests
             (await database.Colonias.CountDocumentsAsync(centerInsideOwnPolygon)).Should().Be(1, $"el centro de {nombre} cae dentro de su polígono");
         }
 
-        colonias.Count(c => c["piloto"].AsBoolean).Should().Be(8);
+        colonias.Count(c => c["piloto"].AsBoolean).Should().Be(9);
         var byPostalCode = await database.InScopeAsync<ICatalogApi, IReadOnlyList<string>>(
             catalog => catalog.FindNeighborhoodsByPostalCodeAsync("42803", CancellationToken.None));
         byPostalCode.Should().Contain(CatalogSeedData.WithoutPolygon);

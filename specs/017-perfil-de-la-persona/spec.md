@@ -37,7 +37,7 @@ Que la persona con sesión pueda ver y editar su propio perfil (nombre, foto, co
 - **CA-03:** Dado un `If-None-Match` vigente, cuando se pide, entonces responde 304 sin cuerpo.
 - **CA-04:** Dada una petición sin token o con token cancelado, cuando se pide, entonces responde 401.
 - **CA-05:** Dado un `PUT /me` válido, cuando termina, entonces responde 200, el siguiente `GET /me` devuelve los datos nuevos y `version` subió.
-- **CA-06:** Dado un `PUT /me` con nombre de un carácter, código postal de 4 dígitos o foto de un dominio ajeno, cuando se pide, entonces responde 400 y no cambia nada.
+- **CA-06:** Dado un `PUT /me` con nombre de un carácter, código postal de 4 dígitos o foto de un dominio ajeno, cuando se pide, entonces responde 422 con `errors` por campo y no cambia nada.
 - **CA-07:** Dada una colonia que no existe, cuando se pide el `PUT`, entonces responde 422.
 - **CA-08:** Dado un cuerpo con `sub`, `celularHash`, `esTecnico` o `estado`, cuando se hace el `PUT`, entonces esos campos no cambian.
 - **CA-09:** Dadas dos personas con sesión, cuando cada una pide `/me`, entonces cada una recibe solo su perfil.
@@ -48,7 +48,7 @@ Que la persona con sesión pueda ver y editar su propio perfil (nombre, foto, co
 
 ## 5. Contrato
 - `GET /api/v1/me` · persona · 200 (perfil), 304, 401.
-- `PUT /api/v1/me` · persona · cuerpo `{ nombre, fotoUrl?, colonia?, codigoPostal? }` · 200 (perfil), 400, 401, 409, 422, 503.
+- `PUT /api/v1/me` · persona · cuerpo `{ nombre, fotoUrl?, colonia?, codigoPostal? }` · 200 (perfil), 400 (cuerpo ilegible), 401, 409, 422 (campos inválidos o colonia inexistente), 503.
 - Respuesta de lectura con `ETag` y `Cache-Control: private, no-cache`.
 - Interfaz en `Knock.Contracts` para consultar si una colonia existe.
 
@@ -83,6 +83,6 @@ Decisiones tomadas en la revisión del 2026-11-04. Quien aprueba la spec las ace
 - **`If-Match` (decidido): no en esta versión.** Un perfil con cuatro campos editados por una persona no justifica la complejidad; se agrega si aparecen conflictos reales.
 
 ## Aprobación
-- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-04
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
 - [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)
