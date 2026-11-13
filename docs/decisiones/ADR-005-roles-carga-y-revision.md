@@ -25,6 +25,8 @@ El panel de administración y la landing **no tienen dueño fijo** (ver «Tareas
 - **No se dejan libres** las tareas con fecha dura que bloquean otras cosas (por ejemplo, la landing y la URL de privacidad que pide Google Play): llevan dueño y fecha desde la planeación.
 
 ## Quién revisa a quién (revisión de pares)
+> **Actualización 2026-11-11:** el comentario de pares pasó de obligatorio a **opcional**; la revisión obligatoria es la del Tech Lead, que no espera comentarios de pares (seguridad, infraestructura, CI, scripts y Terraform conservan uno). Se mantiene el texto original de abajo como historia. Ver `docs/FLUJO_EQUIPO.md` §3.
+
 Todo PR necesita al menos un comentario de revisión de otra persona **antes** de la revisión final del Tech Lead. El revisor de pares comenta qué revisó y qué falta; **no aprueba ni fusiona**.
 
 | PR de… | Revisor de pares |

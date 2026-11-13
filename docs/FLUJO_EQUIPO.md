@@ -17,7 +17,7 @@ Guía corta para empezar. Detalle del método: [`docs/SDD_GUIA.md`](SDD_GUIA.md)
 | 3 | Autor | Commit de la spec y **PR en *draft*** hacia `sprint-XX` (título `KNOCK-N · <ID> <título>`, plantilla completa) | PR en draft |
 | 4 | **Revisor (Tech Lead o su suplente)** | Lee la spec en el PR y comenta. Cuando está bien, **edita a mano las líneas de aprobación** (Estado: Aprobada, casillas marcadas, nombre y fecha) y sube ese commit a la misma rama | Spec Aprobada |
 | 5 | Autor + agente | En la **misma rama** implementa con el agente constructor, con pruebas y evidencia real. Sin spec aprobada el guardián bloquea el commit de código | Código y pruebas |
-| 6 | Autor | Con el CI en verde y la evidencia, marca el PR como *ready*. Otra persona lo revisa y deja su comentario (**obligatorio**, ver «Quién revisa a quién» abajo); **la aprobación final y el merge los hace el Tech Lead** con «Rebase and merge»; nadie más fusiona. Se exige el check `gate` y, en zonas sensibles, el Code Owner. Después la spec pasa a Firmada | Merge |
+| 6 | Autor | Con el CI en verde y la evidencia, marca el PR como *ready*. El Tech Lead lo revisa (**obligatorio**, con el reporte de la pre-revisión del agente) y, si alguien tiene tiempo, otra persona deja su comentario (opcional; ver «Quién revisa a quién» abajo); **la aprobación final y el merge los hace el Tech Lead**, sin esperar comentarios de pares, con «Rebase and merge»; nadie más fusiona. Se exige el check `gate` y, en zonas sensibles, el Code Owner. Después la spec pasa a Firmada | Merge |
 
 Reglas que no cambian:
 - **El agente nunca aprueba ni firma una spec**, y el autor tampoco aprueba la suya: lo hace el revisor.
@@ -82,7 +82,7 @@ No cambies reglas, umbrales ni workflows para que pase el CI. Si un comentario c
 - **Dudas de la ficha o del alcance:** a la sección 8 de la spec y al PR; no decidas solo.
 
 ### Quién revisa a quién (revisión de pares)
-Todo PR necesita al menos un comentario de revisión de otra persona **antes** de que el Tech Lead haga la revisión final, apruebe y fusione. El revisor de pares comenta (qué revisó, qué falta); no aprueba ni fusiona.
+La revisión obligatoria de todo PR es la del Tech Lead (ver la regla vigente más abajo). El comentario de otro integrante es opcional y no bloquea el merge; quien lo deja comenta qué revisó y qué falta, no aprueba ni fusiona.
 
 | PR de… | Revisor de pares |
 |---|---|
@@ -94,7 +94,7 @@ Todo PR necesita al menos un comentario de revisión de otra persona **antes** d
 
 **Excepción para documentación (2026-10-24, propuesta pendiente de la aprobación de 2 de los 4):** un PR que cambie **solo documentación** (specs, ADR, `Memoria.md`, evidencia) necesita la revisión final del Tech Lead y el reporte de la pre-revisión automática (`ai-review.yml`); el comentario de otro integrante es opcional. Todo PR que cambie código, workflows, scripts, infraestructura o seguridad sigue necesitando al menos un comentario de otro integrante, y la pre-revisión automática nunca lo sustituye. Si la pre-revisión no corrió o falló, se aplica la regla general. Porqué: la espera del par humano en cambios de bajo riesgo retrasaba los sprints; el riesgo se limita a documentación y se cubre con la revisión del Tech Lead más un revisor automático independiente.
 
-**Regla vigente desde 2026-11-04.** Cada PR necesita **una** revisión de otra persona, obligatoria; una segunda revisión es opcional y queda a criterio de quien abre el PR. Los PR del Tech Lead los puede aprobar él mismo, y su revisión es opcional cuando el cambio es urgente o no hay nadie disponible: en ese caso anota el motivo en el PR. Esto sustituye a la excepción solo para documentación de arriba. Un agente sigue sin aprobar ni fusionar nada.
+**Regla vigente desde 2026-11-11.** La revisión obligatoria de cada PR es la del Tech Lead, que es «otra persona» respecto de quien lo escribió, con el reporte de la pre-revisión del agente como apoyo. Revisar el PR de otro integrante es **opcional**: quien tenga tiempo deja su comentario, pero el Tech Lead no espera comentarios de pares: cuando está disponible revisa, y fusiona o deja sus comentarios. Los cambios de seguridad, infraestructura, CI, scripts y Terraform conservan además un comentario de otra persona con contexto, salvo que sea urgente o no haya nadie disponible (se anota el motivo en el PR). Los PR del Tech Lead los puede aprobar él mismo, con el mismo apoyo del agente, y pide a otra persona la revisión solo en esas zonas sensibles. Un agente sigue sin aprobar ni fusionar nada. Esto sustituye a la regla del 2026-11-04 (una revisión de otra persona, obligatoria; conservada en la Memoria) y a la excepción solo para documentación de arriba.
 
 La tabla rota cuando el equipo lo decida (retrospectiva); si el revisor asignado no puede, el autor pide a otra persona y lo anota en el PR. Detalle y motivos en [ADR-005](decisiones/ADR-005-roles-carga-y-revision.md).
 
