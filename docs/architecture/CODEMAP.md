@@ -1,6 +1,6 @@
 # Mapa de código
 
-> Generado por `scripts/codemap.py` el 2026-11-13T19:22:10Z. No editar a mano.
+> Generado por `scripts/codemap.py` el 2026-11-13T19:41:58Z. No editar a mano.
 > **Antes de crear una clase, método o archivo, busca aquí o corre `python scripts/codemap.py --query "<qué necesitas>"`.**
 
 ## Resumen
@@ -14,7 +14,7 @@
 | `Knock.Market.Api` | -, common, hosting | 26 | 56 | 70 |
 | `Knock.Messaging.Api` | -, hosting | 14 | 37 | 45 |
 | `Media` | -, data, domain, dtos, validators | 7 | 13 | 19 |
-| `Requests` | -, data, domain, services, validators | 9 | 21 | 15 |
+| `Requests` | -, data, domain, services, validators | 10 | 26 | 19 |
 | `Sesiones` | -, controllers, data, domain, dtos, services, validators | 25 | 46 | 53 |
 | `Usuarios` | -, controllers, data, domain, dtos, services | 9 | 19 | 23 |
 
@@ -464,7 +464,9 @@
 **data**
 
 - `src/Knock.Market.Api/Modules/Requests/Data/QuoteReaders.cs` — class `MongoTechnicianDirectory`, class `MongoQuoteRequestReader`
-  - `FindBySubAsync()`:16, `FindAsync()`:42
+  - `FindBySubAsync()`:16, `ExistsAsync()`:39, `FindAsync()`:49
+- `src/Knock.Market.Api/Modules/Requests/Data/QuoteStore.cs` — class `QuoteStore`
+  - `SaveAsync()`:20, `SaveAsync()`:23
 
 **domain**
 
@@ -477,8 +479,8 @@
 
 **services**
 
-- `src/Knock.Market.Api/Modules/Requests/Services/QuoteService.cs` — record `Technician`, record `QuoteRequestSnapshot`, interface `ITechnicianDirectory`, interface `IQuoteRequestReader`, enum `QuoteCheckResult`, class `QuoteService`
-  - `QuoteService()`:25, `SendAsync()`:27
+- `src/Knock.Market.Api/Modules/Requests/Services/QuoteService.cs` — record `Technician`, record `QuoteRequestSnapshot`, interface `ITechnicianDirectory`, interface `IQuoteRequestReader`, enum `QuoteCheckResult`, interface `IQuoteWriter`, enum `NoteModerationResult`, interface `INoteModerator`, class `UnavailableNoteModerator`, class `QuoteService`
+  - `ModerateAsync()`:39, `QuoteService()`:42, `SendAsync()`:44
 - `src/Knock.Market.Api/Modules/Requests/Services/RequestsApi.cs` — class `RequestsApi`
 
 **validators**

@@ -15,7 +15,9 @@ internal sealed class MongoTechnicianDirectory(
 {
     public async Task<Technician?> FindBySubAsync(string sub, CancellationToken cancellationToken)
     {
-        var filter = Builders<BsonDocument>.Filter.Eq("usuarioId", sub);
+        var filter = Builders<BsonDocument>.Filter.Eq("usuarioId", sub)
+            & Builders<BsonDocument>.Filter.Eq("estado", "activo")
+            & Builders<BsonDocument>.Filter.Eq("oculto", false);
         var projection = Builders<BsonDocument>.Projection.Include("usuarioId").Include("estado").Include("oculto")
             .Include("oficios").Include("coloniaBaseId").Include("ubicacionBase").Include("radioAtencionKm");
         var doc = await database.GetCollection<BsonDocument>("tecnicos")
@@ -31,8 +33,13 @@ internal sealed class MongoTechnicianDirectory(
             trades.IsBsonArray ? trades.AsBsonArray.Where(x => x.IsString).Select(x => x.AsString).ToArray() : [],
             doc.GetValue("coloniaBaseId", BsonNull.Value).ToString(),
             validPoint ? coordinates.AsBsonArray[1].ToDouble() : null,
-            validPoint ? coordinates.AsBsonArray[0].ToDouble() : null, radius.IsInt32 ? radius.AsInt32 : 0);
+            validPoint ? coordinates.AsBsonArray[0].ToDouble() : null, radius.IsInt32 ? radius.AsInt32 : 0, doc["_id"].ToString()!);
     }
+
+    public async Task<bool> ExistsAsync(string sub, CancellationToken cancellationToken) =>
+        await database.GetCollection<BsonDocument>("tecnicos")
+            .Find(Builders<BsonDocument>.Filter.Eq("usuarioId", sub), new FindOptions { MaxTime = options.Value.QueryMaxTime })
+            .Project(Builders<BsonDocument>.Projection.Include("_id")).FirstOrDefaultAsync(cancellationToken) is not null;
 }
 
 internal sealed class MongoQuoteRequestReader(
