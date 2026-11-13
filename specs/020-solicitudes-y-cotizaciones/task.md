@@ -7,8 +7,8 @@
 |---|---|---|---|---|---|---|
 | T-01 | Traer o reutilizar el módulo de archivos privados (`IMediaApi`: confirmar dueño, `uso`, `listo` y emitir enlace de lectura de 5 min) en Mercado | R-04 · CA-18 | — (bloquea T-05) | T-02, T-03 | Alexis (dueño de la spec 013) | pendiente |
 | T-02 | Crear `MarketApiFactory` con `Testcontainers` (documentdb-local, Redis, Azurite) para las specs 020 a 023 | R-01 a R-22 (infraestructura de prueba) | — (bloquea T-11) | T-01, T-03 | Guillermo | pendiente |
-| T-03 | Escribir el script de `db/` con `solicitudes`, `cotizaciones` e índices, y su prueba de base de datos | §6 · R-07, R-17 | — | T-01, T-02 | Alexis | pendiente |
-| T-04 | Dominio: estados de la solicitud y de la cotización, `venceEn`, `CotizacionTopeCalculator` con sus pruebas unitarias y de mutación | R-01, R-13, R-14, R-16 · CA-11 | T-03 | T-05, T-08 | Alexis | pendiente |
+| T-03 | Escribir el script de `db/` con `solicitudes`, `cotizaciones` e índices, y su prueba de base de datos | §6 · R-07, R-17 | — | T-01, T-02 | Alexis | hecha (`db/020-requests-solicitudes-cotizaciones.js`) |
+| T-04 | Dominio: estados de la solicitud y de la cotización, `venceEn`, `CotizacionTopeCalculator` con sus pruebas unitarias y de mutación | R-01, R-13, R-14, R-16 · CA-11 | T-03 | T-05, T-08 | Alexis | parcial: unitarias; mutación sin resultado y transiciones no especificadas pendientes de aclaración |
 | T-05 | Validadores y servicio de creación de solicitud: catálogo con caché, fotos con `IMediaApi`, moderación, dirección cifrada | R-02 a R-07, R-21 · CA-01, CA-02, CA-04, CA-05, CA-15, CA-18 | T-01, T-03 | T-08 | Guillermo | pendiente |
 | T-06 | Lectura de detalle por rol (cliente, técnico del oficio, técnico que cotizó) y listado por cursor | R-08, R-09, R-18, R-22 · CA-12 a CA-14, CA-21 | T-05 | T-09 | Guillermo | pendiente |
 | T-07 | `SolicitudesController` con `Location`, `Cache-Control`, 413 y ProblemDetails con `code` | R-01, R-19, R-21 · CA-16, CA-22 | T-05, T-06 | T-10 | Guillermo | pendiente |
