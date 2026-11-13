@@ -1,6 +1,6 @@
 # Mapa de código
 
-> Generado por `scripts/codemap.py` el 2026-11-13T18:45:04Z. No editar a mano.
+> Generado por `scripts/codemap.py` el 2026-11-13T18:52:27Z. No editar a mano.
 > **Antes de crear una clase, método o archivo, busca aquí o corre `python scripts/codemap.py --query "<qué necesitas>"`.**
 
 ## Resumen
@@ -13,7 +13,7 @@
 | `Knock.Identity.Api` | -, common, hosting | 28 | 58 | 72 |
 | `Knock.Market.Api` | -, common, hosting | 26 | 55 | 69 |
 | `Knock.Messaging.Api` | -, hosting | 14 | 37 | 45 |
-| `Requests` | -, controllers, domain, dtos, services | 12 | 29 | 16 |
+| `Requests` | -, controllers, domain, dtos, services | 16 | 38 | 19 |
 | `Sesiones` | -, controllers, data, domain, dtos, services, validators | 25 | 46 | 53 |
 | `Usuarios` | -, controllers, data, domain, dtos, services | 9 | 19 | 23 |
 
@@ -432,10 +432,16 @@
 
 **controllers**
 
+- `src/Knock.Market.Api/Modules/Requests/Controllers/V1/ArrivalController.cs` — class `ArrivalController`
+  - `Arrive()`:33
 - `src/Knock.Market.Api/Modules/Requests/Controllers/V1/QuoteComparisonController.cs` — class `QuoteComparisonController`
   - `Compare()`:29, `Choose()`:43
 - `src/Knock.Market.Api/Modules/Requests/Controllers/V1/SolicitudesController.cs` — class `SolicitudesController`
   - `Create()`:30, `List()`:40, `Get()`:50
+- `src/Knock.Market.Api/Modules/Requests/Controllers/V1/TrustNoticeController.cs` — class `TrustNoticeController`
+  - `Prepare()`:26
+- `src/Knock.Market.Api/Modules/Requests/Controllers/V1/VisitasController.cs` — class `VisitasController`
+  - `Get()`:25
 
 **domain**
 
@@ -452,6 +458,7 @@
 - `src/Knock.Market.Api/Modules/Requests/Dtos/ListRequestsQuery.cs` — class `ListRequestsQuery`
 - `src/Knock.Market.Api/Modules/Requests/Dtos/QuoteComparisonDtos.cs` — record `QuoteTechnician`, record `QuoteComparisonItem`, record `QuoteComparison`, class `QuoteComparisonQuery`, record `ChooseQuoteBody`, record `ChosenTechnician`, record `AppointmentPlace`, record `Appointment`
 - `src/Knock.Market.Api/Modules/Requests/Dtos/RequestResponses.cs` — record `RequestTrade`, record `RequestNeighborhood`, record `RequestPhoto`, record `RequestResponse`, record `RequestSummary`, record `RequestPage`
+- `src/Knock.Market.Api/Modules/Requests/Dtos/VisitDtos.cs` — record `VisitTechnician`, record `VisitCustomer`, record `VisitPlace`, record `VisitResponse`, record `ArrivalBody`, record `TrustNotice`
 
 **services**
 
