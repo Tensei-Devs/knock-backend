@@ -5,7 +5,7 @@
 
 | Tarea | Qué se hace | Cubre | Depende de | Paralelo con | Responsable sugerido | Estado |
 |---|---|---|---|---|---|---|
-| T-01 | Script de `db/` con `listas_espera` e índices; prueba de base de datos sin campos de ubicación | §6 · R-08 | — | T-02, T-03 | Alexis | pendiente |
+| T-01 | Script de `db/` con `listas_espera` e índices; prueba de base de datos sin campos de ubicación | §6 · R-08 | — | T-02, T-03 | Alexis | parcial: falta comprobar un documento creado por la API |
 | T-02 | Consulta por código postal: validador tipado, regla de cobertura, proyección, caché positiva y negativa, `ETag` y 304 | R-01 a R-04, R-10, R-15, R-16 · CA-01 a CA-04, CA-13 a CA-15 | — | T-01, T-03 | Alexis | pendiente |
 | T-03 | Lista de espera: validador de `cp` y `municipio`, `upsert`, `sub` del token, límite de 5 por hora y 413 | R-05 a R-09, R-11, R-17 · CA-05 a CA-11, CA-16 | T-01 | T-02 | Alexis (o Guillermo si queda libre; tarea independiente) | pendiente |
 | T-04 | Pruebas de integración, seguridad negativa y registros sin coordenadas ni código postal ligado a la persona | R-12 a R-14 · CA-01 a CA-16 | T-02, T-03, `MarketApiFactory` (spec 020 T-02) | T-05 | Alexis | pendiente |
