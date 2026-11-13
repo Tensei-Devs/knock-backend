@@ -23,7 +23,8 @@ namespace Knock.UnitTest.Hosting;
 /// Spec 011 en Identity, Messaging y el Gateway, con el mismo cableado que su <c>Program.cs</c> (<c>AddKnockLogging</c> y
 /// <c>AddKnockObservability</c>) y su <c>appsettings.json</c> del repositorio. Se mira lo que sale hacia OpenTelemetry (Application
 /// Insights) y lo que Serilog escribe en la consola, ya pasados por la redacción. El <c>correlationId</c> del contrato no se prueba aquí:
-/// llega con <c>Knock.Contracts</c> (PR #3). CA-03 (alerta) se verifica a mano en el PR, con la infraestructura de KNOCK-200.
+/// llega con <c>Knock.Contracts</c> (PR #3). CA-03 (alerta) se prueba estáticamente en <see cref="Infrastructure.Spec011AlertRuleTests"/>;
+/// el disparo real se comprueba tras desplegar.
 /// Las pruebas de esta clase corren en serie (una colección propia) porque la de consola cambia <see cref="Console.Out"/>; solo se revisa
 /// la línea del evento de la prueba, así que lo que escriban otras pruebas en paralelo no la afecta.
 /// </summary>
@@ -117,6 +118,12 @@ public sealed class Spec011ObservabilityTests
             ("Authorization: Bearer abc.def-ghi", "abc.def-ghi"),
             ("?token=t-ficticio&code=777", "t-ficticio"),
             ("{\"refreshToken\":\"r-ficticio\"}", "r-ficticio"),
+            ("?id_token=i-secret-1&x=1", "i-secret-1"),
+            ("access_token: a-secret-2", "a-secret-2"),
+            ("maps 19.4326,-99.1332", "19.4326"),
+            ("contacto persona.ficticia@ejemplo.com fin", "persona.ficticia@ejemplo.com"),
+            ("email=persona.ficticia@ejemplo.com", "persona.ficticia@ejemplo.com"),
+            ("correo: persona.ficticia@ejemplo.com", "persona.ficticia@ejemplo.com"),
             ("cerca de 19.4326, -99.1332", "19.4326"),
             ("ruta /at/19.4326/-99.1332", "99.1332"),
             ("lat=19.43&lon=-99.13", "19.43"),
@@ -135,7 +142,7 @@ public sealed class Spec011ObservabilityTests
 
     [Theory]
     [MemberData(nameof(Services))]
-    public async Task Log_WrittenThroughServiceWiring_HasTimestampLevelServiceAndStructuredMessage_CA_011_01(string service)
+    public async Task Log_WrittenThroughServiceWiring_HasTimestampLevelServiceAndStructuredMessage_R_011_03(string service)
     {
         var records = await CaptureAsync(service, factory => _orderProcessed(factory.CreateLogger<Spec011ObservabilityTests>(), 3, null));
 
@@ -153,7 +160,7 @@ public sealed class Spec011ObservabilityTests
 
     [Theory]
     [MemberData(nameof(Services))]
-    public async Task Log_FrameworkInformation_IsFilteredByConfiguredLevel_CA_011_01(string service)
+    public async Task Log_FrameworkInformation_IsFilteredByConfiguredLevel_R_011_03(string service)
     {
         // appsettings.json: Serilog:MinimumLevel:Override:Microsoft.AspNetCore = Warning (evita llenar la cuota con el detalle del framework).
         var records = await CaptureAsync(service, factory =>
@@ -221,6 +228,8 @@ public sealed class Spec011ObservabilityTests
         redact("phone", "5555550101").Should().Be(placeholder);
         redact("curp", "XEXX010101HNEXXXA4").Should().Be(placeholder);
         redact("refresh_token", "r-ficticio").Should().Be(placeholder);
+        redact("email", "persona.ficticia@ejemplo.com").Should().Be(placeholder);
+        redact("correo", "persona.ficticia@ejemplo.com").Should().Be(placeholder);
         redact("authorization", "Bearer x").Should().Be(placeholder);
         string[] notes = ["+52 55 5555 0101", "ok"];
         redact("notes", notes).Should().BeEquivalentTo(new[] { placeholder, "ok" });
