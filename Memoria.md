@@ -480,3 +480,8 @@
 - **Decisión (Tech Lead):** las fotos se aceptan hasta 5 MB, 40 MP y 8 000 px por lado, en JPEG, PNG o WebP. Reemplaza «JPEG/PNG, 1 byte a 8 MB» de la entrada de OI-1 y los 12 000 px / 24 MP de TT-API-05 legacy. Si el moderador no responde, 503 reintentable (se implementa en #63, con la réplica en 1 Gi y `MaxConcurrentProcessing=1`).
 - **Alcance del cambio:** `MediaRules`, el mensaje `MediaRejection.InvalidFile`, la nota de `specs/013/task.md`, HU-002 (CA3 y CA4), TT-API-05 y `docs/referencia/FUNCIONES_Y_FLUJOS.md`. No se tocan `legacy/`, `specs/_legacy/` ni `docs/migracion/`, que son historia.
 - **Pendiente:** `docs/descripcion-del-proyecto.md` (paso 2 de pedir una cotización) sigue diciendo «JPG o PNG, de hasta 8 MB»; lo decide el Tech Lead porque de ese documento salen la constitución y las specs.
+
+## 2026-11-13 — BUG-002, BUG-003 y BUG-004 implementadas; H-01, H-02 y H-03 cerradas (KNOCK-239, KNOCK-240, KNOCK-241)
+- **Estado:** el índice de specs marca las tres como Implementadas; los planes y las tareas dicen qué PR las hizo (#85, #78 y #82, con #86 de Terraform). H-01, H-02 y H-03 pasan a cerradas en `docs/modelo-de-amenazas.md`.
+- **Evidencia:** el líder verificó el gateway desplegado con `GET` a `/health`, `/sitemap.xml` y `/api/v1/me/x`: HSTS `max-age=31536000; includeSubDomains` y sin `Server` ni `X-Powered-By`. Mensajería corre (revisión `0000004`, Healthy) con la llave del JWT y Redis; su ingreso es interno, así que el «401 sin token» se cita con las pruebas del CI.
+- **A evitar:** cerrar un hallazgo con solo la prueba local: el `TestServer` no emite `Server` ni HSTS a `localhost`; la evidencia que cierra es la del despliegue.
