@@ -41,6 +41,11 @@
 - 14 specs de la base (arquitectura, estructura del repositorio, infraestructura, rendimiento, observabilidad, versionamiento y seguridad) redactadas en **Borrador**; sus tareas **no se han ejecutado**.
 - Sin código de producto todavía.
 
+## 2026-11-12 — KNOCK-239 (BUG-002): el gateway fija HSTS sin depender del esquema
+- **Decisión:** `Strict-Transport-Security` se fija en `SecurityHeadersMiddleware` del gateway fuera de Development, con `Security:Hsts` propio (365 días, `includeSubDomains`, nunca `preload`; `MaxAge` ≤ 0 impide arrancar) y se quita `UseHsts()`.
+- **Porqué:** `UseHsts` solo emite con `Request.IsHttps` y no a `localhost`; detrás del ingreso la petición llega como HTTP, así que el encabezado no salía nunca. Fijarlo siempre es inofensivo por HTTP (los navegadores lo ignoran) y no confía en `X-Forwarded-Proto`. **La causa exacta en Azure no se comprobó** (sin acceso al ingreso); el arreglo no depende de ella.
+- **Verificación:** las pruebas fallan sin el arreglo (3 de 4; la de Development es una guarda y pasa en ambos casos). Falta el `curl -D` tras el despliegue (TC-BUG-002-05), que corre el líder; el humo del CI (`localhost`) no verá HSTS a propósito.
+- **A evitar:** probar HSTS con `TestServer` sin simular el ingreso (el host se llama `localhost`, donde `UseHsts` nunca emite); dar por cerrado H-01 sin el `curl` en vivo.
 ## 2026-11-11 — KNOCK-241 (BUG-004): Mensajería valida JWT, pone encabezados y limita por IP
 - **Decisión:** Mensajería copia de Mercado y del gateway el JWT propio, los encabezados de seguridad, el límite por IP y el cliente de Redis (EXC-021, temporal, vence 2026-12-15 y se paga con KNOCK-251). Lo que no declare `[AllowAnonymous]` exige sesión (política por defecto; `/health` y `/health/ready` son anónimos). La sesión cancelada se lee de `sesion-cancelada:{sid}` en Redis y, si Redis no responde, responde 503 con `Retry-After` en vez de dejar pasar.
 - **Porqué:** el servicio solo estaba protegido por el ingreso interno; la spec 026 (KNOCK-62) exige que valide el token por su cuenta antes de exponer el hub. Mercado no comprueba sesiones canceladas (solo el gateway), así que este control se construyó para Mensajería, con la llave de `Knock.Contracts`.
