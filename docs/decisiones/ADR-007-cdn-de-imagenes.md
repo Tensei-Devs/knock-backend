@@ -1,6 +1,6 @@
 # ADR-007 — CDN de las imágenes públicas
 
-> **Estado:** propuesta, pendiente de aprobación del Tech Lead (consulta de documentación y tarifas: 2026-11-06). El Tech Lead indicó la opción D (Blob público sin CDN de pago); el ADR sigue como propuesta hasta que él lo apruebe al fusionar.
+> **Estado:** Aprobada
 > **Complementa:** la sección 10 de `docs/DECISION_TECNICA.md`, el [ADR-006](ADR-006-costos-y-ventana-de-evaluacion.md) y la spec 013.
 > **Tarea:** TT-GES-10 (KNOCK-182) · Impacto de implementación: TT-API-10, TT-AZ-02, TT-CD-02.
 
@@ -55,3 +55,7 @@ Hechos de la documentación (consulta del 2026-11-06):
 - Los dominios permitidos de `fotoUrl` (spec 017, R-05) son la dirección del almacenamiento público; si en el futuro se pone una CDN delante, se agrega su dominio.
 - El punto 15c queda parcial (sección «Cumplimiento del punto 15c»).
 - Si cambia alguna tarifa citada, se actualiza este ADR.
+
+## Aprobación
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [x] Sin conflicto con la constitución

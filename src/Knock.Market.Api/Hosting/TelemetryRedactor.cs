@@ -10,7 +10,7 @@ namespace Knock.Market.Api.Hosting;
 /// <summary>
 /// Segunda barrera de privacidad de la telemetría (TT-OBS-01 §6): la primera es no capturar cuerpos, encabezados ni la query.
 /// Las claves conocidas se redactan siempre; en texto libre, celulares con prefijo internacional, JWT, <c>Bearer</c>, CURP (sin importar
-/// mayúsculas), <c>clave=valor</c> de esas claves, <c>Cookie</c>/<c>Set-Cookie</c> completos y pares de coordenadas (con separador).
+/// mayúsculas), correos, <c>clave=valor</c> de esas claves, <c>Cookie</c>/<c>Set-Cookie</c> completos y pares de coordenadas (con separador).
 /// Un número suelto, como el <c>12.3456 ms</c> del log de petición, no se toca (decisión P6). El celular nacional sin <c>+</c> no se
 /// busca: riesgo aceptado (HU-001 solo maneja <c>+52</c>; ver <c>docs/OBSERVABILIDAD.md</c>). Las expresiones no tienen
 /// cuantificadores anidados y empiezan en un límite de palabra (sin retroceso catastrófico ni reintentos a mitad de una corrida);
@@ -30,7 +30,7 @@ internal static partial class TelemetryRedactor
     private static readonly FrozenSet<string> _sensitiveKeys = new[]
     {
         "lat", "lon", "phone", "celular", "curp", "token", "idToken", "id_token", "accessToken", "access_token", "refreshToken",
-        "refresh_token", "code", "sig", "authorization", "cookie", "set-cookie", "password", "secret",
+        "refresh_token", "code", "sig", "authorization", "cookie", "set-cookie", "password", "secret", "email", "correo",
     }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
     /// <summary><see langword="true"/> si el nombre exacto de la clave (sin importar mayúsculas) es de las que siempre se redactan.</summary>
@@ -49,6 +49,7 @@ internal static partial class TelemetryRedactor
             var result = value.Contains("eyJ", StringComparison.Ordinal) ? Jwt().Replace(value, Placeholder) : value;
             result = result.Contains("bearer", StringComparison.OrdinalIgnoreCase) ? Bearer().Replace(result, Placeholder) : result;
             result = result.AsSpan().ContainsAny('=', ':') ? KeyValue().Replace(result, "${key}${separator}" + Placeholder) : result;
+            result = result.Contains('@', StringComparison.Ordinal) ? Email().Replace(result, Placeholder) : result;
             result = result.Contains("cookie", StringComparison.OrdinalIgnoreCase) ? Cookie().Replace(result, "${key}${separator}" + Placeholder) : result;
             result = result.AsSpan().ContainsAny('+', '%') ? Phone().Replace(result, Placeholder) : result;
             result = result.Length >= 18 ? Curp().Replace(result, Placeholder) : result;
@@ -131,7 +132,7 @@ internal static partial class TelemetryRedactor
 
     /// <summary><c>clave=valor</c> o <c>"clave":"valor"</c> de una clave conocida; el nombre debe ser exacto (<c>StatusCode</c> no es <c>code</c>).</summary>
     [GeneratedRegex(
-        @"\b(?<key>lat|lon|phone|celular|curp|token|idToken|id_token|accessToken|access_token|refreshToken|refresh_token|code|sig|authorization|password|secret)(?<separator>""?\s*[=:]\s*""?)[^\s&;,""]+",
+        @"\b(?<key>lat|lon|phone|celular|curp|token|idToken|id_token|accessToken|access_token|refreshToken|refresh_token|code|sig|authorization|password|secret|email|correo)(?<separator>""?\s*[=:]\s*""?)[^\s&;,""]+",
         _options | RegexOptions.IgnoreCase,
         _timeoutMilliseconds)]
     private static partial Regex KeyValue();
@@ -139,6 +140,10 @@ internal static partial class TelemetryRedactor
     /// <summary><c>Cookie</c> o <c>Set-Cookie</c> con el valor completo hasta el fin de línea o la comilla: lleva varios pares separados por <c>;</c>.</summary>
     [GeneratedRegex(@"\b(?<key>set-cookie|cookie)(?<separator>""?\s*[=:]\s*""?)[^\r\n""]+", _options | RegexOptions.IgnoreCase, _timeoutMilliseconds)]
     private static partial Regex Cookie();
+
+    /// <summary>Correo electrónico en texto libre: parte local, <c>@</c> y dominio con punto y TLD.</summary>
+    [GeneratedRegex(@"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b", _options, _timeoutMilliseconds)]
+    private static partial Regex Email();
 
     /// <summary>Celular con prefijo internacional (<c>+</c> o <c>%2B</c>) y 10 a 14 dígitos, con o sin espacios, puntos o guiones.</summary>
     [GeneratedRegex(@"(?:\+|%2[Bb])[0-9](?:[\s.-]?[0-9]){9,13}", _options, _timeoutMilliseconds)]

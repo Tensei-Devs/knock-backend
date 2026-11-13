@@ -12,6 +12,7 @@ internal static class ModuleCatalog
     [
         "Catalog",
         "Media",
+        "Requests",
     ];
 
     public static Assembly ApiAssembly => typeof(CatalogModuleExtensions).Assembly;
