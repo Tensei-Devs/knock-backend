@@ -11,6 +11,41 @@ namespace Knock.UnitTest.Media;
 /// <summary>OI-2: ImageProcessor cleans EXIF GPS, reduces deterministically and rejects fake signatures.</summary>
 public sealed class ImageProcessorTests
 {
+    [Theory]
+    [InlineData("perfil", 512, 384)]
+    [InlineData("solicitud", 1600, 1200)]
+    [InlineData("trabajo", 1600, 1200)]
+    public async Task Process_ReducesByUsage(string usage, int width, int height)
+    {
+        using var processor = new ImageProcessor(Options.Create(new MediaOptions()));
+        var result = await processor.ProcessAsync(new ArraySegment<byte>(Jpeg(2000, 1500)), MediaRules.ParseUsage(usage)!.Value, CancellationToken.None);
+        result.Status.Should().Be(MediaOutcomeStatus.Success);
+        using var codec = SKCodec.Create(new MemoryStream(result.Value!.Reduced));
+        codec.Info.Width.Should().Be(width);
+        codec.Info.Height.Should().Be(height);
+    }
+    [Theory]
+    [InlineData(SKEncodedImageFormat.Png)]
+    [InlineData(SKEncodedImageFormat.Webp)]
+    public async Task Process_TransparentImage_ProducesWhiteJpegWithoutMetadata_CA_013_01(SKEncodedImageFormat format)
+    {
+        using var processor = CreateProcessor();
+        using var bitmap = new SKBitmap(new SKImageInfo(32, 32, SKColorType.Rgba8888, SKAlphaType.Premul));
+        bitmap.Erase(SKColors.Transparent);
+        using var encoded = bitmap.Encode(format, 100);
+        var result = await processor.ProcessAsync(new ArraySegment<byte>(encoded.ToArray()), CancellationToken.None);
+        result.Status.Should().Be(MediaOutcomeStatus.Success);
+        foreach (var bytes in new[] { result.Value!.Original, result.Value.Reduced })
+        {
+            using var codec = SKCodec.Create(new MemoryStream(bytes));
+            codec.EncodedFormat.Should().Be(SKEncodedImageFormat.Jpeg);
+            HasApp1Segment(bytes).Should().BeFalse();
+            using var decoded = SKBitmap.Decode(bytes);
+            decoded.GetPixel(0, 0).Red.Should().BeGreaterThan((byte)245);
+            decoded.GetPixel(0, 0).Green.Should().BeGreaterThan((byte)245);
+            decoded.GetPixel(0, 0).Blue.Should().BeGreaterThan((byte)245);
+        }
+    }
     [Fact]
     public async Task Process_StripsGpsCoordinates_CA_013_01()
     {

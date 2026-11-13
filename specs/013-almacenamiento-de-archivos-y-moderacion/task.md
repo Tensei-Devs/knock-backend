@@ -6,8 +6,8 @@
 |---|---|---|---|
 | T-01 | Crear las dos cuentas de almacenamiento y sus contenedores en Terraform, sin CDN | R-01, R-04 | pendiente |
 | T-02 | Implementar el servicio de enlaces firmados | R-02 · CA-02 | pendiente |
-| T-03 | Implementar la validación (5 MB, JPEG/PNG/WebP), la limpieza de metadatos y la reducción de tamaño | R-03 · CA-01, CA-06 | parcial: OI-1 valida 5 MB y JPEG/PNG/WebP; OI-2 hace la limpieza y la reducción (`ImageProcessor` con SkiaSharp: firma y dimensiones antes de decodificar, orientación EXIF aplicada a píxeles y re-codificado sin metadatos) |
-| T-04 | Implementar el cliente de moderación compartido con falla cerrada y 503 reintentable | R-05, R-06, R-07 · CA-04, CA-05 | parcial: contrato `IContentModerator` en OI-1 y flujo con moderador falso en OI-2; falta el cliente real de Azure AI Content Safety (OI-3) |
+| T-03 | Implementar la validación (5 MB, JPEG/PNG/WebP), la limpieza de metadatos y la reducción de tamaño | R-03 · CA-01, CA-06 | parcial: OI-2 procesa JPEG/PNG/WebP a JPEG sin metadatos, con fondo blanco y reducción por uso; falta el flujo HTTP de OI-3 |
+| T-04 | Implementar el cliente de moderación compartido con falla cerrada y 503 reintentable | R-05, R-06, R-07 · CA-04, CA-05 | parcial: OI-2 conserva la subida pendiente ante moderación no disponible o tiempo agotado; faltan el cliente real y la respuesta HTTP 503 con Retry-After en OI-3 |
 | T-05 | Escribir las pruebas de seguridad negativa (incluida la petición anónima a la cuenta privada) | R-04 · CA-03 | parcial: OI-2 cubre archivo malicioso con firma falsa y falla cerrada de moderación; falta la petición anónima a la cuenta privada (CA-03) |
 | T-06 | Crear el índice TTL de `subidas_imagen` (vence solo lo pendiente o rechazado) | R-08 · CA-07 | pendiente |
 
@@ -44,7 +44,7 @@ Las pruebas de OI-1 se nombran `*_OI1_NN` y no `*_CA_013_NN`, porque ninguna cub
 ## Notas de revisión (OI-2)
 - **Qué entró:** `ImageProcessor` (SkiaSharp), `MediaService` (cuarentena → procesar → moderar → contenedor final → borrar cuarentena), `IMediaBlobStore` con implementación de Azure (`AzureMediaBlobStore`) y en memoria (`InMemoryMediaBlobStore`), `IMediaFileStore` con `BlobMediaFileStore` (JSON por archivo en el contenedor de registros, temporal hasta TT-BD-06) e `InMemoryMediaFileStore`, y `IMediaApi`/`MediaApi` como frontera del módulo.
 - **Fuera de OI-2 (pasa a OI-3):** SAS de delegación, controllers/rutas, Terraform, moderación real de Azure AI Content Safety, CDN y prueba de CA-02/CA-03.
-- **Pruebas OI-2:** `ImageProcessorTests` (`..._CA_013_01` sin coordenadas tras procesar; reducción y firma falsa), `MediaServiceTests` (`_CA_013_04` rechazado y `_CA_013_05` moderación caída, con cuarentena borrada) y `tests/IntegrationTest/Media/MediaConfirmationBlobTests` con Azurite real (caso feliz y `.jpg` con firma PDF rechazado, contenedor final y cuarentena vacíos).
+- **Pruebas OI-2:** `ImageProcessorTests` cubre conversión, transparencia, metadatos y reducción por uso; `MediaServiceTests` verifica rechazo y conservación de cuarentena ante moderación caída, con reintento; `MediaConfirmationBlobTests` usa Azurite para el flujo de blobs. El 503 HTTP corresponde a OI-3 y aún no está probado.
 - **Azurite de pruebas:** `mcr.microsoft.com/azure-storage/azurite:3.37.0` fijado por el digest de la lista de manifiestos (`sha256:830430c1...`), con `--skipApiVersionCheck` porque `Azure.Storage.Blobs` 12.30 envía una `x-ms-version` que 3.37 aún no reconoce.
 - **Docker de Market:** construye con `SkiaSharp.NativeAssets.Linux.NoDependencies`; la imagen contiene `libSkiaSharp.so` para linux-x64/arm64 y no necesita paquetes del sistema adicionales.
 

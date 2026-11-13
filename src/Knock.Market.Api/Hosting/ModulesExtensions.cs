@@ -6,8 +6,8 @@ namespace Knock.Market.Api.Hosting;
 
 internal static class ModulesExtensions
 {
-    public static IServiceCollection AddKnockModules(this IServiceCollection services)
+    public static IServiceCollection AddKnockModules(this IServiceCollection services, bool isDevelopment)
     {
-        return services.AddCatalogModule().AddMediaModule().AddRequestsModule();
+        return services.AddCatalogModule().AddMediaModule(isDevelopment).AddRequestsModule();
     }
 }
