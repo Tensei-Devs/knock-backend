@@ -470,3 +470,7 @@
 - **Decisión (Tech Lead):** las fotos se aceptan hasta 5 MB, 40 MP y 8 000 px por lado, en JPEG, PNG o WebP. Reemplaza «JPEG/PNG, 1 byte a 8 MB» de la entrada de OI-1 y los 12 000 px / 24 MP de TT-API-05 legacy. Si el moderador no responde, 503 reintentable (se implementa en #63, con la réplica en 1 Gi y `MaxConcurrentProcessing=1`).
 - **Alcance del cambio:** `MediaRules`, el mensaje `MediaRejection.InvalidFile`, la nota de `specs/013/task.md`, HU-002 (CA3 y CA4), TT-API-05 y `docs/referencia/FUNCIONES_Y_FLUJOS.md`. No se tocan `legacy/`, `specs/_legacy/` ni `docs/migracion/`, que son historia.
 - **Pendiente:** `docs/descripcion-del-proyecto.md` (paso 2 de pedir una cotización) sigue diciendo «JPG o PNG, de hasta 8 MB»; lo decide el Tech Lead porque de ese documento salen la constitución y las specs.
+## 2026-11-12 — Correo de la alerta de presupuesto verificado (KNOCK-250)
+- **Resultado:** `budget-knock-dev` envió el correo de gasto previsto al 100 % (11.10 USD previstos contra 10 USD) el 2026-11-12 a las 16:40 UTC. Con eso queda cubierta la parte de presupuesto de la R-05 de la spec 011. La evidencia y la captura están en `docs/evidencia/KNOCK-250-alerta-presupuesto.md`.
+- **A evitar:** confundir este correo con la alerta de peticiones fallidas (`requests/failed`, KNOCK-206), que se verifica aparte.
+
