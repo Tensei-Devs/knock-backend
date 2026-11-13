@@ -9,7 +9,7 @@ name: ci-deploy
 # - Sin `az acr build` ni ACR Tasks: el build sale del runner (docker/build-push-action).
 # - Solo se construye el servicio que cambió en el commit (detect; Knock.Contracts afecta a todos).
 # - Sin etiqueta `latest`: la única etiqueta es el SHA completo.
-# - Después del push actualiza los Container Apps que cambiaron y corre la prueba de humo contra el
+# - Después del push actualiza los Container Apps que cambiaron y corre la prueba de humo contra
 #   los cuatro servicios (CA-03 de la spec 007; autorizado por el Tech Lead el 2026-11-10). Costo cero: solo
 #   az CLI en el runner, sin recursos ni secretos nuevos. Todo se busca dentro de RESOURCE_GROUP.
 # - Un despliegue a la vez (grupo de concurrencia fijo): dos fusiones seguidas se encolan, no corren en paralelo.
