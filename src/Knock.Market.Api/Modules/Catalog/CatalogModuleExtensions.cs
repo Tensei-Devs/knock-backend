@@ -15,6 +15,8 @@ public static class CatalogModuleExtensions
         ArgumentNullException.ThrowIfNull(services);
         services.AddKnockMongoDatabase(ModuleKey);
         services.AddSingleton<CatalogStore>();
+        services.AddSingleton<IWaitlistStore, WaitlistStore>();
+        services.AddSingleton<WaitlistService>();
         services.AddSingleton<NeighborhoodLocator>();
         services.AddSingleton<INeighborhoodLocator>(sp => sp.GetRequiredService<NeighborhoodLocator>());
         services.AddSingleton<INeighborhoodNames, NeighborhoodNames>();
