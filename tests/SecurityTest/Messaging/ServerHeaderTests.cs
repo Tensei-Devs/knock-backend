@@ -1,8 +1,5 @@
-extern alias MessagingApi;
-
 using AwesomeAssertions;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
+using Knock.SecurityTest.Support;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -16,19 +13,10 @@ namespace Knock.SecurityTest.Messaging;
 /// </summary>
 public sealed class ServerHeaderTests
 {
-    private sealed class MessagingFactory : WebApplicationFactory<MessagingApi::Program>
-    {
-        protected override void ConfigureWebHost(IWebHostBuilder builder)
-        {
-            ArgumentNullException.ThrowIfNull(builder);
-            builder.UseSetting("ConnectionStrings:KnockMongo", "mongodb://127.0.0.1:27099/?serverSelectionTimeoutMS=500");
-        }
-    }
-
     [Fact]
     public async Task Messaging_NeverSendsServer_TC_BUG_003_02()
     {
-        await using var host = new MessagingFactory();
+        await using var host = await SecurityMessagingFactory.CreateAsync();
         using var client = host.CreateClient();
 
         host.Services.GetRequiredService<IOptions<KestrelServerOptions>>().Value.AddServerHeader
