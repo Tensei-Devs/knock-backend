@@ -52,7 +52,7 @@ Cada carpeta tiene `spec.md`, `plan.md` y `task.md`. Estados: Borrador → Aprob
 | 045 | Catálogo de oficios, oficios pedidos y lista de espera (consulta interna) | Borrador | [`045-catalogos-y-lista-de-espera`](045-catalogos-y-lista-de-espera/spec.md) |
 | 046 | Técnico: perfil, horarios, disponibilidad, mapa y explorar | Borrador | [`046-tecnico-perfil-horarios-y-exploracion`](046-tecnico-perfil-horarios-y-exploracion/spec.md) |
 | 047 | Servicios y precios de cada técnico | Borrador | [`047-servicios-del-tecnico`](047-servicios-del-tecnico/spec.md) |
-| 048 | Solicitudes y cotizaciones: ampliar, archivos, referencia de mercado, cotizaciones del técnico… | Borrador | [`048-solicitudes-y-cotizaciones-complementos`](048-solicitudes-y-cotizaciones-complementos/spec.md) |
+| 048 | Solicitudes y cotizaciones: ampliar, archivos, referencia de mercado y cotizaciones del técnico | Borrador | [`048-solicitudes-y-cotizaciones-complementos`](048-solicitudes-y-cotizaciones-complementos/spec.md) |
 | 049 | Cotización final tras la visita y ajustes de precio | Borrador | [`049-cotizacion-final-y-ajustes-de-precio`](049-cotizacion-final-y-ajustes-de-precio/spec.md) |
 | 050 | Visita: agenda, reprogramación, cancelación, cliente ausente, cierre y permiso de fotos | Borrador | [`050-visita-agenda-y-cierre`](050-visita-agenda-y-cierre/spec.md) |
 | 051 | Opiniones y reputación del técnico | Borrador | [`051-opiniones-y-reputacion`](051-opiniones-y-reputacion/spec.md) |
