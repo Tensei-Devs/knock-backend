@@ -33,15 +33,15 @@ async function deliver() {
     quit(2);
   }
 
-  // 1. Archiv<= num> en orden, con load(): pasa por el evaluador de mongosh (que vuelve síncronas las llamadas del shell). Corren en el
+  // 1. Scripts numerados, en orden, con load(): pasa por el evaluador de mongosh (que vuelve síncronas las llamadas del shell). Corren en el
   //    mismo ámbito global, así que sus nombres de nivel superior (const) no deben repetirse entre scripts numerados.
-  const files = fs.readdirSync(dir).filter((name) => /^\d{3}[_-].+\.js$/.test(name)).sort();
-  if (files.length === 0) {
+  const scripts = fs.readdirSync(dir).filter((name) => /^\d{3}[_-].+\.js$/.test(name)).sort();
+  if (scripts.length === 0) {
     print(`No hay scripts numerados en ${dir}.`);
     quit(2);
   }
 
-  for (const name of files) {
+  for (const name of scripts) {
     print(`> ${name}`);
     load(`${dir}/${name}`);
   }
