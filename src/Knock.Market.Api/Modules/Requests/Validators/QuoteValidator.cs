@@ -1,6 +1,7 @@
 using System.Globalization;
 using FluentValidation;
 using Knock.Market.Api.Modules.Requests.Domain;
+using Microsoft.Extensions.Options;
 
 namespace Knock.Market.Api.Modules.Requests.Validators;
 
@@ -12,11 +13,17 @@ internal sealed record QuoteValidationInput(
 /// <summary>Validates quote fields; the service must separately moderate the note before saving.</summary>
 internal sealed class QuoteValidator : AbstractValidator<QuoteValidationInput>
 {
-    public QuoteValidator()
+    public QuoteValidator(IOptions<QuotePricingOptions> pricing)
     {
+        ArgumentNullException.ThrowIfNull(pricing);
+        var options = pricing.Value;
         RuleFor(x => x.TipoPrecio).Must(x => x is "fijo" or "rango" or "visita").WithMessage("Unknown price type.");
-        RuleFor(x => x.Precio).Must((x, value) => AmountForType(value, x.TipoPrecio is "fijo" or "visita"))
-            .WithMessage("Amount is missing, invalid, or not applicable.");
+        RuleFor(x => x.Precio).Must((x, value) => x.TipoPrecio == "visita"
+                ? AmountForType(value, true, options.VisitFeeMin, options.VisitFeeMax)
+                : AmountForType(value, x.TipoPrecio == "fijo"))
+            .WithMessage(x => x.TipoPrecio == "visita"
+                ? $"Visit fee must be a whole number between {options.VisitFeeMin} and {options.VisitFeeMax}."
+                : "Amount is missing, invalid, or not applicable.");
         RuleFor(x => x.PrecioMin).Must((x, value) => AmountForType(value, x.TipoPrecio == "rango"))
             .WithMessage("Amount is missing, invalid, or not applicable.");
         RuleFor(x => x.PrecioMax).Must((x, value) => AmountForType(value, x.TipoPrecio == "rango"))
@@ -29,8 +36,8 @@ internal sealed class QuoteValidator : AbstractValidator<QuoteValidationInput>
         RuleFor(x => x.Nota).MaximumLength(300).WithMessage("Note must contain at most 300 characters.");
     }
 
-    private static bool AmountForType(decimal? amount, bool required) => required
-        ? amount is >= QuotePricing.MinAmount and <= QuotePricing.MaxAmount && decimal.Truncate(amount.Value) == amount.Value
+    private static bool AmountForType(decimal? amount, bool required, int min = QuotePricing.MinAmount, int max = QuotePricing.MaxAmount) => required
+        ? amount >= min && amount <= max && decimal.Truncate(amount.Value) == amount.Value
         : amount is null;
 
     private static bool ValidHour(string? value) => value is { Length: 5 }

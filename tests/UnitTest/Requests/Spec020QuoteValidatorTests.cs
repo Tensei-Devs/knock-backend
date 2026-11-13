@@ -1,5 +1,7 @@
 using AwesomeAssertions;
+using Knock.Market.Api.Modules.Requests.Domain;
 using Knock.Market.Api.Modules.Requests.Validators;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Knock.UnitTest.Requests;
@@ -8,15 +10,51 @@ public class Spec020QuoteValidatorTests
 {
     private static readonly DateOnly _created = new(2026, 11, 12);
     private static QuoteValidationInput Valid() => new("fijo", 1, null, null, _created, "00:00", null, _created);
-    private static string[] Errors(QuoteValidationInput input) => new QuoteValidator().Validate(input).Errors.Select(x => x.PropertyName).ToArray();
+    private static string[] Errors(QuoteValidationInput input, QuotePricingOptions? options = null) =>
+        new QuoteValidator(Options.Create(options ?? new QuotePricingOptions())).Validate(input).Errors.Select(x => x.PropertyName).ToArray();
 
     [Theory]
     [InlineData("fijo", 1)]
     [InlineData("fijo", 200000)]
-    [InlineData("visita", 1)]
-    [InlineData("visita", 200000)]
+    [InlineData("visita", 100)]
+    [InlineData("visita", 250)]
     public void AmountBoundariesAreValid_R_13(string type, int amount) =>
         Errors(Valid() with { TipoPrecio = type, Precio = amount }).Should().BeEmpty();
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(99)]
+    [InlineData(251)]
+    [InlineData(200000)]
+    public void VisitFeeOutsideConfiguredBoundsIsReportedOnPrecio_R_14(int amount) =>
+        Errors(Valid() with { TipoPrecio = "visita", Precio = amount }).Should().Equal("Precio");
+
+    [Fact]
+    public void VisitFeeBoundsComeFromConfiguration_R_14()
+    {
+        var options = new QuotePricingOptions { VisitFeeMin = 50, VisitFeeMax = 400 };
+
+        Errors(Valid() with { TipoPrecio = "visita", Precio = 400 }, options).Should().BeEmpty();
+        Errors(Valid() with { TipoPrecio = "visita", Precio = 49 }, options).Should().Equal("Precio");
+        Errors(Valid() with { TipoPrecio = "visita", Precio = 401 }, options).Should().Equal("Precio");
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(99)]
+    [InlineData(100)]
+    [InlineData(250)]
+    [InlineData(251)]
+    [InlineData(200000)]
+    public void AValidatedVisitFeeNeverMakesTheCalculatorThrow_R_14(int amount)
+    {
+        var options = new QuotePricingOptions();
+        var accepted = Errors(Valid() with { TipoPrecio = "visita", Precio = amount }, options).Length == 0;
+
+        var act = () => QuotePricing.Calculate(PriceType.Visita, "ele", amount, null, null, options);
+        if (accepted) act.Should().NotThrow();
+        else act.Should().Throw<Knock.Market.Api.Common.Errors.DomainException>();
+    }
 
     [Theory]
     [InlineData(0)]
