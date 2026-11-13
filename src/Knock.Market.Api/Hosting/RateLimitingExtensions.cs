@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.RateLimiting;
+using Knock.Market.Api.Common.Errors;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 
@@ -72,7 +73,7 @@ internal static class RateLimitingExtensions
                 var seconds = Math.Max(1, (int)Math.Ceiling(retryAfter.TotalSeconds));
                 context.HttpContext.Response.Headers.RetryAfter = seconds.ToString(CultureInfo.InvariantCulture);
                 // Cuerpo uniforme: sin IP, clave de partición, límite ni contador.
-                await ProblemResponses.WriteAsync(context.HttpContext, StatusCodes.Status429TooManyRequests, "Too Many Requests");
+                await ProblemResponses.WriteAsync(context.HttpContext, StatusCodes.Status429TooManyRequests, "Too Many Requests", ErrorCodes.RateLimitedCode);
             };
         });
         return services;
