@@ -19,10 +19,11 @@ public class Spec020RequestStateTests
     [InlineData(1)]
     [InlineData(48)]
     [InlineData(168)]
-    public void ExpiryUsesClockAndConfiguredHours_R_01(int hours)
+    public void ExpiryIsComputedFromTheReceivedCreationInstantAndConfiguredHours_R_01(int hours)
     {
-        var now = new DateTimeOffset(2026, 11, 12, 10, 0, 0, TimeSpan.Zero);
-        RequestRules.ExpiresAt(new FixedClock(now), hours).Should().Be(now.AddHours(hours));
+        var created = new DateTimeOffset(2026, 11, 12, 10, 0, 0, TimeSpan.Zero);
+
+        RequestRules.ExpiresAt(created, hours).Should().Be(created.AddHours(hours));
     }
 
     [Theory]
@@ -30,20 +31,11 @@ public class Spec020RequestStateTests
     [InlineData(169)]
     public void ExpiryRejectsHoursOutsideConfiguredRange_R_01(int hours)
     {
-        var act = () => RequestRules.ExpiresAt(TimeProvider.System, hours);
+        var created = new DateTimeOffset(2026, 11, 12, 10, 0, 0, TimeSpan.Zero);
+
+        var act = () => RequestRules.ExpiresAt(created, hours);
+
         act.Should().Throw<ArgumentOutOfRangeException>();
-    }
-
-    [Fact]
-    public void ExpiryDefaultsTo48HoursWithClock_R_01()
-    {
-        var now = new DateTimeOffset(2026, 11, 12, 10, 0, 0, TimeSpan.Zero);
-        RequestRules.ExpiresAt(new FixedClock(now)).Should().Be(now.AddHours(48));
-    }
-
-    private sealed class FixedClock(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
     }
 
     [Theory]
