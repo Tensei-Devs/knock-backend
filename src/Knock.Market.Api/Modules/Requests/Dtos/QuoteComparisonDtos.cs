@@ -5,9 +5,10 @@ namespace Knock.Market.Api.Modules.Requests.Dtos;
 /// <summary>Técnico que cotizó, tal como lo ve el cliente al comparar (spec 021). Sin teléfono: el contacto solo llega con la visita.</summary>
 internal sealed record QuoteTechnician(string Id, string Nombre, string? FotoUrl, double? Calificacion, bool Verificado, string NivelVerificacion);
 
-/// <summary>Cotización dentro de la comparación (spec 021, §5).</summary>
-/// <param name="Cubre">Texto corto de lo que cubre la cotización según su tipo de precio.</param>
-/// <param name="Etiquetas">Marcas calculadas por el servidor, por ejemplo la más barata o la más pronto.</param>
+/// <summary>
+/// Cotización dentro de la comparación (spec 021, §5). <c>Cubre</c> es el texto corto de lo que cubre según su tipo de precio y <c>Etiquetas</c> son marcas
+/// calculadas por el servidor, por ejemplo la más barata o la más pronto.
+/// </summary>
 internal sealed record QuoteComparisonItem(
     string Id,
     string Estado,
@@ -24,10 +25,11 @@ internal sealed record QuoteComparisonItem(
     IReadOnlyList<string> Etiquetas,
     QuoteTechnician Tecnico);
 
-/// <summary>Respuesta de <c>GET /solicitudes/{id}/cotizaciones</c>: hasta 5 cotizaciones vivas y si el cliente ya puede elegir.</summary>
-/// <param name="TiposMixtos">Verdadero cuando hay precios fijos y rangos o visitas juntos, para avisar que no son comparables uno a uno.</param>
-/// <param name="Motivo">Por qué no se puede elegir (<c>puedeElegir = false</c>), cuando aplica.</param>
-/// <param name="VisitaId">Identificador de la visita si la solicitud ya tiene cita confirmada.</param>
+/// <summary>
+/// Respuesta de <c>GET /solicitudes/{id}/cotizaciones</c>: hasta 5 cotizaciones vivas y si el cliente ya puede elegir. <c>TiposMixtos</c> es verdadero cuando
+/// hay precios fijos y rangos o visitas juntos (no son comparables uno a uno); <c>Motivo</c> explica por qué <c>PuedeElegir</c> es falso; <c>VisitaId</c>
+/// aparece si la solicitud ya tiene cita confirmada.
+/// </summary>
 internal sealed record QuoteComparison(
     string SolicitudId,
     IReadOnlyList<QuoteComparisonItem> Cotizaciones,
