@@ -1,6 +1,6 @@
 # Mapa de código
 
-> Generado por `scripts/codemap.py` el 2026-11-13T03:30:55Z. No editar a mano.
+> Generado por `scripts/codemap.py` el 2026-11-13T05:49:47Z. No editar a mano.
 > **Antes de crear una clase, método o archivo, busca aquí o corre `python scripts/codemap.py --query "<qué necesitas>"`.**
 
 ## Resumen
@@ -89,7 +89,7 @@
 - `src/Knock.Identity.Api/Hosting/ValidationExtensions.cs:29 ValidationFilter.OnActionExecutionAsync` · `src/Knock.Market.Api/Hosting/ValidationExtensions.cs:27 ValidationFilter.OnActionExecutionAsync`
 - `src/Knock.Identity.Api/Hosting/ValidationExtensions.cs:65 ValidationFilter.ToCamelCasePath` · `src/Knock.Market.Api/Hosting/ValidationExtensions.cs:63 ValidationFilter.ToCamelCasePath`
 - `src/Knock.Identity.Api/Hosting/ValidationExtensions.cs:69 ValidationFilter.Collect` · `src/Knock.Market.Api/Hosting/ValidationExtensions.cs:67 ValidationFilter.Collect`
-- `src/Knock.Identity.Api/Modules/Usuarios/Controllers/V1/MeController.cs:80 MeController.Matches` · `src/Knock.Market.Api/Modules/Catalog/Controllers/V1/OficiosController.cs:46 OficiosController.Matches`
+- `src/Knock.Identity.Api/Modules/Usuarios/Controllers/V1/MeController.cs:80 MeController.Matches` · `src/Knock.Market.Api/Modules/Catalog/Controllers/V1/OficiosController.cs:50 OficiosController.Matches`
 - `src/Knock.Identity.Api/Modules/Usuarios/Data/ProfileCacheOptions.cs:25 ProfileCacheOptionsValidator.Validate` · `src/Knock.Market.Api/Modules/Catalog/Data/CatalogCacheOptions.cs:25 CatalogCacheOptionsValidator.Validate`
 
 ## Tipos con el mismo nombre en varios lugares
@@ -174,7 +174,7 @@
 - `src/Knock.Market.Api/Modules/Catalog/Controllers/V1/ColoniasController.cs` — class `ColoniasController`
   - `GetAtPoint()`:29
 - `src/Knock.Market.Api/Modules/Catalog/Controllers/V1/OficiosController.cs` — class `OficiosController`
-  - `ETag()`:38, `Matches()`:46
+  - `ETag()`:42, `Matches()`:50
 
 **data**
 

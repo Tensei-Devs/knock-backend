@@ -5,13 +5,13 @@ using Xunit;
 
 namespace Knock.SecurityTest.Market;
 
-/// <summary>Spec 010, R-03 y R-06: GET /api/v1/oficios lleva ETag débil y Cache-Control público; If-None-Match vigente responde 304 sin cuerpo.</summary>
+/// <summary>Spec 010, R-03 y R-06: GET /api/v1/oficios lleva ETag débil y Cache-Control público con revalidación obligatoria (max-age=0, must-revalidate); If-None-Match vigente responde 304 sin cuerpo.</summary>
 public class MarketETagTests
 {
     private const string _oficios = "/api/v1/oficios";
 
     [Fact]
-    public async Task Oficios_ReturnsWeakETagAndPublicCacheControl_CA_010_03()
+    public async Task Oficios_ReturnsWeakETagAndRevalidatingPublicCacheControl_CA_010_03()
     {
         var hosts = await SecurityHosts.SharedAsync();
 
@@ -21,7 +21,8 @@ public class MarketETagTests
         response.Headers.ETag.Should().NotBeNull();
         response.Headers.ETag?.IsWeak.Should().BeTrue();
         response.Headers.CacheControl?.Public.Should().BeTrue();
-        response.Headers.CacheControl?.MaxAge.Should().Be(TimeSpan.FromSeconds(86400));
+        response.Headers.CacheControl?.MaxAge.Should().Be(TimeSpan.Zero);
+        response.Headers.CacheControl?.MustRevalidate.Should().BeTrue();
     }
 
     [Fact]
