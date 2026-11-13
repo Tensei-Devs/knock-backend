@@ -22,7 +22,7 @@ internal static class LoggingExtensions
             .ReadFrom.Configuration(configuration)
             .Enrich.FromLogContext()
             .Enrich.With<ScopeRequestPathEnricher>()
-            .WriteTo.Console(new RenderedCompactJsonFormatter())
+            .WriteTo.Console(new RedactingJsonFormatter(new RenderedCompactJsonFormatter()))
             .WriteTo.Sink(new OpenTelemetryLogSink(provider)));
         return services;
     }
