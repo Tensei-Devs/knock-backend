@@ -14,6 +14,7 @@ builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
 builder.Services.AddReverseProxy().LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 builder.Services
     .AddKnockGatewayProblemDetails()
+    .AddKnockGatewayHsts()
     .AddKnockGatewayForwardedHeaders()
     .AddKnockGatewayCors(builder.Configuration)
     .AddKnockData()
@@ -30,11 +31,6 @@ app.UseKnockCorrelationId();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseExceptionHandler();
 app.UseSerilogRequestLogging(LoggingExtensions.ConfigureRequestLogging);
-if (!app.Environment.IsDevelopment())
-{
-    app.UseHsts();
-}
-
 app.UseRouting();
 app.UseCors(CorsExtensions.PolicyName);
 app.UseMiddleware<IpRateLimitMiddleware>();
