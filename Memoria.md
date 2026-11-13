@@ -470,3 +470,5 @@
 - **Resultado:** `budget-knock-dev` envió el correo de gasto previsto al 100 % (11.10 USD previstos contra 10 USD) el 2026-11-12 a las 16:40 UTC. Con eso queda cubierta la parte de presupuesto de la R-05 de la spec 011. La evidencia y la captura están en `docs/evidencia/KNOCK-250-alerta-presupuesto.md`.
 - **A evitar:** confundir este correo con la alerta de peticiones fallidas (`requests/failed`, KNOCK-206), que se verifica aparte.
 
+## 2026-11-13 — KNOCK-47: T-04 parcial de lista de espera
+- **Estado:** pruebas HTTP con `MarketApiFactory` y MongoDB real para CA-05 a CA-11 y CA-16, validación de CP y privacidad de consola para lista de espera; T-02 y el límite compartido entre réplicas siguen pendientes. Build y formato correctos, 882 unitarias, 304 de seguridad y 48 de integración 023 en verde; el linter reporta seis faltantes y reconoce CA-03 por una prueba del validador de lista de espera, no por la consulta CP. Se reutilizó `ConsoleCapture`; el archivo de redacción indicado no existe en esta rama.

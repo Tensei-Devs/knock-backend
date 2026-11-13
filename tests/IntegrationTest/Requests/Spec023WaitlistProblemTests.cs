@@ -17,7 +17,7 @@ namespace Knock.IntegrationTest.Requests;
 /// <summary>
 /// Spec 023 (T-01 y T-03) sobre el canal HTTP de <c>POST /api/v1/zonas/lista-espera</c>: 401, 413, 422, 400 y 429 en ProblemDetails con el <c>code</c> de la spec 002
 /// (R-08, R-09 y R-11) y <c>Cache-Control: private, no-store</c> en todas las respuestas. Host sin contenedores y almacén de mentira: la persistencia se prueba en
-/// <see cref="Spec023WaitlistHttpTests"/>. Solo datos ficticios.
+/// <see cref="Spec023ListaEsperaTests"/>. Solo datos ficticios.
 /// </summary>
 public class Spec023WaitlistProblemTests
 {
