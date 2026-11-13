@@ -8,6 +8,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
+using Serilog.Events;
+using Serilog.Formatting.Compact;
 using Xunit;
 
 namespace Knock.UnitTest.Hosting;
@@ -51,6 +53,30 @@ public sealed class MarketConsoleRedactionTests
         var (_, serviceName) = await CaptureAsync("ordinary");
         serviceName.Should().Be("knock-market");
         new ObservabilityOptions().ServiceName.Should().Be("knock-market");
+    }
+
+    [Fact]
+    public void NumericSensitiveProperties_AreRedacted_AndOutputRemainsJson()
+    {
+        using var buffer = new StringWriter(CultureInfo.InvariantCulture);
+        var properties = new[]
+        {
+            new LogEventProperty("lat", new ScalarValue(19.4326)),
+            new LogEventProperty("lon", new ScalarValue(-99.1332)),
+            new LogEventProperty("SafeCount", new ScalarValue(42)),
+            new LogEventProperty("Origin", new StructureValue([new LogEventProperty("lat", new ScalarValue(19.4326))])),
+        };
+        var logEvent = new LogEvent(DateTimeOffset.UnixEpoch, LogEventLevel.Information, null, new MessageTemplate("numeric", []), properties);
+
+        new RedactingJsonFormatter(new RenderedCompactJsonFormatter()).Format(logEvent, buffer);
+
+        var line = buffer.ToString();
+        using var json = JsonDocument.Parse(line);
+        line.Should().NotContain("19.4326").And.NotContain("99.1332");
+        json.RootElement.GetProperty("lat").GetString().Should().Be("[redacted]");
+        json.RootElement.GetProperty("lon").GetString().Should().Be("[redacted]");
+        json.RootElement.GetProperty("Origin").GetProperty("lat").GetString().Should().Be("[redacted]");
+        json.RootElement.GetProperty("SafeCount").GetInt32().Should().Be(42);
     }
 
     private static async Task AssertRedactedAsync(string value, params string[] secrets)
