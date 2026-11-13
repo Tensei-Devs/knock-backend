@@ -37,7 +37,7 @@ Definir y especificar los endpoints TEC-01, TEC-02, TEC-03, TEC-04, TEC-05, TEC-
 ## 3. Requisitos
 - **R-01:** `POST /api/v1/tecnicos` (crear): Registra a la persona como técnico (nombre y apellido, oficios, taller o domicilio, radio, perfil opcional y términos). Lo puede llamar: persona con sesión (cliente o técnico). Responde 201 cuando sale bien.
 - **R-02:** Entrada de `POST /api/v1/tecnicos`: Cuerpo: oficios, atencion, direccionTaller o radioKm, perfil opcional, aceptaTerminos. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400. Reglas: `oficios`: Al menos uno; `atencion`: Solo esos valores; `direccionTaller`: Obligatoria si atiende en taller (mínimo 8 caracteres). No se muestra si atiende a domici…; `radioKm`: 3, 5, 8 o 12.
-- **R-03:** Estados de `POST /api/v1/tecnicos`: 409 (ya es técnico). El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
+- **R-03:** Estados de `POST /api/v1/tecnicos`: 409 `already_a_technician` (ya es técnico). Los códigos de negocio van en inglés y en snake_case.
 - **R-04:** `GET /api/v1/tecnicos` (leer todos / filtro / búsqueda): Busca técnicos por oficio, colonia, distancia o radio, Disponible hoy, solo verificados y texto libre. Lo puede llamar: cualquier persona para el resumen y una persona con sesión para el detalle. Responde 200 cuando sale bien.
 - **R-05:** Entrada de `GET /api/v1/tecnicos`: Query: oficio, colonia, lat, lng, radioKm, disponibleHoy, soloVerificados, q, orden, cursor, limite. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo. Reglas: `radioKm`: 3, 5, 8 o 12; `disponibleHoy`: Necesario para recibir solicitudes.
 - **R-06:** `GET /api/v1/tecnicos` pagina por cursor (Por cursor, 20 (máx. 50)): parámetros `cursor` y `limite`, 20 por defecto y 50 como máximo; orden: Orden: distancia, calificacion o recomendadas.
@@ -50,15 +50,15 @@ Definir y especificar los endpoints TEC-01, TEC-02, TEC-03, TEC-04, TEC-05, TEC-
 - **R-13:** `GET /api/v1/mapa/tecnicos` se cachea (Sí, unos segundos); la clave nunca incluye datos personales de otra persona y se invalida al escribir.
 - **R-14:** `GET /api/v1/tecnicos/{id}` (leer uno): Perfil del técnico. Sin sesión devuelve solo el resumen (foto, verificación, calificación, experiencia, descripción corta); con sesión suma servicios y precios, colonias, fotos y horarios. Lo puede llamar: cualquier persona para el resumen y una persona con sesión para el detalle. Responde 200 cuando sale bien.
 - **R-15:** Entrada de `GET /api/v1/tecnicos/{id}`: Ruta: id. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo.
-- **R-16:** Estados de `GET /api/v1/tecnicos/{id}`: 404. El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
+- **R-16:** Estados de `GET /api/v1/tecnicos/{id}`: 404 `technician_not_found`. Los códigos de negocio van en inglés y en snake_case.
 - **R-17:** `GET /api/v1/tecnicos/{id}` se cachea (Sí, 1 minuto); la clave nunca incluye datos personales de otra persona y se invalida al escribir.
 - **R-18:** `GET /api/v1/tecnicos/{id}/llega-a-mi-colonia` (búsqueda específica): Dice si el técnico atiende la colonia de la persona. Lo puede llamar: persona con sesión (cliente o técnico). Responde 200 cuando sale bien.
 - **R-19:** Entrada de `GET /api/v1/tecnicos/{id}/llega-a-mi-colonia`: Ruta: id. Query: colonia. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo.
-- **R-20:** Estados de `GET /api/v1/tecnicos/{id}/llega-a-mi-colonia`: 404. El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
+- **R-20:** Estados de `GET /api/v1/tecnicos/{id}/llega-a-mi-colonia`: 404 `technician_not_found`. Los códigos de negocio van en inglés y en snake_case.
 - **R-21:** `GET /api/v1/tecnicos/{id}/llega-a-mi-colonia` se cachea (Sí, 1 minuto); la clave nunca incluye datos personales de otra persona y se invalida al escribir.
 - **R-22:** `GET /api/v1/tecnicos/{id}/fotos-trabajos` (leer todos): Fotos de trabajos terminados que el cliente permitió publicar. Lo puede llamar: persona con sesión (cliente o técnico). Responde 200 cuando sale bien.
 - **R-23:** Entrada de `GET /api/v1/tecnicos/{id}/fotos-trabajos`: Ruta: id. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo.
-- **R-24:** Estados de `GET /api/v1/tecnicos/{id}/fotos-trabajos`: 404. El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
+- **R-24:** Estados de `GET /api/v1/tecnicos/{id}/fotos-trabajos`: 404 `technician_not_found`. Los códigos de negocio van en inglés y en snake_case.
 - **R-25:** `GET /api/v1/tecnicos/{id}/fotos-trabajos` pagina por cursor (Por cursor, 20): parámetros `cursor` y `limite`, 20 por defecto y 50 como máximo; orden: Orden por fecha descendente.
 - **R-26:** `GET /api/v1/tecnicos/{id}/fotos-trabajos` se cachea (Sí, 1 minuto); la clave nunca incluye datos personales de otra persona y se invalida al escribir.
 - **R-27:** `PUT /api/v1/tecnicos/me` (actualizar): Edita el perfil público: negocio, años, oficios, forma de atención, radio, descripción, foto. Lo puede llamar: cuenta con perfil de técnico. Responde 200 cuando sale bien.
@@ -73,17 +73,28 @@ Definir y especificar los endpoints TEC-01, TEC-02, TEC-03, TEC-04, TEC-05, TEC-
 - **R-36:** `GET /api/v1/explorar` (búsqueda específica): Bloques de la pestaña Explorar: servicios populares, trabajos reales, cerca de ti, mejor calificados e ideas, con el filtro elegido. Lo puede llamar: cualquier persona para el resumen y una persona con sesión para el detalle. Responde 200 cuando sale bien.
 - **R-37:** Entrada de `GET /api/v1/explorar`: Query: filtro (todo|auto|agua|luz), colonia. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo.
 - **R-38:** `GET /api/v1/explorar` se cachea (Sí, 1 minuto); la clave nunca incluye datos personales de otra persona y se invalida al escribir.
-- **R-39:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
-- **R-40:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
-- **R-41:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
-- **R-42:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
+- **R-39:** **Registro (TEC-01).** Crea el perfil del técnico en estado `pendiente_de_verificacion`: no recibe solicitudes hasta verificarse (spec 025). `oficios` de 1 a 5 de la lista cerrada; `atencion` solo `taller`, `domicilio` o `ambos`; `direccionTaller` obligatoria con taller (mínimo 8 caracteres) y nunca visible con atención a domicilio; `radioKm` de 3, 5, 8 o 12; `aceptaTerminos` verdadero. La persona es la del `sub` del token y solo puede tener un perfil.
+- **R-40:** **Búsqueda y mapa (TEC-02 y TEC-04).** `lat`, `lng` y los límites del mapa **no se guardan, no se registran, no se devuelven ni forman parte de la clave de caché**: se convierten en colonia o en celdas (spec 023, R-12). Solo aparecen técnicos verificados y no ocultos. `orden` es `distancia`, `calificacion` o `recomendadas`; el mapa devuelve hasta 200 elementos agrupados por celda según `zoom` (de 1 a 20; fuera de rango, 422).
+- **R-41:** **Autocompletar (TEC-03).** `q` de 2 a 40 caracteres (letras, números y espacios); hasta 8 sugerencias; es público y por eso tiene límite por IP; el texto buscado no se registra junto con la persona.
+- **R-42:** **Perfil (TEC-05).** Sin sesión devuelve solo el resumen (foto, verificación, calificación, experiencia y descripción corta); con sesión suma servicios, precios, colonias, fotos y horarios. Nunca devuelve teléfono ni dirección; un técnico oculto responde 404 `technician_not_found`.
+- **R-43:** **Llega a mi colonia (TEC-06).** Responde `{ atiende: bool }` comparando la colonia consultada con las que atiende el técnico; una `colonia` que no está en el catálogo responde 422 `errors.colonia`.
+- **R-44:** **Fotos de trabajos (TEC-07).** Solo fotos de trabajos terminados con permiso del cliente (spec 050, VIS-11) y que pasaron la moderación (spec 031); se entregan con las direcciones de imágenes públicas de la spec 032 y se paginan por cursor, 20 por defecto.
+- **R-45:** **Editar perfil (TEC-08).** Cambian solo los campos enviados; rigen las reglas de TEC-01 más `nombreNegocio` de hasta 60 caracteres, `descripcion` de hasta 300 y `anios` de 0 a 60; `fotoUrl` se acepta solo si viene de la subida del servidor (spec 032) y pasa moderación; al guardar se invalida la caché del perfil.
+- **R-46:** **Disponibilidad (TEC-09).** Solo un técnico verificado puede activar `disponibleHoy`; sin verificación responde 403 `technician_not_verified`. El interruptor no se apaga solo.
+- **R-47:** **Horarios (TEC-10 y TEC-11).** Siete días, cada uno `abierto` o cerrado con una o dos franjas `HH:mm` de 24 horas en la hora de la ciudad, con inicio anterior al fin y sin traslapes; `PUT` reemplaza la lista completa y una franja inválida responde 422.
+- **R-48:** **Reputación (TEC-13).** Calificación promedio con un decimal, distribución por estrellas de 1 a 5 y nivel, calculados con las opiniones (spec 051); se cachea 1 minuto por técnico.
+- **R-49:** **Explorar (TEC-14).** `filtro` es `todo`, `auto`, `agua` o `luz` y `colonia` es opcional; cada bloque (servicios populares, trabajos reales, cerca de ti, mejor calificados e ideas) tiene como máximo 10 elementos; sin sesión devuelve solo los bloques públicos; se cachea 1 minuto por filtro y colonia.
+- **R-50:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
+- **R-51:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
+- **R-52:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
+- **R-53:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dado el rol «persona con sesión (cliente o técnico)», cuando llama `POST /api/v1/tecnicos` con datos válidos, entonces responde 201 con lo descrito en §5.
 - **CA-02:** Dada una petición sin token o con token vencido, cuando llama `POST /api/v1/tecnicos`, entonces responde 401 y no ejecuta la operación.
 - **CA-03:** Dado un valor inválido según las reglas de §6, cuando llama `POST /api/v1/tecnicos`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
 - **CA-04:** Dado un cuerpo que no se puede leer, cuando llama `POST /api/v1/tecnicos`, entonces responde 400 y no guarda nada.
-- **CA-05:** Dado el caso «ya es técnico», cuando llama `POST /api/v1/tecnicos`, entonces responde 409 con ProblemDetails y no cambia el estado.
+- **CA-05:** Dado el caso «la persona ya tiene perfil de técnico», cuando llama `POST /api/v1/tecnicos`, entonces responde 409 `already_a_technician` con ProblemDetails y no cambia el estado.
 - **CA-06:** Dado el rol «cualquier persona para el resumen y una persona con sesión para el detalle», cuando llama `GET /api/v1/tecnicos` con datos válidos, entonces responde 200 con lo descrito en §5.
 - **CA-07:** Dado un valor inválido según las reglas de §6, cuando llama `GET /api/v1/tecnicos`, entonces responde 422 con `errors.<campo>`, no repite el valor y no devuelve datos.
 - **CA-08:** Dado un listado con más de 20 elementos, cuando se pide sin `limite`, entonces devuelve 20 y el cursor de la página siguiente; con `limite=51` responde 422.
@@ -96,17 +107,17 @@ Definir y especificar los endpoints TEC-01, TEC-02, TEC-03, TEC-04, TEC-05, TEC-
 - **CA-15:** Dada una consulta repetida dentro del tiempo de caché, cuando llega la segunda, entonces se responde desde la caché y la base recibe una sola consulta.
 - **CA-16:** Dado el rol «cualquier persona para el resumen y una persona con sesión para el detalle», cuando llama `GET /api/v1/tecnicos/{id}` con datos válidos, entonces responde 200 con lo descrito en §5.
 - **CA-17:** Dado un valor inválido según las reglas de §6, cuando llama `GET /api/v1/tecnicos/{id}`, entonces responde 422 con `errors.<campo>`, no repite el valor y no devuelve datos.
-- **CA-18:** Dado el caso «recurso no disponible», cuando llama `GET /api/v1/tecnicos/{id}`, entonces responde 404 con ProblemDetails y no cambia el estado.
+- **CA-18:** Dado el caso «el técnico no existe o está oculto», cuando llama `GET /api/v1/tecnicos/{id}`, entonces responde 404 `technician_not_found` con ProblemDetails y no cambia el estado.
 - **CA-19:** Dada una consulta repetida dentro del tiempo de caché, cuando llega la segunda, entonces se responde desde la caché y la base recibe una sola consulta.
 - **CA-20:** Dado el rol «persona con sesión (cliente o técnico)», cuando llama `GET /api/v1/tecnicos/{id}/llega-a-mi-colonia` con datos válidos, entonces responde 200 con lo descrito en §5.
 - **CA-21:** Dada una petición sin token o con token vencido, cuando llama `GET /api/v1/tecnicos/{id}/llega-a-mi-colonia`, entonces responde 401 y no ejecuta la operación.
 - **CA-22:** Dado un valor inválido según las reglas de §6, cuando llama `GET /api/v1/tecnicos/{id}/llega-a-mi-colonia`, entonces responde 422 con `errors.<campo>`, no repite el valor y no devuelve datos.
-- **CA-23:** Dado el caso «recurso no disponible», cuando llama `GET /api/v1/tecnicos/{id}/llega-a-mi-colonia`, entonces responde 404 con ProblemDetails y no cambia el estado.
+- **CA-23:** Dado el caso «el técnico no existe o está oculto», cuando llama `GET /api/v1/tecnicos/{id}/llega-a-mi-colonia`, entonces responde 404 `technician_not_found` con ProblemDetails y no cambia el estado.
 - **CA-24:** Dada una consulta repetida dentro del tiempo de caché, cuando llega la segunda, entonces se responde desde la caché y la base recibe una sola consulta.
 - **CA-25:** Dado el rol «persona con sesión (cliente o técnico)», cuando llama `GET /api/v1/tecnicos/{id}/fotos-trabajos` con datos válidos, entonces responde 200 con lo descrito en §5.
 - **CA-26:** Dada una petición sin token o con token vencido, cuando llama `GET /api/v1/tecnicos/{id}/fotos-trabajos`, entonces responde 401 y no ejecuta la operación.
 - **CA-27:** Dado un valor inválido según las reglas de §6, cuando llama `GET /api/v1/tecnicos/{id}/fotos-trabajos`, entonces responde 422 con `errors.<campo>`, no repite el valor y no devuelve datos.
-- **CA-28:** Dado el caso «recurso no disponible», cuando llama `GET /api/v1/tecnicos/{id}/fotos-trabajos`, entonces responde 404 con ProblemDetails y no cambia el estado.
+- **CA-28:** Dado el caso «el técnico no existe o está oculto», cuando llama `GET /api/v1/tecnicos/{id}/fotos-trabajos`, entonces responde 404 `technician_not_found` con ProblemDetails y no cambia el estado.
 - **CA-29:** Dado un listado con más de 20 elementos, cuando se pide sin `limite`, entonces devuelve 20 y el cursor de la página siguiente; con `limite=51` responde 422.
 - **CA-30:** Dada una consulta repetida dentro del tiempo de caché, cuando llega la segunda, entonces se responde desde la caché y la base recibe una sola consulta.
 - **CA-31:** Dado el rol «cuenta con perfil de técnico», cuando llama `PUT /api/v1/tecnicos/me` con datos válidos, entonces responde 200 con lo descrito en §5.
@@ -133,10 +144,21 @@ Definir y especificar los endpoints TEC-01, TEC-02, TEC-03, TEC-04, TEC-05, TEC-
 - **CA-52:** Dado el rol «cualquier persona para el resumen y una persona con sesión para el detalle», cuando llama `GET /api/v1/explorar` con datos válidos, entonces responde 200 con lo descrito en §5.
 - **CA-53:** Dado un valor inválido según las reglas de §6, cuando llama `GET /api/v1/explorar`, entonces responde 422 con `errors.<campo>`, no repite el valor y no devuelve datos.
 - **CA-54:** Dada una consulta repetida dentro del tiempo de caché, cuando llega la segunda, entonces se responde desde la caché y la base recibe una sola consulta.
-- **CA-55:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
-- **CA-56:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
-- **CA-57:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
-- **CA-58:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
+- **CA-55:** Dada una persona sin perfil, cuando se registra con datos válidos, entonces se crea el perfil `pendiente_de_verificacion`; con un radio fuera de 3, 5, 8 o 12, más de 5 oficios o sin términos responde 422; y si ya es técnico responde 409 `already_a_technician`.
+- **CA-56:** Dada una búsqueda con coordenadas, cuando se inspeccionan registros, caché y respuesta, entonces no aparecen coordenadas; y un técnico no verificado u oculto no sale en la lista ni en el mapa.
+- **CA-57:** Dado un `q` de 1 o de más de 40 caracteres o con símbolos, cuando se consulta, entonces responde 422; con uno válido recibe hasta 8 sugerencias.
+- **CA-58:** Dado un perfil visible, cuando lo consulta alguien sin sesión, entonces recibe solo el resumen; con sesión, el detalle; y en ambos casos sin teléfono ni dirección.
+- **CA-59:** Dado un técnico y una colonia del catálogo, cuando se consulta, entonces responde si la atiende; con una colonia inexistente responde 422.
+- **CA-60:** Dado un técnico con fotos con y sin permiso, cuando se consultan, entonces solo salen las permitidas y moderadas, paginadas.
+- **CA-61:** Dado un técnico, cuando cambia solo su descripción, entonces el resto del perfil no cambia y la caché del perfil se invalida; con una `fotoUrl` ajena responde 422.
+- **CA-62:** Dado un técnico sin verificar, cuando activa la disponibilidad, entonces responde 403 `technician_not_verified`; verificado, queda activa hasta que él la apague.
+- **CA-63:** Dado un horario con franjas traslapadas o con inicio posterior al fin, cuando se guarda, entonces responde 422 y no cambia el horario anterior.
+- **CA-64:** Dado un técnico con opiniones, cuando consulta su reputación, entonces recibe promedio, distribución y nivel coherentes con sus opiniones.
+- **CA-65:** Dado un filtro válido, cuando se consulta Explorar, entonces cada bloque trae como máximo 10 elementos; con un filtro fuera de la lista responde 422.
+- **CA-66:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
+- **CA-67:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
+- **CA-68:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
+- **CA-69:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
 
 **4.1 Criterio → prueba prevista**
 
@@ -200,6 +222,17 @@ Definir y especificar los endpoints TEC-01, TEC-02, TEC-03, TEC-04, TEC-05, TEC-
 | CA-56 | `Spec046Tests.Criterio56_CA_046_56` |
 | CA-57 | `Spec046Tests.Criterio57_CA_046_57` |
 | CA-58 | `Spec046Tests.Criterio58_CA_046_58` |
+| CA-59 | `Spec046Tests.Criterio59_CA_046_59` |
+| CA-60 | `Spec046Tests.Criterio60_CA_046_60` |
+| CA-61 | `Spec046Tests.Criterio61_CA_046_61` |
+| CA-62 | `Spec046Tests.Criterio62_CA_046_62` |
+| CA-63 | `Spec046Tests.Criterio63_CA_046_63` |
+| CA-64 | `Spec046Tests.Criterio64_CA_046_64` |
+| CA-65 | `Spec046Tests.Criterio65_CA_046_65` |
+| CA-66 | `Spec046Tests.Criterio66_CA_046_66` |
+| CA-67 | `Spec046Tests.Criterio67_CA_046_67` |
+| CA-68 | `Spec046Tests.Criterio68_CA_046_68` |
+| CA-69 | `Spec046Tests.Criterio69_CA_046_69` |
 
 ## 5. Contrato
 | ID | Método y ruta | Quién | Entrada | Respuestas |
@@ -235,6 +268,16 @@ Definir y especificar los endpoints TEC-01, TEC-02, TEC-03, TEC-04, TEC-05, TEC-
 | TEC-11 | No aplica | No | No |
 | TEC-13 | No aplica | No | Sí, 1 minuto |
 | TEC-14 | Filtro por categoría | No (cada bloque limitado) | Sí, 1 minuto |
+
+**Códigos de error de negocio**
+
+| ID | Estado | Código | Cuándo |
+|---|---|---|---|
+| TEC-01 | 409 | `already_a_technician` | la persona ya tiene perfil de técnico |
+| TEC-05 | 404 | `technician_not_found` | el técnico no existe o está oculto |
+| TEC-06 | 404 | `technician_not_found` | el técnico no existe o está oculto |
+| TEC-07 | 404 | `technician_not_found` | el técnico no existe o está oculto |
+
 
 **Códigos de error:** los de forma salen como 422 con `errors` por campo y los de sesión y límite como 401 y 429; los conflictos de negocio llevan un código en inglés y snake_case que se fija al implementar y se agrega al catálogo.
 
@@ -289,13 +332,13 @@ Definir y especificar los endpoints TEC-01, TEC-02, TEC-03, TEC-04, TEC-05, TEC-
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |
 |---|---|---|
-| Acceso a datos de otra persona (IDOR) | Toda consulta y escritura filtra por el `sub` del token; ajeno responde 403 o 404 | CA-33, CA-38, CA-42, CA-45, CA-50, CA-55 |
-| Asignación masiva o identificador ajeno en el cuerpo | El DTO no acepta identificadores de persona; se ignoran | CA-33, CA-38, CA-42, CA-45, CA-50, CA-55 |
+| Acceso a datos de otra persona (IDOR) | Toda consulta y escritura filtra por el `sub` del token; ajeno responde 403 o 404 | CA-33, CA-38, CA-42, CA-45, CA-50, CA-66 |
+| Asignación masiva o identificador ajeno en el cuerpo | El DTO no acepta identificadores de persona; se ignoran | CA-33, CA-38, CA-42, CA-45, CA-50, CA-66 |
 | Inyección en filtros y parámetros | Parámetros tipados con validador; nada se concatena en consultas | CA-03 a CA-04, CA-07, CA-11, CA-14, CA-17, CA-22, CA-27, CA-34 a CA-35, CA-39, CA-46 a CA-47, CA-53 |
 | Ruta sin sesión | JWT obligatorio salvo las públicas | CA-02, CA-21, CA-26, CA-32, CA-37, CA-41, CA-44, CA-49 |
-| Abuso por repetición o cuerpos grandes | Límite de peticiones, `Retry-After` y tope de cuerpo | CA-57 |
-| Datos personales en registros y errores | Registros sin datos personales; ProblemDetails sin valores | CA-56 |
-| Duplicados por reintento | Regla de estado o índice único, sin `Idempotency-Key` | CA-58 |
+| Abuso por repetición o cuerpos grandes | Límite de peticiones, `Retry-After` y tope de cuerpo | CA-68 |
+| Datos personales en registros y errores | Registros sin datos personales; ProblemDetails sin valores | CA-67 |
+| Duplicados por reintento | Regla de estado o índice único, sin `Idempotency-Key` | CA-69 |
 
 ## 10. Plan de pruebas
 Las pruebas citan el caso como `CA_046_NN` en el nombre (para `python scripts/sdd_lint.py --trace 046`).
@@ -304,26 +347,16 @@ Las pruebas citan el caso como `CA_046_NN` en el nombre (para `python scripts/sd
 |---|---|---|
 | Unitarias | Sí | Validadores, reglas de estado y cálculos del dominio |
 | Integración | Sí | Cada ruta con la base real en contenedor (Testcontainers) y `MarketApiFactory`/fábrica del servicio |
-| Seguridad negativa | Sí | 401, 403/404, 422, 413 y 429 (CA-02 a CA-04, CA-07, CA-11, CA-14, CA-17, CA-21 a CA-22, CA-26 a CA-27, CA-32 a CA-35, CA-37 a CA-39, CA-41 a CA-42, CA-44 a CA-47, CA-49 a CA-50, CA-53, CA-55, CA-57) |
+| Seguridad negativa | Sí | 401, 403/404, 422, 413 y 429 (CA-02 a CA-04, CA-07, CA-11, CA-14, CA-17, CA-21 a CA-22, CA-26 a CA-27, CA-32 a CA-35, CA-37 a CA-39, CA-41 a CA-42, CA-44 a CA-47, CA-49 a CA-50, CA-53, CA-66, CA-68) |
 | Base de datos | Sí | Índices y reglas de cada colección de §6 |
 | Contrato | Sí | OpenAPI regenerado y comparado con `contracts/` |
 | Mutación | Sí | Meta del módulo según la spec 008 |
 | Rendimiento | No aplica | Sin ruta crítica; se mide solo si la spec 034 lo pide |
 
 ## 11. Escenarios
-- **TEC-01** — pantallas: Registrarse como técnico.
-- **TEC-02** — pantallas: Inicio (lista); Buscar; Explorar.
-- **TEC-03** — pantallas: Buscar; Inicio (barra de búsqueda).
-- **TEC-04** — pantallas: Inicio (mapa).
-- **TEC-05** — pantallas: Perfil del técnico.
-- **TEC-06** — pantallas: Perfil del técnico.
-- **TEC-07** — pantallas: Perfil del técnico; Explorar (Trabajos reales).
-- **TEC-08** — pantallas: Mi perfil público; Mi negocio.
-- **TEC-09** — pantallas: Trabajo.
-- **TEC-10** — pantallas: Mi perfil público.
-- **TEC-11** — pantallas: Mi perfil público.
-- **TEC-13** — pantallas: Mi reputación.
-- **TEC-14** — pantallas: Explorar.
+- **Registro:** una persona toca «Quiero ser técnico» → llena oficios, forma de atención, radio y términos → queda pendiente de verificación y se le pide la verificación de identidad.
+- **Explorar:** el cliente abre Explorar con su colonia → ve bloques de técnicos y trabajos reales → entra al perfil, donde con sesión ve servicios, precios y horarios.
+- **Disponible hoy:** el técnico verificado activa el interruptor → aparece en búsquedas y mapa; sin verificación, la app le explica por qué no puede.
 
 ## 12. Definición de terminado
 - Los criterios de aceptación están cubiertos por pruebas en verde y `sdd_lint --trace 046` sin faltantes.
@@ -336,14 +369,17 @@ Las pruebas citan el caso como `CA_046_NN` en el nombre (para `python scripts/sd
 
 ## 14. Decisiones tomadas sin consulta
 - **D-01:** Se toma el Excel de endpoints como fuente del contrato porque es el insumo acordado para las specs; cualquier diferencia con las specs 020 a 038 se resuelve a favor de la spec numerada.
-- **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case definidos al implementar, siguiendo la convención de errores de la spec 002.
+- **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case (los de §5 y, si falta alguno, los que se fijen al implementar), siguiendo la convención de errores de la spec 002.
 - **D-03:** No se usa `Idempotency-Key`, aunque el Excel lo menciona en creaciones.
+- **D-04:** El perfil nace `pendiente_de_verificacion` y solo recibe solicitudes cuando la verificación de la spec 025 lo marca como verificado.
+- **D-05:** La disponibilidad no se apaga sola: es el técnico quien la controla (la app puede recordárselo).
+- **D-06:** El mapa agrupa por celdas según el zoom para devolver como máximo 200 elementos.
+- **D-07:** Máximo 5 oficios por técnico: el Excel solo pide «al menos uno».
 
 ## 15. Riesgos y dudas abiertas
-- TEC-12 (resumen del técnico) ya lo cubre la spec 036 con la ruta `/tecnicos/me/trabajo`: el Excel conserva el nombre antiguo.
-- La búsqueda por texto vive en la spec 027 (`/busqueda`); aquí se confirma que `/tecnicos` y `/explorar` no la duplican.
-- La verificación de identidad del técnico (spec 025) condiciona qué perfiles se muestran: confirmar el filtro.
-- Esta spec se generó a partir del Excel; antes de aprobarla hay que revisar los límites, los textos de error y los plazos con el equipo.
+- TEC-12 (resumen del técnico) ya lo cubre la spec 036 con `/tecnicos/me/trabajo`; el Excel conserva el nombre antiguo.
+- La búsqueda por texto vive en la spec 027 (`/busqueda`): confirmar que `/tecnicos` y `/explorar` comparten sus índices y no la duplican.
+- Confirmar el máximo de 5 oficios y la regla de que un técnico solo con «otro oficio» no recibe solicitudes.
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: _____________________ fecha: __________
