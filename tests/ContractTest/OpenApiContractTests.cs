@@ -70,7 +70,8 @@ public sealed class OpenApiContractTests
 
         var errorsWithoutProblemDetails = Operations(document.RootElement)
             .SelectMany(operation => operation.Operation.GetProperty("responses").EnumerateObject()
-                .Where(response => (response.Name.StartsWith('4') || response.Name.StartsWith('5'))
+                .Where(response => response.Name.Length > 0
+                    && response.Name[0] is '4' or '5'
                     && response.Value.TryGetProperty("content", out var content)
                     && !content.GetRawText().Contains("ProblemDetails", StringComparison.Ordinal))
                 .Select(response => $"{operation.Method.ToUpperInvariant()} {operation.Path} {response.Name}"))
