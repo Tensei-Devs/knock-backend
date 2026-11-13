@@ -238,3 +238,19 @@ excepciones:
     creada: 2026-11-10
     vence: 2026-12-15
     plan: KNOCK-251 (TT-API-12, mover ForwardedHeadersExtensions a una biblioteca compartida); al fusionarlo, quitar los marcadores de Messaging.Api y retirar esta excepción antes de vencer.
+  - id: EXC-021
+    herramienta: jscpd, codemap
+    regla: código duplicado (jscpd:ignore y línea base de clones de docs/architecture/clones-baseline.json)
+    alcance: src/Knock.Messaging.Api/Hosting/RedisExtensions.cs, src/Knock.Messaging.Api/Hosting/JwtSettings.cs, src/Knock.Messaging.Api/Hosting/SecurityHeadersMiddleware.cs, src/Knock.Messaging.Api/Hosting/RateLimitingExtensions.cs, src/Knock.Messaging.Api/Hosting/AuthenticationExtensions.cs y src/Knock.Messaging.Api/Hosting/ProblemResponses.cs (6 archivos con su nombre exacto, entre «// jscpd:ignore-start -- EXC-021» y su cierre); no se amplía más allá de 6 (la siguiente copia obliga a hacer la biblioteca compartida)
+    justificacion: >-
+      BUG-004 (KNOCK-241): Mensajería necesita el mismo JWT, encabezados de seguridad, límite por IP y cliente de Redis que Identidad, Mercado y el gateway antes de publicar su
+      primer endpoint y de la spec 026 (KNOCK-62). Aún no existe la biblioteca técnica compartida y un servicio no referencia a otro, así que se copian estas clases de
+      src/Knock.Market.Api/Hosting, src/Knock.Market.Api/Common/Security y src/Knock.Gateway/Hosting cambiando solo el espacio de nombres y quitando lo que Mensajería no usa. EXC-007 y
+      EXC-008 no las amparan; ForwardedHeadersExtensions no se incluye (la cubre EXC-020, PR 61). Las copias se prueban por separado en tests/SecurityTest/Messaging y
+      tests/UnitTest/Messaging. Ampliación del 2026-11-12 de 4 a 6 archivos, aprobada por el líder en el PR 82: el job de jscpd del CI reportó dos clones más contra Mercado,
+      uno de 13 líneas (src/Knock.Market.Api/Hosting/RequestBodyLimitMiddleware.cs [11:9 - 24:2] contra src/Knock.Messaging.Api/Hosting/ProblemResponses.cs [18:9 - 31:2]) y otro de 25 líneas
+      (src/Knock.Market.Api/Hosting/AuthenticationExtensions.cs [16:9 - 41:103] contra src/Knock.Messaging.Api/Hosting/AuthenticationExtensions.cs [43:9 - 68:37]). Aprobada por el líder el 2026-11-11, temporal y ligada a KNOCK-251.
+    responsable: José Guillermo Rangel Hernández
+    creada: 2026-11-11
+    vence: 2026-12-15
+    plan: KNOCK-251 lleva estas clases a la biblioteca técnica compartida; al fusionarlo se quitan los marcadores de Messaging.Api y se retira la excepción antes de vencer.

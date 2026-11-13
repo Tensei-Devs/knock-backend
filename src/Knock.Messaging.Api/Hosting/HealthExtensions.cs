@@ -16,7 +16,8 @@ internal static class HealthExtensions
     public static IEndpointRouteBuilder MapKnockReadiness(this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
-        endpoints.MapHealthChecks(ReadyPath, new HealthCheckOptions { Predicate = check => check.Tags.Contains(ReadyTag) });
+        endpoints.MapHealthChecks(ReadyPath, new HealthCheckOptions { Predicate = check => check.Tags.Contains(ReadyTag) })
+            .AllowAnonymous();
         return endpoints;
     }
 }
