@@ -63,10 +63,14 @@ locals {
         Identity__PhoneProtection__HmacKeys__1       = "pii-hmac-key"
       })
     }
+    # BUG-004 (KNOCK-241): Mensajería valida el JWT de Knock y lee la lista de sesiones canceladas en Redis; sin estos dos secretos no arranca.
     messaging = {
-      external   = false
-      env        = local.forwarded
-      secret_env = { ConnectionStrings__KnockMongo = "mongo-messaging" }
+      external = false
+      env      = local.forwarded
+      secret_env = merge(local.redis_secret, {
+        ConnectionStrings__KnockMongo = "mongo-messaging"
+        Jwt__SigningKey               = "jwt-signing-key"
+      })
     }
     market = {
       external = false
