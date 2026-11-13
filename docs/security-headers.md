@@ -13,15 +13,15 @@ Se fijan en `Response.OnStarting` y por asignación (no `Add`): el manejador de 
 | `Content-Security-Policy` | `default-src 'none'; frame-ancestors 'none'` | Siempre; en Development no se aplica a `/scalar` ni a `/openapi` | Una API JSON no carga recursos ni se enmarca. Scalar sirve HTML y scripts y la CSP estricta lo rompería. |
 | `Referrer-Policy` | `no-referrer` | Siempre | No filtra la URL de la API a otros sitios. |
 | `Cache-Control` | `no-store` | Solo si el endpoint no define el suyo | Perfil, enlaces SAS y datos personales no se guardan en cachés. Un endpoint con `ETag` declara el suyo (se respeta y no se duplica). |
-| `Strict-Transport-Security` | `max-age=<Security:Hsts:MaxAge>` (+ `includeSubDomains` según `Security:Hsts:IncludeSubDomains`), sin `preload` | Solo HTTPS y fuera de Development; nunca a `localhost` | Evita el downgrade. Sin `preload`: es irreversible en la práctica y el dominio es temporal. |
-| `Server`, `X-Powered-By`, `X-AspNet-Version` | ausentes | Siempre | No revelar el servidor ni la versión. Kestrel arranca con `AddServerHeader = false` y el middleware retira los otros dos por defensa. |
+| `Strict-Transport-Security` | `max-age=<Security:Hsts:MaxAge>` (+ `includeSubDomains` según `Security:Hsts:IncludeSubDomains`), sin `preload` | Fuera de Development, en toda respuesta del gateway (también 401, 404 y 429), sin depender del esquema que vea Kestrel (es inofensivo por HTTP); no en Development. Solo el gateway lo emite: los demás servicios no tienen salida pública | Evita el downgrade. Sin `preload`: es irreversible en la práctica y el dominio es temporal. |
+| `Server`, `X-Powered-By`, `X-AspNet-Version` | ausentes | Siempre | No revelar el servidor ni la versión. Kestrel arranca con `AddServerHeader = false` en los cuatro servicios (gateway y Mensajería desde KNOCK-240; es la única forma de quitar «Server: Kestrel», que Kestrel escribe después de cualquier middleware) y el middleware retira los otros dos por defensa. |
 
 No se incluyen `Permissions-Policy`, `X-XSS-Protection` ni `Cross-Origin-*`: no tienen efecto en respuestas JSON (o el auditor XSS heredado es contraproducente) y darían una falsa sensación de control.
 
 ## HTTPS detrás del ingress
 
 - En Container Apps el TLS termina en el ingress: la API recibe HTTP interno con `X-Forwarded-Proto: https`. `ForwardedHeaders` procesa `X-Forwarded-For` y `X-Forwarded-Proto` **solo** de los proxies y redes de `ForwardedHeaders:KnownProxies` y `ForwardedHeaders:KnownNetworks`; sin ellos el reenvío queda en `None` (nadie es de confianza) y no se procesa `X-Forwarded-Host` ni el encabezado `Forwarded`.
-- **HSTS** (`UseHsts`) solo se emite si la petición es HTTPS (por el esquema reenviado) y fuera de Development.
+- **HSTS** lo fija `SecurityHeadersMiddleware` del gateway fuera de Development, con `Security:Hsts` (por defecto 365 días e `includeSubDomains`; un `MaxAge` menor o igual a cero impide el arranque). No se usa `UseHsts`: solo emitía con `Request.IsHttps`, y detrás del ingreso la petición llega como HTTP (BUG-002, KNOCK-239). Identidad y Mercado siguen con `UseHsts`, sin efecto real porque su tráfico es interno.
 - **Redirección** (`UseHttpsRedirection`) es opcional: solo existe si `Security:Https:RedirectPort` está configurado y fuera de Development; responde 308 conservando ruta y query. En Container Apps **no se configura**: es el ingress (`allowInsecure=false`, TT-AZ-02) quien exige HTTPS. Con el proxy de confianza y `X-Forwarded-Proto: https` la API ve HTTPS y no redirige (sin bucle).
 - **Riesgo aceptado:** redirigir un `POST` por HTTP no protege el cuerpo que ya viajó en claro. El control real es el ingress; la redirección es defensa en profundidad.
 
@@ -62,4 +62,4 @@ Los valores reales los inyecta quien despliega por variables de entorno, por eje
 
 - `AllowedHosts: "*"` (filtrado del encabezado `Host`) queda fuera de esta tarea; se fija por variable de entorno al desplegar o en una tarea aparte.
 - Con varias réplicas el limitador vive en la memoria de cada una (ver `docs/rate-limit-matrix.md`).
-- El `curl -I` contra la API en ejecución (el `TestServer` no emite `Server`) va como evidencia en el PR.
+- El `curl -I` contra la API en ejecución (el `TestServer` no emite `Server`) va como evidencia en el PR. Por eso las pruebas de `Server` comprueban además la opción real de Kestrel (`AddServerHeader`), que es lo que de verdad lo apaga.

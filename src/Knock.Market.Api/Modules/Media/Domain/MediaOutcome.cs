@@ -13,7 +13,7 @@ internal sealed record MediaOutcome<T>(MediaOutcomeStatus Status, T? Value = def
 }
 internal static class MediaRejection
 {
-    public const string InvalidFile = "The file must be a JPG or PNG image of 8 MB or less.";
+    public const string InvalidFile = "The file must be a JPEG, PNG or WebP image of 5 MB or less.";
     public const string ModerationRejected = "The content was rejected by moderation.";
     public const string NotUploaded = "No file was uploaded with the upload link.";
     public const string ChangedDuringConfirmation = "The uploaded file changed while it was being confirmed. Upload it again.";

@@ -71,6 +71,13 @@ El gateway, Identity y Market confían en `X-Forwarded-For` solo desde la subred
 Para la ventana de evaluación (25-nov al 5-dic) usar `envs/evaluacion.tfvars`. Si el primer apply falla por permisos
 sobre un secreto, espera unos minutos a que se propague el rol y repite.
 
+## Imagen de los Container Apps
+Desde KNOCK-202 (CA-03 de la spec 007), la imagen de los servicios la manda `ci-deploy` en cada commit de `main` (`az containerapp update --image <acr>/knock-<servicio>:<sha>`). El módulo `deploy/modules/service` ignora los cambios de imagen (`lifecycle.ignore_changes`), así que `terraform apply` ya no la regresa a `var.image_tag`; esa variable solo cuenta al **crear** una app.
+
+Redis usa el mismo módulo, así que Terraform tampoco actualiza su imagen. Para cambiarla (está fijada por digest y casi nunca cambia), una persona hace una de estas dos cosas:
+- `az containerapp update --name knock-redis --resource-group <grupo> --image <imagen@sha256:digest>`
+- `terraform apply -replace='module.redis.azurerm_container_app.this'` con el nuevo `redis_image` (recrea la app; Redis pierde lo que tenga en memoria).
+
 ## Paso 3 — eliminar lo desplegado
 `cd deploy/apps && terraform destroy ...` (mismas variables). Deja la infraestructura y la base.
 
