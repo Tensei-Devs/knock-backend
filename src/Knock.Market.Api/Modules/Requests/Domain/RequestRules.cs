@@ -13,25 +13,21 @@ internal static class RequestRules
     /// <summary>Máximo de cotizaciones vivas (<c>enviada</c> o <c>aceptada</c>) por solicitud (R-20).</summary>
     public const int MaxLiveQuotes = 5;
 
-    public static DateTimeOffset ExpiresAt(DateTimeOffset createdAt) => createdAt.AddHours(LifetimeHours);
-
-    public static DateTimeOffset ExpiresAt(TimeProvider clock, int hours = LifetimeHours)
+    /// <summary>Vencimiento a partir del instante único de creación (<c>creadoEn</c>), sin una segunda lectura del reloj (R-01).</summary>
+    public static DateTimeOffset ExpiresAt(DateTimeOffset createdAt, int hours = LifetimeHours)
     {
-        ArgumentNullException.ThrowIfNull(clock);
         ArgumentOutOfRangeException.ThrowIfLessThan(hours, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(hours, 168);
-        return clock.GetUtcNow().AddHours(hours);
+        return createdAt.AddHours(hours);
     }
 
     /// <summary>Solo una solicitud <c>enviada</c> o <c>cotizando</c> recibe cotizaciones nuevas.</summary>
     public static bool AcceptsQuotes(RequestState state) => state is RequestState.Enviada or RequestState.Cotizando;
 
     /// <summary>Estado de la solicitud tras recibir una cotización: la primera la pasa de <c>enviada</c> a <c>cotizando</c> (R-16).</summary>
-    public static RequestState AfterFirstQuote(RequestState state) => state switch
-    {
-        RequestState.Enviada or RequestState.Cotizando => RequestState.Cotizando,
-        _ => throw new DomainException(DomainErrorKind.Conflict, "The request cannot receive a quote."),
-    };
+    public static RequestState AfterFirstQuote(RequestState state) => AcceptsQuotes(state)
+        ? RequestState.Cotizando
+        : throw new DomainException(DomainErrorKind.Conflict, "The request cannot receive a quote.");
 
     public static bool IsLive(QuoteState state) => state is QuoteState.Enviada or QuoteState.Aceptada;
 
