@@ -5,9 +5,19 @@ using Xunit;
 
 namespace Knock.UnitTest.Requests;
 
-public class Spec020QuotePricingTests
+public class Spec020TopeTests
 {
     private static readonly QuotePricingOptions _options = new();
+
+    [Theory]
+    [InlineData(1000, 1100, true)]
+    [InlineData(50, 55, false)]
+    public void Calcula_Tope_CA_020_11(int price, int expected, bool approval)
+    {
+        var cap = QuotePricing.Calculate(PriceType.Fijo, "ele", price, null, null, _options);
+        cap.Tope.Should().Be(expected);
+        cap.RequiereAprobacion.Should().Be(approval);
+    }
 
     [Fact]
     public void FixedPriceOf1000HasCapOf1100AndRequiresApproval_CA_020_11()
@@ -104,6 +114,8 @@ public class Spec020QuotePricingTests
     [InlineData(600, 500)]
     [InlineData(0, 500)]
     [InlineData(500, 200_001)]
+    [InlineData(-1, 500)]
+    [InlineData(1, 0)]
     public void RangeRequiresMinBelowMaxBothInsideTheBounds_R_13(int min, int max)
     {
         var act = () => QuotePricing.Calculate(PriceType.Rango, "ele", null, min, max, _options);

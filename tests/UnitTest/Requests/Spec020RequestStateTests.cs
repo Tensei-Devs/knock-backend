@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Knock.Market.Api.Common.Errors;
 using Knock.Market.Api.Modules.Requests.Domain;
 using Xunit;
 
@@ -12,6 +13,37 @@ public class Spec020RequestStateTests
         var created = new DateTimeOffset(2026, 11, 11, 10, 0, 0, TimeSpan.Zero);
 
         RequestRules.ExpiresAt(created).Should().Be(created.AddHours(48));
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(48)]
+    [InlineData(168)]
+    public void ExpiryUsesClockAndConfiguredHours_R_01(int hours)
+    {
+        var now = new DateTimeOffset(2026, 11, 12, 10, 0, 0, TimeSpan.Zero);
+        RequestRules.ExpiresAt(new FixedClock(now), hours).Should().Be(now.AddHours(hours));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(169)]
+    public void ExpiryRejectsHoursOutsideConfiguredRange_R_01(int hours)
+    {
+        var act = () => RequestRules.ExpiresAt(TimeProvider.System, hours);
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void ExpiryDefaultsTo48HoursWithClock_R_01()
+    {
+        var now = new DateTimeOffset(2026, 11, 12, 10, 0, 0, TimeSpan.Zero);
+        RequestRules.ExpiresAt(new FixedClock(now)).Should().Be(now.AddHours(48));
+    }
+
+    private sealed class FixedClock(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
     }
 
     [Theory]
@@ -32,6 +64,19 @@ public class Spec020RequestStateTests
     {
         RequestRules.AfterFirstQuote(RequestState.Enviada).Should().Be(RequestState.Cotizando);
         RequestRules.AfterFirstQuote(RequestState.Cotizando).Should().Be(RequestState.Cotizando);
+    }
+
+    [Theory]
+    [InlineData("CitaConfirmada")]
+    [InlineData("Terminada")]
+    [InlineData("Calificada")]
+    [InlineData("Cancelada")]
+    [InlineData("Vencida")]
+    public void FirstQuoteOnAClosedRequestIsRejected_R_16(string stateName)
+    {
+        var act = () => RequestRules.AfterFirstQuote(Enum.Parse<RequestState>(stateName));
+
+        act.Should().Throw<DomainException>().Which.Kind.Should().Be(DomainErrorKind.Conflict);
     }
 
     [Theory]
