@@ -4,7 +4,7 @@
 > **Origen:** `Documentacion/00_Profesores/Desarrollo_Movil/Entregables/Knock_Endpoints_CRUD.xlsx` (revisión 2026-11-02): endpoints VER-03, VER-04, VER-05, REP-04, REP-05.
 > **Claves de trabajo:** por asignar (se crea la tarea de Jira cuando se decida el alcance) · **Sprint:** por definir · **Prioridad:** por definir
 > **Servicio:** Identidad (`Knock.Identity.Api`) · **Módulo:** `Moderation` · **Colecciones:** `verificaciones`, `reportes`
-> **Responsable sugerido:** por asignar (Alexis o Guillermo) · Erick consume el contrato (frontend 043)
+> **Responsable sugerido:** por asignar (Alexis o Guillermo) · Erick consume el contrato (frontend 043, panel web)
 
 ## 1. Objetivo
 Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del Excel de endpoints para que el equipo los implemente con el mismo estilo, seguridad y pruebas que las specs 020 a 037. Como personal de verificación o moderación, quiero revisar verificaciones y reportes y decidir, para mantener la confianza en la plataforma.
@@ -23,7 +23,7 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 
 **2.3 Fuera**
 - La implementación: esta spec solo se escribe; las tareas se activan cuando una persona la apruebe y lo indique.
-- Pantallas y textos de la app: los define la spec de frontend 043.
+- Pantallas y textos de la app: los define la spec de frontend 043 (panel web).
 - Endpoints de otras colecciones o de otras specs (020 a 038) que el Excel nombra distinto: se anotan en §15.
 
 ## 3. Requisitos
@@ -201,7 +201,7 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 - Spec 031 de este repositorio.
 - Spec 033 de este repositorio.
 - Specs 002, 003, 009, 010 y 011 (estilo, bases de datos, seguridad, caché y registros).
-- Frontend: spec 043 consume este contrato.
+- Frontend: la spec 043 (panel web) consume este contrato.
 
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |

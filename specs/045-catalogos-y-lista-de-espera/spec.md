@@ -4,7 +4,7 @@
 > **Origen:** `Documentacion/00_Profesores/Desarrollo_Movil/Entregables/Knock_Endpoints_CRUD.xlsx` (revisión 2026-11-02): endpoints OFI-02, OFI-03, OFI-04, OFI-05, OFP-01, OFP-02, LIS-02.
 > **Claves de trabajo:** por asignar (se crea la tarea de Jira cuando se decida el alcance) · **Sprint:** por definir · **Prioridad:** por definir
 > **Servicio:** Mercado (`Knock.Market.Api`) · **Módulo:** `CatalogAdmin` · **Colecciones:** `oficios`, `oficios_pedidos`, `lista_espera`
-> **Responsable sugerido:** por asignar (Alexis o Guillermo) · Erick consume el contrato (frontend 035)
+> **Responsable sugerido:** por asignar (Alexis o Guillermo) · Erick consume el contrato (frontend 035 para la app y 044 para el panel)
 
 ## 1. Objetivo
 Definir y especificar los endpoints OFI-02, OFI-03, OFI-04, OFI-05, OFP-01, OFP-02, LIS-02 del Excel de endpoints para que el equipo los implemente con el mismo estilo, seguridad y pruebas que las specs 020 a 037. Como persona, quiero pedir un oficio que no existe y, como personal interno, administrar el catálogo y ver la lista de espera, para ampliar la cobertura con datos reales.
@@ -25,7 +25,7 @@ Definir y especificar los endpoints OFI-02, OFI-03, OFI-04, OFI-05, OFP-01, OFP-
 
 **2.3 Fuera**
 - La implementación: esta spec solo se escribe; las tareas se activan cuando una persona la apruebe y lo indique.
-- Pantallas y textos de la app: los define la spec de frontend 035.
+- Pantallas y textos de la app: los definen las specs de frontend 035 (app) y 044 (panel web).
 - Endpoints de otras colecciones o de otras specs (020 a 038) que el Excel nombra distinto: se anotan en §15.
 
 ## 3. Requisitos
@@ -218,7 +218,7 @@ Definir y especificar los endpoints OFI-02, OFI-03, OFI-04, OFI-05, OFP-01, OFP-
 - Spec 023 de este repositorio.
 - Spec 033 de este repositorio.
 - Specs 002, 003, 009, 010 y 011 (estilo, bases de datos, seguridad, caché y registros).
-- Frontend: spec 035 consume este contrato.
+- Frontend: las specs 035 (app) y 044 (panel web) consumen este contrato.
 
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |
