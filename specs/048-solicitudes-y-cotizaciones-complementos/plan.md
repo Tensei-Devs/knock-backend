@@ -1,4 +1,4 @@
-# Plan 048 — Solicitudes y cotizaciones: ampliar, archivos, referencia de mercado, cotizaciones del técnico y cierre por elección
+# Plan 048 — Solicitudes y cotizaciones: ampliar, archivos, referencia de mercado y cotizaciones del técnico
 
 > Parte de `spec.md` (estado Borrador). Este plan se confirma cuando la spec esté Aprobada.
 

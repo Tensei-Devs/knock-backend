@@ -28,20 +28,25 @@ Definir y especificar los endpoints COT-06, COT-07, AJU-01, AJU-02 del Excel de 
 ## 3. Requisitos
 - **R-01:** `POST /api/v1/visitas/{id}/cotizacion-final` (crear (acción)): Después de la visita previa, el técnico envía la cotización final. Lo puede llamar: cuenta con perfil de técnico. Responde 201 cuando sale bien.
 - **R-02:** Entrada de `POST /api/v1/visitas/{id}/cotizacion-final`: Ruta: id. Cuerpo: precio, descripcion. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400.
-- **R-03:** Estados de `POST /api/v1/visitas/{id}/cotizacion-final`: 409. El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
+- **R-03:** Estados de `POST /api/v1/visitas/{id}/cotizacion-final`: 409 `final_quote_not_allowed`. Los códigos de negocio van en inglés y en snake_case.
 - **R-04:** `POST /api/v1/visitas/{id}/cotizacion-final/decision` (actualizar (acción)): El cliente aprueba o rechaza la cotización final. Si rechaza, paga solo la visita. Lo puede llamar: persona con sesión que sea dueña del recurso. Responde 200 cuando sale bien.
 - **R-05:** Entrada de `POST /api/v1/visitas/{id}/cotizacion-final/decision`: Ruta: id. Cuerpo: decision. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400.
-- **R-06:** Estados de `POST /api/v1/visitas/{id}/cotizacion-final/decision`: 409. El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
+- **R-06:** Estados de `POST /api/v1/visitas/{id}/cotizacion-final/decision`: 409 `final_quote_already_decided`. Los códigos de negocio van en inglés y en snake_case.
 - **R-07:** `POST /api/v1/cotizaciones/{id}/ajuste-precio` (crear): El técnico propone un cambio sobre el tope, con motivo. Lo puede llamar: cuenta con perfil de técnico. Responde 201 cuando sale bien.
 - **R-08:** Entrada de `POST /api/v1/cotizaciones/{id}/ajuste-precio`: Ruta: id. Cuerpo: montoNuevo, motivo. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400. Reglas: `montoNuevo`: Mayor que el tope en al menos 100 pesos; `motivo`: Mínimo 10 caracteres. Moderado.
-- **R-09:** Estados de `POST /api/v1/cotizaciones/{id}/ajuste-precio`: 409. El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
+- **R-09:** Estados de `POST /api/v1/cotizaciones/{id}/ajuste-precio`: 409 `adjustment_not_allowed`. Los códigos de negocio van en inglés y en snake_case.
 - **R-10:** `POST /api/v1/ajustes/{id}/decision` (actualizar (acción)): El cliente aprueba o rechaza. Lo puede llamar: persona con sesión que sea dueña del recurso. Responde 200 cuando sale bien.
 - **R-11:** Entrada de `POST /api/v1/ajustes/{id}/decision`: Ruta: id. Cuerpo: decision. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400.
-- **R-12:** Estados de `POST /api/v1/ajustes/{id}/decision`: 404; 409. El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
-- **R-13:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
-- **R-14:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
-- **R-15:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
-- **R-16:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
+- **R-12:** Estados de `POST /api/v1/ajustes/{id}/decision`: 404; 409 `adjustment_already_decided`. Los códigos de negocio van en inglés y en snake_case.
+- **R-13:** **Cotización final (COT-06).** Solo la envía el técnico de la visita, una vez terminada la revisión previa y **una sola** por visita. `precio` es un entero positivo en pesos, máximo 100 000, y `descripcion` tiene de 8 a 500 caracteres. El cliente la ve para aprobarla o rechazarla.
+- **R-14:** **Decisión sobre la cotización final (COT-07).** `decision` es `aprueba` o `rechaza` y es definitiva. Si aprueba, el trabajo sigue con ese precio; si rechaza, el cliente paga solo la visita y la visita queda `visita_pagada`. Tiene vigencia de 48 horas: sin respuesta se considera rechazada por vencimiento.
+- **R-15:** **Ajuste de precio (AJU-01).** El técnico propone un `montoNuevo` mayor que el tope de la cotización con un `motivo` de 8 a 300 caracteres; solo puede haber un ajuste pendiente por cotización, y el cálculo del tope y su aprobación son los de la spec 020 (`CotizacionTopeCalculator`).
+- **R-16:** **Decisión sobre el ajuste (AJU-02).** `decision` es `aprueba` o `rechaza` y es definitiva, con vigencia de 24 horas: sin respuesta queda rechazada por vencimiento y el precio sigue siendo el tope aprobado.
+- **R-17:** **Avisos.** Cada cotización final y cada ajuste crea un aviso para el cliente, y cada decisión, uno para el técnico, por la bandeja de salida (specs 037 y 054); los avisos no llevan precios ni textos escritos por las personas.
+- **R-18:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
+- **R-19:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
+- **R-20:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
+- **R-21:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dado el rol «cuenta con perfil de técnico», cuando llama `POST /api/v1/visitas/{id}/cotizacion-final` con datos válidos, entonces responde 201 con lo descrito en §5.
@@ -49,30 +54,35 @@ Definir y especificar los endpoints COT-06, COT-07, AJU-01, AJU-02 del Excel de 
 - **CA-03:** Dada una persona que no cumple el rol «cuenta con perfil de técnico», cuando llama `POST /api/v1/visitas/{id}/cotizacion-final`, entonces responde 403 y no cambia nada.
 - **CA-04:** Dado un valor inválido según las reglas de §6, cuando llama `POST /api/v1/visitas/{id}/cotizacion-final`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
 - **CA-05:** Dado un cuerpo que no se puede leer, cuando llama `POST /api/v1/visitas/{id}/cotizacion-final`, entonces responde 400 y no guarda nada.
-- **CA-06:** Dado el caso «recurso no disponible», cuando llama `POST /api/v1/visitas/{id}/cotizacion-final`, entonces responde 409 con ProblemDetails y no cambia el estado.
+- **CA-06:** Dado el caso «la revisión previa no terminó o ya existe una cotización final de esa visita», cuando llama `POST /api/v1/visitas/{id}/cotizacion-final`, entonces responde 409 `final_quote_not_allowed` con ProblemDetails y no cambia el estado.
 - **CA-07:** Dado el rol «persona con sesión que sea dueña del recurso», cuando llama `POST /api/v1/visitas/{id}/cotizacion-final/decision` con datos válidos, entonces responde 200 con lo descrito en §5.
 - **CA-08:** Dada una petición sin token o con token vencido, cuando llama `POST /api/v1/visitas/{id}/cotizacion-final/decision`, entonces responde 401 y no ejecuta la operación.
 - **CA-09:** Dada una persona que no cumple el rol «persona con sesión que sea dueña del recurso», cuando llama `POST /api/v1/visitas/{id}/cotizacion-final/decision`, entonces responde 403 y no cambia nada.
 - **CA-10:** Dado un valor inválido según las reglas de §6, cuando llama `POST /api/v1/visitas/{id}/cotizacion-final/decision`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
 - **CA-11:** Dado un cuerpo que no se puede leer, cuando llama `POST /api/v1/visitas/{id}/cotizacion-final/decision`, entonces responde 400 y no guarda nada.
-- **CA-12:** Dado el caso «recurso no disponible», cuando llama `POST /api/v1/visitas/{id}/cotizacion-final/decision`, entonces responde 409 con ProblemDetails y no cambia el estado.
+- **CA-12:** Dado el caso «no hay una cotización final pendiente o ya fue decidida o venció», cuando llama `POST /api/v1/visitas/{id}/cotizacion-final/decision`, entonces responde 409 `final_quote_already_decided` con ProblemDetails y no cambia el estado.
 - **CA-13:** Dado el rol «cuenta con perfil de técnico», cuando llama `POST /api/v1/cotizaciones/{id}/ajuste-precio` con datos válidos, entonces responde 201 con lo descrito en §5.
 - **CA-14:** Dada una petición sin token o con token vencido, cuando llama `POST /api/v1/cotizaciones/{id}/ajuste-precio`, entonces responde 401 y no ejecuta la operación.
 - **CA-15:** Dada una persona que no cumple el rol «cuenta con perfil de técnico», cuando llama `POST /api/v1/cotizaciones/{id}/ajuste-precio`, entonces responde 403 y no cambia nada.
 - **CA-16:** Dado un valor inválido según las reglas de §6, cuando llama `POST /api/v1/cotizaciones/{id}/ajuste-precio`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
 - **CA-17:** Dado un cuerpo que no se puede leer, cuando llama `POST /api/v1/cotizaciones/{id}/ajuste-precio`, entonces responde 400 y no guarda nada.
-- **CA-18:** Dado el caso «recurso no disponible», cuando llama `POST /api/v1/cotizaciones/{id}/ajuste-precio`, entonces responde 409 con ProblemDetails y no cambia el estado.
+- **CA-18:** Dado el caso «ya hay un ajuste pendiente o la cotización no está aceptada», cuando llama `POST /api/v1/cotizaciones/{id}/ajuste-precio`, entonces responde 409 `adjustment_not_allowed` con ProblemDetails y no cambia el estado.
 - **CA-19:** Dado el rol «persona con sesión que sea dueña del recurso», cuando llama `POST /api/v1/ajustes/{id}/decision` con datos válidos, entonces responde 200 con lo descrito en §5.
 - **CA-20:** Dada una petición sin token o con token vencido, cuando llama `POST /api/v1/ajustes/{id}/decision`, entonces responde 401 y no ejecuta la operación.
 - **CA-21:** Dada una persona que no cumple el rol «persona con sesión que sea dueña del recurso», cuando llama `POST /api/v1/ajustes/{id}/decision`, entonces responde 403 y no cambia nada.
 - **CA-22:** Dado un valor inválido según las reglas de §6, cuando llama `POST /api/v1/ajustes/{id}/decision`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
 - **CA-23:** Dado un cuerpo que no se puede leer, cuando llama `POST /api/v1/ajustes/{id}/decision`, entonces responde 400 y no guarda nada.
 - **CA-24:** Dado el caso «recurso no disponible», cuando llama `POST /api/v1/ajustes/{id}/decision`, entonces responde 404 con ProblemDetails y no cambia el estado.
-- **CA-25:** Dado el caso «recurso no disponible», cuando llama `POST /api/v1/ajustes/{id}/decision`, entonces responde 409 con ProblemDetails y no cambia el estado.
-- **CA-26:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
-- **CA-27:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
-- **CA-28:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
-- **CA-29:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
+- **CA-25:** Dado el caso «el ajuste ya fue decidido o venció», cuando llama `POST /api/v1/ajustes/{id}/decision`, entonces responde 409 `adjustment_already_decided` con ProblemDetails y no cambia el estado.
+- **CA-26:** Dado el técnico de una visita con revisión previa terminada, cuando envía precio y descripción válidos, entonces se crea la cotización final y el cliente recibe un aviso; una segunda responde 409 `final_quote_not_allowed`.
+- **CA-27:** Dada una cotización final pendiente, cuando el cliente aprueba o rechaza, entonces queda decidida y no puede cambiarse; y si pasan 48 horas sin respuesta, entonces se trata como rechazada por vencimiento.
+- **CA-28:** Dada una cotización aceptada, cuando el técnico propone un monto nuevo con motivo válido, entonces se crea el ajuste pendiente; con un ajuste ya pendiente responde 409 `adjustment_not_allowed`.
+- **CA-29:** Dado un ajuste pendiente, cuando el cliente decide o pasan 24 horas, entonces queda aprobado, rechazado o vencido y el precio de la cotización cambia solo si se aprobó.
+- **CA-30:** Dada una cotización final, un ajuste o su decisión, cuando se genera el aviso, entonces el evento solo lleva identificadores, sin precios ni texto escrito.
+- **CA-31:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
+- **CA-32:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
+- **CA-33:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
+- **CA-34:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
 
 **4.1 Criterio → prueba prevista**
 
@@ -107,6 +117,11 @@ Definir y especificar los endpoints COT-06, COT-07, AJU-01, AJU-02 del Excel de 
 | CA-27 | `Spec049Tests.Criterio27_CA_049_27` |
 | CA-28 | `Spec049Tests.Criterio28_CA_049_28` |
 | CA-29 | `Spec049Tests.Criterio29_CA_049_29` |
+| CA-30 | `Spec049Tests.Criterio30_CA_049_30` |
+| CA-31 | `Spec049Tests.Criterio31_CA_049_31` |
+| CA-32 | `Spec049Tests.Criterio32_CA_049_32` |
+| CA-33 | `Spec049Tests.Criterio33_CA_049_33` |
+| CA-34 | `Spec049Tests.Criterio34_CA_049_34` |
 
 ## 5. Contrato
 | ID | Método y ruta | Quién | Entrada | Respuestas |
@@ -124,6 +139,16 @@ Definir y especificar los endpoints COT-06, COT-07, AJU-01, AJU-02 del Excel de 
 | COT-07 | No aplica | No | No |
 | AJU-01 | No aplica | No | No |
 | AJU-02 | No aplica | No | No |
+
+**Códigos de error de negocio**
+
+| ID | Estado | Código | Cuándo |
+|---|---|---|---|
+| COT-06 | 409 | `final_quote_not_allowed` | la revisión previa no terminó o ya existe una cotización final de esa visita |
+| COT-07 | 409 | `final_quote_already_decided` | no hay una cotización final pendiente o ya fue decidida o venció |
+| AJU-01 | 409 | `adjustment_not_allowed` | ya hay un ajuste pendiente o la cotización no está aceptada |
+| AJU-02 | 409 | `adjustment_already_decided` | el ajuste ya fue decidido o venció |
+
 
 **Códigos de error:** los de forma salen como 422 con `errors` por campo y los de sesión y límite como 401 y 429; los conflictos de negocio llevan un código en inglés y snake_case que se fija al implementar y se agrega al catálogo.
 
@@ -191,13 +216,13 @@ Definir y especificar los endpoints COT-06, COT-07, AJU-01, AJU-02 del Excel de 
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |
 |---|---|---|
-| Acceso a datos de otra persona (IDOR) | Toda consulta y escritura filtra por el `sub` del token; ajeno responde 403 o 404 | CA-03, CA-09, CA-15, CA-21, CA-26 |
-| Asignación masiva o identificador ajeno en el cuerpo | El DTO no acepta identificadores de persona; se ignoran | CA-03, CA-09, CA-15, CA-21, CA-26 |
+| Acceso a datos de otra persona (IDOR) | Toda consulta y escritura filtra por el `sub` del token; ajeno responde 403 o 404 | CA-03, CA-09, CA-15, CA-21, CA-31 |
+| Asignación masiva o identificador ajeno en el cuerpo | El DTO no acepta identificadores de persona; se ignoran | CA-03, CA-09, CA-15, CA-21, CA-31 |
 | Inyección en filtros y parámetros | Parámetros tipados con validador; nada se concatena en consultas | CA-04 a CA-05, CA-10 a CA-11, CA-16 a CA-17, CA-22 a CA-23 |
 | Ruta sin sesión | JWT obligatorio salvo las públicas | CA-02, CA-08, CA-14, CA-20 |
-| Abuso por repetición o cuerpos grandes | Límite de peticiones, `Retry-After` y tope de cuerpo | CA-28 |
-| Datos personales en registros y errores | Registros sin datos personales; ProblemDetails sin valores | CA-27 |
-| Duplicados por reintento | Regla de estado o índice único, sin `Idempotency-Key` | CA-29 |
+| Abuso por repetición o cuerpos grandes | Límite de peticiones, `Retry-After` y tope de cuerpo | CA-33 |
+| Datos personales en registros y errores | Registros sin datos personales; ProblemDetails sin valores | CA-32 |
+| Duplicados por reintento | Regla de estado o índice único, sin `Idempotency-Key` | CA-34 |
 
 ## 10. Plan de pruebas
 Las pruebas citan el caso como `CA_049_NN` en el nombre (para `python scripts/sdd_lint.py --trace 049`).
@@ -206,17 +231,16 @@ Las pruebas citan el caso como `CA_049_NN` en el nombre (para `python scripts/sd
 |---|---|---|
 | Unitarias | Sí | Validadores, reglas de estado y cálculos del dominio |
 | Integración | Sí | Cada ruta con la base real en contenedor (Testcontainers) y `MarketApiFactory`/fábrica del servicio |
-| Seguridad negativa | Sí | 401, 403/404, 422, 413 y 429 (CA-02 a CA-05, CA-08 a CA-11, CA-14 a CA-17, CA-20 a CA-23, CA-26, CA-28) |
+| Seguridad negativa | Sí | 401, 403/404, 422, 413 y 429 (CA-02 a CA-05, CA-08 a CA-11, CA-14 a CA-17, CA-20 a CA-23, CA-31, CA-33) |
 | Base de datos | Sí | Índices y reglas de cada colección de §6 |
 | Contrato | Sí | OpenAPI regenerado y comparado con `contracts/` |
 | Mutación | Sí | Meta del módulo según la spec 008 |
 | Rendimiento | No aplica | Sin ruta crítica; se mide solo si la spec 034 lo pide |
 
 ## 11. Escenarios
-- **COT-06** — pantallas: Terminar servicio; Chat.
-- **COT-07** — pantallas: Mensajes; Visita.
-- **AJU-01** — pantallas: Terminar servicio (Proponer otro precio).
-- **AJU-02** — pantallas: Mensajes (Aprobar); Visita.
+- **Cotización final:** el técnico termina la revisión previa → envía precio y descripción → el cliente recibe el aviso, la revisa y aprueba → el trabajo continúa con ese precio.
+- **Rechazo:** el cliente rechaza la cotización final → paga solo la visita → la visita queda `visita_pagada`.
+- **Ajuste:** el técnico pide subir el precio sobre el tope con su motivo → el cliente aprueba en 24 horas o el ajuste vence y se mantiene el tope.
 
 ## 12. Definición de terminado
 - Los criterios de aceptación están cubiertos por pruebas en verde y `sdd_lint --trace 049` sin faltantes.
@@ -229,13 +253,17 @@ Las pruebas citan el caso como `CA_049_NN` en el nombre (para `python scripts/sd
 
 ## 14. Decisiones tomadas sin consulta
 - **D-01:** Se toma el Excel de endpoints como fuente del contrato porque es el insumo acordado para las specs; cualquier diferencia con las specs 020 a 038 se resuelve a favor de la spec numerada.
-- **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case definidos al implementar, siguiendo la convención de errores de la spec 002.
+- **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case (los de §5 y, si falta alguno, los que se fijen al implementar), siguiendo la convención de errores de la spec 002.
 - **D-03:** No se usa `Idempotency-Key`, aunque el Excel lo menciona en creaciones.
+- **D-04:** Vigencia de 48 horas para la cotización final y de 24 horas para el ajuste: el Excel no fija plazos.
+- **D-05:** Precio máximo de 100 000 pesos en la cotización final para evitar errores de captura.
+- **D-06:** El rechazo de la cotización final deja la visita como `visita_pagada` (solo se paga la visita), según el Excel.
+- **D-07:** El precio de la cotización final no se limita al tope de la cotización inicial, pero siempre exige la aprobación del cliente.
 
 ## 15. Riesgos y dudas abiertas
-- El tope de ajuste sobre la cotización inicial lo fija la spec 020 (10 %): confirmar que se reutiliza el mismo cálculo.
-- Confirmar qué pasa con la visita si el cliente rechaza la cotización final (cancelar o reprogramar).
-- Esta spec se generó a partir del Excel; antes de aprobarla hay que revisar los límites, los textos de error y los plazos con el equipo.
+- Confirmar cómo se registra el pago de la visita rechazada si Knock no procesa pagos.
+- Confirmar que 100 000 pesos como máximo y las vigencias de 48 y 24 horas son las que quiere el equipo.
+- Confirmar si el cliente puede pedir cambios en vez de solo aprobar o rechazar la cotización final.
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: _____________________ fecha: __________
