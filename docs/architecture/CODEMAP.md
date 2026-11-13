@@ -1,6 +1,6 @@
 # Mapa de código
 
-> Generado por `scripts/codemap.py` el 2026-11-13T00:25:50Z. No editar a mano.
+> Generado por `scripts/codemap.py` el 2026-11-13T05:23:01Z. No editar a mano.
 > **Antes de crear una clase, método o archivo, busca aquí o corre `python scripts/codemap.py --query "<qué necesitas>"`.**
 
 ## Resumen
@@ -10,7 +10,7 @@
 | `Catalog` | -, controllers, data, domain, dtos, services, validators | 26 | 29 | 34 |
 | `Knock.Contracts` | - | 5 | 7 | 7 |
 | `Knock.Gateway` | -, hosting | 14 | 39 | 47 |
-| `Knock.Identity.Api` | -, common, hosting | 28 | 58 | 71 |
+| `Knock.Identity.Api` | -, common, hosting | 28 | 58 | 72 |
 | `Knock.Market.Api` | -, common, hosting | 26 | 55 | 69 |
 | `Knock.Messaging.Api` | -, hosting | 14 | 37 | 45 |
 | `Requests` | -, domain, services | 6 | 11 | 11 |
@@ -81,9 +81,8 @@
 - `src/Knock.Identity.Api/Hosting/SecurityHeadersMiddleware.cs:25 SecurityHeadersMiddleware.Apply` · `src/Knock.Market.Api/Hosting/SecurityHeadersMiddleware.cs:24 SecurityHeadersMiddleware.Apply`
 - `src/Knock.Identity.Api/Hosting/SecuritySettings.cs:50 SecuritySettingsValidator.Errors` · `src/Knock.Market.Api/Hosting/SecuritySettings.cs:49 SecuritySettingsValidator.Errors`
 - `src/Knock.Identity.Api/Hosting/SecuritySettings.cs:84 SecuritySettingsValidator.IsValidOrigin` · `src/Knock.Market.Api/Hosting/SecuritySettings.cs:83 SecuritySettingsValidator.IsValidOrigin`
-- `src/Knock.Identity.Api/Hosting/ValidationExtensions.cs:29 ValidationFilter.OnActionExecutionAsync` · `src/Knock.Market.Api/Hosting/ValidationExtensions.cs:27 ValidationFilter.OnActionExecutionAsync`
-- `src/Knock.Identity.Api/Hosting/ValidationExtensions.cs:65 ValidationFilter.ToCamelCasePath` · `src/Knock.Market.Api/Hosting/ValidationExtensions.cs:63 ValidationFilter.ToCamelCasePath`
-- `src/Knock.Identity.Api/Hosting/ValidationExtensions.cs:69 ValidationFilter.Collect` · `src/Knock.Market.Api/Hosting/ValidationExtensions.cs:67 ValidationFilter.Collect`
+- `src/Knock.Identity.Api/Hosting/ValidationExtensions.cs:70 ValidationFilter.ToCamelCasePath` · `src/Knock.Market.Api/Hosting/ValidationExtensions.cs:63 ValidationFilter.ToCamelCasePath`
+- `src/Knock.Identity.Api/Hosting/ValidationExtensions.cs:74 ValidationFilter.Collect` · `src/Knock.Market.Api/Hosting/ValidationExtensions.cs:67 ValidationFilter.Collect`
 
 ## Tipos con el mismo nombre en varios lugares
 
@@ -325,7 +324,7 @@
 - `src/Knock.Identity.Api/Hosting/TelemetryRedactor.cs` — class `TelemetryRedactor`, class `CoordinatePairs`, class `TelemetryRedactionProcessor`, class `LogRedactionProcessor`, class `RedactingJsonFormatter`
   - `IsSensitiveKey()`:42, `Redact()`:44, `RedactAttribute()`:75, `RedactUrl()`:99, `ExceptionEvent()`:121, `Redact()`:171, `OnEnd()`:289, `OnEnd()`:322, `Format()`:353
 - `src/Knock.Identity.Api/Hosting/ValidationExtensions.cs` — class `ValidationExtensions`, class `ValidationFilter`
-  - `AddKnockValidation()`:12, `OnActionExecutionAsync()`:29, `ToCamelCasePath()`:65
+  - `AddKnockValidation()`:12, `OnActionExecutionAsync()`:29, `WriteErrorsAsync()`:56, `ToCamelCasePath()`:70
 
 ### Knock.Market.Api
 
@@ -523,7 +522,7 @@
 **controllers**
 
 - `src/Knock.Identity.Api/Modules/Usuarios/Controllers/V1/MeController.cs` — class `MeController`
-  - `Get()`:30, `Put()`:54, `ETag()`:73, `Matches()`:79
+  - `Get()`:31, `Put()`:56, `ETag()`:74, `Matches()`:80
 
 **data**
 
@@ -546,6 +545,6 @@
 - `src/Knock.Identity.Api/Modules/Usuarios/Services/MarketColoniaCatalog.cs` — class `MarketColoniaCatalog`, record `ExistsResponse`, class `MarketCatalogOptions`
   - `ExistsAsync()`:16, `HasValidBaseUrl()`:65
 - `src/Knock.Identity.Api/Modules/Usuarios/Services/ProfileRules.cs` — class `ProfileOptions`, class `ProfileRules`
-  - `ProfileRules()`:20, `Validate()`:37
+  - `ProfileRules()`:19, `Validate()`:36
 - `src/Knock.Identity.Api/Modules/Usuarios/Services/ProfileService.cs` — class `ProfileService`
   - `ProfileService()`:12, `GetAsync()`:23, `UpdateAsync()`:36
