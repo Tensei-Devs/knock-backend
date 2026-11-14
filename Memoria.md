@@ -602,6 +602,10 @@
 - **Por qué en código y después de `ReadFrom.Configuration`:** así ningún `appsettings` ni variable de entorno puede volver a habilitar esos eventos; bajar el nivel solo deja pasar más eventos al filtro.
 - **Pendiente de la spec (no es de esta tarea):** la regla de redacción de consultas en `TelemetryRedactor` (T-03, Erick), la regla de Semgrep contra `UseHttpLogging` y la prueba de trazas (T-04, Alexis) y el frente de `ForwardedHeaders` (KNOCK-180).
 - **A evitar:** confiar en el nivel configurado para no registrar la consulta; mover `QueryLeakDetector` o la lista de fuentes sin actualizar las cuatro copias de `LoggingExtensions` y la prueba unitaria que las recorre.
+## 2026-11-13 — BUG-002, BUG-003 y BUG-004 implementadas; H-01, H-02 y H-03 cerradas (KNOCK-239, KNOCK-240, KNOCK-241)
+- **Estado:** el índice de specs marca las tres como Implementadas; los planes y las tareas dicen qué PR las hizo (#85, #78 y #82, con #86 de Terraform). H-01, H-02 y H-03 pasan a cerradas en `docs/modelo-de-amenazas.md`.
+- **Evidencia:** el líder verificó el gateway desplegado con `GET` a `/health`, `/sitemap.xml` y `/api/v1/me/x`: HSTS `max-age=31536000; includeSubDomains` y sin `Server` ni `X-Powered-By`. Mensajería corre (revisión `0000004`, Healthy) con la llave del JWT y Redis; su ingreso es interno, así que el «401 sin token» se cita con las pruebas del CI.
+- **A evitar:** cerrar un hallazgo con solo la prueba local: el `TestServer` no emite `Server` ni HSTS a `localhost`; la evidencia que cierra es la del despliegue.
 ## 2026-11-12 — KNOCK-208, OI-2: JPEG y reintento de moderación
 - **Estado:** procesamiento de JPEG/PNG/WebP a JPEG sin metadatos, transparencia sobre blanco, reducción a 512 px para perfil y 1600 px para solicitud/trabajo, y una operación concurrente por réplica. Market solicita 0.5 CPU y 1 Gi; no se ha desplegado. El registro temporal conserva la clave aleatoria del blob. La moderación no disponible o agotada conserva la cuarentena y el estado pendiente; se probó un reintento exitoso a nivel de servicio.
 - **Verificación:** compilación sin errores ni advertencias, formato sin cambios, 913 unitarias, 300 de seguridad y 2 integraciones con Azurite en verde. `sdd_lint --trace 013` señala cuatro criterios pendientes de OI-3. No se comprobó el despliegue de Terraform ni el consumo real de memoria.
@@ -645,3 +649,8 @@
 - **Por qué:** el rechazo ocurre dentro de Kestrel; el gateway también corre sobre Kestrel, así que el 400 sale antes de llegar a Mercado. No hay nada razonable que hacer en la aplicación.
 - **Alcance:** solo texto de `specs/023-zona-por-ubicacion-o-codigo-postal/spec.md`; no se tocó ningún campo de aprobación ni el código.
 - **A evitar:** esperar 422 para `%00` en pruebas o en el DAST; es 400 del servidor.
+
+## 2026-11-14 — Gitleaks marca todos los PR por dos cadenas sintéticas de la rama de KNOCK-40 (EXC-023)
+- **Qué pasó:** el commit 72c27e4 de la rama de KNOCK-40 trae en `DemoSeedGuardTests.cs` (líneas 17 y 40) cadenas de conexión de MongoDB inventadas para probar la guarda de host. Gitleaks revisa el historial de todas las ramas, así que desde ese push falló en todos los PR nuevos, incluso en los que solo cambian documentación (#113).
+- **Decisión (Tech Lead):** se aceptan las dos huellas en `.gitleaksignore`, con la EXC-023 en `security/exceptions.yaml` (vence 2026-12-04 o al fusionar la rama), igual que EXC-019. No se reescribe el historial ni se toca la regla.
+- **A evitar:** escribir en pruebas una cadena de conexión completa con usuario y clave aunque sea inventada; constrúyela en el código sin ese formato.
