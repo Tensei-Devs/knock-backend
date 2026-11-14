@@ -5,6 +5,7 @@ using Knock.IntegrationTest.Support;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
@@ -25,6 +26,37 @@ namespace Knock.DatabaseTest.Demo;
 public sealed class DemoSeedLoaderTests
 {
     private static readonly string _path = Path.Combine(CatalogTestDatabase.SeedsDirectory, "demo", "identity", "usuarios.json");
+
+    [Fact]
+    public async Task ProtectedPhones_CA_038_06()
+    {
+        await WithDatabase(async (database, seeder, key) =>
+        {
+            await seeder.SeedAsync(_path, CancellationToken.None);
+            var users = await database.GetCollection<BsonDocument>("usuarios").Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+            var seeds = BsonSerializer.Deserialize<BsonArray>(await File.ReadAllTextAsync(_path)).Select(item => item.AsBsonDocument).ToArray();
+            Assert.Equal(10, users.Count);
+            foreach (var user in users)
+            {
+                var serialized = user.ToJson();
+                foreach (var seed in seeds)
+                {
+                    Assert.DoesNotContain(seed["celular"].AsString, serialized, StringComparison.Ordinal);
+                }
+
+                var source = Assert.Single(seeds, item => item["_id"] == user["_id"]);
+                Assert.Equal(1, user["celularCifradoVersion"].AsInt32);
+                Assert.Equal(1, user["celularHashVersion"].AsInt32);
+                Assert.Equal(32, user["celularHash"].AsBsonBinaryData.Bytes.Length);
+                var cipher = user["celularCifrado"].AsBsonBinaryData.Bytes;
+                var plaintext = new byte[cipher.Length - 28];
+                using var aes = new AesGcm(key, 16);
+                aes.Decrypt(cipher.AsSpan(0, 12), cipher.AsSpan(12, plaintext.Length), cipher.AsSpan(12 + plaintext.Length), plaintext,
+                    Encoding.UTF8.GetBytes("usuarios|celular|" + user["_id"].AsObjectId));
+                Assert.Equal(source["celular"].AsString, Encoding.UTF8.GetString(plaintext));
+            }
+        });
+    }
 
     [Theory]
     [InlineData(false, "Development")]
@@ -154,6 +186,15 @@ public sealed class DemoSeedLoaderTests
             await seeder.SeedAsync(_path, CancellationToken.None);
             Assert.Equal(10, await database.GetCollection<BsonDocument>("usuarios").CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty));
             Assert.Empty(cache.Removed);
+            var seeds = BsonSerializer.Deserialize<BsonArray>(await File.ReadAllTextAsync(_path));
+            var messages = cache.Logger.Messages;
+            Assert.Equal(10, messages.Count);
+            foreach (var seed in seeds.Select(item => item.AsBsonDocument))
+            {
+                Assert.Contains(messages, message => message.Contains(seed["_id"].AsObjectId.ToString(), StringComparison.Ordinal));
+                Assert.DoesNotContain(messages, message => message.Contains(seed["celular"].AsString, StringComparison.Ordinal));
+                Assert.DoesNotContain(messages, message => message.Contains(UserIdDerivation.Derive(seed["uid"].AsString).ToString("D"), StringComparison.Ordinal));
+            }
             cache.Fail = false;
             await seeder.SeedAsync(_path, CancellationToken.None);
             Assert.Equal(10, cache.Removed.Count);
@@ -269,7 +310,7 @@ public sealed class DemoSeedLoaderTests
             var store = new UsuariosStore(database, Options.Create(new KnockMongoOptions { ConnectionString = fixture.ConnectionString }));
             var cache = new FakeCache();
             var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Seed:Demo"] = enabled.ToString() }).Build();
-            await test(database, new DemoClientSeeder(store, protector, cache, Microsoft.Extensions.Logging.Abstractions.NullLogger<DemoClientSeeder>.Instance, configuration, new FakeEnvironment { EnvironmentName = environment }), key, cache);
+            await test(database, new DemoClientSeeder(store, protector, cache, cache.Logger, configuration, new FakeEnvironment { EnvironmentName = environment }), key, cache);
         }
         finally
         {
@@ -280,6 +321,7 @@ public sealed class DemoSeedLoaderTests
     private sealed class FakeCache : IProfileCache
     {
         public List<string> Removed { get; } = [];
+        public CaptureLogger Logger { get; } = new();
         public bool Fail { get; set; }
         public Task<UserProfile?> GetAsync(string sub, CancellationToken cancellationToken) => Task.FromResult<UserProfile?>(null);
         public Task SetAsync(UserProfile profile, CancellationToken cancellationToken) => Task.CompletedTask;
@@ -288,6 +330,17 @@ public sealed class DemoSeedLoaderTests
             if (Fail) { throw new TimeoutException(); }
             lock (Removed) { Removed.Add(sub); }
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class CaptureLogger : ILogger<DemoClientSeeder>
+    {
+        public List<string> Messages { get; } = [];
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            lock (Messages) { Messages.Add(formatter(state, exception)); }
         }
     }
 

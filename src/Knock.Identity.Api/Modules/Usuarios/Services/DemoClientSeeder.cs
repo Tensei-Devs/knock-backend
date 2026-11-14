@@ -78,13 +78,13 @@ internal sealed partial class DemoClientSeeder(
         {
             if (!await DemoProfileCache.TryRemoveAsync(cache, document["sub"].AsString, cancellationToken))
             {
-                LogCacheUnavailable(logger);
+                LogCacheUnavailable(logger, document["_id"].AsObjectId.ToString());
             }
         }
     }
 
-    [LoggerMessage(EventId = 2250, Level = LogLevel.Warning, Message = "Demo profile cache invalidation unavailable; a later load will retry")]
-    private static partial void LogCacheUnavailable(ILogger logger);
+    [LoggerMessage(EventId = 2250, Level = LogLevel.Warning, Message = "Demo profile cache invalidation unavailable for demo document {DemoId}; a later load will retry")]
+    private static partial void LogCacheUnavailable(ILogger logger, string demoId);
 
     private void CheckEnvironment()
     {
