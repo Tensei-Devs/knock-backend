@@ -177,6 +177,8 @@ Definir y especificar los endpoints AVI-01, AVI-02, AVI-03, AVI-04, PRE-01 del E
 - Spec 037 de este repositorio.
 - Specs 002, 003, 009, 010 y 011 (estilo, bases de datos, seguridad, caché y registros).
 - Frontend: spec 034 consume este contrato.
+- **Prerrequisitos que hoy no existen (trabajo pendiente, no capacidades implementadas):**
+  - Despachador de avisos de la spec 037, único que crea avisos (hoy no implementado)
 
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |

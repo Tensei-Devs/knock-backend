@@ -199,6 +199,8 @@ Definir y especificar los endpoints COT-06, COT-07, AJU-01, AJU-02 del Excel de 
 | Llave principal | _id | Identifica de forma única cada documento. La genera la base de datos |
 | Compuesto | visitaId + estado | Ver si hay un cambio pendiente en una visita |
 
+**Campos nuevos opcionales en `visitas` (spec 021).** `resultado` (`solo_visita` cuando el cliente rechaza la cotización final) y `cotizacionFinal` embebida `{ precio, descripcion, estado (enviada, aprobada, rechazada, vencida), venceEn }`. Son aditivos: no cambian los estados ni las reglas de la spec 021.
+
 ## 7. Arquitectura y componentes
 - Proyecto `Knock.Market.Api`, módulo `FinalQuotes` con las capas del estilo de la spec 002: `Controllers`, `Dtos`, `Validators`, `Services`, `Data` y `Hosting`.
 - Cada ruta recibe sus parámetros en objetos tipados con validador registrado, nunca como `string` suelto, y consulta con filtros por el `sub` del token.
@@ -212,6 +214,9 @@ Definir y especificar los endpoints COT-06, COT-07, AJU-01, AJU-02 del Excel de 
 - Spec 022 de este repositorio.
 - Specs 002, 003, 009, 010 y 011 (estilo, bases de datos, seguridad, caché y registros).
 - Frontend: spec 039 consume este contrato.
+- **Prerrequisitos que hoy no existen (trabajo pendiente, no capacidades implementadas):**
+  - Tareas de vencimiento del ejecutor de la spec 054 (hoy no implementado)
+  - Topes de la spec 020 (su dominio ya está en `sprint-04`)
 
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |

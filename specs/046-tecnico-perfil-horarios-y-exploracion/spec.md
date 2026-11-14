@@ -15,14 +15,14 @@ Definir y especificar los endpoints TEC-01, TEC-02, TEC-03, TEC-04, TEC-05, TEC-
 
 **2.2 Dentro**
 - `POST /api/v1/tecnicos` (TEC-01): Registra a la persona como técnico (nombre y apellido, oficios, taller o domicilio, radio, perfil opcional y términos).
-- `GET /api/v1/tecnicos` (TEC-02): Busca técnicos por oficio, colonia, distancia o radio, Disponible hoy, solo verificados y texto libre.
+- `GET /api/v1/tecnicos` (TEC-02): Busca técnicos por filtros: oficio, colonia, distancia o radio, Disponible hoy y solo verificados (el texto libre es `/busqueda`, spec 027).
 - `GET /api/v1/tecnicos/autocompletar` (TEC-03): Sugerencias de oficios, servicios y negocios mientras se escribe (por ejemplo, boiler, frenos).
 - `GET /api/v1/mapa/tecnicos` (TEC-04): Técnicos de la zona visible del mapa, ya agrupados, para no mandarlos todos.
 - `GET /api/v1/tecnicos/{id}` (TEC-05): Perfil del técnico. Sin sesión devuelve solo el resumen (foto, verificación, calificación, experiencia, descripción corta); con sesión suma servicios y precios, colonias….
 - `GET /api/v1/tecnicos/{id}/llega-a-mi-colonia` (TEC-06): Dice si el técnico atiende la colonia de la persona.
 - `GET /api/v1/tecnicos/{id}/fotos-trabajos` (TEC-07): Fotos de trabajos terminados que el cliente permitió publicar.
 - `PUT /api/v1/tecnicos/me` (TEC-08): Edita el perfil público: negocio, años, oficios, forma de atención, radio, descripción, foto.
-- `PUT /api/v1/tecnicos/me/disponibilidad` (TEC-09): Cambia el interruptor Disponible hoy.
+- `PUT /api/v1/tecnicos/me/disponibilidad` (TEC-09): Cambia el interruptor Disponible hoy: guarda `disponibleHasta` (hoy a las 23:59:59 hora de la ciudad) y devuelve `disponibleHoy` y `disponibleHasta`.
 - `GET /api/v1/tecnicos/me/horarios` (TEC-10): Horarios del técnico.
 - `PUT /api/v1/tecnicos/me/horarios` (TEC-11): Cambia abierto o cerrado por día.
 - `GET /api/v1/tecnicos/me/reputacion` (TEC-13): Calificación promedio, distribución por estrellas y nivel.
@@ -38,8 +38,8 @@ Definir y especificar los endpoints TEC-01, TEC-02, TEC-03, TEC-04, TEC-05, TEC-
 - **R-01:** `POST /api/v1/tecnicos` (crear): Registra a la persona como técnico (nombre y apellido, oficios, taller o domicilio, radio, perfil opcional y términos). Lo puede llamar: persona con sesión (cliente o técnico). Responde 201 cuando sale bien.
 - **R-02:** Entrada de `POST /api/v1/tecnicos`: Cuerpo: oficios, atencion, direccionTaller o radioKm, perfil opcional, aceptaTerminos. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400. Reglas: `oficios`: Al menos uno; `atencion`: Solo esos valores; `direccionTaller`: Obligatoria si atiende en taller (mínimo 8 caracteres). No se muestra si atiende a domici…; `radioKm`: 3, 5, 8 o 12.
 - **R-03:** Estados de `POST /api/v1/tecnicos`: 409 `already_a_technician` (ya es técnico). Los códigos de negocio van en inglés y en snake_case.
-- **R-04:** `GET /api/v1/tecnicos` (leer todos / filtro / búsqueda): Busca técnicos por oficio, colonia, distancia o radio, Disponible hoy, solo verificados y texto libre. Lo puede llamar: cualquier persona para el resumen y una persona con sesión para el detalle. Responde 200 cuando sale bien.
-- **R-05:** Entrada de `GET /api/v1/tecnicos`: Query: oficio, colonia, lat, lng, radioKm, disponibleHoy, soloVerificados, q, orden, cursor, limite. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo. Reglas: `radioKm`: 3, 5, 8 o 12; `disponibleHoy`: Necesario para recibir solicitudes.
+- **R-04:** `GET /api/v1/tecnicos` (leer todos / filtro / búsqueda): Busca técnicos por filtros: oficio, colonia, distancia o radio, Disponible hoy y solo verificados (el texto libre es `/busqueda`, spec 027). Lo puede llamar: cualquier persona para el resumen y una persona con sesión para el detalle. Responde 200 cuando sale bien.
+- **R-05:** Entrada de `GET /api/v1/tecnicos`: Query: oficio, colonia, lat, lng, radioKm, disponibleHoy, soloVerificados, orden, cursor, limite. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo. Reglas: `radioKm`: 3, 5, 8 o 12; `disponibleHoy`: Necesario para recibir solicitudes.
 - **R-06:** `GET /api/v1/tecnicos` pagina por cursor (Por cursor, 20 (máx. 50)): parámetros `cursor` y `limite`, 20 por defecto y 50 como máximo; orden: Orden: distancia, calificacion o recomendadas.
 - **R-07:** `GET /api/v1/tecnicos` se cachea (Sí, unos segundos); la clave nunca incluye datos personales de otra persona y se invalida al escribir.
 - **R-08:** `GET /api/v1/tecnicos/autocompletar` (autocompletado): Sugerencias de oficios, servicios y negocios mientras se escribe (por ejemplo, boiler, frenos). Lo puede llamar: cualquier persona, sin sesión. Responde 200 cuando sale bien.
@@ -63,7 +63,7 @@ Definir y especificar los endpoints TEC-01, TEC-02, TEC-03, TEC-04, TEC-05, TEC-
 - **R-26:** `GET /api/v1/tecnicos/{id}/fotos-trabajos` se cachea (Sí, 1 minuto); la clave nunca incluye datos personales de otra persona y se invalida al escribir.
 - **R-27:** `PUT /api/v1/tecnicos/me` (actualizar): Edita el perfil público: negocio, años, oficios, forma de atención, radio, descripción, foto. Lo puede llamar: cuenta con perfil de técnico. Responde 200 cuando sale bien.
 - **R-28:** Entrada de `PUT /api/v1/tecnicos/me`: Cuerpo: campos a cambiar. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400.
-- **R-29:** `PUT /api/v1/tecnicos/me/disponibilidad` (actualizar): Cambia el interruptor Disponible hoy. Lo puede llamar: cuenta con perfil de técnico. Responde 200 cuando sale bien.
+- **R-29:** `PUT /api/v1/tecnicos/me/disponibilidad` (actualizar): Cambia el interruptor Disponible hoy: guarda `disponibleHasta` (hoy a las 23:59:59 hora de la ciudad) y devuelve `disponibleHoy` y `disponibleHasta`. Lo puede llamar: cuenta con perfil de técnico. Responde 200 cuando sale bien.
 - **R-30:** Entrada de `PUT /api/v1/tecnicos/me/disponibilidad`: Cuerpo: disponibleHoy. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400. Reglas: `disponibleHoy`: Necesario para recibir solicitudes.
 - **R-31:** `GET /api/v1/tecnicos/me/horarios` (leer uno): Horarios del técnico. Lo puede llamar: cuenta con perfil de técnico. Responde 200 cuando sale bien.
 - **R-32:** `PUT /api/v1/tecnicos/me/horarios` (actualizar): Cambia abierto o cerrado por día. Lo puede llamar: cuenta con perfil de técnico. Responde 200 cuando sale bien.
@@ -238,9 +238,9 @@ Definir y especificar los endpoints TEC-01, TEC-02, TEC-03, TEC-04, TEC-05, TEC-
 | ID | Método y ruta | Quién | Entrada | Respuestas |
 |---|---|---|---|---|
 | TEC-01 | `POST /api/v1/tecnicos` | persona con sesión (cliente o técnico) | Cuerpo: oficios, atencion, direccionTaller o radioKm, perfil opcional, aceptaTerminos | 201; 400; 401; 409 (ya es técnico); 422 |
-| TEC-02 | `GET /api/v1/tecnicos` | cualquier persona para el resumen y una persona con sesión para el detalle | Query: oficio, colonia, lat, lng, radioKm, disponibleHoy, soloVerificados, q, orden, cursor, limite | 200; 400 |
-| TEC-03 | `GET /api/v1/tecnicos/autocompletar` | cualquier persona, sin sesión | Query: q (mínimo 2 caracteres) | 200; 400 |
-| TEC-04 | `GET /api/v1/mapa/tecnicos` | cualquier persona, sin sesión | Query: norte, sur, este, oeste, oficio, zoom | 200; 400 |
+| TEC-02 | `GET /api/v1/tecnicos` | cualquier persona para el resumen y una persona con sesión para el detalle | Query: oficio, colonia, lat, lng, radioKm, disponibleHoy, soloVerificados, orden, cursor, limite | 200; 422 |
+| TEC-03 | `GET /api/v1/tecnicos/autocompletar` | cualquier persona, sin sesión | Query: q (mínimo 2 caracteres) | 200; 422 |
+| TEC-04 | `GET /api/v1/mapa/tecnicos` | cualquier persona, sin sesión | Query: norte, sur, este, oeste, oficio, zoom | 200; 422 |
 | TEC-05 | `GET /api/v1/tecnicos/{id}` | cualquier persona para el resumen y una persona con sesión para el detalle | Ruta: id | 200; 404 |
 | TEC-06 | `GET /api/v1/tecnicos/{id}/llega-a-mi-colonia` | persona con sesión (cliente o técnico) | Ruta: id. Query: colonia | 200; 401; 404 |
 | TEC-07 | `GET /api/v1/tecnicos/{id}/fotos-trabajos` | persona con sesión (cliente o técnico) | Ruta: id | 200; 401; 404 |
@@ -314,6 +314,8 @@ Definir y especificar los endpoints TEC-01, TEC-02, TEC-03, TEC-04, TEC-05, TEC-
 | Texto (español) | nombreNegocio + descripcion + servicios | Autocompletado y búsqueda por texto |
 | Normal | reputacion.promedio | Orden por calificación |
 
+**Disponibilidad.** `tecnicos.disponibleHasta` (fecha UTC, spec 028) sustituye al booleano `disponibleHoy` del Excel: `disponibleHoy` es un valor derivado (`disponibleHasta > ahora`) que no se guarda.
+
 ## 7. Arquitectura y componentes
 - Proyecto `Knock.Market.Api`, módulo `Technicians` con las capas del estilo de la spec 002: `Controllers`, `Dtos`, `Validators`, `Services`, `Data` y `Hosting`.
 - Cada ruta recibe sus parámetros en objetos tipados con validador registrado, nunca como `string` suelto, y consulta con filtros por el `sub` del token.
@@ -328,6 +330,9 @@ Definir y especificar los endpoints TEC-01, TEC-02, TEC-03, TEC-04, TEC-05, TEC-
 - Spec 036 de este repositorio.
 - Specs 002, 003, 009, 010 y 011 (estilo, bases de datos, seguridad, caché y registros).
 - Frontend: spec 036 consume este contrato.
+- **Prerrequisitos que hoy no existen (trabajo pendiente, no capacidades implementadas):**
+  - Almacén de búsqueda de la spec 027 y elegibilidad de la 028 (hoy no implementados)
+  - `disponibleHasta` (HU-019): hoy solo existe en las semillas
 
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |

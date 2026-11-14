@@ -45,10 +45,11 @@ Definir y especificar los endpoints CAS-01, CAS-02, CAS-03, CAS-04, CAS-05 del E
 - **R-16:** **Propiedad.** Un elemento ajeno responde 404, sin revelar que existe; todas las lecturas y escrituras filtran por el `sub` del token.
 - **R-17:** **Historial (CAS-05).** Mercado agrega a `solicitudes` un campo **opcional** `elementoId` (ampliación aditiva de la spec 020: no cambia su contrato ni sus pruebas; solo se valida su formato). Identidad devuelve el historial pidiéndolo a Mercado por la ruta interna `GET /api/v1/interno/historial?usuarioId&elementoId` con el token de la spec 037: lista, por cursor (20 por defecto, máximo 50) y del más reciente al más antiguo, las visitas `terminada` de ese cliente con ese `elementoId`, con fecha, oficio y técnico, sin precios ni direcciones.
 - **R-18:** **Eliminar un elemento.** Quitarlo no borra los trabajos pasados de Mercado: solo desliga el historial.
-- **R-19:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
-- **R-20:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
-- **R-21:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
-- **R-22:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
+- **R-19:** **Compatibilidad con la spec 020.** `POST /api/v1/solicitudes` acepta `elementoId` opcional como ampliación aditiva (ver §5): sin el campo responde exactamente igual que según la spec 020; con un valor de 24 caracteres hexadecimales lo guarda en `solicitudes.elementoId`; con otro formato responde 422 `errors.elementoId`. La respuesta nunca lo incluye y ninguna regla, estado ni prueba de la 020 cambia.
+- **R-20:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
+- **R-21:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
+- **R-22:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
+- **R-23:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dado el rol «persona con sesión (cliente o técnico)», cuando llama `GET /api/v1/me/casa-y-auto` con datos válidos, entonces responde 200 con lo descrito en §5.
@@ -79,10 +80,11 @@ Definir y especificar los endpoints CAS-01, CAS-02, CAS-03, CAS-04, CAS-05 del E
 - **CA-26:** Dado el elemento de otra persona, cuando se intenta ver, editar, borrar o pedir su historial, entonces responde 404.
 - **CA-27:** Dado un elemento con trabajos terminados, cuando su dueña consulta el historial, entonces recibe fecha, oficio y técnico de cada trabajo, paginados y sin precios ni direcciones; las solicitudes sin `elementoId` no aparecen.
 - **CA-28:** Dado un elemento con historial, cuando se elimina, entonces desaparece de la lista y los trabajos terminados siguen existiendo en Mercado.
-- **CA-29:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
-- **CA-30:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
-- **CA-31:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
-- **CA-32:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
+- **CA-29:** Dado un cliente que crea una solicitud sin `elementoId`, cuando se compara con el comportamiento de la spec 020, entonces responde exactamente igual; con un `elementoId` válido se guarda y no aparece en la respuesta; con uno mal formado responde 422.
+- **CA-30:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
+- **CA-31:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
+- **CA-32:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
+- **CA-33:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
 
 **4.1 Criterio → prueba prevista**
 
@@ -120,6 +122,7 @@ Definir y especificar los endpoints CAS-01, CAS-02, CAS-03, CAS-04, CAS-05 del E
 | CA-30 | `Spec041Tests.Criterio30_CA_041_30` |
 | CA-31 | `Spec041Tests.Criterio31_CA_041_31` |
 | CA-32 | `Spec041Tests.Criterio32_CA_041_32` |
+| CA-33 | `Spec041Tests.Criterio33_CA_041_33` |
 
 ## 5. Contrato
 | ID | Método y ruta | Quién | Entrada | Respuestas |
@@ -141,6 +144,26 @@ Definir y especificar los endpoints CAS-01, CAS-02, CAS-03, CAS-04, CAS-05 del E
 | CAS-05 | Orden por fecha descendente | Por cursor, 20 | No |
 
 **Códigos de error:** los de forma salen como 422 con `errors` por campo y los de sesión y límite como 401 y 429; los conflictos de negocio llevan un código en inglés y snake_case que se fija al implementar y se agrega al catálogo.
+
+
+**Ampliación aditiva de `POST /api/v1/solicitudes` (spec 020)**
+
+Esta spec agrega un campo **opcional** a ese endpoint sin cambiar nada de lo que la spec 020 ya fija:
+
+| Elemento | Spec 020 (aprobada) | Con esta spec |
+|---|---|---|
+| Cuerpo (R-01) | `{ oficioClave, descripcion, fotos, dia, franja, coloniaId, direccion? }` | igual, más `elementoId?` (cadena de 24 caracteres hexadecimales) |
+| Respuestas (201, 400, 401, 413, 422, 429, 503) | solicitud creada y errores | **sin cambios**; la respuesta no devuelve `elementoId` |
+| Validación (R-02 a R-04) | oficio, colonia, descripción y fotos | **sin cambios**; `elementoId` solo se valida por formato (mal formado: 422 `errors.elementoId`); ausente o nulo se trata como hoy |
+| Modelo `solicitudes` (§6) | campos actuales | campo opcional `elementoId` (string) e índice parcial `{ clienteId: 1, elementoId: 1, estado: 1 }` solo donde existe |
+| OpenAPI | contrato vigente | propiedad opcional nueva en el cuerpo de creación: cambio **no incompatible** para `oasdiff` (spec 020, gates) |
+| Pruebas de la 020 | CA-01 a CA-24 | **no se modifican**; se agregan las pruebas de esta spec |
+
+**Cómo se incorpora sin contradicciones**
+- Se implementa en el mismo DTO y servicio de la 020, en una tarea de esta spec que se fusiona **después** de que `POST /solicitudes` esté en `sprint-04`.
+- Los clientes que no envían el campo siguen funcionando igual (frontend 015); el campo es opcional y su ausencia no cambia ninguna regla de la 020.
+- `elementoId` **no se toma como confiable**: Mercado no lo valida contra Identidad y el historial une solo solicitudes cuyo `clienteId` sea el `sub` de quien consulta; un identificador ajeno solo afecta el historial de quien lo envió.
+- Cuando se enmiende la spec 020, este campo se incorpora a su texto sin otros cambios; hasta entonces **manda esta spec para ese campo** y la 020 para todo lo demás.
 
 ## 6. Modelo de datos
 **Colección `mi_casa_y_auto`.** Guarda los autos y las cosas de la casa que el cliente registra para pedir servicios más rápido. El historial del auto no se captura a mano: sale de los trabajos reales terminados por Knock. Sirve a la pantalla Mi casa y mi auto y al aviso de mantenimiento (por ejemplo, que ya toca el cambio de aceite)
@@ -171,17 +194,20 @@ Definir y especificar los endpoints CAS-01, CAS-02, CAS-03, CAS-04, CAS-05 del E
 - Spec 022 de este repositorio.
 - Specs 002, 003, 009, 010 y 011 (estilo, bases de datos, seguridad, caché y registros).
 - Frontend: spec 031 consume este contrato.
+- **Prerrequisitos que hoy no existen (trabajo pendiente, no capacidades implementadas):**
+  - El campo opcional `elementoId` en `POST /solicitudes` (se agrega en una tarea de esta spec; la fundación de la 020 ya está en `sprint-04`)
+  - Ruta interna de historial con el secreto nuevo `interno-key-identity` (hoy no implementada ni creada)
 
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |
 |---|---|---|
-| Acceso a datos de otra persona (IDOR) | Toda consulta y escritura filtra por el `sub` del token; ajeno responde 403 o 404 | CA-09, CA-15, CA-20, CA-29 |
-| Asignación masiva o identificador ajeno en el cuerpo | El DTO no acepta identificadores de persona; se ignoran | CA-09, CA-15, CA-20, CA-29 |
+| Acceso a datos de otra persona (IDOR) | Toda consulta y escritura filtra por el `sub` del token; ajeno responde 403 o 404 | CA-09, CA-15, CA-20, CA-30 |
+| Asignación masiva o identificador ajeno en el cuerpo | El DTO no acepta identificadores de persona; se ignoran | CA-09, CA-15, CA-20, CA-30 |
 | Inyección en filtros y parámetros | Parámetros tipados con validador; nada se concatena en consultas | CA-05 a CA-06, CA-10 a CA-11, CA-16, CA-21 |
 | Ruta sin sesión | JWT obligatorio salvo las públicas | CA-02, CA-04, CA-08, CA-14, CA-19 |
-| Abuso por repetición o cuerpos grandes | Límite de peticiones, `Retry-After` y tope de cuerpo | CA-31 |
-| Datos personales en registros y errores | Registros sin datos personales; ProblemDetails sin valores | CA-30 |
-| Duplicados por reintento | Regla de estado o índice único, sin `Idempotency-Key` | CA-32 |
+| Abuso por repetición o cuerpos grandes | Límite de peticiones, `Retry-After` y tope de cuerpo | CA-32 |
+| Datos personales en registros y errores | Registros sin datos personales; ProblemDetails sin valores | CA-31 |
+| Duplicados por reintento | Regla de estado o índice único, sin `Idempotency-Key` | CA-33 |
 
 ## 10. Plan de pruebas
 Las pruebas citan el caso como `CA_041_NN` en el nombre (para `python scripts/sdd_lint.py --trace 041`).
@@ -190,7 +216,7 @@ Las pruebas citan el caso como `CA_041_NN` en el nombre (para `python scripts/sd
 |---|---|---|
 | Unitarias | Sí | Validadores, reglas de estado y cálculos del dominio |
 | Integración | Sí | Cada ruta con la base real en contenedor (Testcontainers) y `MarketApiFactory`/fábrica del servicio |
-| Seguridad negativa | Sí | 401, 403/404, 422, 413 y 429 (CA-02, CA-04 a CA-06, CA-08 a CA-11, CA-14 a CA-16, CA-19 a CA-21, CA-29, CA-31) |
+| Seguridad negativa | Sí | 401, 403/404, 422, 413 y 429 (CA-02, CA-04 a CA-06, CA-08 a CA-11, CA-14 a CA-16, CA-19 a CA-21, CA-30, CA-32) |
 | Base de datos | Sí | Índices y reglas de cada colección de §6 |
 | Contrato | Sí | OpenAPI regenerado y comparado con `contracts/` |
 | Mutación | Sí | Meta del módulo según la spec 008 |

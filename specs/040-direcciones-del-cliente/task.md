@@ -5,6 +5,7 @@
 
 | Tarea | Qué se hace | Cubre | Depende de | Paralelo con | Responsable sugerido | Estado |
 |---|---|---|---|---|---|---|
+| T-00 | Prerrequisitos que hoy no existen y no son parte de esta spec: Llaves de cifrado de campo en Key Vault (spec 025) y la copia de la dirección en la visita de la spec 022 (hoy no implementadas) | §8 | — | T-01 | por asignar | pendiente |
 | T-01 | Script de `db/` con colecciones e índices de §6 y prueba de base de datos | §6 | — | T-02 en adelante (con datos de prueba) | por asignar | pendiente |
 | T-02 | `GET /api/v1/me/direcciones` (DIR-01): DTO, validador, servicio, almacén, controlador y pruebas | R-01 · CA-01 a CA-02 | T-01 | otras rutas | por asignar | pendiente |
 | T-03 | `POST /api/v1/me/direcciones` (DIR-02): DTO, validador, servicio, almacén, controlador y pruebas | R-02 a R-03 · CA-03 a CA-06 | T-01 | otras rutas | por asignar | pendiente |

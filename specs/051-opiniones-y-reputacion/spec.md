@@ -172,6 +172,9 @@ Definir y especificar los endpoints OPI-01, OPI-02, OPI-03 del Excel de endpoint
 - Spec 032 de este repositorio.
 - Specs 002, 003, 009, 010 y 011 (estilo, bases de datos, seguridad, caché y registros).
 - Frontend: spec 041 consume este contrato.
+- **Prerrequisitos que hoy no existen (trabajo pendiente, no capacidades implementadas):**
+  - Moderación de la spec 031 y entrega de imágenes de la 032 (hoy no implementadas)
+  - Tareas de cierre del ejecutor de la 054 (hoy no implementado)
 
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |

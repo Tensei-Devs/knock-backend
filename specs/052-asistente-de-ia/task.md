@@ -5,6 +5,7 @@
 
 | Tarea | Qué se hace | Cubre | Depende de | Paralelo con | Responsable sugerido | Estado |
 |---|---|---|---|---|---|---|
+| T-00 | Prerrequisitos que hoy no existen y no son parte de esta spec: Recurso de Azure OpenAI y cliente de la spec 024 (el recurso no está en Terraform; autorizado con límites); Filtro de datos personales y `uso_ia` de la spec 024 (hoy no implementados); Cálculo de la referencia de mercado de la spec 048 (hoy no implementado) | §8 | — | T-01 | por asignar | pendiente |
 | T-01 | Script de `db/` con colecciones e índices de §6 y prueba de base de datos | §6 | — | T-02 en adelante (con datos de prueba) | por asignar | pendiente |
 | T-02 | `POST /api/v1/asistente/conversaciones` (ASI-01): DTO, validador, servicio, almacén, controlador y pruebas | R-01 a R-02 · CA-01 a CA-04 | T-01 | otras rutas | por asignar | pendiente |
 | T-03 | `POST /api/v1/asistente/resumen-chat` (ASI-02): DTO, validador, servicio, almacén, controlador y pruebas | R-03 a R-04 · CA-05 a CA-08 | T-01 | otras rutas | por asignar | pendiente |

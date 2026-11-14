@@ -251,6 +251,8 @@ Definir y especificar los endpoints VIS-02, VIS-04, VIS-05, VIS-06, VIS-07, VIS-
 | Compuesto | clienteId + estado + fechaHora | Visitas y citas del cliente en Actividad |
 | Único | cotizacionId | Una visita por cotización elegida |
 
+**Campos nuevos opcionales en `visitas` (spec 021).** `tardia` (booleano), `quienFalto` (`cliente`), `reprogramaciones` (entero) y `propuestaReprogramacion` `{ fechaHora, propuestaPor, venceEn }`. Son aditivos: los estados siguen siendo los de la spec 021.
+
 ## 7. Arquitectura y componentes
 - Proyecto `Knock.Market.Api`, módulo `Visits` con las capas del estilo de la spec 002: `Controllers`, `Dtos`, `Validators`, `Services`, `Data` y `Hosting`.
 - Cada ruta recibe sus parámetros en objetos tipados con validador registrado, nunca como `string` suelto, y consulta con filtros por el `sub` del token.
@@ -264,6 +266,9 @@ Definir y especificar los endpoints VIS-02, VIS-04, VIS-05, VIS-06, VIS-07, VIS-
 - Spec 032 de este repositorio.
 - Specs 002, 003, 009, 010 y 011 (estilo, bases de datos, seguridad, caché y registros).
 - Frontend: spec 040 consume este contrato.
+- **Prerrequisitos que hoy no existen (trabajo pendiente, no capacidades implementadas):**
+  - Ciclo de la visita de las specs 021 y 022 y tareas de la 054 (hoy no implementados)
+  - Moderación e imágenes de las specs 031 y 032 (hoy no implementadas)
 
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |

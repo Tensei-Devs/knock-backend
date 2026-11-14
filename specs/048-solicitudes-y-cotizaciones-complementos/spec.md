@@ -14,7 +14,7 @@ Definir y especificar los endpoints SOL-05, COT-03, COT-05 del Excel de endpoint
 - Como cliente quiero ampliar mi solicitud y ver sus archivos, y como técnico ver mis cotizaciones y una referencia de mercado, para negociar con información clara.
 
 **2.2 Dentro**
-- `POST /api/v1/solicitudes/{id}/ampliar` (SOL-05): Pide también a más técnicos (Pedir también a otros).
+- `POST /api/v1/solicitudes/{id}/ampliar` (SOL-05): Adelanta la siguiente oleada de la spec 028 (Pedir también a otros).
 - `GET /api/v1/cotizaciones/referencia-mercado` (COT-03): Rango de lo que cobran otros técnicos por trabajos parecidos (cotizaciones aceptadas en 90 días, percentil 25 al 75 y mediana). Solo con al menos 10 cotizaciones; si no,….
 - `GET /api/v1/tecnicos/me/cotizaciones` (COT-05): Cotizaciones enviadas por el técnico con su estado (esperando respuesta, aceptada).
 - Los índices y las reglas de cada campo de las colecciones de §6, el límite de peticiones y la documentación del contrato.
@@ -25,20 +25,20 @@ Definir y especificar los endpoints SOL-05, COT-03, COT-05 del Excel de endpoint
 - Endpoints de otras colecciones o de otras specs (020 a 038) que el Excel nombra distinto: se anotan en §15.
 
 ## 3. Requisitos
-- **R-01:** `POST /api/v1/solicitudes/{id}/ampliar` (actualizar (acción)): Pide también a más técnicos (Pedir también a otros). Lo puede llamar: persona con sesión que sea dueña del recurso. Responde 200 cuando sale bien.
+- **R-01:** `POST /api/v1/solicitudes/{id}/ampliar` (actualizar (acción)): Adelanta la siguiente oleada de la spec 028 (Pedir también a otros). Lo puede llamar: persona con sesión que sea dueña del recurso. Responde 200 cuando sale bien.
 - **R-02:** Entrada de `POST /api/v1/solicitudes/{id}/ampliar`: Ruta: id. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400.
 - **R-03:** Estados de `POST /api/v1/solicitudes/{id}/ampliar`: 404; 409 `request_not_extendable`. Los códigos de negocio van en inglés y en snake_case.
 - **R-04:** `GET /api/v1/cotizaciones/referencia-mercado` (búsqueda específica): Rango de lo que cobran otros técnicos por trabajos parecidos (cotizaciones aceptadas en 90 días, percentil 25 al 75 y mediana). Solo con al menos 10 cotizaciones; si no, rango general de la categoría. Lo puede llamar: cuenta con perfil de técnico. Responde 200 cuando sale bien.
 - **R-05:** Entrada de `GET /api/v1/cotizaciones/referencia-mercado`: Query: oficio, tipoTrabajo. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo.
 - **R-06:** `GET /api/v1/cotizaciones/referencia-mercado` se cachea (Sí, 1 hora); la clave nunca incluye datos personales de otra persona y se invalida al escribir.
 - **R-07:** `GET /api/v1/tecnicos/me/cotizaciones` (leer todos / filtro): Cotizaciones enviadas por el técnico con su estado (esperando respuesta, aceptada). Lo puede llamar: cuenta con perfil de técnico. Responde 200 cuando sale bien.
-- **R-08:** Entrada de `GET /api/v1/tecnicos/me/cotizaciones`: Query: estado, cursor, limite. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo. Reglas: `estado`: Solo una elegida por solicitud.
+- **R-08:** Entrada de `GET /api/v1/tecnicos/me/cotizaciones`: Query: estado (enviada|aceptada|rechazada|retirada), cursor, limite. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo. Reglas: `estado`: Solo una elegida por solicitud.
 - **R-09:** `GET /api/v1/tecnicos/me/cotizaciones` pagina por cursor (Por cursor, 20): parámetros `cursor` y `limite`, 20 por defecto y 50 como máximo; orden: Filtro por estado.
 - **R-10:** **Ampliar (SOL-05).** «Pedir también a otros» adelanta la **siguiente oleada de la spec 028**: crea la tarea `RepartirOleada` de la oleada siguiente con `programadaPara = ahora` en lugar de esperar los 15 minutos, solo si la solicitud sigue `enviada` o `cotizando`, no venció y no se alcanzó el máximo de 3 oleadas (15 técnicos) de la 028; en otro caso responde 409 `request_not_extendable`.
 - **R-11:** **Archivos de la solicitud (SOL-08) no se implementa aparte.** El detalle de la spec 020 ya entrega a la dueña y al técnico incluido los enlaces temporales de las fotos (5 minutos, sin caché ni registro) y la app los vuelve a pedir al reabrir la pantalla; una ruta separada duplicaría esa responsabilidad.
 - **R-12:** **Referencia de mercado (COT-03).** Calcula el percentil 25, la mediana y el percentil 75 de las cotizaciones **aceptadas** del mismo oficio y tipo de trabajo en los últimos 90 días y solo si hay al menos 10; si no, devuelve el rango general de la categoría con `origen: categoria`. No revela precios individuales ni identidades; se cachea 1 hora por oficio y tipo.
 - **R-13:** **Mis cotizaciones (COT-05).** Lista solo las cotizaciones del técnico, de la más reciente a la más antigua, filtradas por `estado` con los estados de la spec 020 (`enviada`, `aceptada`, `rechazada`, `retirada`); el cursor es opaco y el tamaño por defecto es 20 (máximo 50).
-- **R-14:** **Cierre de conversaciones al elegir (CNV-05, evento interno, sin ruta pública).** Cuando el cliente elige una cotización (spec 021), Mercado escribe el evento `CotizacionElegida` en su bandeja de salida (spec 054) y Mensajería cierra las demás conversaciones de esa solicitud, de forma idempotente por `eventoId` y sin borrar mensajes.
+- **R-14:** **Cierre de conversaciones al elegir (CNV-05, evento interno, sin ruta pública).** Cuando el cliente elige una cotización (spec 021), Mercado escribe el evento `CotizacionElegida` en su bandeja de salida (spec 054) y esta lo entrega a Mensajería por `POST /api/v1/interno/eventos`; Mensajería cierra las demás conversaciones de esa solicitud, de forma idempotente por `eventoId` y sin borrar mensajes.
 - **R-15:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
 - **R-16:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
 - **R-17:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
@@ -106,7 +106,7 @@ Definir y especificar los endpoints SOL-05, COT-03, COT-05 del Excel de endpoint
 |---|---|---|---|---|
 | SOL-05 | `POST /api/v1/solicitudes/{id}/ampliar` | persona con sesión que sea dueña del recurso | Ruta: id | 200; 401; 403; 404; 409 |
 | COT-03 | `GET /api/v1/cotizaciones/referencia-mercado` | cuenta con perfil de técnico | Query: oficio, tipoTrabajo | 200; 401; 403 |
-| COT-05 | `GET /api/v1/tecnicos/me/cotizaciones` | cuenta con perfil de técnico | Query: estado, cursor, limite | 200; 401; 403 |
+| COT-05 | `GET /api/v1/tecnicos/me/cotizaciones` | cuenta con perfil de técnico | Query: estado (enviada/aceptada/rechazada/retirada), cursor, limite | 200; 401; 403 |
 
 **Filtros, orden, paginación y caché**
 
@@ -200,6 +200,9 @@ Definir y especificar los endpoints SOL-05, COT-03, COT-05 del Excel de endpoint
 - Spec 032 de este repositorio.
 - Specs 002, 003, 009, 010 y 011 (estilo, bases de datos, seguridad, caché y registros).
 - Frontend: spec 038 consume este contrato.
+- **Prerrequisitos que hoy no existen (trabajo pendiente, no capacidades implementadas):**
+  - Oleadas y tarea `RepartirOleada` de la spec 028 (hoy no implementadas)
+  - Bandeja de salida de la spec 054 para el evento `CotizacionElegida` (hoy no implementada)
 
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |

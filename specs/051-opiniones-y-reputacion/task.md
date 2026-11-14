@@ -5,6 +5,7 @@
 
 | Tarea | Qué se hace | Cubre | Depende de | Paralelo con | Responsable sugerido | Estado |
 |---|---|---|---|---|---|---|
+| T-00 | Prerrequisitos que hoy no existen y no son parte de esta spec: Moderación de la spec 031 y entrega de imágenes de la 032 (hoy no implementadas); Tareas de cierre del ejecutor de la 054 (hoy no implementado) | §8 | — | T-01 | por asignar | pendiente |
 | T-01 | Script de `db/` con colecciones e índices de §6 y prueba de base de datos | §6 | — | T-02 en adelante (con datos de prueba) | por asignar | pendiente |
 | T-02 | `GET /api/v1/tecnicos/{id}/opiniones` (OPI-01): DTO, validador, servicio, almacén, controlador y pruebas | R-01 a R-05 · CA-01 a CA-06 | T-01 | otras rutas | por asignar | pendiente |
 | T-03 | `POST /api/v1/visitas/{id}/opinion` (OPI-02): DTO, validador, servicio, almacén, controlador y pruebas | R-06 a R-08 · CA-07 a CA-12 | T-01 | otras rutas | por asignar | pendiente |

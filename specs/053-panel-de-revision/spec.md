@@ -14,11 +14,11 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 - Como personal de verificación o moderación, quiero revisar verificaciones y reportes y decidir, para mantener la confianza en la plataforma.
 
 **2.2 Dentro**
-- `GET /api/v1/admin/verificaciones` (VER-03): Cola de revisión del panel.
+- `GET /api/v1/admin/verificaciones` (VER-03): Cola de revisión del panel: verificaciones de identidad y recuperaciones de acceso.
 - `GET /api/v1/admin/verificaciones/{id}` (VER-04): Abre una verificación; entrega enlaces de 5 minutos a las fotos y registra quién las abrió.
-- `POST /api/v1/admin/verificaciones/{id}/decision` (VER-05): Aprueba o rechaza con motivo; destruye la llave de las fotos.
+- `POST /api/v1/admin/verificaciones/{id}/decision` (VER-05): Aprueba o rechaza con motivo; en una verificación destruye la llave de las fotos y en una recuperación cambia el número de la cuenta.
 - `GET /api/v1/admin/reportes` (REP-04): Cola de moderación.
-- `POST /api/v1/admin/reportes/{id}/decision` (REP-05): Asigna gravedad y sanción; avisa a las dos partes sin revelar datos de la otra.
+- `POST /api/v1/admin/reportes/{id}/decision` (REP-05): Asigna la gravedad (la respuesta se deriva de ella: suspensión preventiva, ocultar, advertencia o mediación) y avisa a las dos partes sin revelar datos de la otra.
 - Los índices y las reglas de cada campo de las colecciones de §6, el límite de peticiones y la documentación del contrato.
 
 **2.3 Fuera**
@@ -27,20 +27,20 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 - Endpoints de otras colecciones o de otras specs (020 a 038) que el Excel nombra distinto: se anotan en §15.
 
 ## 3. Requisitos
-- **R-01:** `GET /api/v1/admin/verificaciones` (leer todos / filtro): Cola de revisión del panel. Lo puede llamar: personal interno (Verificador (doble verificación)) con doble verificación, spec 033. Responde 200 cuando sale bien.
-- **R-02:** Entrada de `GET /api/v1/admin/verificaciones`: Query: estado, desde, hasta. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo. Reglas: `estado`: Solo esos valores. A los 7 días sin revisión vuelve a sin_verificar.
+- **R-01:** `GET /api/v1/admin/verificaciones` (leer todos / filtro): Cola de revisión del panel: verificaciones de identidad y recuperaciones de acceso. Lo puede llamar: personal interno (Verificador (doble verificación)) con doble verificación, spec 033. Responde 200 cuando sale bien.
+- **R-02:** Entrada de `GET /api/v1/admin/verificaciones`: Query: tipo (identidad|recuperacion), estado, desde, hasta. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo. Reglas: `estado`: Solo esos valores. A los 7 días sin revisión vuelve a sin_verificar.
 - **R-03:** `GET /api/v1/admin/verificaciones` pagina por cursor (Por cursor, 20): parámetros `cursor` y `limite`, 20 por defecto y 50 como máximo; orden: Filtro por estado y antigüedad; orden por enviadaEn ascendente.
 - **R-04:** `GET /api/v1/admin/verificaciones/{id}` (leer uno): Abre una verificación; entrega enlaces de 5 minutos a las fotos y registra quién las abrió. Lo puede llamar: personal interno (Verificador (doble verificación)) con doble verificación, spec 033. Responde 200 cuando sale bien.
 - **R-05:** Entrada de `GET /api/v1/admin/verificaciones/{id}`: Ruta: id. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo.
 - **R-06:** Estados de `GET /api/v1/admin/verificaciones/{id}`: 404 `verification_not_found`; 410 `photos_destroyed` (fotos ya destruidas). Los códigos de negocio van en inglés y en snake_case.
-- **R-07:** `POST /api/v1/admin/verificaciones/{id}/decision` (actualizar (acción)): Aprueba o rechaza con motivo; destruye la llave de las fotos. Lo puede llamar: personal interno (Verificador (doble verificación)) con doble verificación, spec 033. Responde 200 cuando sale bien.
+- **R-07:** `POST /api/v1/admin/verificaciones/{id}/decision` (actualizar (acción)): Aprueba o rechaza con motivo; en una verificación destruye la llave de las fotos y en una recuperación cambia el número de la cuenta. Lo puede llamar: personal interno (Verificador (doble verificación)) con doble verificación, spec 033. Responde 200 cuando sale bien.
 - **R-08:** Entrada de `POST /api/v1/admin/verificaciones/{id}/decision`: Cuerpo: decision (aprobada|rechazada), motivo. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400. Reglas: `motivo`: Obligatorio si el estado es no_verificado.
 - **R-09:** Estados de `POST /api/v1/admin/verificaciones/{id}/decision`: 404 `verification_not_found`; 409 `verification_already_decided`. Los códigos de negocio van en inglés y en snake_case.
 - **R-10:** `GET /api/v1/admin/reportes` (leer todos / filtro): Cola de moderación. Lo puede llamar: personal interno (Moderación (doble verificación)) con doble verificación, spec 033. Responde 200 cuando sale bien.
 - **R-11:** Entrada de `GET /api/v1/admin/reportes`: Query: gravedad, estado, desde, hasta. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo. Reglas: `gravedad`: La asigna la moderación; `estado`: Solo esos valores.
 - **R-12:** `GET /api/v1/admin/reportes` pagina por cursor (Por cursor, 20): parámetros `cursor` y `limite`, 20 por defecto y 50 como máximo; orden: Filtro por gravedad y estado; orden por gravedad y antigüedad.
-- **R-13:** `POST /api/v1/admin/reportes/{id}/decision` (actualizar (acción)): Asigna gravedad y sanción; avisa a las dos partes sin revelar datos de la otra. Lo puede llamar: personal interno (Moderación (doble verificación)) con doble verificación, spec 033. Responde 200 cuando sale bien.
-- **R-14:** Entrada de `POST /api/v1/admin/reportes/{id}/decision`: Cuerpo: gravedad, sancion, motivo. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400. Reglas: `motivo`: Solo esos valores; `gravedad`: La asigna la moderación.
+- **R-13:** `POST /api/v1/admin/reportes/{id}/decision` (actualizar (acción)): Asigna la gravedad (la respuesta se deriva de ella: suspensión preventiva, ocultar, advertencia o mediación) y avisa a las dos partes sin revelar datos de la otra. Lo puede llamar: personal interno (Moderación (doble verificación)) con doble verificación, spec 033. Responde 200 cuando sale bien.
+- **R-14:** Entrada de `POST /api/v1/admin/reportes/{id}/decision`: Cuerpo: gravedad (critica|alta|media|baja), motivo. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400. Reglas: `motivo`: Solo esos valores; `gravedad`: La asigna la moderación.
 - **R-15:** Estados de `POST /api/v1/admin/reportes/{id}/decision`: 404 `report_not_found`. Los códigos de negocio van en inglés y en snake_case.
 - **R-16:** **Cola de verificaciones (VER-03).** Solo con el permiso `verification:review` y doble verificación (spec 033); filtros `tipo` (`identidad` o `recuperacion`, esta última de la spec 039), `estado`, `desde` y `hasta` (por omisión, los últimos 30 días); por cursor (20 por defecto, máximo 50), de la más antigua a la más reciente; la lista no incluye fotos ni datos personales, solo identificador, tipo, estado y fecha. Una verificación sin revisar a los 7 días vuelve a «sin verificar» (spec 025).
 - **R-17:** **Abrir una verificación (VER-04).** Entrega enlaces de 5 minutos a las fotos y registra quién las abrió y cuándo (auditoría); los enlaces no se guardan ni se cachean y no se repiten en registros; con las fotos ya destruidas responde 410 `photos_destroyed`.
@@ -48,10 +48,11 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 - **R-19:** **Cola de reportes (REP-04).** Solo con `reports:resolve` y doble verificación; filtros `gravedad`, `estado`, `desde` y `hasta` (por omisión, los últimos 30 días); por cursor (20 por defecto); muestra el motivo y el texto del reporte pero nunca el teléfono ni la dirección de las personas.
 - **R-20:** **Decidir un reporte (REP-05).** El moderador asigna la `gravedad` (`critica`, `alta`, `media` o `baja`) y un `motivo` de 8 a 300 caracteres; la respuesta se deriva de la gravedad, como define el Excel: `critica` = suspensión preventiva de la cuenta hasta revisión, `alta` = se oculta al técnico de nuevas solicitudes (`oculto = true`), `media` = advertencia a la persona reportada y `baja` = mediación (aviso a ambas partes para que lo resuelvan, sin sanción). Se avisa a las dos partes **sin revelar datos de la otra** y la decisión queda auditada. Si hay apelación (spec 043), se asigna con prioridad a otra persona del panel.
 - **R-21:** **Sin datos en registros ni caché.** Ninguna ruta de esta spec guarda en registros o caché fotos, enlaces firmados, textos de reportes ni datos personales de las personas revisadas; todas las respuestas llevan `Cache-Control: private, no-store`.
-- **R-22:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
-- **R-23:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
-- **R-24:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
-- **R-25:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
+- **R-22:** **Permiso y auditoría de las decisiones.** El permiso `verification:review` (rol `verificador`, y `administrador`, spec 033 R-02) cubre las dos colas, la de verificaciones de identidad y la de recuperaciones de acceso; la lista de permisos de la 033 es cerrada y no se agrega uno nuevo. Cada decisión de VER-05 escribe en `panel_auditoria` (spec 033 R-23) un registro con `evento` `verificacion_decidida` o `recuperacion_decidida`, `resultado`, `sub` del verificador y `recursoId`, sin celular, motivo ni datos de la persona; si la auditoría no se puede escribir, la acción responde 503 `audit_unavailable` y no se ejecuta (R-24). Como las recuperaciones y el panel viven en Identidad, el cambio de número, el cierre de sesiones y el registro de auditoría se escriben en **una sola transacción**. Un moderador sin `verification:review` recibe 403 `insufficient_permission` (también auditado).
+- **R-23:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
+- **R-24:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
+- **R-25:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
+- **R-26:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dado el rol «personal interno (Verificador (doble verificación)) con doble verificación, spec 033», cuando llama `GET /api/v1/admin/verificaciones` con datos válidos, entonces responde 200 con lo descrito en §5.
@@ -89,10 +90,11 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 - **CA-33:** Dado un moderador, cuando consulta la cola, entonces ve motivo y texto y ningún teléfono ni dirección; un filtro inválido responde 422.
 - **CA-34:** Dado un reporte abierto, cuando el moderador asigna una gravedad con motivo, entonces se aplica la respuesta de esa gravedad (suspensión, ocultar, advertencia o mediación), ambas partes reciben aviso sin datos de la otra y la decisión queda auditada.
 - **CA-35:** Dadas estas rutas, cuando se inspeccionan registros, caché y encabezados, entonces no aparecen fotos, enlaces ni textos y las respuestas no son cacheables.
-- **CA-36:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
-- **CA-37:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
-- **CA-38:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
-- **CA-39:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
+- **CA-36:** Dada una recuperación en revisión, cuando un verificador la aprueba, entonces el número cambia, se cierran las sesiones y queda un registro `recuperacion_decidida` en la misma transacción; sin poder escribir la auditoría responde 503 `audit_unavailable` y no cambia nada; y un moderador sin `verification:review` recibe 403 con su registro de denegación.
+- **CA-37:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
+- **CA-38:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
+- **CA-39:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
+- **CA-40:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
 
 **4.1 Criterio → prueba prevista**
 
@@ -137,15 +139,16 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 | CA-37 | `Spec053Tests.Criterio37_CA_053_37` |
 | CA-38 | `Spec053Tests.Criterio38_CA_053_38` |
 | CA-39 | `Spec053Tests.Criterio39_CA_053_39` |
+| CA-40 | `Spec053Tests.Criterio40_CA_053_40` |
 
 ## 5. Contrato
 | ID | Método y ruta | Quién | Entrada | Respuestas |
 |---|---|---|---|---|
-| VER-03 | `GET /api/v1/admin/verificaciones` | personal interno (Verificador (doble verificación)) con doble verificación, spec 033 | Query: estado, desde, hasta | 200; 401; 403 |
+| VER-03 | `GET /api/v1/admin/verificaciones` | personal interno (Verificador (doble verificación)) con doble verificación, spec 033 | Query: tipo (identidad/recuperacion), estado, desde, hasta | 200; 401; 403 |
 | VER-04 | `GET /api/v1/admin/verificaciones/{id}` | personal interno (Verificador (doble verificación)) con doble verificación, spec 033 | Ruta: id | 200; 401; 403; 404; 410 (fotos ya destruidas) |
 | VER-05 | `POST /api/v1/admin/verificaciones/{id}/decision` | personal interno (Verificador (doble verificación)) con doble verificación, spec 033 | Cuerpo: decision (aprobada/rechazada), motivo | 200; 400; 401; 403; 404; 409 |
 | REP-04 | `GET /api/v1/admin/reportes` | personal interno (Moderación (doble verificación)) con doble verificación, spec 033 | Query: gravedad, estado, desde, hasta | 200; 401; 403 |
-| REP-05 | `POST /api/v1/admin/reportes/{id}/decision` | personal interno (Moderación (doble verificación)) con doble verificación, spec 033 | Cuerpo: gravedad, sancion, motivo | 200; 400; 401; 403; 404 |
+| REP-05 | `POST /api/v1/admin/reportes/{id}/decision` | personal interno (Moderación (doble verificación)) con doble verificación, spec 033 | Cuerpo: gravedad (critica/alta/media/baja), motivo | 200; 400; 401; 403; 404 |
 
 **Filtros, orden, paginación y caché**
 
@@ -231,17 +234,21 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 - Spec 033 de este repositorio.
 - Specs 002, 003, 009, 010 y 011 (estilo, bases de datos, seguridad, caché y registros).
 - Frontend: la spec 043 (panel web) consume este contrato.
+- **Prerrequisitos que hoy no existen (trabajo pendiente, no capacidades implementadas):**
+  - Panel con doble factor, permisos y auditoría de la spec 033 (hoy no implementados)
+  - Cuenta de almacenamiento privada y cifrado de fotos de la spec 025 (hoy no existen en Terraform)
+  - Moderación de la spec 031 (hoy no implementada)
 
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |
 |---|---|---|
-| Acceso a datos de otra persona (IDOR) | Toda consulta y escritura filtra por el `sub` del token; ajeno responde 403 o 404 | CA-03, CA-08, CA-14, CA-21, CA-26, CA-36 |
-| Asignación masiva o identificador ajeno en el cuerpo | El DTO no acepta identificadores de persona; se ignoran | CA-03, CA-08, CA-14, CA-21, CA-26, CA-36 |
+| Acceso a datos de otra persona (IDOR) | Toda consulta y escritura filtra por el `sub` del token; ajeno responde 403 o 404 | CA-03, CA-08, CA-14, CA-21, CA-26, CA-37 |
+| Asignación masiva o identificador ajeno en el cuerpo | El DTO no acepta identificadores de persona; se ignoran | CA-03, CA-08, CA-14, CA-21, CA-26, CA-37 |
 | Inyección en filtros y parámetros | Parámetros tipados con validador; nada se concatena en consultas | CA-04, CA-09, CA-15 a CA-16, CA-22, CA-27 a CA-28 |
 | Ruta sin sesión | JWT obligatorio salvo las públicas | CA-02, CA-07, CA-13, CA-20, CA-25 |
-| Abuso por repetición o cuerpos grandes | Límite de peticiones, `Retry-After` y tope de cuerpo | CA-38 |
-| Datos personales en registros y errores | Registros sin datos personales; ProblemDetails sin valores | CA-37 |
-| Duplicados por reintento | Regla de estado o índice único, sin `Idempotency-Key` | CA-39 |
+| Abuso por repetición o cuerpos grandes | Límite de peticiones, `Retry-After` y tope de cuerpo | CA-39 |
+| Datos personales en registros y errores | Registros sin datos personales; ProblemDetails sin valores | CA-38 |
+| Duplicados por reintento | Regla de estado o índice único, sin `Idempotency-Key` | CA-40 |
 
 ## 10. Plan de pruebas
 Las pruebas citan el caso como `CA_053_NN` en el nombre (para `python scripts/sdd_lint.py --trace 053`).
@@ -250,7 +257,7 @@ Las pruebas citan el caso como `CA_053_NN` en el nombre (para `python scripts/sd
 |---|---|---|
 | Unitarias | Sí | Validadores, reglas de estado y cálculos del dominio |
 | Integración | Sí | Cada ruta con la base real en contenedor (Testcontainers) y `MarketApiFactory`/fábrica del servicio |
-| Seguridad negativa | Sí | 401, 403/404, 422, 413 y 429 (CA-02 a CA-04, CA-07 a CA-09, CA-13 a CA-16, CA-20 a CA-22, CA-25 a CA-28, CA-36, CA-38) |
+| Seguridad negativa | Sí | 401, 403/404, 422, 413 y 429 (CA-02 a CA-04, CA-07 a CA-09, CA-13 a CA-16, CA-20 a CA-22, CA-25 a CA-28, CA-37, CA-39) |
 | Base de datos | Sí | Índices y reglas de cada colección de §6 |
 | Contrato | Sí | OpenAPI regenerado y comparado con `contracts/` |
 | Mutación | Sí | Meta del módulo según la spec 008 |

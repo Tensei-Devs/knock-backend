@@ -208,6 +208,10 @@ Definir y especificar los endpoints ASI-01, ASI-02, ASI-03, ASI-04, ASI-05, ASI-
 - Spec 031 de este repositorio.
 - Specs 002, 003, 009, 010 y 011 (estilo, bases de datos, seguridad, caché y registros).
 - Frontend: spec 042 consume este contrato.
+- **Prerrequisitos que hoy no existen (trabajo pendiente, no capacidades implementadas):**
+  - Recurso de Azure OpenAI y cliente de la spec 024 (el recurso no está en Terraform; autorizado con límites)
+  - Filtro de datos personales y `uso_ia` de la spec 024 (hoy no implementados)
+  - Cálculo de la referencia de mercado de la spec 048 (hoy no implementado)
 
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |

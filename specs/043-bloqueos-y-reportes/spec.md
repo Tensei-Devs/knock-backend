@@ -45,15 +45,16 @@ Definir y especificar los endpoints BLO-01, BLO-02, BLO-03, REP-01, REP-02, REP-
 - **R-15:** Estados de `POST /api/v1/reportes/{id}/apelacion`: 409 `appeal_not_allowed`. Los códigos de negocio van en inglés y en snake_case.
 - **R-16:** **Bloquear (BLO-01 y BLO-02).** Una persona no puede bloquearse a sí misma (422); bloquear dos veces responde 409 `already_blocked`; desbloquear es posible en cualquier momento («Deshacer»). El bloqueo es en un solo sentido pero **corta en ambos**: ninguna de las dos puede enviarse mensajes, pedirse cotización ni verse en búsquedas.
 - **R-17:** **No se revela el bloqueo.** A la persona bloqueada nunca se le dice que fue bloqueada: sus intentos de mensaje o solicitud responden igual que si la otra no estuviera disponible.
-- **R-18:** **Efecto sobre lo abierto.** Al bloquear se cierra la conversación abierta entre ambas (queda de solo lectura, sin borrar mensajes); desde ese momento no se reparten solicitudes a la persona bloqueada y las cotizaciones de la persona bloqueada no se muestran a quien bloqueó. Las visitas ya confirmadas **no se cancelan**: se completan con el código y la llegada de siempre (spec 022).
+- **R-18:** **Efecto sobre lo abierto.** Al bloquear se cierra la conversación abierta entre ambas (queda de solo lectura, sin borrar mensajes); desde ese momento no se reparten solicitudes a la persona bloqueada (condición adicional de la elegibilidad de la spec 028, que solo la restringe y no la contradice) y las cotizaciones de la persona bloqueada no se muestran a quien bloqueó. Las visitas ya confirmadas **no se cancelan**: se completan con el código y la llegada de siempre (spec 022).
 - **R-19:** **Lista (BLO-03).** Paginada por cursor (20 por defecto, máximo 50), de más reciente a más antigua, solo con identificador, nombre público y fecha, sin teléfono.
 - **R-20:** **Crear un reporte (REP-01).** `motivo` de una lista cerrada; `descripcion` de 8 a 500 caracteres y moderada (spec 031); `evidencia` de 0 a 5 imágenes (spec 032); `referencia` opcional a una solicitud, visita u opinión; no se puede reportar a uno mismo (422). Si el motivo implica peligro, la respuesta incluye el aviso de llamar al 911.
 - **R-21:** **Lista y apelación (REP-02 y REP-03).** La persona ve solo sus reportes, por cursor (20 por defecto); puede apelar **una sola vez** una decisión ya tomada, con `texto` de 8 a 500 caracteres. La apelación se asigna con prioridad a una persona del panel distinta de la que decidió; si no hay otra con el permiso, la revisa quien lo tenga y queda marcada «misma persona». Sin decisión o con una apelación previa responde 409 `appeal_not_allowed`; quien no es la persona afectada, 403.
 - **R-22:** **Privacidad del reporte.** La persona reportada nunca ve quién la reportó ni el texto del reporte; la evidencia solo la ve el panel con enlaces firmados de vida corta (spec 025); los registros no llevan el texto ni los identificadores de las dos personas juntos.
-- **R-23:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
-- **R-24:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
-- **R-25:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
-- **R-26:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
+- **R-23:** **Aplicar el bloqueo en otros servicios.** Los bloqueos viven en Identidad. Para aplicarlos sin leer su base (spec 001 R-03), Identidad publica `BloqueoCreado` y `BloqueoEliminado` por la bandeja de salida (spec 054) y Mercado y Mensajería mantienen una proyección mínima `bloqueos` (`bloqueaId`, `bloqueadoId`), idempotente por `eventoId`.
+- **R-24:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
+- **R-25:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
+- **R-26:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
+- **R-27:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dado el rol «persona con sesión (cliente o técnico)», cuando llama `POST /api/v1/usuarios/{id}/bloqueo` con datos válidos, entonces responde 201 con lo descrito en §5.
@@ -88,10 +89,11 @@ Definir y especificar los endpoints BLO-01, BLO-02, BLO-03, REP-01, REP-02, REP-
 - **CA-30:** Dado un reporte válido, cuando se crea, entonces queda `abierto` y llega a revisión (spec 053); con más de 5 evidencias, una descripción corta o a sí misma responde 422; con motivo de peligro la respuesta incluye el aviso de emergencia.
 - **CA-31:** Dada una decisión tomada, cuando la persona afectada apela, entonces el reporte pasa a `en_apelacion` y se asigna a otra persona del panel si la hay; una segunda apelación o apelar sin decisión responde 409 `appeal_not_allowed`, y la de otra persona, 403.
 - **CA-32:** Dado un reporte, cuando la persona reportada consulta lo suyo, entonces no ve quién reportó ni el texto; y los registros no vinculan a ambas personas.
-- **CA-33:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
-- **CA-34:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
-- **CA-35:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
-- **CA-36:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
+- **CA-33:** Dado un bloqueo creado o eliminado en Identidad, cuando Mercado y Mensajería reciben el evento, entonces su proyección `bloqueos` queda al día y recibir el mismo evento otra vez no cambia nada.
+- **CA-34:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
+- **CA-35:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
+- **CA-36:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
+- **CA-37:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
 
 **4.1 Criterio → prueba prevista**
 
@@ -133,6 +135,7 @@ Definir y especificar los endpoints BLO-01, BLO-02, BLO-03, REP-01, REP-02, REP-
 | CA-34 | `Spec043Tests.Criterio34_CA_043_34` |
 | CA-35 | `Spec043Tests.Criterio35_CA_043_35` |
 | CA-36 | `Spec043Tests.Criterio36_CA_043_36` |
+| CA-37 | `Spec043Tests.Criterio37_CA_043_37` |
 
 ## 5. Contrato
 | ID | Método y ruta | Quién | Entrada | Respuestas |
@@ -220,17 +223,21 @@ Definir y especificar los endpoints BLO-01, BLO-02, BLO-03, REP-01, REP-02, REP-
 - Spec 033 de este repositorio.
 - Specs 002, 003, 009, 010 y 011 (estilo, bases de datos, seguridad, caché y registros).
 - Frontend: spec 033 consume este contrato.
+- **Prerrequisitos que hoy no existen (trabajo pendiente, no capacidades implementadas):**
+  - Mensajería y conversaciones de las specs 026 y 030 y el reparto de solicitudes de la 028 (hoy no implementados)
+  - Cola del panel de la spec 053 (hoy no implementada)
+  - Eventos `BloqueoCreado` y `BloqueoEliminado` por la bandeja de salida de la spec 054 y la proyección `bloqueos` en Mercado y Mensajería (hoy no existen)
 
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |
 |---|---|---|
-| Acceso a datos de otra persona (IDOR) | Toda consulta y escritura filtra por el `sub` del token; ajeno responde 403 o 404 | CA-22, CA-33 |
-| Asignación masiva o identificador ajeno en el cuerpo | El DTO no acepta identificadores de persona; se ignoran | CA-22, CA-33 |
+| Acceso a datos de otra persona (IDOR) | Toda consulta y escritura filtra por el `sub` del token; ajeno responde 403 o 404 | CA-22, CA-34 |
+| Asignación masiva o identificador ajeno en el cuerpo | El DTO no acepta identificadores de persona; se ignoran | CA-22, CA-34 |
 | Inyección en filtros y parámetros | Parámetros tipados con validador; nada se concatena en consultas | CA-03, CA-08, CA-15 a CA-16, CA-23 a CA-24 |
 | Ruta sin sesión | JWT obligatorio salvo las públicas | CA-02, CA-07, CA-11, CA-14, CA-18, CA-21 |
-| Abuso por repetición o cuerpos grandes | Límite de peticiones, `Retry-After` y tope de cuerpo | CA-35 |
-| Datos personales en registros y errores | Registros sin datos personales; ProblemDetails sin valores | CA-34 |
-| Duplicados por reintento | Regla de estado o índice único, sin `Idempotency-Key` | CA-36 |
+| Abuso por repetición o cuerpos grandes | Límite de peticiones, `Retry-After` y tope de cuerpo | CA-36 |
+| Datos personales en registros y errores | Registros sin datos personales; ProblemDetails sin valores | CA-35 |
+| Duplicados por reintento | Regla de estado o índice único, sin `Idempotency-Key` | CA-37 |
 
 ## 10. Plan de pruebas
 Las pruebas citan el caso como `CA_043_NN` en el nombre (para `python scripts/sdd_lint.py --trace 043`).
@@ -239,7 +246,7 @@ Las pruebas citan el caso como `CA_043_NN` en el nombre (para `python scripts/sd
 |---|---|---|
 | Unitarias | Sí | Validadores, reglas de estado y cálculos del dominio |
 | Integración | Sí | Cada ruta con la base real en contenedor (Testcontainers) y `MarketApiFactory`/fábrica del servicio |
-| Seguridad negativa | Sí | 401, 403/404, 422, 413 y 429 (CA-02 a CA-03, CA-07 a CA-08, CA-11, CA-14 a CA-16, CA-18, CA-21 a CA-24, CA-33, CA-35) |
+| Seguridad negativa | Sí | 401, 403/404, 422, 413 y 429 (CA-02 a CA-03, CA-07 a CA-08, CA-11, CA-14 a CA-16, CA-18, CA-21 a CA-24, CA-34, CA-36) |
 | Base de datos | Sí | Índices y reglas de cada colección de §6 |
 | Contrato | Sí | OpenAPI regenerado y comparado con `contracts/` |
 | Mutación | Sí | Meta del módulo según la spec 008 |

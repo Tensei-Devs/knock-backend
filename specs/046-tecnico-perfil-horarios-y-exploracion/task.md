@@ -5,6 +5,7 @@
 
 | Tarea | Qué se hace | Cubre | Depende de | Paralelo con | Responsable sugerido | Estado |
 |---|---|---|---|---|---|---|
+| T-00 | Prerrequisitos que hoy no existen y no son parte de esta spec: Almacén de búsqueda de la spec 027 y elegibilidad de la 028 (hoy no implementados); `disponibleHasta` (HU-019): hoy solo existe en las semillas | §8 | — | T-01 | por asignar | pendiente |
 | T-01 | Script de `db/` con colecciones e índices de §6 y prueba de base de datos | §6 | — | T-02 en adelante (con datos de prueba) | por asignar | pendiente |
 | T-02 | `POST /api/v1/tecnicos` (TEC-01): DTO, validador, servicio, almacén, controlador y pruebas | R-01 a R-03 · CA-01 a CA-05 | T-01 | otras rutas | por asignar | pendiente |
 | T-03 | `GET /api/v1/tecnicos` (TEC-02): DTO, validador, servicio, almacén, controlador y pruebas | R-04 a R-07 · CA-06 a CA-09 | T-01 | otras rutas | por asignar | pendiente |
