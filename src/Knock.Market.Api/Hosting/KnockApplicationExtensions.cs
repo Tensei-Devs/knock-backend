@@ -49,10 +49,19 @@ internal static class KnockApplicationExtensions
         }
 
         app.UseMiddleware<CorsMiddleware>();
+        app.Use(async (context, next) =>
+        {
+            if (context.Request.Path.Equals("/api/v1/zonas/lista-espera", StringComparison.OrdinalIgnoreCase))
+            {
+                context.Response.Headers.CacheControl = "private, no-store";
+            }
+
+            await next(context);
+        });
+        app.UseAuthentication();
         app.UseRateLimiter();
         app.UseMiddleware<RequestBodyLimitMiddleware>();
         app.UseMiddleware<JsonCompressionMiddleware>();
-        app.UseAuthentication();
         app.UseAuthorization();
         app.MapKnockHealth();
         app.MapKnockOpenApi(app.Environment);
