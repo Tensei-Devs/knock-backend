@@ -17,7 +17,7 @@ public sealed class CatalogStoreMaxTimeTests
     {
         // El cliente no se conecta: las consultas solo se arman, nunca se ejecutan.
         using var client = new MongoClient(MongoTestServices.SyntheticConnectionString());
-        var store = new CatalogStore(client.GetDatabase("market"), Options.Create(new KnockMongoOptions { QueryMaxTimeSeconds = 3 }));
+        var store = new CatalogStore(client.GetDatabase("market"), Options.Create(new KnockMongoOptions { QueryMaxTimeSeconds = 3 }), new DisabledCatalogCache());
         var position = new GeoPosition(-99.3495, 20.0505);
 
         var queries = new[]
@@ -36,7 +36,7 @@ public sealed class CatalogStoreMaxTimeTests
     public void CatalogQueriesUseTheDefaultMaxTimeWhenNotConfigured_TC_TT_BD_06_13()
     {
         using var client = new MongoClient(MongoTestServices.SyntheticConnectionString());
-        var store = new CatalogStore(client.GetDatabase("market"), Options.Create(new KnockMongoOptions()));
+        var store = new CatalogStore(client.GetDatabase("market"), Options.Create(new KnockMongoOptions()), new DisabledCatalogCache());
 
         store.NamesByPostalCodeQuery("42803").Options.MaxTime.Should().Be(TimeSpan.FromSeconds(5));
     }
