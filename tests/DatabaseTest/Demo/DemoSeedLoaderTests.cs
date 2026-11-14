@@ -86,20 +86,48 @@ public sealed class DemoSeedLoaderTests
     }
 
     [Fact]
-    public async Task ChangedDemoInvalidatesProfileOnlyOnce()
+    public async Task EveryLoadInvalidatesEveryProfile()
     {
         await WithDatabase(async (database, seeder, _, cache) =>
         {
             var users = database.GetCollection<BsonDocument>("usuarios");
             await seeder.SeedAsync(_path, CancellationToken.None);
             await seeder.SeedAsync(_path, CancellationToken.None);
-            Assert.Empty(cache.Removed);
+            Assert.Equal(20, cache.Removed.Count);
             var user = await users.Find(FilterDefinition<BsonDocument>.Empty).FirstAsync();
             await users.UpdateOneAsync(Builders<BsonDocument>.Filter.Eq("_id", user["_id"]), Builders<BsonDocument>.Update.Set("nombre", "Demo Modificado"));
             await seeder.SeedAsync(_path, CancellationToken.None);
-            Assert.Equal(user["sub"].AsString, Assert.Single(cache.Removed));
+            Assert.Equal(30, cache.Removed.Count);
             await seeder.SeedAsync(_path, CancellationToken.None);
-            Assert.Single(cache.Removed);
+            Assert.Equal(40, cache.Removed.Count);
+        });
+    }
+
+    [Fact]
+    public async Task ConcurrentLoads_CA_038_11()
+    {
+        await WithDatabase(async (database, seeder, _) =>
+        {
+            var users = database.GetCollection<BsonDocument>("usuarios");
+            await users.Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("sub"), new CreateIndexOptions { Unique = true }));
+            await users.Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("celularHash"), new CreateIndexOptions { Unique = true }));
+            await Task.WhenAll(seeder.SeedAsync(_path, CancellationToken.None), seeder.SeedAsync(_path, CancellationToken.None));
+            Assert.Equal(10, await users.CountDocumentsAsync(Builders<BsonDocument>.Filter.Eq("demo", true)));
+        });
+    }
+
+    [Fact]
+    public async Task CacheFailureDoesNotBlockLoadAndNextLoadRetries()
+    {
+        await WithDatabase(async (database, seeder, _, cache) =>
+        {
+            cache.Fail = true;
+            await seeder.SeedAsync(_path, CancellationToken.None);
+            Assert.Equal(10, await database.GetCollection<BsonDocument>("usuarios").CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty));
+            Assert.Empty(cache.Removed);
+            cache.Fail = false;
+            await seeder.SeedAsync(_path, CancellationToken.None);
+            Assert.Equal(10, cache.Removed.Count);
         });
     }
 
@@ -116,7 +144,8 @@ public sealed class DemoSeedLoaderTests
             try
             {
                 await File.WriteAllTextAsync(temporary, seeds.ToJson());
-                await Assert.ThrowsAnyAsync<MongoException>(() => seeder.SeedAsync(temporary, CancellationToken.None));
+                var error = await Assert.ThrowsAsync<InvalidOperationException>(() => seeder.SeedAsync(temporary, CancellationToken.None));
+                Assert.Contains("unique index", error.Message, StringComparison.Ordinal);
                 Assert.Equal(5, await users.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty));
                 await seeder.SeedAsync(_path, CancellationToken.None);
                 Assert.Equal(10, await users.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty));
@@ -210,7 +239,7 @@ public sealed class DemoSeedLoaderTests
             var protector = new PhoneProtector(PhoneProtectionKeys.TryCreate(options, out var errors) ?? throw new InvalidOperationException(string.Join(',', errors)));
             var store = new UsuariosStore(database, Options.Create(new KnockMongoOptions()));
             var cache = new FakeCache();
-            await test(database, new DemoClientSeeder(store, protector, cache), key, cache);
+            await test(database, new DemoClientSeeder(store, protector, cache, Microsoft.Extensions.Logging.Abstractions.NullLogger<DemoClientSeeder>.Instance), key, cache);
         }
         finally
         {
@@ -221,8 +250,14 @@ public sealed class DemoSeedLoaderTests
     private sealed class FakeCache : IProfileCache
     {
         public List<string> Removed { get; } = [];
+        public bool Fail { get; set; }
         public Task<UserProfile?> GetAsync(string sub, CancellationToken cancellationToken) => Task.FromResult<UserProfile?>(null);
         public Task SetAsync(UserProfile profile, CancellationToken cancellationToken) => Task.CompletedTask;
-        public Task RemoveAsync(string sub, CancellationToken cancellationToken) { Removed.Add(sub); return Task.CompletedTask; }
+        public Task RemoveAsync(string sub, CancellationToken cancellationToken)
+        {
+            if (Fail) { throw new TimeoutException(); }
+            lock (Removed) { Removed.Add(sub); }
+            return Task.CompletedTask;
+        }
     }
 }

@@ -3,11 +3,12 @@ using Knock.Identity.Api.Modules.Sesiones.Services;
 using Knock.Identity.Api.Modules.Usuarios.Data;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
+using StackExchange.Redis;
 
 namespace Knock.Identity.Api.Modules.Usuarios.Services;
 
 /// <summary>Preparación parcial de la demo; no se registra ni conecta al arranque hasta implementar las guardas.</summary>
-internal sealed class DemoClientSeeder(UsuariosStore store, PhoneProtector phones, IProfileCache cache)
+internal sealed partial class DemoClientSeeder(UsuariosStore store, PhoneProtector phones, IProfileCache cache, ILogger<DemoClientSeeder> logger)
 {
     public async Task SeedAsync(string path, CancellationToken cancellationToken)
     {
@@ -67,12 +68,24 @@ internal sealed class DemoClientSeeder(UsuariosStore store, PhoneProtector phone
 
         foreach (var document in documents)
         {
-            if (await store.UpsertDemoAsync(document, cancellationToken))
+            await store.UpsertDemoAsync(document, cancellationToken);
+        }
+
+        foreach (var document in documents)
+        {
+            try
             {
                 await cache.RemoveAsync(document["sub"].AsString, cancellationToken);
             }
+            catch (Exception exception) when (exception is RedisException or TimeoutException)
+            {
+                LogCacheUnavailable(logger);
+            }
         }
     }
+
+    [LoggerMessage(EventId = 2250, Level = LogLevel.Warning, Message = "Demo profile cache invalidation unavailable; a later load will retry")]
+    private static partial void LogCacheUnavailable(ILogger logger);
 
     private static void ValidateFields(BsonDocument entry)
     {

@@ -83,8 +83,19 @@ internal sealed class UsuariosStore(
         var existing = await Users.Find(_filter.Eq("_id", id), _findOptions).FirstOrDefaultAsync(cancellationToken);
         if (existing is null)
         {
-            await Users.InsertOneAsync(desired, cancellationToken: cancellationToken);
-            return false;
+            try
+            {
+                await Users.InsertOneAsync(desired, cancellationToken: cancellationToken);
+                return false;
+            }
+            catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
+            {
+                existing = await Users.Find(_filter.Eq("_id", id), _findOptions).FirstOrDefaultAsync(cancellationToken);
+                if (existing is null)
+                {
+                    throw new InvalidOperationException("Demo seed conflict on a unique index.");
+                }
+            }
         }
 
         var compared = desired.DeepClone().AsBsonDocument;
