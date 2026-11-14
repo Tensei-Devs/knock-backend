@@ -2,7 +2,7 @@
 
 > **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Origen:** `Documentacion/00_Profesores/Desarrollo_Movil/Entregables/Knock_Endpoints_CRUD.xlsx` (revisión 2026-11-02): endpoints OFI-02, OFI-03, OFI-04, OFI-05, OFP-01, OFP-02, LIS-02.
-> **Claves de trabajo:** por asignar (se crea la tarea de Jira cuando se decida el alcance) · **Sprint:** por definir · **Prioridad:** por definir
+> **Claves de trabajo:** KNOCK-266 (tarea paraguas de las specs de los endpoints del Excel) · **Sprint:** por definir · **Prioridad:** por definir
 > **Servicio:** Mercado (`Knock.Market.Api`) · **Módulo:** `CatalogAdmin` · **Colecciones:** `oficios`, `oficios_pedidos`, `lista_espera`
 > **Responsable sugerido:** por asignar (Alexis o Guillermo) · Erick consume el contrato (frontend 035 para la app y 044 para el panel)
 

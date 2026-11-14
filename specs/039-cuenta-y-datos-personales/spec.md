@@ -2,7 +2,7 @@
 
 > **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Origen:** `Documentacion/00_Profesores/Desarrollo_Movil/Entregables/Knock_Endpoints_CRUD.xlsx` (revisión 2026-11-02): endpoints USR-03, USR-04, USR-05, USR-06, USR-07, USR-08, USR-09, USR-10, USR-11.
-> **Claves de trabajo:** por asignar (se crea la tarea de Jira cuando se decida el alcance) · **Sprint:** por definir · **Prioridad:** por definir
+> **Claves de trabajo:** KNOCK-266 (tarea paraguas de las specs de los endpoints del Excel) · **Sprint:** por definir · **Prioridad:** por definir
 > **Servicio:** Identidad (`Knock.Identity.Api`) · **Módulo:** `Account` · **Colecciones:** `usuarios`
 > **Responsable sugerido:** por asignar (Alexis o Guillermo) · Erick consume el contrato (frontend 029)
 
