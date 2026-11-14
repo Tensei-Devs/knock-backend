@@ -1,12 +1,16 @@
+using Knock.Contracts.Catalog;
 using Knock.Market.Api.Modules.Catalog.Data;
 using Knock.Market.Api.Modules.Catalog.Domain;
 using MongoDB.Bson;
 
 namespace Knock.Market.Api.Modules.Catalog.Services;
 
-internal sealed class CatalogApi(NeighborhoodLocator locator, CatalogStore store) : ICatalogApi
+internal sealed class CatalogApi(NeighborhoodLocator locator, CatalogStore store) : ICatalogApi, INeighborhoodCenterCatalog
 {
     public string ModuleName => CatalogModuleExtensions.ModuleKey;
+
+    public Task<(double Latitude, double Longitude)?> FindNeighborhoodCenterAsync(string coloniaId, CancellationToken cancellationToken) =>
+        ObjectId.TryParse(coloniaId, out var id) ? store.FindCenterAsync(id, cancellationToken) : Task.FromResult<(double, double)?>(null);
 
     public async Task<string?> FindNeighborhoodAtAsync(double latitude, double longitude, CancellationToken cancellationToken) =>
         (await locator.FindAtAsync(latitude, longitude, cancellationToken))?.Nombre;
