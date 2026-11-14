@@ -136,6 +136,7 @@ public class QuoteServiceTests
     private sealed class FakeDirectory(Technician? technician, bool exists = false) : ITechnicianDirectory
     {
         public Task<Technician?> FindBySubAsync(string sub, CancellationToken cancellationToken) => Task.FromResult(technician);
+        public Task<Technician?> FindEligibleAsync(string sub, QuoteRequestSnapshot request, CancellationToken cancellationToken) => Task.FromResult(technician);
         public Task<bool> ExistsAsync(string sub, CancellationToken cancellationToken) => Task.FromResult(exists || technician is not null);
     }
 

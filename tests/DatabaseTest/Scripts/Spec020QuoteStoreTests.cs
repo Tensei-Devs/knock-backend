@@ -16,6 +16,39 @@ namespace Knock.DatabaseTest.Scripts;
 public sealed class Spec020QuoteStoreTests
 {
     [Fact]
+    public async Task TechnicianDirectory_FiltersTradeAndNeighborhood_R_23()
+    {
+        var fixture = await DocumentDbFixture.SharedAsync();
+        using var client = new MongoClient(fixture.ConnectionString);
+        var name = "s020_eligibility_" + Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(6));
+        try
+        {
+            var db = client.GetDatabase(name);
+            await db.GetCollection<BsonDocument>("tecnicos").InsertManyAsync([
+                new BsonDocument { ["usuarioId"] = "eligible", ["estado"] = "activo", ["oculto"] = false, ["oficios"] = new BsonArray { "plo" }, ["coloniaBaseId"] = "colonia" },
+                new BsonDocument { ["usuarioId"] = "trade", ["estado"] = "activo", ["oculto"] = false, ["oficios"] = new BsonArray { "ele" }, ["coloniaBaseId"] = "colonia" },
+                new BsonDocument { ["usuarioId"] = "zone", ["estado"] = "activo", ["oculto"] = false, ["oficios"] = new BsonArray { "plo" }, ["coloniaBaseId"] = "otra" },
+            ]);
+            var directory = new MongoTechnicianDirectory(db, Options.Create(new KnockMongoOptions()));
+            var request = new QuoteRequestSnapshot("plo", "colonia", RequestState.Enviada, DateTimeOffset.UtcNow.AddHours(1), DateOnly.FromDateTime(DateTime.UtcNow), null, null);
+            (await directory.FindEligibleAsync("eligible", request, CancellationToken.None)).Should().NotBeNull();
+            (await directory.FindEligibleAsync("trade", request, CancellationToken.None)).Should().BeNull();
+            (await directory.FindEligibleAsync("zone", request, CancellationToken.None)).Should().BeNull();
+            await db.GetCollection<BsonDocument>("tecnicos").InsertManyAsync([
+                new BsonDocument { ["usuarioId"] = "near", ["estado"] = "activo", ["oculto"] = false, ["oficios"] = new BsonArray { "plo" }, ["ubicacionBase"] = new BsonDocument { ["type"] = "Point", ["coordinates"] = new BsonArray { -99.0, 19.0 } }, ["radioAtencionKm"] = 5 },
+                new BsonDocument { ["usuarioId"] = "far", ["estado"] = "activo", ["oculto"] = false, ["oficios"] = new BsonArray { "plo" }, ["ubicacionBase"] = new BsonDocument { ["type"] = "Point", ["coordinates"] = new BsonArray { -99.0, 19.1 } }, ["radioAtencionKm"] = 5 },
+            ]);
+            var geographicRequest = request with { Latitude = 19.0, Longitude = -99.0 };
+            (await directory.FindEligibleAsync("near", geographicRequest, CancellationToken.None)).Should().NotBeNull();
+            (await directory.FindEligibleAsync("far", geographicRequest, CancellationToken.None)).Should().BeNull();
+        }
+        finally
+        {
+            await client.DropDatabaseAsync(name);
+        }
+    }
+
+    [Fact]
     public async Task TechnicianDirectory_FiltersInactiveAndHidden_R_23()
     {
         var fixture = await DocumentDbFixture.SharedAsync();
