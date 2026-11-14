@@ -2,7 +2,7 @@
 
 > **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Origen:** `Documentacion/00_Profesores/Desarrollo_Movil/Entregables/Knock_Endpoints_CRUD.xlsx` (revisión 2026-11-02): endpoints VIS-02, VIS-04, VIS-05, VIS-06, VIS-07, VIS-09, VIS-10, VIS-11.
-> **Claves de trabajo:** por asignar (se crea la tarea de Jira cuando se decida el alcance) · **Sprint:** por definir · **Prioridad:** por definir
+> **Claves de trabajo:** KNOCK-266 (tarea paraguas de las specs de los endpoints del Excel) · **Sprint:** por definir · **Prioridad:** por definir
 > **Servicio:** Mercado (`Knock.Market.Api`) · **Módulo:** `Visits` · **Colecciones:** `visitas`
 > **Responsable sugerido:** por asignar (Alexis o Guillermo) · Erick consume el contrato (frontend 040)
 

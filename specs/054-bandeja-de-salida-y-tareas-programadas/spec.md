@@ -2,7 +2,7 @@
 
 > **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Origen:** `Documentacion/00_Profesores/Desarrollo_Movil/Entregables/Knock_Endpoints_CRUD.xlsx` (revisión 2026-11-02), hoja `outbox_y_tareas`, endpoint interno INT-01 (sin ruta pública).
-> **Claves de trabajo:** por asignar (se crea la tarea de Jira cuando se decida el alcance) · **Sprint:** por definir · **Prioridad:** por definir
+> **Claves de trabajo:** KNOCK-266 (tarea paraguas de las specs de los endpoints del Excel) · **Sprint:** por definir · **Prioridad:** por definir
 > **Servicio:** transversal (`Knock.Identity.Api`, `Knock.Market.Api`, `Knock.Messaging.Api`) · **Módulo:** `Common/TareasProgramadas` y `Common/Outbox` de cada servicio · **Colecciones:** `outbox` y `tareas_programadas` (técnicas, spec 003)
 > **Responsable sugerido:** por asignar (Alexis o Guillermo) · No tiene frontend: no hay pantallas ni rutas públicas.
 > **Relacionada con:** specs 003 (colecciones técnicas), 028 (ejecutor de tareas y forma de `tareas_programadas`), 029, 037 (entrega interna de avisos), 025, 034.

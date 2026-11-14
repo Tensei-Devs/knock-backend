@@ -2,7 +2,7 @@
 
 > **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Origen:** `Documentacion/00_Profesores/Desarrollo_Movil/Entregables/Knock_Endpoints_CRUD.xlsx` (revisión 2026-11-02): endpoints CON-01, CON-02, CON-03, TCO-01, TCO-02, TCO-03.
-> **Claves de trabajo:** por asignar (se crea la tarea de Jira cuando se decida el alcance) · **Sprint:** por definir · **Prioridad:** por definir
+> **Claves de trabajo:** KNOCK-266 (tarea paraguas de las specs de los endpoints del Excel) · **Sprint:** por definir · **Prioridad:** por definir
 > **Servicio:** Identidad (`Knock.Identity.Api`) · **Módulo:** `Trust` · **Colecciones:** `contactos_confianza`, `tecnicos_confianza`
 > **Responsable sugerido:** por asignar (Alexis o Guillermo) · Erick consume el contrato (frontend 032)
 

@@ -2,7 +2,7 @@
 
 > **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Origen:** `Documentacion/00_Profesores/Desarrollo_Movil/Entregables/Knock_Endpoints_CRUD.xlsx` (revisión 2026-11-02): endpoints ASI-01, ASI-02, ASI-03, ASI-04, ASI-05, ASI-06.
-> **Claves de trabajo:** por asignar (se crea la tarea de Jira cuando se decida el alcance) · **Sprint:** por definir · **Prioridad:** por definir
+> **Claves de trabajo:** KNOCK-266 (tarea paraguas de las specs de los endpoints del Excel) · **Sprint:** por definir · **Prioridad:** por definir
 > **Servicio:** Mercado (`Knock.Market.Api`) · **Módulo:** `Assistant` · **Colecciones:** `asistente_ia`
 > **Responsable sugerido:** por asignar (Alexis o Guillermo) · Erick consume el contrato (frontend 042)
 
