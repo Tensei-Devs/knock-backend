@@ -11,9 +11,10 @@
 | T-04 | `PUT /api/v1/me/casa-y-auto/{id}` (CAS-03): DTO, validador, servicio, almacén, controlador y pruebas | R-04 a R-06 · CA-07 a CA-12 | T-01 | otras rutas | por asignar | pendiente |
 | T-05 | `DELETE /api/v1/me/casa-y-auto/{id}` (CAS-04): DTO, validador, servicio, almacén, controlador y pruebas | R-07 a R-09 · CA-13 a CA-17 | T-01 | otras rutas | por asignar | pendiente |
 | T-06 | `GET /api/v1/me/casa-y-auto/{id}/historial` (CAS-05): DTO, validador, servicio, almacén, controlador y pruebas | R-10 a R-13 · CA-18 a CA-23 | T-01 | otras rutas | por asignar | pendiente |
-| T-07 | Transversales: `sub` del token, registros sin datos personales, 429 y 413, sin `Idempotency-Key` | R-14 a R-17 · CA-24 a CA-27 | T-02 a T-06 | T-08 | por asignar | pendiente |
-| T-08 | OpenAPI, `docs/endpoints.md` y `docs/rate-limit-matrix.md` | §5 | T-02 a T-06 | T-07 | por asignar | pendiente |
-| T-09 | Gates, `Memoria.md` y revisión de par | §12 | todas | — | por asignar | pendiente |
+| T-07 | Reglas de negocio específicas de la spec (estados, plazos y límites) | R-14 a R-18 · CA-24 a CA-28 | T-01 | otras rutas | por asignar | pendiente |
+| T-08 | Transversales: `sub` del token, registros sin datos personales, 429 y 413, sin `Idempotency-Key` | R-19 a R-22 · CA-29 a CA-32 | T-02 a T-07 | T-09 | por asignar | pendiente |
+| T-09 | OpenAPI, `docs/endpoints.md` y `docs/rate-limit-matrix.md` | §5 | T-02 a T-07 | T-08 | por asignar | pendiente |
+| T-10 | Gates, `Memoria.md` y revisión de par | §12 | todas | — | por asignar | pendiente |
 
 ## Definición de terminado
 - Los criterios de aceptación de `spec.md` están cubiertos por pruebas en verde.
