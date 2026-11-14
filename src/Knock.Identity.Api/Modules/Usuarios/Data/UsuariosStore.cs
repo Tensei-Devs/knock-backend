@@ -57,14 +57,34 @@ internal sealed class UsuariosStore(
 
     private IMongoCollection<BsonDocument> Users { get; } = database.GetCollection<BsonDocument>(UsersCollection);
 
-    internal async Task UpsertDemoAsync(BsonDocument desired, CancellationToken cancellationToken)
+    internal async Task<string?> DemoConflictAsync(BsonDocument desired, CancellationToken cancellationToken)
+    {
+        var sameIdNonDemo = _filter.And(_filter.Eq("_id", desired["_id"]), _filter.Ne("demo", true));
+        if (await Users.Find(sameIdNonDemo, _findOptions).Limit(1).AnyAsync(cancellationToken))
+        {
+            return "_id";
+        }
+
+        foreach (var field in new[] { "sub", "celularHash" })
+        {
+            var filter = _filter.And(_filter.Ne("_id", desired["_id"]), _filter.Eq(field, desired[field]));
+            if (await Users.Find(filter, _findOptions).Limit(1).AnyAsync(cancellationToken))
+            {
+                return field;
+            }
+        }
+
+        return null;
+    }
+
+    internal async Task<bool> UpsertDemoAsync(BsonDocument desired, CancellationToken cancellationToken)
     {
         var id = desired["_id"];
         var existing = await Users.Find(_filter.Eq("_id", id), _findOptions).FirstOrDefaultAsync(cancellationToken);
         if (existing is null)
         {
             await Users.InsertOneAsync(desired, cancellationToken: cancellationToken);
-            return;
+            return false;
         }
 
         var compared = desired.DeepClone().AsBsonDocument;
@@ -77,7 +97,7 @@ internal sealed class UsuariosStore(
 
         if (compared.Equals(previous))
         {
-            return;
+            return false;
         }
 
         desired["version"] = existing["version"].AsInt32 + 1;
@@ -88,6 +108,8 @@ internal sealed class UsuariosStore(
         {
             throw new InvalidOperationException("Demo account changed concurrently.");
         }
+
+        return true;
     }
 
     public async Task<UserProfile?> FindProfileAsync(string sub, CancellationToken cancellationToken) =>
