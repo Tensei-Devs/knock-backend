@@ -1,6 +1,6 @@
 # Spec 054 — Bandeja de salida y tareas programadas (INT-01)
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Origen:** `Documentacion/00_Profesores/Desarrollo_Movil/Entregables/Knock_Endpoints_CRUD.xlsx` (revisión 2026-11-02), hoja `outbox_y_tareas`, endpoint interno INT-01 (sin ruta pública).
 > **Claves de trabajo:** KNOCK-266 (tarea paraguas de las specs de los endpoints del Excel) · **Sprint:** por definir · **Prioridad:** por definir
 > **Servicio:** transversal (`Knock.Identity.Api`, `Knock.Market.Api`, `Knock.Messaging.Api`) · **Módulo:** `Common/TareasProgramadas` y `Common/Outbox` de cada servicio · **Colecciones:** `outbox` y `tareas_programadas` (técnicas, spec 003)
@@ -209,6 +209,6 @@ Las pruebas citan el caso como `CA_054_NN` en el nombre (para `python scripts/sd
 - **Riesgo aceptado:** si Mensajería necesita tareas propias, esta spec se amplía.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: _____________________ fecha: __________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

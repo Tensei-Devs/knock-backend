@@ -1,6 +1,6 @@
 # Spec 051 — Opiniones y reputación del técnico
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Origen:** `Documentacion/00_Profesores/Desarrollo_Movil/Entregables/Knock_Endpoints_CRUD.xlsx` (revisión 2026-11-02): endpoints OPI-01, OPI-02, OPI-03.
 > **Claves de trabajo:** KNOCK-266 (tarea paraguas de las specs de los endpoints del Excel) · **Sprint:** por definir · **Prioridad:** por definir
 > **Servicio:** Mercado (`Knock.Market.Api`) · **Módulo:** `Reviews` · **Colecciones:** `opiniones`
@@ -233,6 +233,6 @@ Las pruebas citan el caso como `CA_051_NN` en el nombre (para `python scripts/sd
 - Dependencias: moderación de la spec 031, imágenes de la 032, estado `calificada` de la 020 y el cierre a los 30 días de la 054.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: _____________________ fecha: __________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

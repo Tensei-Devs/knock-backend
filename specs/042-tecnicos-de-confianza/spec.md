@@ -1,6 +1,6 @@
 # Spec 042 — Técnicos de confianza
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Origen:** `Documentacion/00_Profesores/Desarrollo_Movil/Entregables/Knock_Endpoints_CRUD.xlsx` (revisión 2026-11-02): endpoints TCO-01, TCO-02, TCO-03.
 > **Claves de trabajo:** KNOCK-266 (tarea paraguas de las specs de los endpoints del Excel) · **Sprint:** por definir · **Prioridad:** por definir
 > **Servicio:** Mercado (`Knock.Market.Api`) · **Módulo:** `Trust` · **Colecciones:** `tecnicos_confianza`
@@ -195,6 +195,6 @@ Las pruebas citan el caso como `CA_042_NN` en el nombre (para `python scripts/sd
 - Dependencia: «solicitud directa a un técnico de confianza» no entra en esta spec; la distribución de solicitudes es de la spec 028.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: _____________________ fecha: __________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

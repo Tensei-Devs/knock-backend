@@ -1,6 +1,6 @@
 # Spec 041 — Mi casa y mi auto
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Origen:** `Documentacion/00_Profesores/Desarrollo_Movil/Entregables/Knock_Endpoints_CRUD.xlsx` (revisión 2026-11-02): endpoints CAS-01, CAS-02, CAS-03, CAS-04, CAS-05.
 > **Claves de trabajo:** KNOCK-266 (tarea paraguas de las specs de los endpoints del Excel) · **Sprint:** por definir · **Prioridad:** por definir
 > **Servicio:** Identidad (`Knock.Identity.Api`) · **Módulo:** `HomeAndCar` · **Colecciones:** `mi_casa_y_auto`
@@ -252,6 +252,6 @@ Las pruebas citan el caso como `CA_041_NN` en el nombre (para `python scripts/sd
 - Dependencias: el campo opcional `elementoId` en `solicitudes` y su aceptación en `POST /solicitudes` (se implementa junto con esta spec, sin tocar la 020 aprobada) y las rutas internas de la spec 037 (H-1).
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: _____________________ fecha: __________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

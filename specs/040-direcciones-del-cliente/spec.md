@@ -1,6 +1,6 @@
 # Spec 040 — Direcciones del cliente
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Origen:** `Documentacion/00_Profesores/Desarrollo_Movil/Entregables/Knock_Endpoints_CRUD.xlsx` (revisión 2026-11-02): endpoints DIR-01, DIR-02, DIR-03, DIR-04.
 > **Claves de trabajo:** KNOCK-266 (tarea paraguas de las specs de los endpoints del Excel) · **Sprint:** por definir · **Prioridad:** por definir
 > **Servicio:** Identidad (`Knock.Identity.Api`) · **Módulo:** `Addresses` · **Colecciones:** `direcciones`
@@ -210,6 +210,6 @@ Las pruebas citan el caso como `CA_040_NN` en el nombre (para `python scripts/sd
 - Dependencias: catálogo de colonias de la spec 017 y la copia de la dirección en la visita de la spec 022.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: _____________________ fecha: __________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)
