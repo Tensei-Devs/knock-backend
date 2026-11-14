@@ -121,8 +121,6 @@ module "service" {
   key_vault_id                   = local.infra.key_vault_id
   key_vault_uri                  = local.infra.key_vault_uri
   image                          = local.image[each.key]
-  cpu                            = each.key == "market" ? 0.5 : 0.25
-  memory                         = each.key == "market" ? "1Gi" : "0.5Gi"
   ingress_external               = each.value.external
   env                            = each.value.env
   secret_env                     = each.value.secret_env

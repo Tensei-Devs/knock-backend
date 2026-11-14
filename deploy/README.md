@@ -140,6 +140,3 @@ El criterio «el entorno se crea desde cero con un comando» se puede dar por cu
 4. Un solo comando basta una vez cubiertos los prerrequisitos manuales (grupo de recursos, secretos e imágenes), que el README documenta.
 
 Si el líder técnico exige la prueba completa, la evidencia adicional es la etapa 6 en un entorno desechable, con el resultado y el `destroy` posterior anotados.
-# Memoria de Market para imágenes
-
-Market usa 0.5 CPU y 1 Gi de memoria por réplica: decodificar una imagen de 40 MP ocupa aproximadamente 160 MB por copia de píxeles. El procesamiento predeterminado se limita a una imagen concurrente por réplica; hay copias adicionales durante la orientación y la recodificación. Esta asignación aumenta el costo de Market y debe revisarse con mediciones reales antes del despliegue.
