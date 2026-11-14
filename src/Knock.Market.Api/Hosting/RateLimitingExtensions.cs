@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.RateLimiting;
+using Knock.Market.Api.Common.Errors;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 
@@ -32,6 +33,7 @@ internal sealed class RateLimitSettings
 
 internal static class RateLimitingExtensions
 {
+    public const string WaitlistPolicy = "waitlist";
     private const string _healthPath = "/health";
     private const string _readyPath = "/health/ready";
     private const string _unknownClient = "unknown";
@@ -55,6 +57,9 @@ internal static class RateLimitingExtensions
             var auth = settings.Value.Auth;
             var ready = settings.Value.Ready;
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.AddPolicy(WaitlistPolicy, context => context.User.FindFirst("sub")?.Value is { Length: > 0 } subject
+                ? RateLimitPartition.GetFixedWindowLimiter(subject, _ => FixedWindow(new RateLimitPolicySettings { PermitLimit = 5, Window = TimeSpan.FromHours(1) }))
+                : RateLimitPartition.GetNoLimiter(_unknownClient));
             options.GlobalLimiter = PartitionedRateLimiter.CreateChained(
                 PartitionedRateLimiter.Create<HttpContext, string>(context => GlobalPartition(context, global, ready)),
                 PartitionedRateLimiter.Create<HttpContext, string>(context =>
@@ -68,7 +73,7 @@ internal static class RateLimitingExtensions
                 var seconds = Math.Max(1, (int)Math.Ceiling(retryAfter.TotalSeconds));
                 context.HttpContext.Response.Headers.RetryAfter = seconds.ToString(CultureInfo.InvariantCulture);
                 // Cuerpo uniforme: sin IP, clave de partición, límite ni contador.
-                await ProblemResponses.WriteAsync(context.HttpContext, StatusCodes.Status429TooManyRequests, "Too Many Requests");
+                await ProblemResponses.WriteAsync(context.HttpContext, StatusCodes.Status429TooManyRequests, "Too Many Requests", ErrorCodes.RateLimitedCode);
             };
         });
         return services;
