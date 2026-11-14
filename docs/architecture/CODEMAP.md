@@ -1,13 +1,13 @@
 # Mapa de código
 
-> Generado por `scripts/codemap.py` el 2026-11-14T21:16:09Z. No editar a mano.
+> Generado por `scripts/codemap.py` el 2026-11-14T22:11:43Z. No editar a mano.
 > **Antes de crear una clase, método o archivo, busca aquí o corre `python scripts/codemap.py --query "<qué necesitas>"`.**
 
 ## Resumen
 
 | Módulo | Capas | Archivos | Tipos | Métodos públicos |
 |---|---|---|---|---|
-| `Catalog` | -, controllers, data, domain, dtos, services, validators | 45 | 77 | 97 |
+| `Catalog` | -, controllers, data, domain, dtos, services, validators | 46 | 78 | 98 |
 | `Knock.Contracts` | - | 7 | 11 | 7 |
 | `Knock.Gateway` | -, hosting | 14 | 39 | 47 |
 | `Knock.Identity.Api` | -, common, hosting | 29 | 61 | 84 |
@@ -164,6 +164,8 @@
 
 **controllers**
 
+- `src/Knock.Market.Api/Modules/Catalog/Controllers/SearchProblems.cs` — class `SearchProblems`
+  - `WriteAsync()`:9
 - `src/Knock.Market.Api/Modules/Catalog/Controllers/V1/ColoniaExistsController.cs` — class `ColoniaExistsController`
   - `Exists()`:28
 - `src/Knock.Market.Api/Modules/Catalog/Controllers/V1/ColoniasController.cs` — class `ColoniasController`

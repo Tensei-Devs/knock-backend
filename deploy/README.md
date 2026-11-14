@@ -60,6 +60,8 @@ az keyvault secret set --vault-name <kv> --name redis-password --value "<valor>"
 - `redis-connection-string`: `knock-redis:6379,password=<la misma de redis-password>`.
 Una forma de generarlas: `python -c "import os,base64;print(base64.b64encode(os.urandom(32)).decode())"`. Los valores nunca se pegan en un chat ni en el repositorio.
 
+**Cursor de búsqueda (KNOCK-66):** Market exige `Busqueda:Cursor:Key` en todos los entornos, también Development: Base64 de 32 bytes aleatorios, distinto de las demás claves. Para ejecución local fuera de contenedor, guárdalo en los *user-secrets* de `src/Knock.Market.Api/Knock.Market.Api.csproj`, sin pegar el valor en archivos del repositorio ni compartirlo. Todas las réplicas de un mismo entorno necesitan la misma clave; rotarla invalida los cursores anteriores. En Azure debe suministrarse desde Key Vault a `Busqueda__Cursor__Key`: **el secreto y su conexión a Market todavía no están configurados en Terraform** y requieren aprobación del Tech Lead antes de desplegar esta versión. Sin la clave, Market no arranca.
+
 ## Paso 2 — desplegar
 Las imágenes deben estar en el ACR (las publica el pipeline, spec 007).
 ```

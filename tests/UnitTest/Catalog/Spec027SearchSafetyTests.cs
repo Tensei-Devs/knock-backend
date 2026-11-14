@@ -52,9 +52,12 @@ public sealed class Spec027SearchSafetyTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Arranque_Exige_Clave_Cursor_R_027_11(bool configured)
+    [InlineData("Production", false)]
+    [InlineData("Staging", false)]
+    [InlineData("Development", false)]
+    [InlineData("Production", true)]
+    [InlineData("Development", true)]
+    public async Task Arranque_Exige_Clave_Cursor_R_027_11(string environment, bool configured)
     {
         var values = new Dictionary<string, string?>
         {
@@ -63,11 +66,13 @@ public sealed class Spec027SearchSafetyTests
             ["Mongo:Databases:Catalog"] = "market_test",
             [SearchCursorOptions.KeyName] = configured ? Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)) : null,
         };
-        using var host = new HostBuilder().ConfigureAppConfiguration(builder => builder.AddInMemoryCollection(values))
+        using var host = new HostBuilder().UseEnvironment(environment).ConfigureAppConfiguration(builder => builder.AddInMemoryCollection(values))
             .ConfigureServices((context, services) => services.AddCatalogModule(context.Configuration)).Build();
         if (configured)
         {
             await host.StartAsync();
+            host.Services.GetRequiredService<BusquedaService>().Should().NotBeNull();
+            host.Services.GetRequiredService<IFiltroDatosPersonales>().Should().BeOfType<FiltroDatosPersonalesNoDisponible>();
             await host.StopAsync();
         }
         else
