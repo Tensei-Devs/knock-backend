@@ -1,13 +1,13 @@
 # Mapa de código
 
-> Generado por `scripts/codemap.py` el 2026-11-14T03:57:45Z. No editar a mano.
+> Generado por `scripts/codemap.py` el 2026-11-14T04:54:53Z. No editar a mano.
 > **Antes de crear una clase, método o archivo, busca aquí o corre `python scripts/codemap.py --query "<qué necesitas>"`.**
 
 ## Resumen
 
 | Módulo | Capas | Archivos | Tipos | Métodos públicos |
 |---|---|---|---|---|
-| `Catalog` | -, controllers, data, domain, dtos, services, validators | 33 | 44 | 70 |
+| `Catalog` | -, controllers, data, domain, dtos, services, validators | 37 | 50 | 74 |
 | `Knock.Contracts` | - | 7 | 11 | 7 |
 | `Knock.Gateway` | -, hosting | 14 | 39 | 47 |
 | `Knock.Identity.Api` | -, common, hosting | 29 | 61 | 84 |
@@ -83,7 +83,7 @@
 - `src/Knock.Identity.Api/Hosting/SecuritySettings.cs:84 SecuritySettingsValidator.IsValidOrigin` · `src/Knock.Market.Api/Hosting/SecuritySettings.cs:83 SecuritySettingsValidator.IsValidOrigin`
 - `src/Knock.Identity.Api/Hosting/ValidationExtensions.cs:70 ValidationFilter.ToCamelCasePath` · `src/Knock.Market.Api/Hosting/ValidationExtensions.cs:65 ValidationFilter.ToCamelCasePath`
 - `src/Knock.Identity.Api/Hosting/ValidationExtensions.cs:74 ValidationFilter.Collect` · `src/Knock.Market.Api/Hosting/ValidationExtensions.cs:69 ValidationFilter.Collect`
-- `src/Knock.Identity.Api/Modules/Usuarios/Controllers/V1/MeController.cs:81 MeController.Matches` · `src/Knock.Market.Api/Modules/Catalog/Controllers/V1/OficiosController.cs:50 OficiosController.Matches`
+- `src/Knock.Identity.Api/Modules/Usuarios/Controllers/V1/MeController.cs:81 MeController.Matches` · `src/Knock.Market.Api/Modules/Catalog/Controllers/V1/OficiosController.cs:52 OficiosController.Matches`
 - `src/Knock.Identity.Api/Modules/Usuarios/Data/ProfileCacheOptions.cs:25 ProfileCacheOptionsValidator.Validate` · `src/Knock.Market.Api/Modules/Catalog/Data/CatalogCacheOptions.cs:25 CatalogCacheOptionsValidator.Validate`
 
 ## Tipos con el mismo nombre en varios lugares
@@ -170,7 +170,8 @@
 - `src/Knock.Market.Api/Modules/Catalog/Controllers/V1/ListaEsperaController.cs` — class `ListaEsperaController`
   - `Join()`:26
 - `src/Knock.Market.Api/Modules/Catalog/Controllers/V1/OficiosController.cs` — class `OficiosController`
-  - `ETag()`:42, `Matches()`:50
+  - `ETag()`:42, `ETagPayload()`:44, `Matches()`:52
+- `src/Knock.Market.Api/Modules/Catalog/Controllers/V1/ZonasController.cs` — class `ZonasController`
 
 **data**
 
@@ -181,7 +182,7 @@
 - `src/Knock.Market.Api/Modules/Catalog/Data/CatalogSeeder.cs` — class `CatalogSeeder`, record `ColoniasSnapshot`
   - `CatalogSeeder()`:13, `SeedAsync()`:19, `SeedAsync()`:29
 - `src/Knock.Market.Api/Modules/Catalog/Data/CatalogStore.cs` — class `CatalogStore`
-  - `EnsureIndexesAsync()`:68, `FindActiveOficiosAsync()`:91, `FindIntersectingAsync()`:110, `FindNearestCenterAsync()`:114, `FindNamesByPostalCodeAsync()`:117, `ColoniaNameExistsAsync()`:132, `ColoniaExistsAsync()`:135, `FindCenterAsync()`:148, `ActiveOficiosQuery()`:160, `IntersectingQuery()`:166, `NearestCenterQuery()`:173, `NamesByPostalCodeQuery()`:179, `ColoniaNameExistsQuery()`:185, `ColoniaExistsQuery()`:191
+  - `EnsureIndexesAsync()`:68, `FindActiveOficiosAsync()`:91, `FindIntersectingAsync()`:110, `FindNearestCenterAsync()`:114, `FindNamesByPostalCodeAsync()`:117, `FindByPostalCodeAsync()`:120, `ColoniaNameExistsAsync()`:135, `ColoniaExistsAsync()`:138, `FindCenterAsync()`:151, `ActiveOficiosQuery()`:163, `IntersectingQuery()`:169, `NearestCenterQuery()`:176, `NamesByPostalCodeQuery()`:182, `ColoniaNameExistsQuery()`:188, `ColoniaExistsQuery()`:194
 - `src/Knock.Market.Api/Modules/Catalog/Data/WaitlistStore.cs` — class `WaitlistStore`
   - `JoinAsync()`:14
 
@@ -204,6 +205,7 @@
 - `src/Knock.Market.Api/Modules/Catalog/Dtos/NeighborhoodAtPointResponse.cs` — record `NeighborhoodAtPointResponse`, record `NeighborhoodAtPointColoniaResponse`
 - `src/Knock.Market.Api/Modules/Catalog/Dtos/NeighborhoodExists.cs` — class `NeighborhoodExistsQuery`, record `NeighborhoodExistsResponse`
 - `src/Knock.Market.Api/Modules/Catalog/Dtos/OficioResponse.cs` — record `OficioResponse`
+- `src/Knock.Market.Api/Modules/Catalog/Dtos/PostalCodeRoute.cs` — class `PostalCodeRoute`, record `ZonaResponse`, record `ZonaColoniaResponse`
 - `src/Knock.Market.Api/Modules/Catalog/Dtos/WaitlistRequest.cs` — record `WaitlistRequest`, record `WaitlistResponse`
 
 **services**
@@ -220,12 +222,15 @@
   - `OficioQueries()`:7, `ListActiveAsync()`:14
 - `src/Knock.Market.Api/Modules/Catalog/Services/WaitlistService.cs` — record `WaitlistEntry`, record `WaitlistResult`, interface `IWaitlistStore`, class `WaitlistService`
   - `WaitlistService()`:14, `JoinAsync()`:16
+- `src/Knock.Market.Api/Modules/Catalog/Services/ZonaService.cs` — class `ZonaService`
+  - `ZonaService()`:6, `FindAsync()`:8
 
 **validators**
 
 - `src/Knock.Market.Api/Modules/Catalog/Validators/NeighborhoodAtPointQueryValidator.cs` — class `NeighborhoodAtPointQueryValidator`
   - `Parse()`:31
 - `src/Knock.Market.Api/Modules/Catalog/Validators/NeighborhoodExistsQueryValidator.cs` — class `NeighborhoodExistsQueryValidator`
+- `src/Knock.Market.Api/Modules/Catalog/Validators/PostalCodeRouteValidator.cs` — class `PostalCodeRouteValidator`
 - `src/Knock.Market.Api/Modules/Catalog/Validators/WaitlistRequestValidator.cs` — class `WaitlistRequestValidator`
 
 ### Knock.Contracts

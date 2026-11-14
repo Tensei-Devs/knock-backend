@@ -378,6 +378,123 @@
           }
         }
       }
+    },
+    "/api/v{version}/zonas/cp/{cp}": {
+      "get": {
+        "tags": [
+          "Zonas"
+        ],
+        "parameters": [
+          {
+            "name": "cp",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ZonaResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ZonaResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ZonaResponse"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -550,6 +667,51 @@
             "type": "boolean"
           }
         }
+      },
+      "ZonaColoniaResponse": {
+        "required": [
+          "id",
+          "nombre",
+          "cp",
+          "municipio"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "cp": {
+            "type": "string"
+          },
+          "municipio": {
+            "type": "string"
+          }
+        }
+      },
+      "ZonaResponse": {
+        "required": [
+          "enCobertura",
+          "ciudadPiloto",
+          "colonias"
+        ],
+        "type": "object",
+        "properties": {
+          "enCobertura": {
+            "type": "boolean"
+          },
+          "ciudadPiloto": {
+            "type": "string"
+          },
+          "colonias": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ZonaColoniaResponse"
+            }
+          }
+        }
       }
     }
   },
@@ -565,6 +727,9 @@
     },
     {
       "name": "Oficios"
+    },
+    {
+      "name": "Zonas"
     }
   ]
 }
