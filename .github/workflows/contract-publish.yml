@@ -2,8 +2,9 @@ name: contract-publish
 
 # KNOCK-137 (TT-CI-02): cuando cambia un contrato en develop, junta los de Market e Identidad en un solo
 # contracts/openapi.v1.json, regenera el cliente Dart y abre un PR en Tensei-Devs/knock-frontend (rama contract/api-<sha>, base develop).
-# - Corrida automática: push a develop que toca docs/openapi*.json. Corrida manual: workflow_dispatch, con dry_run activo por omisión.
-# - dry_run: hace todo menos empujar y abrir el PR; sube el contrato combinado y el parche como artefactos para revisarlos.
+# - Corrida automática: push a develop que toca docs/openapi*.json; es la única que empuja y abre el PR.
+# - Corrida manual (workflow_dispatch, sin entradas por CKV_GHA_7): siempre es de prueba (dry_run): hace todo menos empujar y abrir el PR;
+#   sube el contrato combinado y el parche como artefactos para revisarlos.
 # - El token FRONTEND_CONTRACT_TOKEN (grano fino, solo knock-frontend: Contents y Pull requests) se usa solo en los pasos que leen o escriben
 #   en knock-frontend; nunca se imprime ni va en una URL. Todo lo que viene del evento llega por entorno, nunca dentro del script.
 # - Si la rama contract/api-<sha> ya existe en knock-frontend no se vuelve a empujar (sin force-push).
@@ -18,11 +19,6 @@ on:
       - scripts/ci/merge_openapi.py
       - .github/workflows/contract-publish.yml
   workflow_dispatch:
-    inputs:
-      dry_run:
-        description: Preparar el contrato y el parche como artefactos, sin empujar ni abrir el PR en knock-frontend
-        type: boolean
-        default: true
 
 permissions: {}
 
@@ -38,7 +34,7 @@ jobs:
     permissions:
       contents: read
     env:
-      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
       FRONTEND_REPO: Tensei-Devs/knock-frontend
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
