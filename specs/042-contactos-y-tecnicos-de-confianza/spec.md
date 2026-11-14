@@ -38,14 +38,18 @@ Definir y especificar los endpoints CON-01, CON-02, CON-03, TCO-01, TCO-02, TCO-
 - **R-08:** `GET /api/v1/me/tecnicos-confianza` pagina por cursor (Por cursor, 20): parámetros `cursor` y `limite`, 20 por defecto y 50 como máximo; orden: Orden por fecha descendente.
 - **R-09:** `PUT /api/v1/me/tecnicos-confianza/{tecnicoId}` (crear): Guarda a un técnico de confianza (requiere cuenta). Lo puede llamar: persona con sesión (cliente o técnico). Responde 200 cuando sale bien.
 - **R-10:** Entrada de `PUT /api/v1/me/tecnicos-confianza/{tecnicoId}`: Ruta: tecnicoId. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400. Reglas: `tecnicoId`: Debe existir en tecnicos.
-- **R-11:** Estados de `PUT /api/v1/me/tecnicos-confianza/{tecnicoId}`: 201; 404. El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
+- **R-11:** Estados de `PUT /api/v1/me/tecnicos-confianza/{tecnicoId}`: 201; 404 `technician_not_found`. Los códigos de negocio van en inglés y en snake_case.
 - **R-12:** `DELETE /api/v1/me/tecnicos-confianza/{tecnicoId}` (borrar): Quita un técnico de la lista. Lo puede llamar: persona con sesión (cliente o técnico). Responde 204 cuando sale bien.
 - **R-13:** Entrada de `DELETE /api/v1/me/tecnicos-confianza/{tecnicoId}`: Ruta: tecnicoId. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400. Reglas: `tecnicoId`: Debe existir en tecnicos.
-- **R-14:** Estados de `DELETE /api/v1/me/tecnicos-confianza/{tecnicoId}`: 404. El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
-- **R-15:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
-- **R-16:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
-- **R-17:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
-- **R-18:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
+- **R-14:** Estados de `DELETE /api/v1/me/tecnicos-confianza/{tecnicoId}`: 404 `trusted_technician_not_found`. Los códigos de negocio van en inglés y en snake_case.
+- **R-15:** **Contactos de confianza (CON-01 a CON-03).** `nombre` de 2 a 60 caracteres y `celular` de 10 dígitos de México, cifrado a nivel de campo y nunca repetido en registros; hasta 5 contactos por persona (el sexto responde 409 `contact_limit_reached`) y sin repetir el mismo celular en la lista de una persona. Un contacto ajeno responde 404.
+- **R-16:** **Consentimiento del contacto.** Agregar a alguien como contacto no le envía nada: el primer mensaje solo sale cuando la persona usa «Avisar a alguien de confianza» (spec 022) y lleva la opción de dejar de recibirlos; un contacto que pidió no recibir más queda marcado y no se le envía.
+- **R-17:** **Técnicos de confianza (TCO-01 a TCO-03).** Guardar a un técnico requiere cuenta y un técnico visible; `PUT` es idempotente: 201 la primera vez y 200 al repetir, sin duplicar. La lista se pagina por cursor (20 por defecto, máximo 50) con el más reciente primero. Quitar un técnico que no está en la lista responde 404.
+- **R-18:** **Técnico no disponible.** Un técnico que se oculta o se bloquea sale de la lista de la persona al consultarla (no se borra el registro) y no se le pueden mandar solicitudes directas.
+- **R-19:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
+- **R-20:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
+- **R-21:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
+- **R-22:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dado el rol «persona con sesión (cliente o técnico)», cuando llama `GET /api/v1/me/contactos-confianza` con datos válidos, entonces responde 200 con lo descrito en §5.
@@ -66,15 +70,19 @@ Definir y especificar los endpoints CON-01, CON-02, CON-03, TCO-01, TCO-02, TCO-
 - **CA-16:** Dada una petición sin token o con token vencido, cuando llama `PUT /api/v1/me/tecnicos-confianza/{tecnicoId}`, entonces responde 401 y no ejecuta la operación.
 - **CA-17:** Dado un valor inválido según las reglas de §6, cuando llama `PUT /api/v1/me/tecnicos-confianza/{tecnicoId}`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
 - **CA-18:** Dado el caso «recurso no disponible», cuando llama `PUT /api/v1/me/tecnicos-confianza/{tecnicoId}`, entonces responde 201 con ProblemDetails y no cambia el estado.
-- **CA-19:** Dado el caso «recurso no disponible», cuando llama `PUT /api/v1/me/tecnicos-confianza/{tecnicoId}`, entonces responde 404 con ProblemDetails y no cambia el estado.
+- **CA-19:** Dado el caso «el técnico no existe o está oculto», cuando llama `PUT /api/v1/me/tecnicos-confianza/{tecnicoId}`, entonces responde 404 `technician_not_found` con ProblemDetails y no cambia el estado.
 - **CA-20:** Dado el rol «persona con sesión (cliente o técnico)», cuando llama `DELETE /api/v1/me/tecnicos-confianza/{tecnicoId}` con datos válidos, entonces responde 204 con lo descrito en §5.
 - **CA-21:** Dada una petición sin token o con token vencido, cuando llama `DELETE /api/v1/me/tecnicos-confianza/{tecnicoId}`, entonces responde 401 y no ejecuta la operación.
 - **CA-22:** Dado un valor inválido según las reglas de §6, cuando llama `DELETE /api/v1/me/tecnicos-confianza/{tecnicoId}`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
-- **CA-23:** Dado el caso «recurso no disponible», cuando llama `DELETE /api/v1/me/tecnicos-confianza/{tecnicoId}`, entonces responde 404 con ProblemDetails y no cambia el estado.
-- **CA-24:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
-- **CA-25:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
-- **CA-26:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
-- **CA-27:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
+- **CA-23:** Dado el caso «ese técnico no está en la lista de la persona», cuando llama `DELETE /api/v1/me/tecnicos-confianza/{tecnicoId}`, entonces responde 404 `trusted_technician_not_found` con ProblemDetails y no cambia el estado.
+- **CA-24:** Dada una persona con 5 contactos, cuando agrega otro, entonces responde 409 `contact_limit_reached`; con un celular repetido o de menos de 10 dígitos responde 422; y un contacto ajeno responde 404.
+- **CA-25:** Dado un contacto recién agregado, cuando no se ha usado el aviso, entonces no recibe ningún mensaje; y uno que pidió no recibir más no recibe avisos posteriores.
+- **CA-26:** Dada una persona, cuando guarda al mismo técnico dos veces, entonces la primera responde 201 y la segunda 200 y queda un solo registro; y quitar uno que no tiene guardado responde 404.
+- **CA-27:** Dado un técnico oculto, cuando su cliente consulta su lista, entonces ya no aparece; al volver a ser visible, reaparece.
+- **CA-28:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
+- **CA-29:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
+- **CA-30:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
+- **CA-31:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
 
 **4.1 Criterio → prueba prevista**
 
@@ -107,6 +115,10 @@ Definir y especificar los endpoints CON-01, CON-02, CON-03, TCO-01, TCO-02, TCO-
 | CA-25 | `Spec042Tests.Criterio25_CA_042_25` |
 | CA-26 | `Spec042Tests.Criterio26_CA_042_26` |
 | CA-27 | `Spec042Tests.Criterio27_CA_042_27` |
+| CA-28 | `Spec042Tests.Criterio28_CA_042_28` |
+| CA-29 | `Spec042Tests.Criterio29_CA_042_29` |
+| CA-30 | `Spec042Tests.Criterio30_CA_042_30` |
+| CA-31 | `Spec042Tests.Criterio31_CA_042_31` |
 
 ## 5. Contrato
 | ID | Método y ruta | Quién | Entrada | Respuestas |
@@ -128,6 +140,14 @@ Definir y especificar los endpoints CON-01, CON-02, CON-03, TCO-01, TCO-02, TCO-
 | TCO-01 | Orden por fecha descendente | Por cursor, 20 | No |
 | TCO-02 | No aplica | No | No |
 | TCO-03 | No aplica | No | No |
+
+**Códigos de error de negocio**
+
+| ID | Estado | Código | Cuándo |
+|---|---|---|---|
+| TCO-02 | 404 | `technician_not_found` | el técnico no existe o está oculto |
+| TCO-03 | 404 | `trusted_technician_not_found` | ese técnico no está en la lista de la persona |
+
 
 **Códigos de error:** los de forma salen como 422 con `errors` por campo y los de sesión y límite como 401 y 429; los conflictos de negocio llevan un código en inglés y snake_case que se fija al implementar y se agrega al catálogo.
 
@@ -177,13 +197,13 @@ Definir y especificar los endpoints CON-01, CON-02, CON-03, TCO-01, TCO-02, TCO-
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |
 |---|---|---|
-| Acceso a datos de otra persona (IDOR) | Toda consulta y escritura filtra por el `sub` del token; ajeno responde 403 o 404 | CA-09, CA-24 |
-| Asignación masiva o identificador ajeno en el cuerpo | El DTO no acepta identificadores de persona; se ignoran | CA-09, CA-24 |
+| Acceso a datos de otra persona (IDOR) | Toda consulta y escritura filtra por el `sub` del token; ajeno responde 403 o 404 | CA-09, CA-28 |
+| Asignación masiva o identificador ajeno en el cuerpo | El DTO no acepta identificadores de persona; se ignoran | CA-09, CA-28 |
 | Inyección en filtros y parámetros | Parámetros tipados con validador; nada se concatena en consultas | CA-05 a CA-06, CA-10, CA-17, CA-22 |
 | Ruta sin sesión | JWT obligatorio salvo las públicas | CA-02, CA-04, CA-08, CA-13, CA-16, CA-21 |
-| Abuso por repetición o cuerpos grandes | Límite de peticiones, `Retry-After` y tope de cuerpo | CA-26 |
-| Datos personales en registros y errores | Registros sin datos personales; ProblemDetails sin valores | CA-25 |
-| Duplicados por reintento | Regla de estado o índice único, sin `Idempotency-Key` | CA-27 |
+| Abuso por repetición o cuerpos grandes | Límite de peticiones, `Retry-After` y tope de cuerpo | CA-30 |
+| Datos personales en registros y errores | Registros sin datos personales; ProblemDetails sin valores | CA-29 |
+| Duplicados por reintento | Regla de estado o índice único, sin `Idempotency-Key` | CA-31 |
 
 ## 10. Plan de pruebas
 Las pruebas citan el caso como `CA_042_NN` en el nombre (para `python scripts/sdd_lint.py --trace 042`).
@@ -192,19 +212,16 @@ Las pruebas citan el caso como `CA_042_NN` en el nombre (para `python scripts/sd
 |---|---|---|
 | Unitarias | Sí | Validadores, reglas de estado y cálculos del dominio |
 | Integración | Sí | Cada ruta con la base real en contenedor (Testcontainers) y `MarketApiFactory`/fábrica del servicio |
-| Seguridad negativa | Sí | 401, 403/404, 422, 413 y 429 (CA-02, CA-04 a CA-06, CA-08 a CA-10, CA-13, CA-16 a CA-17, CA-21 a CA-22, CA-24, CA-26) |
+| Seguridad negativa | Sí | 401, 403/404, 422, 413 y 429 (CA-02, CA-04 a CA-06, CA-08 a CA-10, CA-13, CA-16 a CA-17, CA-21 a CA-22, CA-28, CA-30) |
 | Base de datos | Sí | Índices y reglas de cada colección de §6 |
 | Contrato | Sí | OpenAPI regenerado y comparado con `contracts/` |
 | Mutación | Sí | Meta del módulo según la spec 008 |
 | Rendimiento | No aplica | Sin ruta crítica; se mide solo si la spec 034 lo pide |
 
 ## 11. Escenarios
-- **CON-01** — pantallas: Avisar a alguien de confianza.
-- **CON-02** — pantallas: Avisar a alguien de confianza (Agregar contacto).
-- **CON-03** — pantallas: Avisar a alguien de confianza.
-- **TCO-01** — pantallas: Mis técnicos de confianza.
-- **TCO-02** — pantallas: Perfil del técnico; Calificar.
-- **TCO-03** — pantallas: Mis técnicos de confianza.
+- **Agregar contacto:** la persona abre «Contactos de confianza» → agrega a su hermana con su celular → queda guardado sin enviarle nada.
+- **Guardar técnico:** al terminar una visita, el cliente toca «Guardar como de confianza» → el técnico aparece en su lista.
+- **Límite:** con 5 contactos, la app pide quitar uno antes de agregar otro.
 
 ## 12. Definición de terminado
 - Los criterios de aceptación están cubiertos por pruebas en verde y `sdd_lint --trace 042` sin faltantes.
@@ -217,13 +234,16 @@ Las pruebas citan el caso como `CA_042_NN` en el nombre (para `python scripts/sd
 
 ## 14. Decisiones tomadas sin consulta
 - **D-01:** Se toma el Excel de endpoints como fuente del contrato porque es el insumo acordado para las specs; cualquier diferencia con las specs 020 a 038 se resuelve a favor de la spec numerada.
-- **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case definidos al implementar, siguiendo la convención de errores de la spec 002.
+- **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case (los de §5 y, si falta alguno, los que se fijen al implementar), siguiendo la convención de errores de la spec 002.
 - **D-03:** No se usa `Idempotency-Key`, aunque el Excel lo menciona en creaciones.
+- **D-04:** Máximo 5 contactos de confianza por persona: el Excel no fija el límite.
+- **D-05:** Guardar un contacto no le envía ningún mensaje; el primer mensaje sale solo al usar el aviso.
+- **D-06:** Un técnico oculto o bloqueado deja de verse en la lista sin borrar el registro.
 
 ## 15. Riesgos y dudas abiertas
-- El aviso a un contacto de confianza lo envía la spec 022; aquí solo se administra la lista. Confirmar que no se duplica la regla de consentimiento del contacto.
-- Un técnico de confianza que se elimina o se bloquea debe salir de la lista: confirmar el evento que lo dispara.
-- Esta spec se generó a partir del Excel; antes de aprobarla hay que revisar los límites, los textos de error y los plazos con el equipo.
+- El aviso a un contacto de confianza lo envía la spec 022: confirmar que el mensaje de baja («no recibir más») se maneja allí y no se duplica aquí.
+- Confirmar el máximo de 5 contactos y la lista de técnicos de confianza (el Excel no fija máximo).
+- Confirmar si «solicitud directa a un técnico de confianza» entra a la spec 028.
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: _____________________ fecha: __________
