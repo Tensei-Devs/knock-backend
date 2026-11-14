@@ -145,6 +145,17 @@ internal sealed class CatalogStore(
         return exists;
     }
 
+    public async Task<(double Latitude, double Longitude)?> FindCenterAsync(ObjectId id, CancellationToken cancellationToken)
+    {
+        var document = await Colonias.Find(_filter.Eq(IdField, id), _findOptions)
+            .Project(Builders<BsonDocument>.Projection.Include(CentroField)).FirstOrDefaultAsync(cancellationToken);
+        if (document is null || !document.TryGetValue(CentroField, out var center) || !center.IsBsonDocument ||
+            !center.AsBsonDocument.TryGetValue("coordinates", out var coordinates) || !coordinates.IsBsonArray || coordinates.AsBsonArray.Count != 2)
+            return null;
+        var values = coordinates.AsBsonArray;
+        return (values[1].ToDouble(), values[0].ToDouble());
+    }
+
     // Las consultas se arman aparte para que las pruebas lean sus opciones (maxTimeMS) sin servidor.
     internal IFindFluent<BsonDocument, BsonDocument> ActiveOficiosQuery() =>
         Oficios

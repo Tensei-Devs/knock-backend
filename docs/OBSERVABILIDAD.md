@@ -7,7 +7,7 @@ La API emite trazas, métricas y logs con OpenTelemetry en todos los entornos. S
 | Clave | Dónde | Valor |
 |---|---|---|
 | `APPLICATIONINSIGHTS_CONNECTION_STRING` | Variable de entorno; en Container Apps, referencia a un secreto de Key Vault | Cadena del recurso. **Nunca** en `appsettings*.json`, en el repositorio, en logs ni en el PR. Sin valor (Development, pruebas) no se exporta nada. |
-| `Observability:ServiceName` | `appsettings.json` | `knock-api` (`service.name`, el *cloud role* de Application Insights) |
+| `Observability:ServiceName` | `appsettings.json` | `knock-api` (`service.name`, el *cloud role* de Application Insights); Mercado (`Knock.Market.Api`) usa `knock-market` en su `appsettings.json` y por defecto (KNOCK-255) |
 | `Observability:SamplingRatio` | `appsettings.json` | `1.0`: 100 % de las trazas; el gasto lo limita el tope diario del recurso (decisión P7) |
 | `Observability:EnableLiveMetrics` | `appsettings.json` | `false` (decisión P7) |
 
@@ -24,7 +24,7 @@ El exportador trae por defecto un muestreo de 5 trazas por segundo. El código l
 
 **Redacción** (segunda barrera, la primera es no capturar cuerpos, encabezados ni la query): las claves `lat`, `lon`, `phone`, `celular`, `curp`, `token`, `idToken`, `id_token`, `accessToken`, `access_token`, `refreshToken`, `refresh_token`, `code`, `sig`, `authorization`, `cookie`, `set-cookie`, `password`, `secret`, `email` y `correo` se redactan siempre (como atributo, en `string`, `string[]`, `object[]` o cualquier lista de textos). En texto libre se redactan los correos electrónicos (cualquier `algo@dominio.tld`; agregado en el PR #62, KNOCK-198 y KNOCK-206), los celulares con `+` o `%2B`, los JWT, `Bearer <x>`, la CURP (también en minúsculas), `clave=valor` de esas claves, `Cookie:` y `Set-Cookie:` con todos sus pares, y los **pares** de coordenadas: dos números con 1 a 3 enteros y 4 o más decimales, separados por espacios, `,`, `;` o `/` (`19.4326, -99.1332` y `19.4326,-99.1332` se redactan; `19.4326-99.1332`, sin separador, no). Un número suelto, como el `12.3456 ms` del log de petición, no se toca (decisión P6).
 
-**Excepción conocida: Mercado.** Hasta que se corrija BUG-005 (KNOCK-255), la salida de consola de Mercado no pasa por `RedactingJsonFormatter`.
+**Mercado.** Desde BUG-005 (KNOCK-255), la consola de Mercado también pasa por `RedactingJsonFormatter`.
 
 **Riesgo aceptado: celular nacional sin `+`.** Un celular de 10 dígitos sin prefijo (`5512345678`, `55 1234 5678`) **no** se redacta en texto libre: un patrón así también taparía ids, folios, marcas de tiempo y duraciones. Se acepta porque HU-001 solo maneja el formato `+52…` y la API no recibe ni escribe celulares de otra forma; las claves conocidas (`phone`, `celular`) se redactan siempre, con cualquier formato. Si un módulo nuevo acepta celulares sin `+`, se revisa esta decisión.
 

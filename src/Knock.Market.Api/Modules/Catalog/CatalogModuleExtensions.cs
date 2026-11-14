@@ -1,3 +1,4 @@
+using Knock.Contracts.Catalog;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Catalog.Data;
 using Knock.Market.Api.Modules.Catalog.Services;
@@ -30,10 +31,13 @@ public static class CatalogModuleExtensions
             services.AddSingleton<ICatalogCache, RedisCatalogCache>();
         }
         services.AddSingleton<CatalogStore>();
+        services.AddSingleton<IWaitlistStore, WaitlistStore>();
+        services.AddSingleton<WaitlistService>();
         services.AddSingleton<NeighborhoodLocator>();
         services.AddSingleton<INeighborhoodLocator>(sp => sp.GetRequiredService<NeighborhoodLocator>());
         services.AddSingleton<INeighborhoodNames, NeighborhoodNames>();
         services.AddScoped<ICatalogApi, CatalogApi>();
+        services.AddScoped<INeighborhoodCenterCatalog, CatalogApi>();
         services.AddScoped<CatalogSeeder>();
         services.AddScoped<OficioQueries>();
         return services;
