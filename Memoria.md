@@ -640,3 +640,8 @@
 - **Por qué:** el rechazo ocurre dentro de Kestrel; el gateway también corre sobre Kestrel, así que el 400 sale antes de llegar a Mercado. No hay nada razonable que hacer en la aplicación.
 - **Alcance:** solo texto de `specs/023-zona-por-ubicacion-o-codigo-postal/spec.md`; no se tocó ningún campo de aprobación ni el código.
 - **A evitar:** esperar 422 para `%00` en pruebas o en el DAST; es 400 del servidor.
+
+## 2026-11-14 — Estado real de las tareas de la spec 006 (KNOCK-201)
+- **Qué cambió:** `task.md` de la spec 006 deja de decir «sin commit» y marca T-01, T-02, T-04 y T-05 como hechas: el PR #61 está fusionado y KNOCK-88 tiene la corrida de k6 del 2026-11-14 contra el despliegue con 2 réplicas (0 % de fallos y p95 de 158.76 ms; con la caída de una copia de Market, 0 % y 153.07 ms).
+- **Pendiente:** T-03 sigue parcial: el límite de peticiones de Identity y Market usa `PartitionedRateLimiter` en proceso, así que con 2 copias se aplica por copia. Pasarlo a Redis (R-05) va en KNOCK-247. La prueba de k6 usa 1 iteración por segundo por los límites por IP (100 por minuto y 60 en `/health/ready`): demuestra que no hay errores con 2 réplicas, no la capacidad máxima.
+- **A evitar:** dar por cumplida R-05 mientras el límite siga en memoria, o presentar la prueba de k6 como prueba de capacidad.
