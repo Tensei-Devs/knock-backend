@@ -77,6 +77,7 @@ internal sealed class MeController(ProfileService profiles, ProfileRules rules) 
         return $"W/\"{owner}-{profile.Version}\"";
     }
 
+    // jscpd:ignore-start -- EXC-018
     internal static bool Matches(string ifNoneMatch, string etag)
     {
         if (string.IsNullOrWhiteSpace(ifNoneMatch))
@@ -88,6 +89,7 @@ internal sealed class MeController(ProfileService profiles, ProfileRules rules) 
         return ifNoneMatch.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
             .Any(candidate => candidate == "*" || Strip(candidate) == wanted);
     }
+    // jscpd:ignore-end -- EXC-018
 
     private static string Strip(string tag) => tag.StartsWith("W/", StringComparison.Ordinal) ? tag[2..] : tag;
 

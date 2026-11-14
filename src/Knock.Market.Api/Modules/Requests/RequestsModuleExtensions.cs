@@ -1,5 +1,8 @@
+using Knock.Market.Api.Hosting;
+using Knock.Market.Api.Modules.Requests.Data;
 using Knock.Market.Api.Modules.Requests.Domain;
 using Knock.Market.Api.Modules.Requests.Services;
+using Knock.Market.Api.Modules.Requests.Validators;
 
 namespace Knock.Market.Api.Modules.Requests;
 
@@ -13,6 +16,14 @@ public static class RequestsModuleExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
         services.AddOptions<QuotePricingOptions>().BindConfiguration(QuotePricingOptions.SectionName);
+        services.AddKnockMongoDatabase(ModuleKey);
+        services.AddSingleton(TimeProvider.System);
+        services.AddScoped<ITechnicianDirectory, MongoTechnicianDirectory>();
+        services.AddScoped<IQuoteRequestReader, MongoQuoteRequestReader>();
+        services.AddScoped<QuoteValidator>();
+        services.AddScoped<INoteModerator, UnavailableNoteModerator>();
+        services.AddScoped<IQuoteWriter, QuoteStore>();
+        services.AddScoped<QuoteService>();
         services.AddScoped<IRequestsApi, RequestsApi>();
         return services;
     }
