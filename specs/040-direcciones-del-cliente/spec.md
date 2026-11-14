@@ -35,10 +35,15 @@ Definir y especificar los endpoints DIR-01, DIR-02, DIR-03, DIR-04 del Excel de 
 - **R-07:** `DELETE /api/v1/me/direcciones/{id}` (borrar): Elimina una dirección. Lo puede llamar: persona con sesión que sea dueña del recurso. Responde 204 cuando sale bien.
 - **R-08:** Entrada de `DELETE /api/v1/me/direcciones/{id}`: Ruta: id. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400.
 - **R-09:** Estados de `DELETE /api/v1/me/direcciones/{id}`: 404. El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
-- **R-10:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
-- **R-11:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
-- **R-12:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
-- **R-13:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
+- **R-10:** **Datos de la dirección (DIR-02 y DIR-03).** `calleNumero` de al menos 8 caracteres y cifrada a nivel de campo; `colonia` debe existir en el catálogo (spec 017); `referencias` opcional de hasta 200 caracteres y cifrada; `principal` booleano. En la edición cambian solo los campos enviados.
+- **R-11:** **Dirección principal.** Cada persona tiene como máximo una principal: la primera dirección queda principal y marcar otra como principal desmarca la anterior. Al eliminar la principal, pasa a serlo la más reciente que quede.
+- **R-12:** **Límite por persona.** Cada persona puede guardar hasta 5 direcciones; la sexta responde 409 `address_limit_reached`.
+- **R-13:** **Privacidad de la dirección.** La dirección exacta solo la ve su dueña; el técnico la recibe únicamente al ser elegido (specs 021 y 022); no se escribe en registros, no se cachea y las respuestas llevan `Cache-Control: private, no-store`.
+- **R-14:** **Propiedad (DIR-03 y DIR-04).** Una dirección ajena responde 404, sin revelar que existe; borrar la dirección usada en una cita ya confirmada no cambia la cita (la cita guarda su propia copia).
+- **R-15:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
+- **R-16:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
+- **R-17:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
+- **R-18:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dado el rol «persona con sesión (cliente o técnico)», cuando llama `GET /api/v1/me/direcciones` con datos válidos, entonces responde 200 con lo descrito en §5.
@@ -58,10 +63,15 @@ Definir y especificar los endpoints DIR-01, DIR-02, DIR-03, DIR-04 del Excel de 
 - **CA-15:** Dada una persona que no cumple el rol «persona con sesión que sea dueña del recurso», cuando llama `DELETE /api/v1/me/direcciones/{id}`, entonces responde 403 y no cambia nada.
 - **CA-16:** Dado un valor inválido según las reglas de §6, cuando llama `DELETE /api/v1/me/direcciones/{id}`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
 - **CA-17:** Dado el caso «recurso no disponible», cuando llama `DELETE /api/v1/me/direcciones/{id}`, entonces responde 404 con ProblemDetails y no cambia el estado.
-- **CA-18:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
-- **CA-19:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
-- **CA-20:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
-- **CA-21:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
+- **CA-18:** Dada una dirección con calle de menos de 8 caracteres, una colonia inexistente o referencias de más de 200, cuando se guarda, entonces responde 422 y no se guarda.
+- **CA-19:** Dada una persona con dos direcciones, cuando marca la segunda como principal, entonces la primera deja de serlo; al eliminar la principal, la otra pasa a serlo.
+- **CA-20:** Dada una persona con 5 direcciones, cuando guarda otra, entonces responde 409 `address_limit_reached` y no la guarda.
+- **CA-21:** Dada una dirección guardada, cuando se inspeccionan registros, caché y respuestas, entonces no aparece en registros ni en caché y la respuesta no es cacheable.
+- **CA-22:** Dada la dirección de otra persona, cuando se intenta editar o borrar, entonces responde 404; y borrar una dirección usada en una cita confirmada no altera esa cita.
+- **CA-23:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
+- **CA-24:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
+- **CA-25:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
+- **CA-26:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
 
 **4.1 Criterio → prueba prevista**
 
@@ -88,6 +98,11 @@ Definir y especificar los endpoints DIR-01, DIR-02, DIR-03, DIR-04 del Excel de 
 | CA-19 | `Spec040Tests.Criterio19_CA_040_19` |
 | CA-20 | `Spec040Tests.Criterio20_CA_040_20` |
 | CA-21 | `Spec040Tests.Criterio21_CA_040_21` |
+| CA-22 | `Spec040Tests.Criterio22_CA_040_22` |
+| CA-23 | `Spec040Tests.Criterio23_CA_040_23` |
+| CA-24 | `Spec040Tests.Criterio24_CA_040_24` |
+| CA-25 | `Spec040Tests.Criterio25_CA_040_25` |
+| CA-26 | `Spec040Tests.Criterio26_CA_040_26` |
 
 ## 5. Contrato
 | ID | Método y ruta | Quién | Entrada | Respuestas |
@@ -143,13 +158,13 @@ Definir y especificar los endpoints DIR-01, DIR-02, DIR-03, DIR-04 del Excel de 
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |
 |---|---|---|
-| Acceso a datos de otra persona (IDOR) | Toda consulta y escritura filtra por el `sub` del token; ajeno responde 403 o 404 | CA-09, CA-15, CA-18 |
-| Asignación masiva o identificador ajeno en el cuerpo | El DTO no acepta identificadores de persona; se ignoran | CA-09, CA-15, CA-18 |
+| Acceso a datos de otra persona (IDOR) | Toda consulta y escritura filtra por el `sub` del token; ajeno responde 403 o 404 | CA-09, CA-15, CA-23 |
+| Asignación masiva o identificador ajeno en el cuerpo | El DTO no acepta identificadores de persona; se ignoran | CA-09, CA-15, CA-23 |
 | Inyección en filtros y parámetros | Parámetros tipados con validador; nada se concatena en consultas | CA-05 a CA-06, CA-10 a CA-11, CA-16 |
 | Ruta sin sesión | JWT obligatorio salvo las públicas | CA-02, CA-04, CA-08, CA-14 |
-| Abuso por repetición o cuerpos grandes | Límite de peticiones, `Retry-After` y tope de cuerpo | CA-20 |
-| Datos personales en registros y errores | Registros sin datos personales; ProblemDetails sin valores | CA-19 |
-| Duplicados por reintento | Regla de estado o índice único, sin `Idempotency-Key` | CA-21 |
+| Abuso por repetición o cuerpos grandes | Límite de peticiones, `Retry-After` y tope de cuerpo | CA-25 |
+| Datos personales en registros y errores | Registros sin datos personales; ProblemDetails sin valores | CA-24 |
+| Duplicados por reintento | Regla de estado o índice único, sin `Idempotency-Key` | CA-26 |
 
 ## 10. Plan de pruebas
 Las pruebas citan el caso como `CA_040_NN` en el nombre (para `python scripts/sdd_lint.py --trace 040`).
@@ -158,17 +173,16 @@ Las pruebas citan el caso como `CA_040_NN` en el nombre (para `python scripts/sd
 |---|---|---|
 | Unitarias | Sí | Validadores, reglas de estado y cálculos del dominio |
 | Integración | Sí | Cada ruta con la base real en contenedor (Testcontainers) y `MarketApiFactory`/fábrica del servicio |
-| Seguridad negativa | Sí | 401, 403/404, 422, 413 y 429 (CA-02, CA-04 a CA-06, CA-08 a CA-11, CA-14 a CA-16, CA-18, CA-20) |
+| Seguridad negativa | Sí | 401, 403/404, 422, 413 y 429 (CA-02, CA-04 a CA-06, CA-08 a CA-11, CA-14 a CA-16, CA-23, CA-25) |
 | Base de datos | Sí | Índices y reglas de cada colección de §6 |
 | Contrato | Sí | OpenAPI regenerado y comparado con `contracts/` |
 | Mutación | Sí | Meta del módulo según la spec 008 |
 | Rendimiento | No aplica | Sin ruta crítica; se mide solo si la spec 034 lo pide |
 
 ## 11. Escenarios
-- **DIR-01** — pantallas: Mis datos; Pedir cotización (paso 3).
-- **DIR-02** — pantallas: Pedir cotización (paso 3); Mis datos.
-- **DIR-03** — pantallas: Mis datos.
-- **DIR-04** — pantallas: Mis datos.
+- **Primera dirección:** el cliente pide su primer servicio → captura calle, colonia y referencias → queda como principal.
+- **Cambiar la principal:** el cliente abre sus direcciones → marca otra como principal → la anterior deja de serlo.
+- **Límite:** con 5 direcciones, la app le pide borrar una antes de agregar otra.
 
 ## 12. Definición de terminado
 - Los criterios de aceptación están cubiertos por pruebas en verde y `sdd_lint --trace 040` sin faltantes.
@@ -181,13 +195,14 @@ Las pruebas citan el caso como `CA_040_NN` en el nombre (para `python scripts/sd
 
 ## 14. Decisiones tomadas sin consulta
 - **D-01:** Se toma el Excel de endpoints como fuente del contrato porque es el insumo acordado para las specs; cualquier diferencia con las specs 020 a 038 se resuelve a favor de la spec numerada.
-- **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case definidos al implementar, siguiendo la convención de errores de la spec 002.
+- **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case (los de §5 y, si falta alguno, los que se fijen al implementar), siguiendo la convención de errores de la spec 002.
 - **D-03:** No se usa `Idempotency-Key`, aunque el Excel lo menciona en creaciones.
+- **D-04:** Máximo 5 direcciones por persona: el Excel no fija el límite.
+- **D-05:** La cita confirmada conserva su propia copia de la dirección, por eso borrar la original no la afecta.
 
 ## 15. Riesgos y dudas abiertas
-- La dirección exacta es dato personal sensible: confirmar con la spec 021 que solo se entrega al técnico elegido y nunca antes.
-- Confirmar el máximo de direcciones por persona (el Excel no lo fija en las reglas).
-- Esta spec se generó a partir del Excel; antes de aprobarla hay que revisar los límites, los textos de error y los plazos con el equipo.
+- Confirmar el máximo de 5 direcciones.
+- Confirmar con la spec 022 que la cita guarda su propia copia de la dirección.
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: _____________________ fecha: __________

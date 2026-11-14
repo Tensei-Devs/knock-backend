@@ -40,10 +40,15 @@ Definir y especificar los endpoints CAS-01, CAS-02, CAS-03, CAS-04, CAS-05 del E
 - **R-11:** Entrada de `GET /api/v1/me/casa-y-auto/{id}/historial`: Ruta: id. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo.
 - **R-12:** Estados de `GET /api/v1/me/casa-y-auto/{id}/historial`: 404. El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
 - **R-13:** `GET /api/v1/me/casa-y-auto/{id}/historial` pagina por cursor (Por cursor, 20): parámetros `cursor` y `limite`, 20 por defecto y 50 como máximo; orden: Orden por fecha descendente.
-- **R-14:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
-- **R-15:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
-- **R-16:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
-- **R-17:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
+- **R-14:** **Datos del elemento (CAS-02 y CAS-03).** `tipo` de una lista cerrada (auto y los elementos de la casa que defina el catálogo); `nombre` de 2 a 60 caracteres; `anio` solo para autos, entre 1950 y el año actual más 1. En la edición cambian solo los campos enviados.
+- **R-15:** **Límite por persona.** Cada persona puede registrar hasta 20 elementos; el 21.º responde 409 `item_limit_reached`.
+- **R-16:** **Propiedad.** Un elemento ajeno responde 404, sin revelar que existe; todas las lecturas y escrituras filtran por el `sub` del token.
+- **R-17:** **Historial (CAS-05).** Lista, por cursor (20 por defecto, máximo 50) y del más reciente al más antiguo, los trabajos terminados relacionados con ese elemento, tomados de Mercado por consulta interna; solo trae fecha, oficio y técnico, sin precios ni direcciones.
+- **R-18:** **Eliminar un elemento.** Quitarlo no borra los trabajos pasados de Mercado: solo desliga el historial.
+- **R-19:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
+- **R-20:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
+- **R-21:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
+- **R-22:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dado el rol «persona con sesión (cliente o técnico)», cuando llama `GET /api/v1/me/casa-y-auto` con datos válidos, entonces responde 200 con lo descrito en §5.
@@ -69,10 +74,15 @@ Definir y especificar los endpoints CAS-01, CAS-02, CAS-03, CAS-04, CAS-05 del E
 - **CA-21:** Dado un valor inválido según las reglas de §6, cuando llama `GET /api/v1/me/casa-y-auto/{id}/historial`, entonces responde 422 con `errors.<campo>`, no repite el valor y no devuelve datos.
 - **CA-22:** Dado el caso «recurso no disponible», cuando llama `GET /api/v1/me/casa-y-auto/{id}/historial`, entonces responde 404 con ProblemDetails y no cambia el estado.
 - **CA-23:** Dado un listado con más de 20 elementos, cuando se pide sin `limite`, entonces devuelve 20 y el cursor de la página siguiente; con `limite=51` responde 422.
-- **CA-24:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
-- **CA-25:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
-- **CA-26:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
-- **CA-27:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
+- **CA-24:** Dado un elemento con nombre de 1 carácter, un año fuera de rango o un año en un elemento que no es auto, cuando se guarda, entonces responde 422 y no se guarda.
+- **CA-25:** Dada una persona con 20 elementos, cuando registra otro, entonces responde 409 `item_limit_reached`.
+- **CA-26:** Dado el elemento de otra persona, cuando se intenta ver, editar, borrar o pedir su historial, entonces responde 404.
+- **CA-27:** Dado un elemento con trabajos terminados, cuando su dueña consulta el historial, entonces recibe fecha, oficio y técnico de cada trabajo, paginados, sin precios ni direcciones.
+- **CA-28:** Dado un elemento con historial, cuando se elimina, entonces desaparece de la lista y los trabajos terminados siguen existiendo en Mercado.
+- **CA-29:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
+- **CA-30:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
+- **CA-31:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
+- **CA-32:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
 
 **4.1 Criterio → prueba prevista**
 
@@ -105,6 +115,11 @@ Definir y especificar los endpoints CAS-01, CAS-02, CAS-03, CAS-04, CAS-05 del E
 | CA-25 | `Spec041Tests.Criterio25_CA_041_25` |
 | CA-26 | `Spec041Tests.Criterio26_CA_041_26` |
 | CA-27 | `Spec041Tests.Criterio27_CA_041_27` |
+| CA-28 | `Spec041Tests.Criterio28_CA_041_28` |
+| CA-29 | `Spec041Tests.Criterio29_CA_041_29` |
+| CA-30 | `Spec041Tests.Criterio30_CA_041_30` |
+| CA-31 | `Spec041Tests.Criterio31_CA_041_31` |
+| CA-32 | `Spec041Tests.Criterio32_CA_041_32` |
 
 ## 5. Contrato
 | ID | Método y ruta | Quién | Entrada | Respuestas |
@@ -160,13 +175,13 @@ Definir y especificar los endpoints CAS-01, CAS-02, CAS-03, CAS-04, CAS-05 del E
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |
 |---|---|---|
-| Acceso a datos de otra persona (IDOR) | Toda consulta y escritura filtra por el `sub` del token; ajeno responde 403 o 404 | CA-09, CA-15, CA-20, CA-24 |
-| Asignación masiva o identificador ajeno en el cuerpo | El DTO no acepta identificadores de persona; se ignoran | CA-09, CA-15, CA-20, CA-24 |
+| Acceso a datos de otra persona (IDOR) | Toda consulta y escritura filtra por el `sub` del token; ajeno responde 403 o 404 | CA-09, CA-15, CA-20, CA-29 |
+| Asignación masiva o identificador ajeno en el cuerpo | El DTO no acepta identificadores de persona; se ignoran | CA-09, CA-15, CA-20, CA-29 |
 | Inyección en filtros y parámetros | Parámetros tipados con validador; nada se concatena en consultas | CA-05 a CA-06, CA-10 a CA-11, CA-16, CA-21 |
 | Ruta sin sesión | JWT obligatorio salvo las públicas | CA-02, CA-04, CA-08, CA-14, CA-19 |
-| Abuso por repetición o cuerpos grandes | Límite de peticiones, `Retry-After` y tope de cuerpo | CA-26 |
-| Datos personales en registros y errores | Registros sin datos personales; ProblemDetails sin valores | CA-25 |
-| Duplicados por reintento | Regla de estado o índice único, sin `Idempotency-Key` | CA-27 |
+| Abuso por repetición o cuerpos grandes | Límite de peticiones, `Retry-After` y tope de cuerpo | CA-31 |
+| Datos personales en registros y errores | Registros sin datos personales; ProblemDetails sin valores | CA-30 |
+| Duplicados por reintento | Regla de estado o índice único, sin `Idempotency-Key` | CA-32 |
 
 ## 10. Plan de pruebas
 Las pruebas citan el caso como `CA_041_NN` en el nombre (para `python scripts/sdd_lint.py --trace 041`).
@@ -175,18 +190,15 @@ Las pruebas citan el caso como `CA_041_NN` en el nombre (para `python scripts/sd
 |---|---|---|
 | Unitarias | Sí | Validadores, reglas de estado y cálculos del dominio |
 | Integración | Sí | Cada ruta con la base real en contenedor (Testcontainers) y `MarketApiFactory`/fábrica del servicio |
-| Seguridad negativa | Sí | 401, 403/404, 422, 413 y 429 (CA-02, CA-04 a CA-06, CA-08 a CA-11, CA-14 a CA-16, CA-19 a CA-21, CA-24, CA-26) |
+| Seguridad negativa | Sí | 401, 403/404, 422, 413 y 429 (CA-02, CA-04 a CA-06, CA-08 a CA-11, CA-14 a CA-16, CA-19 a CA-21, CA-29, CA-31) |
 | Base de datos | Sí | Índices y reglas de cada colección de §6 |
 | Contrato | Sí | OpenAPI regenerado y comparado con `contracts/` |
 | Mutación | Sí | Meta del módulo según la spec 008 |
 | Rendimiento | No aplica | Sin ruta crítica; se mide solo si la spec 034 lo pide |
 
 ## 11. Escenarios
-- **CAS-01** — pantallas: Mi casa y mi auto.
-- **CAS-02** — pantallas: Mi casa y mi auto.
-- **CAS-03** — pantallas: Mi casa y mi auto.
-- **CAS-04** — pantallas: Mi casa y mi auto.
-- **CAS-05** — pantallas: Mi casa y mi auto.
+- **Registrar un auto:** el cliente abre «Mi casa y mi auto» → agrega su auto con nombre y año → aparece en su lista.
+- **Historial:** el cliente abre su auto → ve los trabajos terminados que Knock le hizo, del más reciente al más antiguo.
 
 ## 12. Definición de terminado
 - Los criterios de aceptación están cubiertos por pruebas en verde y `sdd_lint --trace 041` sin faltantes.
@@ -199,13 +211,15 @@ Las pruebas citan el caso como `CA_041_NN` en el nombre (para `python scripts/sd
 
 ## 14. Decisiones tomadas sin consulta
 - **D-01:** Se toma el Excel de endpoints como fuente del contrato porque es el insumo acordado para las specs; cualquier diferencia con las specs 020 a 038 se resuelve a favor de la spec numerada.
-- **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case definidos al implementar, siguiendo la convención de errores de la spec 002.
+- **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case (los de §5 y, si falta alguno, los que se fijen al implementar), siguiendo la convención de errores de la spec 002.
 - **D-03:** No se usa `Idempotency-Key`, aunque el Excel lo menciona en creaciones.
+- **D-04:** Máximo 20 elementos por persona: el Excel no fija el límite.
+- **D-05:** El historial no muestra precios ni direcciones, solo fecha, oficio y técnico.
 
 ## 15. Riesgos y dudas abiertas
-- El historial de cada elemento se arma con visitas terminadas: confirmar de qué colección sale y si se materializa o se consulta.
-- Confirmar límites (cantidad de elementos y tamaño de las notas).
-- Esta spec se generó a partir del Excel; antes de aprobarla hay que revisar los límites, los textos de error y los plazos con el equipo.
+- La spec 020 no guarda a qué elemento pertenece una solicitud: para armar el historial hay que agregar un `elementoId` opcional a la solicitud o armarlo por oficio y fecha; decidir al aprobar.
+- Confirmar la lista cerrada de tipos de elementos de la casa.
+- Confirmar el límite de 20 elementos por persona.
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: _____________________ fecha: __________

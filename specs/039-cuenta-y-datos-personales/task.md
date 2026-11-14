@@ -15,9 +15,10 @@
 | T-08 | `GET /api/v1/me/pendientes` (USR-09): DTO, validador, servicio, almacén, controlador y pruebas | R-13 · CA-22 a CA-23 | T-01 | otras rutas | por asignar | pendiente |
 | T-09 | `POST /api/v1/me/eliminacion` (USR-10): DTO, validador, servicio, almacén, controlador y pruebas | R-14 a R-16 · CA-24 a CA-28 | T-01 | otras rutas | por asignar | pendiente |
 | T-10 | `POST /api/v1/me/eliminacion/cancelar` (USR-11): DTO, validador, servicio, almacén, controlador y pruebas | R-17 a R-18 · CA-29 a CA-31 | T-01 | otras rutas | por asignar | pendiente |
-| T-11 | Transversales: `sub` del token, registros sin datos personales, 429 y 413, sin `Idempotency-Key` | R-19 a R-22 · CA-32 a CA-35 | T-02 a T-10 | T-12 | por asignar | pendiente |
-| T-12 | OpenAPI, `docs/endpoints.md` y `docs/rate-limit-matrix.md` | §5 | T-02 a T-10 | T-11 | por asignar | pendiente |
-| T-13 | Gates, `Memoria.md` y revisión de par | §12 | todas | — | por asignar | pendiente |
+| T-11 | Reglas de negocio específicas de la spec (estados, plazos y límites) | R-19 a R-25 · CA-32 a CA-38 | T-01 | otras rutas | por asignar | pendiente |
+| T-12 | Transversales: `sub` del token, registros sin datos personales, 429 y 413, sin `Idempotency-Key` | R-26 a R-29 · CA-39 a CA-42 | T-02 a T-11 | T-13 | por asignar | pendiente |
+| T-13 | OpenAPI, `docs/endpoints.md` y `docs/rate-limit-matrix.md` | §5 | T-02 a T-11 | T-12 | por asignar | pendiente |
+| T-14 | Gates, `Memoria.md` y revisión de par | §12 | todas | — | por asignar | pendiente |
 
 ## Definición de terminado
 - Los criterios de aceptación de `spec.md` están cubiertos por pruebas en verde.
