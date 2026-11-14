@@ -57,6 +57,9 @@ internal sealed class UsuariosStore(
 
     private IMongoCollection<BsonDocument> Users { get; } = database.GetCollection<BsonDocument>(UsersCollection);
 
+    internal Task ValidateDemoAsync(CancellationToken cancellationToken) =>
+        DemoSeedGuard.ValidateAsync(mongoOptions.Value.ConnectionString, Users, cancellationToken);
+
     internal async Task<string?> DemoConflictAsync(BsonDocument desired, CancellationToken cancellationToken)
     {
         var sameIdNonDemo = _filter.And(_filter.Eq("_id", desired["_id"]), _filter.Ne("demo", true));
