@@ -2,6 +2,11 @@
 
 > Registro del proyecto: estado, decisiones con su fecha y su porqué, y errores a evitar. Los agentes la leen al empezar y agregan una entrada al terminar cada cambio. Sin datos sensibles.
 
+## 2026-11-14 — Estado real de las tareas de las specs 007, 010 y 011 (KNOCK-202, KNOCK-205, KNOCK-206)
+- **Estado:** las tablas `task.md` de las specs 007 (6 de 6 tareas), 010 (5 de 7; T-05 cerrada por alcance y T-07, la prueba de carga con k6, sigue pendiente) y 011 (5 de 5) pasan a «hecha» con la evidencia de sus PR. Se verificó que existen los workflows, `dependabot.yml`, la caché Redis con `ETag` y compresión, el middleware de correlación, el redactor de registros y `docs/OBSERVABILIDAD.md`.
+- **Porqué:** las PR ya estaban fusionadas pero las tablas seguían en «pendiente», así que el avance real se medía mal.
+- **Pendiente:** las specs 006 y 013 quedan para Alexis, que debe aclarar qué parte falta de verdad (límite en Redis de Identity y Market, y las pruebas de la 013).
+
 ## 2026-11-11 — Baseline de clones de #52 aceptado por el Tech Lead y seguimiento de EXC-018 (KNOCK-205)
 - **Decisión:** el Tech Lead aceptó `docs/architecture/clones-baseline.json` del PR #52 (65 → 72 grupos: 65 − 1 + 8). Las 8 huellas nuevas coinciden exactamente con EXC-018 (aprobada el 2026-11-08, vigente hasta el 2026-12-04): 6 de `JsonCompressionMiddleware` (Identity y Market), 1 de `Matches` (MeController y OficiosController) y 1 de los validadores `ProfileCacheOptionsValidator.Validate` y `CatalogCacheOptionsValidator.Validate`. Sale la huella de `CorsMiddleware` entre Identity y Market, que dejó de ser idéntica porque Market cambió sus `AllowedHeaders`. Se verificó ejecutando `scripts/codemap.py` sobre `sprint-04` y sobre esta rama.
 - **Porqué:** son duplicados que EXC-018 ya cubre; el baseline solo refleja el estado real. Nota: el middleware de compresión no «ya estaba duplicado»; el archivo de Market es nuevo en este PR.
