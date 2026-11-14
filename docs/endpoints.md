@@ -45,3 +45,6 @@ Cada servicio con API publica su contrato en `docs/` (spec 002, R-07). Los archi
 - El CI regenera ambos y falla si `git diff --exit-code` ve cambios en alguno. Si cambias un endpoint, un DTO o un comentario XML que llegue al contrato, regenera el archivo del servicio y súbelo en el mismo commit.
 - `oasdiff` compara cada contrato contra el de la rama base y falla ante cambios incompatibles. El nombre de Market se conserva para no romper la publicación al frontend.
 - Pruebas del script: `python scripts/test_export_openapi.py`.
+# Imágenes: confirmación pendiente de OI-3
+
+OI-2 no expone una ruta de confirmación. La spec 013 exige que, cuando se implemente en OI-3, la moderación no disponible responda 503 ProblemDetails con `Retry-After`, sin publicar ni descartar la subida, para permitir su reintento. Este comportamiento HTTP aún no está implementado ni publicado en OpenAPI.
