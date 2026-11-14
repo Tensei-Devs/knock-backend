@@ -75,6 +75,7 @@ public sealed class GatewayRoutingTests : IAsyncLifetime, IDisposable
     [InlineData("/api/v1/me/sesiones", "identidad")]
     [InlineData("/api/v1/oficios", "mercado")]
     [InlineData("/api/v1/colonias/en-punto", "mercado")]
+    [InlineData("/api/v1/zonas/cp/42800", "mercado")]
     [InlineData("/api/v1/mensajes/1", "mensajeria")]
     [InlineData("/api/v1/notificaciones", "mensajeria")]
     public async Task Request_IsRoutedToTheRightService_CA_02(string path, string expectedService)
