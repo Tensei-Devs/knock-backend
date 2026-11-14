@@ -1,13 +1,13 @@
 # Mapa de código
 
-> Generado por `scripts/codemap.py` el 2026-11-14T18:46:59Z. No editar a mano.
+> Generado por `scripts/codemap.py` el 2026-11-14T19:41:20Z. No editar a mano.
 > **Antes de crear una clase, método o archivo, busca aquí o corre `python scripts/codemap.py --query "<qué necesitas>"`.**
 
 ## Resumen
 
 | Módulo | Capas | Archivos | Tipos | Métodos públicos |
 |---|---|---|---|---|
-| `Catalog` | -, controllers, data, domain, dtos, services, validators | 37 | 50 | 74 |
+| `Catalog` | -, controllers, data, domain, dtos, services, validators | 38 | 54 | 76 |
 | `Knock.Contracts` | - | 7 | 11 | 7 |
 | `Knock.Gateway` | -, hosting | 14 | 39 | 47 |
 | `Knock.Identity.Api` | -, common, hosting | 29 | 61 | 84 |
@@ -193,11 +193,13 @@
 - `src/Knock.Market.Api/Modules/Catalog/Domain/Colonia.cs` — record `Colonia`
   - `Colonia()`:7, `IsPostalCode()`:14
 - `src/Knock.Market.Api/Modules/Catalog/Domain/GeoPosition.cs` — record struct `GeoPosition`
+- `src/Knock.Market.Api/Modules/Catalog/Domain/InterpretadorDeConsulta.cs` — record `SearchTrade`, record `SearchSynonym`, record `SearchInterpretation`, class `InterpretadorDeConsulta`
+  - `Interpret()`:9
 - `src/Knock.Market.Api/Modules/Catalog/Domain/Oficio.cs` — class `Oficio`
   - `IsValidModalidad()`:10
 - `src/Knock.Market.Api/Modules/Catalog/Domain/OficioListing.cs` — record `OficioListing`
 - `src/Knock.Market.Api/Modules/Catalog/Domain/SearchNameNormalizer.cs` — class `SearchNameNormalizer`
-  - `Normalize()`:12
+  - `NormalizeQuery()`:12, `Normalize()`:44
 
 **dtos**
 
