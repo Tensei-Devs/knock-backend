@@ -14,12 +14,36 @@ internal static class CursorDeBusqueda
     private const int _tagLength = 16;
     private const int _maxCursorLength = 2048;
 
+    public static SearchCursorPayload Read(string cursor, SearchQuery query, byte[] key)
+    {
+        ArgumentNullException.ThrowIfNull(cursor);
+        ArgumentNullException.ThrowIfNull(query);
+        ValidateKey(key);
+        return Decode(cursor, Fingerprint(query), key);
+    }
+
+    public static string CreateNext(SearchQuery query, SearchRank last, int count, byte[] key)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        ArgumentNullException.ThrowIfNull(last);
+        ValidateKey(key);
+        if (count is < 1 or >= _maximum) throw new ArgumentOutOfRangeException(nameof(count));
+        if (string.IsNullOrEmpty(last.Id) || last.Group is < 0 or > 2) throw new ArgumentException("Invalid rank.", nameof(last));
+        var fingerprint = Fingerprint(query);
+        return Encode(new SearchCursorPayload(last, count, fingerprint), fingerprint, key);
+    }
+
+    private static void ValidateKey(byte[] key)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        if (key.Length != 32) throw new ArgumentException("A 256-bit cursor key is required.", nameof(key));
+    }
+
     public static CursorPage<SearchRank> Page(IEnumerable<SearchRank> ranks, SearchQuery query, int limit, string? cursor, byte[] key)
     {
         ArgumentNullException.ThrowIfNull(ranks);
         ArgumentNullException.ThrowIfNull(query);
-        ArgumentNullException.ThrowIfNull(key);
-        if (key.Length != 32) throw new ArgumentException("A 256-bit cursor key is required.", nameof(key));
+        ValidateKey(key);
         if (limit is < 1 or > PageLimit.Default) throw new ArgumentOutOfRangeException(nameof(limit));
 
         var fingerprint = Fingerprint(query);

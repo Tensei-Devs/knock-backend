@@ -1,13 +1,13 @@
 # Mapa de código
 
-> Generado por `scripts/codemap.py` el 2026-11-14T20:36:57Z. No editar a mano.
+> Generado por `scripts/codemap.py` el 2026-11-14T20:54:41Z. No editar a mano.
 > **Antes de crear una clase, método o archivo, busca aquí o corre `python scripts/codemap.py --query "<qué necesitas>"`.**
 
 ## Resumen
 
 | Módulo | Capas | Archivos | Tipos | Métodos públicos |
 |---|---|---|---|---|
-| `Catalog` | -, controllers, data, domain, dtos, services, validators | 41 | 61 | 83 |
+| `Catalog` | -, controllers, data, domain, dtos, services, validators | 42 | 66 | 91 |
 | `Knock.Contracts` | - | 7 | 11 | 7 |
 | `Knock.Gateway` | -, hosting | 14 | 39 | 47 |
 | `Knock.Identity.Api` | -, common, hosting | 29 | 61 | 84 |
@@ -177,8 +177,8 @@
 
 - `src/Knock.Market.Api/Modules/Catalog/Data/BusquedaStore.cs` — record `SearchCandidate`, class `BusquedaStore`
   - `SearchCandidate()`:10, `FindAsync()`:25, `CountUnmatchedAsync()`:72
-- `src/Knock.Market.Api/Modules/Catalog/Data/CatalogCache.cs` — interface `ICatalogCache`, class `RedisCatalogCache`, class `DisabledCatalogCache`
-  - `NeighborhoodNamesGenerationKey()`:67, `ColoniaExistsGenerationKey()`:69, `NeighborhoodNamesKey()`:94, `ColoniaExistsKey()`:96, `GetOficiosAsync()`:98, `RemoveOficiosAsync()`:113, `GetOficiosGenerationAsync()`:119, `SetOficiosIfGenerationAsync()`:122, `GetNeighborhoodNamesAsync()`:158, `RemoveNeighborhoodNamesAsync()`:174, `GetNeighborhoodNamesGenerationAsync()`:181, `SetNeighborhoodNamesIfGenerationAsync()`:187, `GetColoniaExistsAsync()`:207, `RemoveColoniaExistsAsync()`:223, `GetColoniaExistsGenerationAsync()`:230, `SetColoniaExistsIfGenerationAsync()`:236, `GetOficiosAsync()`:275, `RemoveOficiosAsync()`:278, `GetOficiosGenerationAsync()`:280, `SetOficiosIfGenerationAsync()`:282, `GetNeighborhoodNamesAsync()`:285, `RemoveNeighborhoodNamesAsync()`:288, `GetNeighborhoodNamesGenerationAsync()`:290, `SetNeighborhoodNamesIfGenerationAsync()`:292, `GetColoniaExistsAsync()`:295 …
+- `src/Knock.Market.Api/Modules/Catalog/Data/CatalogCache.cs` — interface `ISearchResponseCache`, interface `ICatalogCache`, class `RedisCatalogCache`, class `DisabledCatalogCache`
+  - `NeighborhoodNamesGenerationKey()`:73, `ColoniaExistsGenerationKey()`:75, `GetSearchAsync()`:79, `SetSearchAsync()`:95, `NeighborhoodNamesKey()`:138, `ColoniaExistsKey()`:140, `GetOficiosAsync()`:142, `RemoveOficiosAsync()`:157, `GetOficiosGenerationAsync()`:163, `SetOficiosIfGenerationAsync()`:166, `GetNeighborhoodNamesAsync()`:202, `RemoveNeighborhoodNamesAsync()`:218, `GetNeighborhoodNamesGenerationAsync()`:225, `SetNeighborhoodNamesIfGenerationAsync()`:231, `GetColoniaExistsAsync()`:251, `RemoveColoniaExistsAsync()`:267, `GetColoniaExistsGenerationAsync()`:274, `SetColoniaExistsIfGenerationAsync()`:280, `GetSearchAsync()`:319, `SetSearchAsync()`:321, `GetOficiosAsync()`:323, `RemoveOficiosAsync()`:326, `GetOficiosGenerationAsync()`:328, `SetOficiosIfGenerationAsync()`:330, `GetNeighborhoodNamesAsync()`:333 …
 - `src/Knock.Market.Api/Modules/Catalog/Data/CatalogCacheOptions.cs` — class `CatalogCacheOptions`, class `CatalogCacheOptionsValidator`
   - `Validate()`:25
 - `src/Knock.Market.Api/Modules/Catalog/Data/CatalogSeeder.cs` — class `CatalogSeeder`, record `ColoniasSnapshot`
@@ -195,7 +195,7 @@
 - `src/Knock.Market.Api/Modules/Catalog/Domain/Colonia.cs` — record `Colonia`
   - `Colonia()`:7, `IsPostalCode()`:14
 - `src/Knock.Market.Api/Modules/Catalog/Domain/CursorDeBusqueda.cs` — record `SearchQuery`, record `SearchCursorPayload`, class `CursorDeBusqueda`
-  - `Page()`:17
+  - `Read()`:17, `CreateNext()`:25, `Page()`:42
 - `src/Knock.Market.Api/Modules/Catalog/Domain/GeoPosition.cs` — record struct `GeoPosition`
 - `src/Knock.Market.Api/Modules/Catalog/Domain/InterpretadorDeConsulta.cs` — record `SearchTrade`, record `SearchSynonym`, record `SearchInterpretation`, class `InterpretadorDeConsulta`
   - `Interpret()`:9
@@ -228,6 +228,8 @@
   - `ExistsAsync()`:8
 - `src/Knock.Market.Api/Modules/Catalog/Services/OficioQueries.cs` — class `OficioQueries`
   - `OficioQueries()`:7, `ListActiveAsync()`:14
+- `src/Knock.Market.Api/Modules/Catalog/Services/SearchSafety.cs` — interface `IFiltroDatosPersonales`, class `FiltroDatosPersonalesNoDisponible`, class `SearchCursorOptions`, class `SearchCursorOptionsValidator`
+  - `CanCount()`:13, `Validate()`:25
 - `src/Knock.Market.Api/Modules/Catalog/Services/WaitlistService.cs` — record `WaitlistEntry`, record `WaitlistResult`, interface `IWaitlistStore`, class `WaitlistService`
   - `WaitlistService()`:14, `JoinAsync()`:16
 - `src/Knock.Market.Api/Modules/Catalog/Services/ZonaService.cs` — class `ZonaService`
