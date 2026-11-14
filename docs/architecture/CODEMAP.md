@@ -1,6 +1,6 @@
 # Mapa de código
 
-> Generado por `scripts/codemap.py` el 2026-11-14T06:09:05Z. No editar a mano.
+> Generado por `scripts/codemap.py` el 2026-11-14T17:37:29Z. No editar a mano.
 > **Antes de crear una clase, método o archivo, busca aquí o corre `python scripts/codemap.py --query "<qué necesitas>"`.**
 
 ## Resumen
@@ -16,7 +16,7 @@
 | `Media` | -, data, domain, dtos, services, validators | 17 | 29 | 53 |
 | `Requests` | -, controllers, data, domain, services, validators | 11 | 30 | 21 |
 | `Sesiones` | -, controllers, data, domain, dtos, services, validators | 25 | 46 | 53 |
-| `Usuarios` | -, controllers, data, domain, dtos, services | 10 | 21 | 24 |
+| `Usuarios` | -, controllers, data, domain, dtos, services | 11 | 22 | 27 |
 
 ## ⚠️ Código duplicado (misma estructura)
 
@@ -619,7 +619,7 @@
 - `src/Knock.Identity.Api/Modules/Usuarios/Data/ProfileCacheOptions.cs` — class `ProfileCacheOptions`, class `ProfileCacheOptionsValidator`
   - `Validate()`:25
 - `src/Knock.Identity.Api/Modules/Usuarios/Data/UsuariosStore.cs` — interface `IUsuariosStore`, class `UsuariosStore`, class `BsonValueExtensions`
-  - `FindProfileAsync()`:60, `UpdateProfileAsync()`:64, `AsNullableString()`:120
+  - `UpsertDemoAsync()`:60, `FindProfileAsync()`:93, `UpdateProfileAsync()`:97, `AsNullableString()`:153
 
 **domain**
 
@@ -632,6 +632,8 @@
 
 **services**
 
+- `src/Knock.Identity.Api/Modules/Usuarios/Services/DemoClientSeeder.cs` — class `DemoClientSeeder`
+  - `DemoClientSeeder()`:9, `SeedAsync()`:11
 - `src/Knock.Identity.Api/Modules/Usuarios/Services/MarketColoniaCatalog.cs` — class `MarketColoniaCatalog`, record `ExistsResponse`, class `MarketCatalogOptions`
   - `ExistsAsync()`:16, `HasValidBaseUrl()`:65
 - `src/Knock.Identity.Api/Modules/Usuarios/Services/ProfileRules.cs` — class `ProfileOptions`, class `ProfileRules`
