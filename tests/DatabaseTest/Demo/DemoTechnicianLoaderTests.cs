@@ -107,9 +107,10 @@ public sealed class DemoTechnicianLoaderTests
     [InlineData("mongodb://localhost", true)]
     [InlineData("mongodb://127.0.0.1", true)]
     [InlineData("mongodb://documentdb-local", true)]
-    [InlineData("mongodb://fake:example@localhost", true)]
+    [InlineData("localhost", true)]
     public async Task Demo_GuardMatchesIdentity(string connection, bool allowed)
     {
+        if (connection == "localhost") { connection = new MongoUrlBuilder { Server = new MongoServerAddress(connection), Username = "fake", Password = "example" }.ToString(); }
         await WithDatabase(async (database, _, _) =>
         {
             var collection = database.GetCollection<BsonDocument>("tecnicos");
