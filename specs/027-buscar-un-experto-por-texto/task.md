@@ -18,7 +18,7 @@
 
 **Qué bloquea:** T-04 espera el script (T-01); T-07 espera el servicio (T-05); T-08 es la última de código. **Qué va en paralelo:** T-01, T-02, T-03 y T-06 arrancan el mismo día y no se pisan (archivos distintos).
 
-**T-05 parcial:** falta integrar el filtro real de la spec 024 (T-03); el #118 no se fusiona sin él. El servicio usa paginación por clave y el sustituto falla cerrado. La segunda búsqueda aún consulta MongoDB para verificar la versión del diccionario y la colonia: CA-15 sigue parcial. Las semillas actuales de colonias no traen `activo` y R-03 lo exige: el servicio las rechaza hasta que una persona concilie el modelo y las semillas. El servicio devuelve códigos internos; traducirlos a ProblemDetails HTTP corresponde a T-07. Falta también verificar los cambios de configuración del cursor en el despliegue.
+**T-05 parcial:** falta integrar el filtro real de la spec 024 (T-03); el #118 no se fusiona sin él. El servicio usa paginación por clave y el sustituto falla cerrado. La segunda búsqueda aún consulta MongoDB para verificar la versión del diccionario y la colonia: CA-15 sigue parcial. Las semillas actuales de colonias no traen `activo` y R-03 lo exige: el servicio las rechaza hasta que una persona concilie el modelo y las semillas. El mapeo de `invalid_cursor` y `search_unavailable` a ProblemDetails se probó con rutas de prueba; T-07 debe conectarlo al controller y comprobar el contrato real. Falta verificar la configuración del cursor en el despliegue.
 
 ## Definición de terminado
 - Los criterios de aceptación de `spec.md` están cubiertos por pruebas en verde.
