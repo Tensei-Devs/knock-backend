@@ -23,12 +23,16 @@ public static class CatalogModuleExtensions
         // sin esto, la exportación del OpenAPI y los entornos sin Redis no podrían arrancar la API (spec 003: Market arranca sin Redis).
         if (string.IsNullOrWhiteSpace(configuration.GetConnectionString(KnockRedisOptions.ConnectionStringName)))
         {
-            services.AddSingleton<ICatalogCache, DisabledCatalogCache>();
+            services.AddSingleton<DisabledCatalogCache>();
+            services.AddSingleton<ICatalogCache>(sp => sp.GetRequiredService<DisabledCatalogCache>());
+            services.AddSingleton<ISearchResponseCache>(sp => sp.GetRequiredService<DisabledCatalogCache>());
         }
         else
         {
             services.AddKnockRedis();
-            services.AddSingleton<ICatalogCache, RedisCatalogCache>();
+            services.AddSingleton<RedisCatalogCache>();
+            services.AddSingleton<ICatalogCache>(sp => sp.GetRequiredService<RedisCatalogCache>());
+            services.AddSingleton<ISearchResponseCache>(sp => sp.GetRequiredService<RedisCatalogCache>());
         }
         services.AddSingleton<CatalogStore>();
         services.AddSingleton<IWaitlistStore, WaitlistStore>();
