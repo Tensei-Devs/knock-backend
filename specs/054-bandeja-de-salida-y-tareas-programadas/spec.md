@@ -35,13 +35,14 @@ Fijar en una sola spec cómo funcionan los dos procesos de fondo que sostienen l
 - **R-05:** La entrega es **al menos una vez**: quien recibe es idempotente por `eventoId` (spec 037: 202 también si ya lo recibió) y el procesador nunca marca `entregado` sin haber recibido 202.
 - **R-06:** `tareas_programadas` tiene la forma de la spec 028 (`tipo`, `claveNegocio`, `programadaPara`, `estado`, `intentos`, `reservadaHasta`) y un índice único `{ tipo, claveNegocio }`: programar dos veces la misma tarea no crea un duplicado y responde con la existente.
 - **R-07:** El ejecutor de Identidad cumple las mismas reglas que el de Mercado (spec 028 R-09): consulta cada `TareasProgramadas:IntervaloSegundos` (15 por omisión), reserva con arrendamiento de 2 min, reintenta con 5 s, 30 s, 2 min y 10 min y al quinto fallo deja `fallida`. Los dos comparten el contrato `IManejadorDeTarea`; mientras no exista la biblioteca técnica compartida (KNOCK-251), su copia en Identidad se declara en la excepción de duplicados vigente.
-- **R-08:** El catálogo de tipos es **cerrado**; cada tipo tiene un plazo: `RepartirOleada` y `RevisarOleada` (15 min, spec 028), `VencerSolicitud` (48 h, specs 020 y 029), `AvisarAlVerificador` (24 h, spec 025), `BorrarFotosDeVerificacion` (7 días, spec 025), `EliminarCuenta` (7 días de gracia, spec 039) y `CerrarPeriodoDeOpinion` (30 días) y `CerrarReporteDeNoTerminado` (7 días) (specs 050 y 051). Un `tipo` que no está en el catálogo no se ejecuta: pasa a `fallida` y se registra.
+- **R-08:** El catálogo de tipos es **cerrado**; cada tipo tiene un plazo: `RepartirOleada` y `RevisarOleada` (15 min, spec 028; la ampliación manual de la spec 048 programa la siguiente al instante), `VencerSolicitud` (48 h, specs 020 y 029), `AvisarAlVerificador` (24 h, spec 025), `BorrarFotosDeVerificacion` (7 días, spec 025), `EliminarCuenta` (7 días de gracia, spec 039), `PrepararExportacion` (inmediata, con entrega en un máximo de 48 horas, spec 039), `VencerRecuperacion` (7 días, spec 039), `VencerCotizacionFinal` (48 h, spec 049), `VencerAjuste` (24 h, spec 049), `VencerPropuestaDeReprogramacion` (24 h o 2 h antes de la cita, lo que ocurra primero, spec 050) y `CerrarPeriodoDeOpinion` (30 días, spec 051) y `CerrarReporteDeNoTerminado` (7 días, spec 050). Un `tipo` que no está en el catálogo no se ejecuta: pasa a `fallida` y se registra.
 - **R-09:** Cada manejador es **idempotente**: comprueba el estado vigente antes de actuar, y ejecutar dos veces la misma tarea deja el mismo resultado. Si el hecho que la originó dejó de aplicar (por ejemplo se eligió una cotización o se canceló la eliminación), la tarea termina como `hecha` sin efecto.
 - **R-10:** Con dos réplicas, ninguna tarea ni evento se ejecuta dos veces a la vez: la reserva atómica de R-03 y R-07 lo impide, y una reserva vencida (réplica caída a medias) la retoma otra réplica (spec 034).
 - **R-11:** Limpieza: las tareas `hecha` y los eventos `entregado` se eliminan a los 14 días con un índice TTL sobre `actualizadoEn`; `fallida` y `fallido` se conservan 90 días para revisión.
 - **R-12:** Todas las fechas son UTC y el ejecutor y el procesador usan `TimeProvider`, para probar plazos largos con tiempo simulado.
 - **R-13:** Los registros y las métricas de ambos procesos llevan tipo, identificador, intento y resultado, sin datos personales. Hay una alerta cuando exista una tarea o un evento `fallida`/`fallido` o uno con más de 10 minutos de retraso (spec 011).
 - **R-14:** `/health/ready` de cada servicio no depende de estos procesos (spec 006): una cola atrasada no saca al servicio del balanceo; su estado se ve en métricas, no en una ruta pública.
+- **R-15:** **Llamadas internas entre servicios.** Toda llamada interna (no solo la de avisos) usa el mecanismo de la spec 037 R-11: HTTP interno con ingress privado, fuera del gateway, token HMAC de vida corta firmado por el emisor, con `iss`, `aud`, `exp` de 5 minutos como máximo, `jti` único y el claim `permisos` con las rutas que ese emisor puede llamar. Las rutas internas nuevas (`/api/v1/interno/pendientes` y `/api/v1/interno/exportacion` de la spec 039 y `/api/v1/interno/historial` de la spec 041) se agregan a ese esquema con las **mismas dos claves por emisor** (`avisos-key-market` y `avisos-key-identity`), sin secretos nuevos; la spec 037 se amplía por esta spec (no se contradice) y su implementación debe aceptar `permisos` por ruta.
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dada la configuración de rutas del gateway y de cada servicio, cuando se inspeccionan, entonces ninguna ruta pública expone `outbox` ni `tareas_programadas` y el gateway no enruta la llamada interna de avisos.
@@ -56,7 +57,7 @@ Fijar en una sola spec cómo funcionan los dos procesos de fondo que sostienen l
 - **CA-10:** Dado el ejecutor de Identidad con tiempo simulado, cuando llega el plazo de una tarea, entonces se ejecuta una vez y queda `hecha`.
 - **CA-11:** Dado un manejador que falla, cuando se reintenta, entonces sigue las esperas de R-07 y al quinto fallo queda `fallida` con registro sin datos personales.
 - **CA-12:** Dado un `tipo` que no está en el catálogo, cuando el ejecutor lo toma, entonces no ejecuta nada y queda `fallida` con registro.
-- **CA-13:** Dado cada tipo del catálogo, cuando se programa, entonces su `programadaPara` respeta su plazo (15 min, 48 h, 24 h, 7 días, 7 días, 30 días y 7 días).
+- **CA-13:** Dado cada tipo del catálogo, cuando se programa, entonces su `programadaPara` respeta el plazo que le fija R-08 (por ejemplo 15 minutos, 24 y 48 horas, 7 y 30 días).
 - **CA-14:** Dada una tarea ejecutada dos veces, cuando termina la segunda, entonces el resultado es el mismo que tras la primera.
 - **CA-15:** Dado un hecho que dejó de aplicar (cotización elegida, eliminación cancelada), cuando llega el plazo, entonces la tarea queda `hecha` sin efecto.
 - **CA-16:** Dadas dos réplicas sobre la misma base, cuando vencen varias tareas y eventos, entonces cada uno se ejecuta una sola vez.
@@ -65,6 +66,7 @@ Fijar en una sola spec cómo funcionan los dos procesos de fondo que sostienen l
 - **CA-19:** Dado un plazo de 30 días, cuando se prueba, entonces se usa tiempo simulado y no se espera tiempo real.
 - **CA-20:** Dado un fallo o un atraso de más de 10 minutos, cuando se evalúa la métrica, entonces se emite la alerta con tipo e identificador y sin datos personales.
 - **CA-21:** Dado un servicio con la cola atrasada, cuando se consulta `/health/ready`, entonces sigue respondiendo según sus dependencias y no por la cola.
+- **CA-22:** Dada una llamada interna entre servicios, cuando el token no trae el `permiso` de esa ruta, está vencido o lo firmó otro emisor, entonces responde 401 o 403 y no ejecuta nada; con el permiso correcto responde con normalidad.
 
 **4.1 Criterio → prueba prevista**
 
@@ -91,6 +93,7 @@ Fijar en una sola spec cómo funcionan los dos procesos de fondo que sostienen l
 | CA-19 | `Spec054EjecutorTests.Plazos_Largos_Con_Tiempo_Simulado_CA_054_19` |
 | CA-20 | `Spec054ObservabilidadTests.Alerta_Sin_Datos_Personales_CA_054_20` |
 | CA-21 | `Spec054SaludTests.Salud_No_Depende_De_La_Cola_CA_054_21` |
+| CA-22 | `Spec054InternoTests.Token_Con_Permiso_Por_Ruta_CA_054_22` |
 
 ## 5. Contrato
 **No hay ruta pública.** El contrato es interno:
@@ -185,14 +188,19 @@ Las pruebas citan el caso como `CA_054_NN` en el nombre (para `python scripts/sd
 
 ## 14. Decisiones tomadas sin consulta
 - **D-01:** Los estados siguen a la spec 028 (`pendiente`, `en_proceso`, `hecha`, `fallida`) y no los del Excel (`pendiente`, `tomada`, `hecha`, `fallida`); los campos `programadaPara` y `reservadaHasta` también (en el Excel se llaman `ejecutarEn` y `reservaVence`). Manda la spec numerada.
-- **D-02:** Retención de 14 días para lo terminado y de 90 para lo fallido: el Excel no fija plazos de limpieza.
+- **D-02:** Retención de 14 días para lo terminado y de 90 para lo fallido: el Excel no fija plazos de limpieza; 14 días alcanzan para investigar una incidencia reciente y 90 para revisar fallos, y son el valor de los índices de vencimiento, no una configuración.
 - **D-03:** Las alertas por fallo o atraso de más de 10 minutos salen por las métricas de la spec 011, sin pantalla ni ruta.
+- **D-04:** Las llamadas internas nuevas reutilizan las dos claves por emisor de la spec 037 y limitan lo que cada una puede llamar con `permisos`: así no se agregan secretos ni infraestructura.
+- **D-05:** Cada vigencia de las specs 039, 049 y 050 es una tarea del catálogo, para tener un solo mecanismo de plazos.
+
+**Correcciones de la revisión del 2026-11-13** (se conserva lo propuesto antes y se explica el cambio)
+- **C-01:** Catálogo de tareas: antes tenía siete tipos; ahora 12, para cubrir la exportación, la recuperación de acceso y las vigencias de las specs 049 y 050.
+- **C-02:** Llamadas internas: antes solo se definía la entrega de avisos; ahora todas las llamadas internas siguen el esquema de la spec 037 con `permisos` por ruta (R-15).
 
 ## 15. Riesgos y dudas abiertas
-- **Duplicado entre servicios:** el ejecutor y el procesador de Identidad copian a los de Mercado hasta que exista la biblioteca compartida (KNOCK-251); hay que registrar la excepción de duplicados o adelantar esa biblioteca.
-- **Plazos de negocio por confirmar:** el cierre del periodo para opinar (30 días) y para reportar que no se terminó (7 días) deben coincidir con las specs 050 y 051 al aprobarlas.
-- **Mensajería sin ejecutor:** si una spec futura necesita tareas en Mensajería, esta spec se amplía.
-- **Costo de las consultas periódicas:** con 15 s de intervalo y dos réplicas hay unas 8 consultas por minuto por servicio; confirmar que no pesa en la base compartida (spec 034).
+- Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
+- **Dependencias:** la spec 037 (entrega de avisos y claves por emisor, H-1), la biblioteca técnica compartida (KNOCK-251) para quitar la copia del ejecutor en Identidad y el costo de las consultas cada 15 segundos con dos réplicas (spec 034), que es bajo por estar indexadas.
+- **Riesgo aceptado:** si Mensajería necesita tareas propias, esta spec se amplía.
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: _____________________ fecha: __________

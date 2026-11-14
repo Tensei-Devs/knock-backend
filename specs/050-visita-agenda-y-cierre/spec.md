@@ -54,9 +54,9 @@ Definir y especificar los endpoints VIS-02, VIS-04, VIS-05, VIS-06, VIS-07, VIS-
 - **R-22:** `PUT /api/v1/visitas/{id}/permiso-fotos` (actualizar): El cliente autoriza o no publicar las fotos del trabajo. Lo puede llamar: persona con sesión que sea dueña del recurso. Responde 200 cuando sale bien.
 - **R-23:** Entrada de `PUT /api/v1/visitas/{id}/permiso-fotos`: Ruta: id. Cuerpo: permiso. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400.
 - **R-24:** **Agenda (VIS-02).** Solo el técnico; devuelve sus visitas y las solicitudes nuevas abiertas entre `desde` y `hasta` (por omisión hoy y los 14 días siguientes; máximo 31 días de rango), ordenadas por fecha en UTC. Un rango mayor o con `hasta` anterior a `desde` responde 422.
-- **R-25:** **Reprogramar (VIS-04 y VIS-05).** Una parte propone una `fechaHora` futura (al menos 2 horas adelante y como máximo a 30 días); solo puede haber una propuesta pendiente por visita; la otra parte tiene 24 horas, o hasta 2 horas antes de la cita si es menos, para aceptar o rechazar; sin respuesta la propuesta vence y la cita se mantiene; como máximo 2 reprogramaciones aceptadas por visita.
-- **R-26:** **Cancelar (VIS-06).** `motivo` de 8 a 300 caracteres, obligatorio. Con más de 24 horas de anticipación es gratis; con menos queda como `cancelacion_tardia` y se avisa de inmediato a la otra parte. No hay penalización económica (el Excel no la define).
-- **R-27:** **Cliente ausente (VIS-07).** Solo el técnico, desde la hora de la cita y hasta 60 minutos después; marca `cliente_ausente`, sin penalizar, y avisa al cliente.
+- **R-25:** **Reprogramar (VIS-04 y VIS-05).** Una parte propone una `fechaHora` futura (al menos 2 horas adelante y como máximo a 30 días); solo puede haber una propuesta pendiente por visita; la otra parte tiene 24 horas, o hasta 2 horas antes de la cita si es menos, para aceptar o rechazar (tarea `VencerPropuestaDeReprogramacion`, spec 054); sin respuesta la propuesta vence y la cita se mantiene; como máximo 2 reprogramaciones aceptadas por visita para evitar ciclos, y después queda cancelar.
+- **R-26:** **Cancelar (VIS-06).** `motivo` de 8 a 300 caracteres, obligatorio. Con más de 24 horas de anticipación es gratis; con menos queda `cancelada` con `tardia: true` y se avisa de inmediato a la otra parte. No hay penalización económica (el Excel no la define).
+- **R-27:** **Cliente ausente (VIS-07).** Solo el técnico, desde 15 minutos después de la hora de la cita y hasta 2 horas después; marca la visita `no_presentado` (estado de la spec 021) con `quienFalto = cliente`, sin penalizar, y avisa al cliente.
 - **R-28:** **Terminar (VIS-09).** Solo el técnico con la visita `en_curso`; `descripcion` de 8 a 500 caracteres, `recomendacion` opcional de hasta 300 y de 1 a 5 `fotos` (privadas, spec 032). No requiere confirmación del cliente. La visita queda `terminada` y se programan `CerrarPeriodoDeOpinion` (30 días) y `CerrarReporteDeNoTerminado` (7 días) (spec 054).
 - **R-29:** **No terminado (VIS-10).** Solo el cliente dueño y dentro de los 7 días siguientes a terminada la visita; `texto` de 8 a 500 caracteres; una sola vez por visita. Crea un reporte que pasa a revisión (spec 053) y responde 201.
 - **R-30:** **Permiso de fotos (VIS-11).** El cliente dueño autoriza o no (`permiso`, booleano; por omisión, no). Las fotos del trabajo solo se publican en el perfil del técnico si hay permiso y pasaron la moderación (specs 031 y 032); revocar el permiso las retira.
@@ -111,9 +111,9 @@ Definir y especificar los endpoints VIS-02, VIS-04, VIS-05, VIS-06, VIS-07, VIS-
 - **CA-43:** Dada una persona que no cumple el rol «persona con sesión que sea dueña del recurso», cuando llama `PUT /api/v1/visitas/{id}/permiso-fotos`, entonces responde 403 y no cambia nada.
 - **CA-44:** Dado un valor inválido según las reglas de §6, cuando llama `PUT /api/v1/visitas/{id}/permiso-fotos`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
 - **CA-45:** Dado un técnico con visitas, cuando consulta su agenda, entonces recibe solo las suyas dentro del rango y ordenadas; un rango mayor de 31 días o invertido responde 422.
-- **CA-46:** Dada una visita confirmada, cuando una parte propone una fecha válida y la otra acepta, entonces la cita cambia; si rechaza o vence, la cita no cambia; una tercera reprogramación responde 409 `visit_not_reschedulable`.
-- **CA-47:** Dada una visita con más de 24 horas, cuando una parte cancela con motivo, entonces queda `cancelada`; con menos de 24 horas queda `cancelacion_tardia` y la otra parte recibe aviso inmediato.
-- **CA-48:** Dado el técnico dentro de la ventana de la cita, cuando registra la ausencia, entonces la visita queda `cliente_ausente` y el cliente recibe aviso; fuera de la ventana responde 409 `outside_arrival_window`.
+- **CA-46:** Dada una visita confirmada, cuando una parte propone una fecha válida y la otra acepta, entonces la cita cambia; si rechaza o vence, la cita no cambia; una tercera reprogramación aceptada responde 409 `visit_not_reschedulable`.
+- **CA-47:** Dada una visita con más de 24 horas, cuando una parte cancela con motivo, entonces queda `cancelada`; con menos de 24 horas queda `cancelada` con `tardia: true` y la otra parte recibe aviso inmediato.
+- **CA-48:** Dado el técnico dentro de la ventana de la cita, cuando registra la ausencia, entonces la visita queda `no_presentado` con `quienFalto = cliente` y el cliente recibe aviso; antes de los 15 minutos o después de las 2 horas responde 409 `outside_arrival_window`.
 - **CA-49:** Dada una visita en curso, cuando el técnico la termina con descripción y al menos una foto, entonces queda `terminada` y se programan los dos cierres; sin foto responde 422.
 - **CA-50:** Dada una visita terminada hace menos de 7 días, cuando el cliente reporta que no se terminó, entonces se crea el reporte; pasados 7 días o con un reporte previo responde 409 `report_window_closed`.
 - **CA-51:** Dado el cliente dueño, cuando autoriza o revoca el permiso, entonces las fotos se publican solo con permiso y moderación, y se retiran al revocarlo.
@@ -307,15 +307,19 @@ Las pruebas citan el caso como `CA_050_NN` en el nombre (para `python scripts/sd
 - **D-01:** Se toma el Excel de endpoints como fuente del contrato porque es el insumo acordado para las specs; cualquier diferencia con las specs 020 a 038 se resuelve a favor de la spec numerada.
 - **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case (los de §5 y, si falta alguno, los que se fijen al implementar), siguiendo la convención de errores de la spec 002.
 - **D-03:** No se usa `Idempotency-Key`, aunque el Excel lo menciona en creaciones.
-- **D-04:** Ventana de 60 minutos después de la hora de la cita para registrar al cliente ausente.
-- **D-05:** Máximo 2 reprogramaciones aceptadas por visita y propuesta vigente por 24 horas.
-- **D-06:** La cancelación tardía no tiene penalización económica; solo se avisa y queda registrada.
-- **D-07:** La agenda se limita a 31 días por consulta para acotar el costo.
+- **D-04:** Ventana de ausencia desde 15 minutos después de la hora de la cita hasta 2 horas después: el técnico espera un tiempo razonable antes de declarar la ausencia y deja de poder hacerlo cuando el hecho ya es antiguo.
+- **D-05:** Máximo 2 reprogramaciones aceptadas y propuesta vigente 24 horas (o hasta 2 horas antes de la cita): evitan ciclos de cambios y citas sin confirmar cuando se acerca la hora.
+- **D-06:** La cancelación tardía no tiene penalización económica: solo se avisa y queda registrada con `tardia: true`.
+- **D-07:** Estados: se reutilizan los de la spec 021 (`confirmada`, `en_curso`, `terminada`, `cancelada`, `no_presentado`); la cancelación tardía y quién faltó son campos, no estados nuevos.
+- **D-08:** La agenda se limita a 31 días por consulta para acotar el costo.
+
+**Correcciones de la revisión del 2026-11-13** (se conserva lo propuesto antes y se explica el cambio)
+- **C-01:** Estados: antes `cliente_ausente` y `cancelacion_tardia`; ahora `no_presentado` (spec 021) y `cancelada` con `tardia: true`.
+- **C-02:** Ventana de ausencia: antes 60 minutos desde la cita; ahora de 15 minutos a 2 horas después, para que el técnico espere antes de declarar la ausencia.
 
 ## 15. Riesgos y dudas abiertas
-- Los estados `cliente_ausente`, `cancelacion_tardia`, `terminada` y `visita_pagada` deben agregarse a los de la spec 022; confirmar sus transiciones al aprobar.
-- El Excel no define penalizaciones por ausencia o cancelación tardía: confirmar si habrá alguna consecuencia en la reputación.
-- Confirmar con las specs 031 y 032 el flujo de las fotos del trabajo antes de publicarlas.
+- Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
+- Dependencias: estados y ciclo de la visita de las specs 021 y 022, tareas de vencimiento de la 054 y moderación de fotos (031 y 032).
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: _____________________ fecha: __________

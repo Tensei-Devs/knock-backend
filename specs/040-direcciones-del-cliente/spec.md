@@ -37,7 +37,7 @@ Definir y especificar los endpoints DIR-01, DIR-02, DIR-03, DIR-04 del Excel de 
 - **R-09:** Estados de `DELETE /api/v1/me/direcciones/{id}`: 404. El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
 - **R-10:** **Datos de la dirección (DIR-02 y DIR-03).** `calleNumero` de al menos 8 caracteres y cifrada a nivel de campo; `colonia` debe existir en el catálogo (spec 017); `referencias` opcional de hasta 200 caracteres y cifrada; `principal` booleano. En la edición cambian solo los campos enviados.
 - **R-11:** **Dirección principal.** Cada persona tiene como máximo una principal: la primera dirección queda principal y marcar otra como principal desmarca la anterior. Al eliminar la principal, pasa a serlo la más reciente que quede.
-- **R-12:** **Límite por persona.** Cada persona puede guardar hasta 5 direcciones; la sexta responde 409 `address_limit_reached`.
+- **R-12:** **Límite por persona.** Cada persona puede guardar hasta 10 direcciones (límite de cordura contra abuso de almacenamiento); la undécima responde 409 `address_limit_reached`.
 - **R-13:** **Privacidad de la dirección.** La dirección exacta solo la ve su dueña; el técnico la recibe únicamente al ser elegido (specs 021 y 022); no se escribe en registros, no se cachea y las respuestas llevan `Cache-Control: private, no-store`.
 - **R-14:** **Propiedad (DIR-03 y DIR-04).** Una dirección ajena responde 404, sin revelar que existe; borrar la dirección usada en una cita ya confirmada no cambia la cita (la cita guarda su propia copia).
 - **R-15:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
@@ -65,7 +65,7 @@ Definir y especificar los endpoints DIR-01, DIR-02, DIR-03, DIR-04 del Excel de 
 - **CA-17:** Dado el caso «recurso no disponible», cuando llama `DELETE /api/v1/me/direcciones/{id}`, entonces responde 404 con ProblemDetails y no cambia el estado.
 - **CA-18:** Dada una dirección con calle de menos de 8 caracteres, una colonia inexistente o referencias de más de 200, cuando se guarda, entonces responde 422 y no se guarda.
 - **CA-19:** Dada una persona con dos direcciones, cuando marca la segunda como principal, entonces la primera deja de serlo; al eliminar la principal, la otra pasa a serlo.
-- **CA-20:** Dada una persona con 5 direcciones, cuando guarda otra, entonces responde 409 `address_limit_reached` y no la guarda.
+- **CA-20:** Dada una persona con 10 direcciones, cuando guarda otra, entonces responde 409 `address_limit_reached` y no la guarda.
 - **CA-21:** Dada una dirección guardada, cuando se inspeccionan registros, caché y respuestas, entonces no aparece en registros ni en caché y la respuesta no es cacheable.
 - **CA-22:** Dada la dirección de otra persona, cuando se intenta editar o borrar, entonces responde 404; y borrar una dirección usada en una cita confirmada no altera esa cita.
 - **CA-23:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
@@ -197,12 +197,15 @@ Las pruebas citan el caso como `CA_040_NN` en el nombre (para `python scripts/sd
 - **D-01:** Se toma el Excel de endpoints como fuente del contrato porque es el insumo acordado para las specs; cualquier diferencia con las specs 020 a 038 se resuelve a favor de la spec numerada.
 - **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case (los de §5 y, si falta alguno, los que se fijen al implementar), siguiendo la convención de errores de la spec 002.
 - **D-03:** No se usa `Idempotency-Key`, aunque el Excel lo menciona en creaciones.
-- **D-04:** Máximo 5 direcciones por persona: el Excel no fija el límite.
-- **D-05:** La cita confirmada conserva su propia copia de la dirección, por eso borrar la original no la afecta.
+- **D-04:** Máximo 10 direcciones por persona: el Excel no lo fija; se pone un tope de cordura contra abuso, sin sistema de configuración.
+- **D-05:** La cita confirmada conserva su propia copia de la dirección (`lugar` de la spec 022), por eso borrar la original no la afecta.
+
+**Correcciones de la revisión del 2026-11-13** (se conserva lo propuesto antes y se explica el cambio)
+- **C-01:** Límite de direcciones: antes 5 sin justificación; ahora 10 como tope de cordura, porque una persona puede tener casa, trabajo, familiares y otros domicilios.
 
 ## 15. Riesgos y dudas abiertas
-- Confirmar el máximo de 5 direcciones.
-- Confirmar con la spec 022 que la cita guarda su propia copia de la dirección.
+- Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
+- Dependencias: catálogo de colonias de la spec 017 y la copia de la dirección en la visita de la spec 022.
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: _____________________ fecha: __________

@@ -46,15 +46,15 @@ Definir y especificar los endpoints USR-03, USR-04, USR-05, USR-06, USR-07, USR-
 - **R-13:** `GET /api/v1/me/pendientes` (leer todos): Lista lo que hay pendiente antes de eliminar la cuenta: citas y cotizaciones abiertas. Lo puede llamar: persona con sesión (cliente o técnico). Responde 200 cuando sale bien.
 - **R-14:** `POST /api/v1/me/eliminacion` (crear (acción)): Programa la eliminación de la cuenta con 7 días de gracia, tras confirmar con código SMS. Lo puede llamar: persona con sesión (cliente o técnico). Responde 202 cuando sale bien.
 - **R-15:** Entrada de `POST /api/v1/me/eliminacion`: Cuerpo: codigo (SMS) o texto ELIMINAR, motivo opcional. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400.
-- **R-16:** Estados de `POST /api/v1/me/eliminacion`: 409 `deletion_already_scheduled` (ya está programada). Los códigos de negocio van en inglés y en snake_case.
+- **R-16:** Estados de `POST /api/v1/me/eliminacion`: 409 `deletion_not_allowed` (ya está programada). Los códigos de negocio van en inglés y en snake_case.
 - **R-17:** `POST /api/v1/me/eliminacion/cancelar` (actualizar (acción)): Cancela la eliminación durante los 7 días de gracia. Lo puede llamar: persona con sesión (cliente o técnico). Responde 200 cuando sale bien.
 - **R-18:** Estados de `POST /api/v1/me/eliminacion/cancelar`: 409 `no_deletion_scheduled`. Los códigos de negocio van en inglés y en snake_case.
-- **R-19:** **Cambio de número (USR-03 y USR-04).** `celularNuevo` en formato E.164 de México (+52 y 10 dígitos). El código SMS vence a los 10 minutos, admite 5 intentos y se pueden pedir 3 códigos por hora y por persona. Al confirmar se cambia el celular (protegido igual que en el registro, spec 015), se cierran todas las demás sesiones (specs 016 y 018) y se avisa por SMS al número anterior.
-- **R-20:** **Recuperación de acceso (USR-05).** Es pública y muy limitada (3 solicitudes por hora por IP y por número). Siempre responde 202 sin revelar si la cuenta existe. `tipo` es `tecnico` o `cliente`: el técnico verificado repite la selfie (spec 025) y el cliente pasa a soporte. No cambia ningún dato hasta que la verificación o soporte lo resuelvan.
-- **R-21:** **Exportación (USR-06).** Una sola exportación en curso por persona. Se prepara en segundo plano con la tarea `PrepararExportacion`, que se agrega al catálogo de la spec 054, y se entrega en un máximo de 48 horas con un enlace firmado de 24 horas; contiene solo datos de la propia persona y se avisa al terminar.
+- **R-19:** **Cambio de número (USR-03 y USR-04).** El SMS lo envía Firebase en el teléfono (spec 015), no el backend. `POST /me/cambio-numero` (USR-03) solo **comprueba que `celularNuevo` (E.164 de México) no pertenece a otra cuenta** antes de que la app gaste un SMS: responde 204 si está libre y 409 `phone_already_registered` si no; admite 3 comprobaciones por hora y por persona. `POST /me/cambio-numero/confirmar` (USR-04) recibe el `firebaseIdToken` del número nuevo, lo valida igual que el inicio de sesión (spec 015 R-02: firma, emisor, destinatario, vencimiento y número verificado), cambia el celular (protegido como en el registro), cierra las demás sesiones conservando la actual (specs 016 y 018) y antes de cerrarlas les deja el aviso `sesion_revocada` (spec 037).
+- **R-20:** **Recuperación de acceso (USR-05).** Es pública y limitada (3 por hora por IP y por número). La persona prueba que controla el número nuevo con el `firebaseIdToken` de ese número y envía `celularAnterior` y `tipo` (`tecnico` o `cliente`). **Siempre responde 202** sin revelar si la cuenta existe; si existe, crea un caso en `recuperaciones` (estado `pendiente`) que aparece en la cola del panel (spec 053, tipo `recuperacion`) con datos que el revisor ya conoce (nombre, colonia, fecha de la última solicitud y, si es técnico verificado, la comparación de selfie de la spec 025). No cambia ningún dato hasta que un verificador la apruebe; al aprobarla se cambia el número como en USR-04 y se cierran todas las sesiones anteriores. Un caso sin decidir vence a los 7 días (tarea `VencerRecuperacion`, spec 054).
+- **R-21:** **Exportación (USR-06).** Una sola exportación en curso por persona. Se prepara con la tarea `PrepararExportacion` (spec 054): Identidad junta sus datos y pide los de Mercado y Mensajería por rutas internas con el token de la spec 037, arma un ZIP con un archivo JSON por servicio en el contenedor privado `exportaciones` de la cuenta de almacenamiento privada de la spec 025 (ciclo de vida de 7 días) y avisa a la persona con un enlace firmado de 24 horas. Se entrega dentro de las 48 horas que fija el Excel. Contiene solo datos propios.
 - **R-22:** **Consentimientos (USR-07 y USR-08).** Los opcionales son `promociones`, `encuestas` y `recomendaciones`; los obligatorios (aviso de privacidad y términos) no se retiran por esta ruta. Cada cambio guarda tipo, versión y fecha, y retirar un consentimiento surte efecto de inmediato. Un `tipo` fuera de la lista responde 422.
 - **R-23:** **Pendientes antes de eliminar (USR-09).** Devuelve solo conteos e identificadores de sus citas y cotizaciones abiertas (consulta interna a Mercado), sin datos de otras personas; sin paginación, con un máximo de 50.
-- **R-24:** **Eliminación (USR-10 y USR-11).** Se confirma con el código SMS o con el texto exacto `ELIMINAR`; `motivo` opcional de hasta 200 caracteres. Programa `EliminarCuenta` a 7 días (spec 054) y, durante la gracia, la persona puede cancelar. Al ejecutarse borra sus datos personales, direcciones y fotos de verificación, anonimiza sus opiniones (spec 051), cierra sus sesiones y cancela sus solicitudes abiertas. La cancelación deja la tarea como `hecha` sin efecto.
+- **R-24:** **Eliminación (USR-10 y USR-11).** Se confirma con el texto exacto `ELIMINAR`; si la sesión tiene más de 24 horas, la app pide además re-autenticar con Firebase y envía el `firebaseIdToken`. `motivo` opcional de hasta 200 caracteres. Programa `EliminarCuenta` a 7 días (spec 054) y **al programarla** cancela las solicitudes abiertas y las cotizaciones pendientes de la persona, avisando a la otra parte; si hay una visita `en_curso` responde 409 `deletion_not_allowed`. Durante la gracia puede cancelar. **Al ejecutarse**, las visitas `confirmada` que queden se cancelan como cancelación tardía con aviso a la otra parte, se borran sus datos personales, direcciones y fotos de verificación, se anonimizan sus opiniones (spec 051) y se cierran sus sesiones. La cancelación deja la tarea `hecha` sin efecto.
 - **R-25:** **Sin datos personales en registros.** Ninguna de estas rutas escribe celulares, códigos ni textos de motivo en los registros; el aviso al número anterior no repite el número nuevo completo.
 - **R-26:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
 - **R-27:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
@@ -89,16 +89,16 @@ Definir y especificar los endpoints USR-03, USR-04, USR-05, USR-06, USR-07, USR-
 - **CA-25:** Dada una petición sin token o con token vencido, cuando llama `POST /api/v1/me/eliminacion`, entonces responde 401 y no ejecuta la operación.
 - **CA-26:** Dado un valor inválido según las reglas de §6, cuando llama `POST /api/v1/me/eliminacion`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
 - **CA-27:** Dado un cuerpo que no se puede leer, cuando llama `POST /api/v1/me/eliminacion`, entonces responde 400 y no guarda nada.
-- **CA-28:** Dado el caso «la eliminación ya está programada», cuando llama `POST /api/v1/me/eliminacion`, entonces responde 409 `deletion_already_scheduled` con ProblemDetails y no cambia el estado.
+- **CA-28:** Dado el caso «la eliminación ya está programada o hay una visita en curso», cuando llama `POST /api/v1/me/eliminacion`, entonces responde 409 `deletion_not_allowed` con ProblemDetails y no cambia el estado.
 - **CA-29:** Dado el rol «persona con sesión (cliente o técnico)», cuando llama `POST /api/v1/me/eliminacion/cancelar` con datos válidos, entonces responde 200 con lo descrito en §5.
 - **CA-30:** Dada una petición sin token o con token vencido, cuando llama `POST /api/v1/me/eliminacion/cancelar`, entonces responde 401 y no ejecuta la operación.
 - **CA-31:** Dado el caso «no hay una eliminación programada que cancelar», cuando llama `POST /api/v1/me/eliminacion/cancelar`, entonces responde 409 `no_deletion_scheduled` con ProblemDetails y no cambia el estado.
-- **CA-32:** Dada una persona con sesión, cuando confirma el código del número nuevo a tiempo, entonces cambia su celular, se cierran sus otras sesiones y el número anterior recibe el aviso; con un código vencido o tras 5 intentos responde 400, y a la cuarta solicitud en una hora, 429.
-- **CA-33:** Dado un número que no existe y otro que sí, cuando se pide la recuperación, entonces ambos responden 202 igual y no se cambia ningún dato; a la cuarta solicitud en una hora responde 429.
-- **CA-34:** Dada una persona sin exportación en curso, cuando la pide, entonces responde 202 y se programa; una segunda mientras la primera sigue responde 409 `export_in_progress`; el archivo solo trae sus datos.
+- **CA-32:** Dada una persona con sesión, cuando verifica el número nuevo con Firebase y lo confirma, entonces cambia su celular, se cierran sus otras sesiones y se conserva la actual; con un número que ya es de otra cuenta responde 409 `phone_already_registered`, y a la cuarta comprobación en una hora, 429.
+- **CA-33:** Dado un número que no existe y otro que sí, cuando se pide la recuperación con un número nuevo verificado, entonces ambos responden 202 igual; el caso del que sí existe aparece en la cola del panel, no cambia ningún dato hasta aprobarse y vence a los 7 días; a la cuarta solicitud en una hora responde 429.
+- **CA-34:** Dada una persona sin exportación en curso, cuando la pide, entonces responde 202 y recibe un aviso con un enlace de 24 horas cuando el ZIP está listo (máximo 48 horas); una segunda mientras la primera sigue responde 409 `export_in_progress`; el archivo solo trae sus datos.
 - **CA-35:** Dada una persona, cuando retira `promociones`, entonces queda `vigente: false` con fecha y versión y deja de recibir esos avisos; un tipo fuera de la lista o intentar retirar uno obligatorio responde 422.
 - **CA-36:** Dada una persona con citas y cotizaciones abiertas, cuando consulta sus pendientes, entonces recibe sus conteos e identificadores y ningún dato de otra persona.
-- **CA-37:** Dada una persona que confirma la eliminación, cuando pasan 7 días sin cancelar, entonces se borran sus datos y se anonimizan sus opiniones; si cancela antes, no se borra nada; pedirla dos veces responde 409 `deletion_already_scheduled`.
+- **CA-37:** Dada una persona que confirma la eliminación, cuando pasan 7 días sin cancelar, entonces se borran sus datos y se anonimizan sus opiniones y las visitas confirmadas pendientes se cancelan con aviso; si cancela antes, no se borra nada; pedirla con una visita en curso o dos veces responde 409 `deletion_not_allowed`.
 - **CA-38:** Dadas estas operaciones, cuando se inspeccionan los registros, entonces no aparecen celulares completos, códigos ni motivos.
 - **CA-39:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
 - **CA-40:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
@@ -185,7 +185,7 @@ Definir y especificar los endpoints USR-03, USR-04, USR-05, USR-06, USR-07, USR-
 |---|---|---|---|
 | USR-03 | 409 | `phone_already_registered` | el número nuevo ya pertenece a otra cuenta |
 | USR-06 | 409 | `export_in_progress` | ya hay una exportación en curso |
-| USR-10 | 409 | `deletion_already_scheduled` | la eliminación ya está programada |
+| USR-10 | 409 | `deletion_not_allowed` | la eliminación ya está programada o hay una visita en curso |
 | USR-11 | 409 | `no_deletion_scheduled` | no hay una eliminación programada que cancelar |
 
 
@@ -218,6 +218,8 @@ Definir y especificar los endpoints USR-03, USR-04, USR-05, USR-06, USR-07, USR-
 | Único | celularHash | Que un celular corresponda a una sola cuenta y buscarlo al iniciar sesión sin descifrarlo |
 | Único | sub | Encontrar la cuenta a partir del token y evitar dos cuentas con el mismo sub |
 | Compuesto | estado + eliminarEn | Que el proceso de fondo encuentre las cuentas cuyos 7 días de gracia ya vencieron |
+
+**Colección `recuperaciones` (nueva, Identidad).** Un documento por caso: `usuarioId` (si existe), `celularNuevoProtegido` (mismo protegido que `usuarios`), `tipo` (`tecnico` o `cliente`), `estado` (`pendiente`, `aprobada`, `rechazada`, `vencida`), `decididaPor`, `creadoEn` y `actualizadoEn`. Índice `{ estado, creadoEn }` y TTL de 90 días sobre `actualizadoEn` para los cerrados.
 
 ## 7. Arquitectura y componentes
 - Proyecto `Knock.Identity.Api`, módulo `Account` con las capas del estilo de la spec 002: `Controllers`, `Dtos`, `Validators`, `Services`, `Data` y `Hosting`.
@@ -260,7 +262,7 @@ Las pruebas citan el caso como `CA_039_NN` en el nombre (para `python scripts/sd
 | Rendimiento | No aplica | Sin ruta crítica; se mide solo si la spec 034 lo pide |
 
 ## 11. Escenarios
-- **Cambio de número:** la persona pide el cambio → recibe el código en el número nuevo → lo confirma → se cierran sus otras sesiones y el número anterior recibe el aviso.
+- **Cambio de número:** la persona pide el cambio → Firebase le manda el SMS al número nuevo → lo verifica y confirma el cambio → se cierran sus otras sesiones y el número anterior recibe el aviso.
 - **Eliminar cuenta:** la persona ve sus pendientes → confirma con el código → la cuenta queda programada para 7 días → si se arrepiente, la cancela desde Perfil.
 - **Exportar datos:** la persona pide su exportación → recibe un aviso cuando está lista → descarga el archivo con un enlace de 24 horas.
 
@@ -277,16 +279,21 @@ Las pruebas citan el caso como `CA_039_NN` en el nombre (para `python scripts/sd
 - **D-01:** Se toma el Excel de endpoints como fuente del contrato porque es el insumo acordado para las specs; cualquier diferencia con las specs 020 a 038 se resuelve a favor de la spec numerada.
 - **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case (los de §5 y, si falta alguno, los que se fijen al implementar), siguiendo la convención de errores de la spec 002.
 - **D-03:** No se usa `Idempotency-Key`, aunque el Excel lo menciona en creaciones.
-- **D-04:** El código de cambio de número vence a los 10 minutos y admite 5 intentos, igual que el registro (spec 015).
-- **D-05:** La recuperación siempre responde 202 para no revelar si el número existe.
-- **D-06:** La eliminación no se bloquea por citas abiertas: se avisa de los pendientes y al ejecutarse se cancelan.
-- **D-07:** La exportación sale en un solo archivo con un enlace de 24 horas.
+- **D-04:** El cambio de número usa Firebase, que ya está en el proyecto con facturación activa: es la única forma de que el SMS salga de un proveedor que el backend no tiene que operar. USR-03 solo comprueba disponibilidad para no gastar SMS.
+- **D-05:** Se deja de avisar por SMS al número anterior (el backend no envía SMS y contratar otro proveedor no aporta lo suficiente); en su lugar se avisa a las demás sesiones y se cierran.
+- **D-06:** La recuperación de acceso se resuelve con un caso en la cola del panel (spec 053): reutiliza la cola y los permisos que ya existen y no obliga a crear un proceso de soporte aparte.
+- **D-07:** La eliminación nunca queda bloqueada por citas, salvo una visita en curso: se avisa y se cancelan con aviso, para que una persona pueda irse sin quedar atrapada y la otra parte sepa qué pasó.
+- **D-08:** La exportación sale en un ZIP con un JSON por servicio, en un contenedor privado de la cuenta de la spec 025, con enlace de 24 horas: no agrega cuentas ni servicios nuevos.
+
+**Correcciones de la revisión del 2026-11-13** (se conserva lo propuesto antes y se explica el cambio)
+- **C-01:** Cambio de número: antes el backend pedía y validaba un código SMS (10 minutos, 5 intentos); ahora lo verifica Firebase y el backend valida el token. Motivo: la spec 015 fija que el SMS lo envía Firebase.
+- **C-02:** Recuperación: antes «el cliente pasa a soporte» sin proceso; ahora hay un caso en la cola del panel con vencimiento a los 7 días.
+- **C-03:** Eliminación: antes se cancelaba todo al ejecutarse; ahora se cancelan solicitudes y cotizaciones al programarla y se bloquea solo con una visita en curso.
+- **C-04:** Exportación: antes sin destino definido; ahora ZIP en contenedor privado con enlace de 24 horas y tarea `PrepararExportacion`.
 
 ## 15. Riesgos y dudas abiertas
-- La recuperación de acceso del cliente pasa a soporte: no hay spec de soporte; confirmar cómo se atiende (panel, correo o formulario).
-- Confirmar si «código SMS o texto ELIMINAR» significa uno u otro según el caso (se propuso aceptar cualquiera de los dos).
-- La exportación y la eliminación tocan colecciones de otros servicios: definir si se coordinan con eventos de la bandeja de salida (spec 054) o con llamadas internas.
-- El texto legal de los plazos (7 días de gracia, 48 horas de exportación) debe coincidir con el aviso de privacidad vigente (KNOCK-218).
+- Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
+- Dependencias: verificación por Firebase de la spec 015, cola del panel de la spec 053, rutas internas con el token de la spec 037 (H-1), contenedor privado `exportaciones` en la cuenta de almacenamiento de la spec 025 (H-2, tarea de infraestructura) y los plazos del aviso de privacidad (KNOCK-218).
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: _____________________ fecha: __________

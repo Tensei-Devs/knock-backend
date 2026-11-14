@@ -38,10 +38,10 @@ Definir y especificar los endpoints COT-06, COT-07, AJU-01, AJU-02 del Excel de 
 - **R-10:** `POST /api/v1/ajustes/{id}/decision` (actualizar (acción)): El cliente aprueba o rechaza. Lo puede llamar: persona con sesión que sea dueña del recurso. Responde 200 cuando sale bien.
 - **R-11:** Entrada de `POST /api/v1/ajustes/{id}/decision`: Ruta: id. Cuerpo: decision. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400.
 - **R-12:** Estados de `POST /api/v1/ajustes/{id}/decision`: 404; 409 `adjustment_already_decided`. Los códigos de negocio van en inglés y en snake_case.
-- **R-13:** **Cotización final (COT-06).** Solo la envía el técnico de la visita, una vez terminada la revisión previa y **una sola** por visita. `precio` es un entero positivo en pesos, máximo 100 000, y `descripcion` tiene de 8 a 500 caracteres. El cliente la ve para aprobarla o rechazarla.
-- **R-14:** **Decisión sobre la cotización final (COT-07).** `decision` es `aprueba` o `rechaza` y es definitiva. Si aprueba, el trabajo sigue con ese precio; si rechaza, el cliente paga solo la visita y la visita queda `visita_pagada`. Tiene vigencia de 48 horas: sin respuesta se considera rechazada por vencimiento.
+- **R-13:** **Cotización final (COT-06).** Solo la envía el técnico de la visita, una vez terminada la revisión previa y **una sola** por visita. `precio` es un entero positivo en pesos (sin tope de negocio) y `descripcion` tiene de 8 a 500 caracteres. El cliente la ve para aprobarla o rechazarla.
+- **R-14:** **Decisión sobre la cotización final (COT-07).** `decision` es `aprueba` o `rechaza` y es definitiva. Si aprueba, el trabajo sigue con ese precio; si rechaza, la visita queda `terminada` con `resultado = solo_visita` y la cotización final `rechazada`: el cobro de la visita lo define la historia de cobro posterior (spec 020, decisión 8) y esta spec solo registra el resultado. Tiene vigencia de 48 horas (tarea `VencerCotizacionFinal`, spec 054): sin respuesta queda rechazada por vencimiento.
 - **R-15:** **Ajuste de precio (AJU-01).** El técnico propone un `montoNuevo` mayor que el tope de la cotización con un `motivo` de 8 a 300 caracteres; solo puede haber un ajuste pendiente por cotización, y el cálculo del tope y su aprobación son los de la spec 020 (`CotizacionTopeCalculator`).
-- **R-16:** **Decisión sobre el ajuste (AJU-02).** `decision` es `aprueba` o `rechaza` y es definitiva, con vigencia de 24 horas: sin respuesta queda rechazada por vencimiento y el precio sigue siendo el tope aprobado.
+- **R-16:** **Decisión sobre el ajuste (AJU-02).** `decision` es `aprueba` o `rechaza` y es definitiva, con vigencia de 24 horas (tarea `VencerAjuste`, spec 054): sin respuesta queda rechazada por vencimiento y el precio sigue siendo el tope aprobado.
 - **R-17:** **Avisos.** Cada cotización final y cada ajuste crea un aviso para el cliente, y cada decisión, uno para el técnico, por la bandeja de salida (specs 037 y 054); los avisos no llevan precios ni textos escritos por las personas.
 - **R-18:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
 - **R-19:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
@@ -75,7 +75,7 @@ Definir y especificar los endpoints COT-06, COT-07, AJU-01, AJU-02 del Excel de 
 - **CA-24:** Dado el caso «recurso no disponible», cuando llama `POST /api/v1/ajustes/{id}/decision`, entonces responde 404 con ProblemDetails y no cambia el estado.
 - **CA-25:** Dado el caso «el ajuste ya fue decidido o venció», cuando llama `POST /api/v1/ajustes/{id}/decision`, entonces responde 409 `adjustment_already_decided` con ProblemDetails y no cambia el estado.
 - **CA-26:** Dado el técnico de una visita con revisión previa terminada, cuando envía precio y descripción válidos, entonces se crea la cotización final y el cliente recibe un aviso; una segunda responde 409 `final_quote_not_allowed`.
-- **CA-27:** Dada una cotización final pendiente, cuando el cliente aprueba o rechaza, entonces queda decidida y no puede cambiarse; y si pasan 48 horas sin respuesta, entonces se trata como rechazada por vencimiento.
+- **CA-27:** Dada una cotización final pendiente, cuando el cliente aprueba o rechaza, entonces queda decidida y no puede cambiarse; si rechaza, la visita queda `terminada` con `resultado = solo_visita`; y si pasan 48 horas sin respuesta, se trata como rechazada por vencimiento.
 - **CA-28:** Dada una cotización aceptada, cuando el técnico propone un monto nuevo con motivo válido, entonces se crea el ajuste pendiente; con un ajuste ya pendiente responde 409 `adjustment_not_allowed`.
 - **CA-29:** Dado un ajuste pendiente, cuando el cliente decide o pasan 24 horas, entonces queda aprobado, rechazado o vencido y el precio de la cotización cambia solo si se aprobó.
 - **CA-30:** Dada una cotización final, un ajuste o su decisión, cuando se genera el aviso, entonces el evento solo lleva identificadores, sin precios ni texto escrito.
@@ -239,7 +239,7 @@ Las pruebas citan el caso como `CA_049_NN` en el nombre (para `python scripts/sd
 
 ## 11. Escenarios
 - **Cotización final:** el técnico termina la revisión previa → envía precio y descripción → el cliente recibe el aviso, la revisa y aprueba → el trabajo continúa con ese precio.
-- **Rechazo:** el cliente rechaza la cotización final → paga solo la visita → la visita queda `visita_pagada`.
+- **Rechazo:** el cliente rechaza la cotización final → la visita queda `terminada` con `resultado = solo_visita`.
 - **Ajuste:** el técnico pide subir el precio sobre el tope con su motivo → el cliente aprueba en 24 horas o el ajuste vence y se mantiene el tope.
 
 ## 12. Definición de terminado
@@ -255,15 +255,19 @@ Las pruebas citan el caso como `CA_049_NN` en el nombre (para `python scripts/sd
 - **D-01:** Se toma el Excel de endpoints como fuente del contrato porque es el insumo acordado para las specs; cualquier diferencia con las specs 020 a 038 se resuelve a favor de la spec numerada.
 - **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case (los de §5 y, si falta alguno, los que se fijen al implementar), siguiendo la convención de errores de la spec 002.
 - **D-03:** No se usa `Idempotency-Key`, aunque el Excel lo menciona en creaciones.
-- **D-04:** Vigencia de 48 horas para la cotización final y de 24 horas para el ajuste: el Excel no fija plazos.
-- **D-05:** Precio máximo de 100 000 pesos en la cotización final para evitar errores de captura.
-- **D-06:** El rechazo de la cotización final deja la visita como `visita_pagada` (solo se paga la visita), según el Excel.
-- **D-07:** El precio de la cotización final no se limita al tope de la cotización inicial, pero siempre exige la aprobación del cliente.
+- **D-04:** Vigencias de 48 horas (cotización final, igual que la solicitud de la spec 020) y de 24 horas (ajuste, una decisión rápida sobre un cambio pequeño): evitan que algo quede pendiente indefinidamente.
+- **D-05:** Sin precio máximo funcional: un tope arbitrario bloquearía trabajos grandes legítimos; la aprobación del cliente es el control.
+- **D-06:** El rechazo de la cotización final deja `resultado = solo_visita` y no crea un estado de pago: el cobro lo define su historia posterior.
+- **D-07:** El tope sobre el que se pide el ajuste es el de la spec 020 (precio fijo más 10 %; rango más 20 % o 25 % según el oficio).
+
+**Correcciones de la revisión del 2026-11-13** (se conserva lo propuesto antes y se explica el cambio)
+- **C-01:** Estado `visita_pagada`: antes un estado nuevo; ahora `resultado = solo_visita` (la spec 020 deja el cobro para una historia posterior).
+- **C-02:** Precio máximo de 100 000 pesos: eliminado.
+- **C-03:** Tope: la duda citaba 10 % para todo; la spec 020 R-14 fija 10 % para precio fijo y 20 % o 25 % para rangos.
 
 ## 15. Riesgos y dudas abiertas
-- Confirmar cómo se registra el pago de la visita rechazada si Knock no procesa pagos.
-- Confirmar que 100 000 pesos como máximo y las vigencias de 48 y 24 horas son las que quiere el equipo.
-- Confirmar si el cliente puede pedir cambios en vez de solo aprobar o rechazar la cotización final.
+- Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
+- Dependencias: tareas de vencimiento de la spec 054 y los topes de la spec 020. El cobro de la visita queda fuera de esta spec.
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: _____________________ fecha: __________

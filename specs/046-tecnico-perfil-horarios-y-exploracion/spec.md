@@ -73,14 +73,14 @@ Definir y especificar los endpoints TEC-01, TEC-02, TEC-03, TEC-04, TEC-05, TEC-
 - **R-36:** `GET /api/v1/explorar` (búsqueda específica): Bloques de la pestaña Explorar: servicios populares, trabajos reales, cerca de ti, mejor calificados e ideas, con el filtro elegido. Lo puede llamar: cualquier persona para el resumen y una persona con sesión para el detalle. Responde 200 cuando sale bien.
 - **R-37:** Entrada de `GET /api/v1/explorar`: Query: filtro (todo|auto|agua|luz), colonia. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo.
 - **R-38:** `GET /api/v1/explorar` se cachea (Sí, 1 minuto); la clave nunca incluye datos personales de otra persona y se invalida al escribir.
-- **R-39:** **Registro (TEC-01).** Crea el perfil del técnico en estado `pendiente_de_verificacion`: no recibe solicitudes hasta verificarse (spec 025). `oficios` de 1 a 5 de la lista cerrada; `atencion` solo `taller`, `domicilio` o `ambos`; `direccionTaller` obligatoria con taller (mínimo 8 caracteres) y nunca visible con atención a domicilio; `radioKm` de 3, 5, 8 o 12; `aceptaTerminos` verdadero. La persona es la del `sub` del token y solo puede tener un perfil.
-- **R-40:** **Búsqueda y mapa (TEC-02 y TEC-04).** `lat`, `lng` y los límites del mapa **no se guardan, no se registran, no se devuelven ni forman parte de la clave de caché**: se convierten en colonia o en celdas (spec 023, R-12). Solo aparecen técnicos verificados y no ocultos. `orden` es `distancia`, `calificacion` o `recomendadas`; el mapa devuelve hasta 200 elementos agrupados por celda según `zoom` (de 1 a 20; fuera de rango, 422).
+- **R-39:** **Registro (TEC-01).** Crea el perfil del técnico con `estado = activo`, el que usa la elegibilidad de la spec 028; **la verificación de identidad es opcional** (spec 025) y solo agrega la insignia. `oficios` es una lista de uno o más oficios activos del catálogo, sin repetir y sin máximo propio; `atencion` solo `taller`, `domicilio` o `ambos`; `direccionTaller` obligatoria con taller (mínimo 8 caracteres) y nunca visible con atención a domicilio; `radioKm` de 3, 5, 8 o 12; `aceptaTerminos` verdadero. La persona es la del `sub` del token y solo puede tener un perfil.
+- **R-40:** **Búsqueda y mapa (TEC-02 y TEC-04).** `lat`, `lng` y los límites del mapa **no se guardan, no se registran, no se devuelven ni forman parte de la clave de caché**: se convierten en colonia o en celdas (spec 023, R-12). Solo aparecen técnicos `activo` y no ocultos (spec 027). TEC-02 reutiliza el almacén y los índices de la spec 027 y atiende **filtros estructurados** (oficio, colonia, radio, `disponibleHoy`, `soloVerificados`, `orden`); **no recibe `q`**: la búsqueda por texto libre es `/busqueda` de la 027. `orden` es `distancia`, `calificacion` o `recomendadas`; el mapa devuelve hasta 200 elementos agrupados por celda según `zoom` (de 1 a 20; fuera de rango, 422).
 - **R-41:** **Autocompletar (TEC-03).** `q` de 2 a 40 caracteres (letras, números y espacios); hasta 8 sugerencias; es público y por eso tiene límite por IP; el texto buscado no se registra junto con la persona.
 - **R-42:** **Perfil (TEC-05).** Sin sesión devuelve solo el resumen (foto, verificación, calificación, experiencia y descripción corta); con sesión suma servicios, precios, colonias, fotos y horarios. Nunca devuelve teléfono ni dirección; un técnico oculto responde 404 `technician_not_found`.
 - **R-43:** **Llega a mi colonia (TEC-06).** Responde `{ atiende: bool }` comparando la colonia consultada con las que atiende el técnico; una `colonia` que no está en el catálogo responde 422 `errors.colonia`.
 - **R-44:** **Fotos de trabajos (TEC-07).** Solo fotos de trabajos terminados con permiso del cliente (spec 050, VIS-11) y que pasaron la moderación (spec 031); se entregan con las direcciones de imágenes públicas de la spec 032 y se paginan por cursor, 20 por defecto.
 - **R-45:** **Editar perfil (TEC-08).** Cambian solo los campos enviados; rigen las reglas de TEC-01 más `nombreNegocio` de hasta 60 caracteres, `descripcion` de hasta 300 y `anios` de 0 a 60; `fotoUrl` se acepta solo si viene de la subida del servidor (spec 032) y pasa moderación; al guardar se invalida la caché del perfil.
-- **R-46:** **Disponibilidad (TEC-09).** Solo un técnico verificado puede activar `disponibleHoy`; sin verificación responde 403 `technician_not_verified`. El interruptor no se apaga solo.
+- **R-46:** **Disponibilidad (TEC-09).** `disponibleHoy = true` fija `disponibleHasta` a las 23:59:59 de hoy en la hora de la ciudad (`America/Mexico_City`) y `false` lo fija en este momento; así se apaga sola a la medianoche (HU-019, spec 028). La respuesta devuelve `disponibleHoy` y `disponibleHasta`. No exige verificación de identidad.
 - **R-47:** **Horarios (TEC-10 y TEC-11).** Siete días, cada uno `abierto` o cerrado con una o dos franjas `HH:mm` de 24 horas en la hora de la ciudad, con inicio anterior al fin y sin traslapes; `PUT` reemplaza la lista completa y una franja inválida responde 422.
 - **R-48:** **Reputación (TEC-13).** Calificación promedio con un decimal, distribución por estrellas de 1 a 5 y nivel, calculados con las opiniones (spec 051); se cachea 1 minuto por técnico.
 - **R-49:** **Explorar (TEC-14).** `filtro` es `todo`, `auto`, `agua` o `luz` y `colonia` es opcional; cada bloque (servicios populares, trabajos reales, cerca de ti, mejor calificados e ideas) tiene como máximo 10 elementos; sin sesión devuelve solo los bloques públicos; se cachea 1 minuto por filtro y colonia.
@@ -144,14 +144,14 @@ Definir y especificar los endpoints TEC-01, TEC-02, TEC-03, TEC-04, TEC-05, TEC-
 - **CA-52:** Dado el rol «cualquier persona para el resumen y una persona con sesión para el detalle», cuando llama `GET /api/v1/explorar` con datos válidos, entonces responde 200 con lo descrito en §5.
 - **CA-53:** Dado un valor inválido según las reglas de §6, cuando llama `GET /api/v1/explorar`, entonces responde 422 con `errors.<campo>`, no repite el valor y no devuelve datos.
 - **CA-54:** Dada una consulta repetida dentro del tiempo de caché, cuando llega la segunda, entonces se responde desde la caché y la base recibe una sola consulta.
-- **CA-55:** Dada una persona sin perfil, cuando se registra con datos válidos, entonces se crea el perfil `pendiente_de_verificacion`; con un radio fuera de 3, 5, 8 o 12, más de 5 oficios o sin términos responde 422; y si ya es técnico responde 409 `already_a_technician`.
-- **CA-56:** Dada una búsqueda con coordenadas, cuando se inspeccionan registros, caché y respuesta, entonces no aparecen coordenadas; y un técnico no verificado u oculto no sale en la lista ni en el mapa.
+- **CA-55:** Dada una persona sin perfil, cuando se registra con datos válidos, entonces se crea el perfil `activo` sin exigir verificación; con un radio fuera de 3, 5, 8 o 12, un oficio repetido o inactivo o sin términos responde 422; y si ya es técnico responde 409 `already_a_technician`.
+- **CA-56:** Dada una búsqueda con coordenadas, cuando se inspeccionan registros, caché y respuesta, entonces no aparecen coordenadas; un técnico suspendido u oculto no sale en la lista ni en el mapa; y un parámetro `q` en TEC-02 se ignora.
 - **CA-57:** Dado un `q` de 1 o de más de 40 caracteres o con símbolos, cuando se consulta, entonces responde 422; con uno válido recibe hasta 8 sugerencias.
 - **CA-58:** Dado un perfil visible, cuando lo consulta alguien sin sesión, entonces recibe solo el resumen; con sesión, el detalle; y en ambos casos sin teléfono ni dirección.
 - **CA-59:** Dado un técnico y una colonia del catálogo, cuando se consulta, entonces responde si la atiende; con una colonia inexistente responde 422.
 - **CA-60:** Dado un técnico con fotos con y sin permiso, cuando se consultan, entonces solo salen las permitidas y moderadas, paginadas.
 - **CA-61:** Dado un técnico, cuando cambia solo su descripción, entonces el resto del perfil no cambia y la caché del perfil se invalida; con una `fotoUrl` ajena responde 422.
-- **CA-62:** Dado un técnico sin verificar, cuando activa la disponibilidad, entonces responde 403 `technician_not_verified`; verificado, queda activa hasta que él la apague.
+- **CA-62:** Dado un técnico, cuando activa «Disponible hoy», entonces `disponibleHasta` queda a las 23:59:59 de hoy y deja de ser elegible al pasar esa hora; al apagarlo, deja de serlo de inmediato.
 - **CA-63:** Dado un horario con franjas traslapadas o con inicio posterior al fin, cuando se guarda, entonces responde 422 y no cambia el horario anterior.
 - **CA-64:** Dado un técnico con opiniones, cuando consulta su reputación, entonces recibe promedio, distribución y nivel coherentes con sus opiniones.
 - **CA-65:** Dado un filtro válido, cuando se consulta Explorar, entonces cada bloque trae como máximo 10 elementos; con un filtro fuera de la lista responde 422.
@@ -354,9 +354,9 @@ Las pruebas citan el caso como `CA_046_NN` en el nombre (para `python scripts/sd
 | Rendimiento | No aplica | Sin ruta crítica; se mide solo si la spec 034 lo pide |
 
 ## 11. Escenarios
-- **Registro:** una persona toca «Quiero ser técnico» → llena oficios, forma de atención, radio y términos → queda pendiente de verificación y se le pide la verificación de identidad.
+- **Registro:** una persona toca «Quiero ser técnico» → llena oficios, forma de atención, radio y términos → queda activo y se le ofrece verificar su identidad para obtener la insignia.
 - **Explorar:** el cliente abre Explorar con su colonia → ve bloques de técnicos y trabajos reales → entra al perfil, donde con sesión ve servicios, precios y horarios.
-- **Disponible hoy:** el técnico verificado activa el interruptor → aparece en búsquedas y mapa; sin verificación, la app le explica por qué no puede.
+- **Disponible hoy:** el técnico activa el interruptor → aparece en búsquedas y mapa hasta la medianoche.
 
 ## 12. Definición de terminado
 - Los criterios de aceptación están cubiertos por pruebas en verde y `sdd_lint --trace 046` sin faltantes.
@@ -371,15 +371,21 @@ Las pruebas citan el caso como `CA_046_NN` en el nombre (para `python scripts/sd
 - **D-01:** Se toma el Excel de endpoints como fuente del contrato porque es el insumo acordado para las specs; cualquier diferencia con las specs 020 a 038 se resuelve a favor de la spec numerada.
 - **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case (los de §5 y, si falta alguno, los que se fijen al implementar), siguiendo la convención de errores de la spec 002.
 - **D-03:** No se usa `Idempotency-Key`, aunque el Excel lo menciona en creaciones.
-- **D-04:** El perfil nace `pendiente_de_verificacion` y solo recibe solicitudes cuando la verificación de la spec 025 lo marca como verificado.
-- **D-05:** La disponibilidad no se apaga sola: es el técnico quien la controla (la app puede recordárselo).
-- **D-06:** El mapa agrupa por celdas según el zoom para devolver como máximo 200 elementos.
-- **D-07:** Máximo 5 oficios por técnico: el Excel solo pide «al menos uno».
+- **D-04:** El perfil nace `activo` y la verificación es opcional, como dice el Excel: exigirla frenaría el arranque del marketplace y la 028 ya define la elegibilidad sin ella.
+- **D-05:** La disponibilidad se guarda como `disponibleHasta` (apagado a medianoche) porque así la lee la spec 028; `disponibleHoy` es el valor derivado que usa el cliente.
+- **D-06:** TEC-02 solo filtra y ordena; el texto libre es de `/busqueda`: así no hay dos buscadores con las mismas reglas.
+- **D-07:** Sin máximo de oficios: cada técnico elige entre los oficios activos del catálogo, que ya es corto.
+- **D-08:** El mapa agrupa por celdas según el zoom para devolver como máximo 200 elementos, como pide el Excel.
+
+**Correcciones de la revisión del 2026-11-13** (se conserva lo propuesto antes y se explica el cambio)
+- **C-01:** Estado y verificación: antes `pendiente_de_verificacion` y exigir verificación para estar disponible; ahora `activo` y verificación opcional (Excel y spec 028).
+- **C-02:** Disponibilidad: antes un interruptor que no se apagaba solo; ahora `disponibleHasta` con apagado a medianoche (spec 028).
+- **C-03:** Búsqueda: antes `/tecnicos` aceptaba `q`; ahora el texto libre queda en `/busqueda` (spec 027).
+- **C-04:** Oficios: antes máximo 5 sin respaldo; ahora sin máximo propio.
 
 ## 15. Riesgos y dudas abiertas
-- TEC-12 (resumen del técnico) ya lo cubre la spec 036 con `/tecnicos/me/trabajo`; el Excel conserva el nombre antiguo.
-- La búsqueda por texto vive en la spec 027 (`/busqueda`): confirmar que `/tecnicos` y `/explorar` comparten sus índices y no la duplican.
-- Confirmar el máximo de 5 oficios y la regla de que un técnico solo con «otro oficio» no recibe solicitudes.
+- Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
+- Dependencias: almacén de búsqueda de la spec 027, elegibilidad de la 028 y la insignia de verificación de la 025. TEC-12 (resumen) ya lo cubre la spec 036 con `/tecnicos/me/trabajo`.
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: _____________________ fecha: __________

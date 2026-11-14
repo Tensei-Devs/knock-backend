@@ -38,8 +38,8 @@ Definir y especificar los endpoints SRV-01, SRV-02, SRV-03, SRV-04 del Excel de 
 - **R-10:** `DELETE /api/v1/tecnicos/me/servicios/{id}` (borrar): Quita un servicio. Lo puede llamar: técnico (dueño). Responde 204 cuando sale bien.
 - **R-11:** Entrada de `DELETE /api/v1/tecnicos/me/servicios/{id}`: Ruta: id. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400.
 - **R-12:** Estados de `DELETE /api/v1/tecnicos/me/servicios/{id}`: 404 `service_not_found`. Los códigos de negocio van en inglés y en snake_case.
-- **R-13:** **Datos del servicio (SRV-02 y SRV-03).** `nombre` de 1 a 60 caracteres, `detalle` de hasta 150, `precioReferencia` entero positivo en pesos con máximo 100 000 y `oficio` de la lista cerrada y entre los oficios del técnico. En la edición (`PUT`) cambian solo los campos enviados.
-- **R-14:** **Límite por técnico.** Cada técnico puede tener como máximo 30 servicios; el 31.º responde 409 `service_limit_reached`.
+- **R-13:** **Datos del servicio (SRV-02 y SRV-03).** `nombre` de 1 a 60 caracteres, `detalle` de hasta 150, `precioReferencia` entero positivo en pesos (sin tope de negocio; el límite es el del tipo `int32`) y `oficio` activo del catálogo y entre los oficios del técnico, para mantener la coherencia con la elegibilidad de la spec 028. En la edición (`PUT`) cambian solo los campos enviados.
+- **R-14:** **Límite por técnico.** Cada técnico puede tener hasta 50 servicios (tope de cordura contra abuso); el 51.º responde 409 `service_limit_reached`.
 - **R-15:** **Propiedad (SRV-03 y SRV-04).** Un técnico solo edita y elimina sus propios servicios; uno ajeno responde 404 `service_not_found`, sin revelar que existe. Al eliminar, el servicio se borra y deja de verse de inmediato.
 - **R-16:** **Lectura (SRV-01).** Cualquier persona con sesión ve los servicios y los precios de referencia de un técnico visible; no hay paginación (máximo 30); caché de 1 minuto que se invalida al crear, editar o eliminar. Un técnico oculto responde 404 `technician_not_found`.
 - **R-17:** **El precio es de referencia.** El `precioReferencia` solo orienta al cliente y a la referencia de mercado: no obliga al técnico y no sustituye a la cotización de cada solicitud.
@@ -71,7 +71,7 @@ Definir y especificar los endpoints SRV-01, SRV-02, SRV-03, SRV-04 del Excel de 
 - **CA-20:** Dado un valor inválido según las reglas de §6, cuando llama `DELETE /api/v1/tecnicos/me/servicios/{id}`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
 - **CA-21:** Dado el caso «el servicio no existe o no es del técnico», cuando llama `DELETE /api/v1/tecnicos/me/servicios/{id}`, entonces responde 404 `service_not_found` con ProblemDetails y no cambia el estado.
 - **CA-22:** Dado un técnico, cuando agrega un servicio con datos válidos, entonces queda creado; con un precio de 0 o negativo, un nombre de más de 60 caracteres o un oficio que no es suyo responde 422.
-- **CA-23:** Dado un técnico con 30 servicios, cuando agrega uno más, entonces responde 409 `service_limit_reached` y no lo guarda.
+- **CA-23:** Dado un técnico con 50 servicios, cuando agrega uno más, entonces responde 409 `service_limit_reached` y no lo guarda.
 - **CA-24:** Dado el servicio de otro técnico, cuando se intenta editar o borrar, entonces responde 404 `service_not_found` y no cambia nada.
 - **CA-25:** Dado un técnico con servicios, cuando una persona con sesión los consulta, entonces los recibe ordenados por nombre; tras editar uno, la siguiente consulta ya muestra el cambio.
 - **CA-26:** Dada una cotización de una solicitud, cuando el técnico envía un precio distinto del precio de referencia de su servicio, entonces se acepta mientras cumpla las reglas de la spec 020.
@@ -216,13 +216,18 @@ Las pruebas citan el caso como `CA_047_NN` en el nombre (para `python scripts/sd
 - **D-01:** Se toma el Excel de endpoints como fuente del contrato porque es el insumo acordado para las specs; cualquier diferencia con las specs 020 a 038 se resuelve a favor de la spec numerada.
 - **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case (los de §5 y, si falta alguno, los que se fijen al implementar), siguiendo la convención de errores de la spec 002.
 - **D-03:** No se usa `Idempotency-Key`, aunque el Excel lo menciona en creaciones.
-- **D-04:** Máximo 30 servicios por técnico: el Excel no fija el límite y 30 cubre un catálogo amplio.
-- **D-05:** El precio de referencia tiene un máximo de 100 000 pesos, igual que la cotización final (spec 049).
-- **D-06:** Eliminar un servicio lo borra; no hay historial porque las cotizaciones ya guardan su propio precio.
+- **D-04:** Sin tope de negocio al precio de referencia: es solo una guía y las cotizaciones reales ya se validan en la spec 020; un tope arbitrario bloquearía trabajos grandes legítimos.
+- **D-05:** Máximo 50 servicios por técnico: tope de cordura.
+- **D-06:** El servicio debe ser de un oficio que el técnico ofrece, para no mostrar servicios por los que nunca recibirá solicitudes.
+- **D-07:** Eliminar un servicio lo borra: las cotizaciones guardan su propio precio.
+
+**Correcciones de la revisión del 2026-11-13** (se conserva lo propuesto antes y se explica el cambio)
+- **C-01:** Precio: antes máximo de 100 000 pesos; ahora sin tope de negocio.
+- **C-02:** Servicios por técnico: antes 30; ahora 50 como tope de cordura.
 
 ## 15. Riesgos y dudas abiertas
-- Confirmar el límite de 30 servicios por técnico y el máximo de 100 000 pesos.
-- Confirmar si un servicio debe poder desactivarse sin borrarse (hoy solo se elimina).
+- Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
+- Dependencia: oficios y elegibilidad de las specs 028 y 046.
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: _____________________ fecha: __________

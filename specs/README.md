@@ -46,7 +46,7 @@ Cada carpeta tiene `spec.md`, `plan.md` y `task.md`. Estados: Borrador → Aprob
 | 039 | Cuenta y datos personales: cambio de número, recuperación de acceso, exportación, consentimien… | Borrador | [`039-cuenta-y-datos-personales`](039-cuenta-y-datos-personales/spec.md) |
 | 040 | Direcciones del cliente | Borrador | [`040-direcciones-del-cliente`](040-direcciones-del-cliente/spec.md) |
 | 041 | Mi casa y mi auto | Borrador | [`041-mi-casa-y-mi-auto`](041-mi-casa-y-mi-auto/spec.md) |
-| 042 | Contactos de confianza y técnicos de confianza | Borrador | [`042-contactos-y-tecnicos-de-confianza`](042-contactos-y-tecnicos-de-confianza/spec.md) |
+| 042 | Técnicos de confianza | Borrador | [`042-tecnicos-de-confianza`](042-tecnicos-de-confianza/spec.md) |
 | 043 | Bloqueos entre personas y reportes con apelación | Borrador | [`043-bloqueos-y-reportes`](043-bloqueos-y-reportes/spec.md) |
 | 044 | Avisos dentro de la app y preferencias de avisos | Borrador | [`044-avisos-dentro-de-la-app`](044-avisos-dentro-de-la-app/spec.md) |
 | 045 | Catálogo de oficios, oficios pedidos y lista de espera (consulta interna) | Borrador | [`045-catalogos-y-lista-de-espera`](045-catalogos-y-lista-de-espera/spec.md) |
