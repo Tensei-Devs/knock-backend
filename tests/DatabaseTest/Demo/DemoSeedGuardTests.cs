@@ -14,10 +14,11 @@ public sealed class DemoSeedGuardTests
     [InlineData("mongodb://remote.invalid")]
     [InlineData("mongodb://localhost,remote.invalid")]
     [InlineData("mongodb+srv://localhost")]
-    [InlineData("mongodb://fake:example@remote.invalid")]
+    [InlineData("remote.invalid", true)]
     [InlineData("mongodb://localhost.remote.invalid")]
-    public async Task NonLocalHost_CA_038_12(string connection)
+    public async Task NonLocalHost_CA_038_12(string connection, bool credentials = false)
     {
+        if (credentials) { connection = new MongoUrlBuilder { Server = new MongoServerAddress(connection), Username = "fake", Password = "example" }.ToString(); }
         var fixture = await DocumentDbFixture.SharedAsync();
         using var client = new MongoClient(fixture.ConnectionString);
         var db = client.GetDatabase("s038_guard_" + Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(8)));
@@ -37,9 +38,10 @@ public sealed class DemoSeedGuardTests
     [InlineData("mongodb://127.0.0.1")]
     [InlineData("mongodb://documentdb-local")]
     [InlineData("mongodb://localhost,documentdb-local")]
-    [InlineData("mongodb://fake:example@localhost")]
-    public async Task LocalHostsAreAccepted_CA_038_12(string connection)
+    [InlineData("localhost", true)]
+    public async Task LocalHostsAreAccepted_CA_038_12(string connection, bool credentials = false)
     {
+        if (credentials) { connection = new MongoUrlBuilder { Server = new MongoServerAddress(connection), Username = "fake", Password = "example" }.ToString(); }
         var fixture = await DocumentDbFixture.SharedAsync();
         using var client = new MongoClient(fixture.ConnectionString);
         var users = client.GetDatabase("s038_guard_empty").GetCollection<BsonDocument>("usuarios");
