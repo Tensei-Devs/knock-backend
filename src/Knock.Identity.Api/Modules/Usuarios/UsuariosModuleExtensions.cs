@@ -14,6 +14,8 @@ public static class UsuariosModuleExtensions
         ArgumentNullException.ThrowIfNull(services);
         services.TryAddSingleton(TimeProvider.System);
         services.AddOptions<ProfileOptions>().BindConfiguration(ProfileOptions.SectionName);
+        services.AddOptions<ProfileCacheOptions>().BindConfiguration(ProfileCacheOptions.SectionName);
+        services.AddSingleton<IValidateOptions<ProfileCacheOptions>, ProfileCacheOptionsValidator>();
         services.AddSingleton<IUsuariosStore, UsuariosStore>();
         services.AddSingleton<IProfileCache, RedisProfileCache>();
         services.AddHttpContextAccessor();
