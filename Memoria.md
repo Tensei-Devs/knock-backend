@@ -620,3 +620,8 @@
 - **Por qué:** el generador del cliente de la app lee un solo archivo y el `contracts/openapi.v1.json` del frontend era el de Identidad, desactualizado (solo `/health` y `/auth/firebase`). El script falla si una ruta o un esquema chocan, y `ProblemDetails` es idéntico en los dos contratos.
 - **Pendiente de una persona:** el secreto `FRONTEND_CONTRACT_TOKEN` (token de grano fino solo para knock-frontend, Contents y Pull requests, vence el 2026-12-13), la primera corrida manual (de prueba) y revisar el artefacto; la primera publicación real ocurre al llegar a `develop` un cambio de contrato o del propio workflow. No se ejecutó el workflow completo todavía.
 - **A evitar:** editar a mano `contracts/openapi.v1.json` o `app/packages/knock_api/`; poner el token en una URL o en el script; empujar con force a la rama del PR automático.
+
+## 2026-11-14 — Spec 038 aprobada: semillas de demo de clientes (KNOCK-40)
+- **Qué cambió:** `specs/038-semillas-de-demo-de-clientes/spec.md` pasa de Borrador a Aprobada. La firma, la fecha y la casilla «Sin conflicto con la constitución» las marcó José a mano; el único cambio de esta PR es esa aprobación y esta entrada.
+- **Pendiente para implementar (T-01):** resolver la frontera de datos de Identidad (la spec menciona `IdentityStore` y `Modules/Identity`, y hoy el servicio tiene `Modules/Sesiones` y `Modules/Usuarios/Data/UsuariosStore.cs`) sin `IMongoCollection` propio (CA-08), y confirmar que no hay caché de perfil que invalidar. Ninguna prueba de la 038 está ejecutada todavía.
+- **A evitar:** cargar las semillas contra un host que no sea `localhost`, `127.0.0.1` o `documentdb-local`; la guarda no tiene bandera para omitirla (R-07).
