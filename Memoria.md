@@ -539,3 +539,7 @@
 ## 2026-11-13 — Estado real de las tareas de la spec 005 (KNOCK-34)
 - **Qué cambió:** `specs/005-infraestructura-en-azure-con-terraform/task.md` marca T-01 a T-05 y T-07 como hechas (módulo compartido y módulo por servicio en `deploy/modules/`, estado remoto `azurerm`, identidades y roles, importación del clúster con `prevent_destroy` y `deploy/README.md`) y T-06 como parcial. Antes decía «pendiente» en todas.
 - **Pendiente:** una creación desde cero registrada con `deploy/up.sh --apply` y la salida del plan sin cambios (CA-02); eliminar y destruir desde el pipeline son KNOCK-165. En Azure (`rg-knock-dev`) existen las cinco Container Apps, el entorno, el registro, el clúster, Key Vault y Storage.
+
+## 2026-11-13 — Dependencias autorizadas de Media (KNOCK-208, OI-2)
+- **Decisión (Tech Lead):** se autorizan `Azure.Storage.Blobs` 12.30.1, `SkiaSharp` 4.153.1 y `SkiaSharp.NativeAssets.Linux.NoDependencies` 4.153.1 en `Knock.Market.Api`, solo para el flujo de Media (cuarentena, foto procesada y registros). La condición es que Trivy y SCA sigan sin vulnerabilidades.
+- **Fuera de este PR:** el cambio de Terraform de Market a 1 Gi lo confirma el Tech Lead, y el 503 con `Retry-After` queda para OI-3.
