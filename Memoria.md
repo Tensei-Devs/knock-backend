@@ -634,3 +634,9 @@
 - **Qué cambió:** `specs/038-semillas-de-demo-de-clientes/spec.md` pasa de Borrador a Aprobada. La firma, la fecha y la casilla «Sin conflicto con la constitución» las marcó José a mano; el único cambio de esta PR es esa aprobación y esta entrada.
 - **Pendiente para implementar (T-01):** resolver la frontera de datos de Identidad (la spec menciona `IdentityStore` y `Modules/Identity`, y hoy el servicio tiene `Modules/Sesiones` y `Modules/Usuarios/Data/UsuariosStore.cs`) sin `IMongoCollection` propio (CA-08), y confirmar que no hay caché de perfil que invalidar. Ninguna prueba de la 038 está ejecutada todavía.
 - **A evitar:** cargar las semillas contra un host que no sea `localhost`, `127.0.0.1` o `documentdb-local`; la guarda no tiene bandera para omitirla (R-07).
+
+## 2026-11-14 — Spec 023: el byte nulo codificado responde 400 del servidor, no 422 (KNOCK-47)
+- **Decisión (Tech Lead):** se acepta que `GET /api/v1/zonas/cp/42800%00` lo rechace Kestrel con 400 sin cuerpo antes de la app, y se ajusta el texto de la spec 023 (R-01, CA-03, su fila de pruebas y la lista de negativos) en lugar de cambiar código. Un `\0` literal o `%2500` sí llega al validador y responde 422, como prueba CA-03.
+- **Por qué:** el rechazo ocurre dentro de Kestrel; el gateway también corre sobre Kestrel, así que el 400 sale antes de llegar a Mercado. No hay nada razonable que hacer en la aplicación.
+- **Alcance:** solo texto de `specs/023-zona-por-ubicacion-o-codigo-postal/spec.md`; no se tocó ningún campo de aprobación ni el código.
+- **A evitar:** esperar 422 para `%00` en pruebas o en el DAST; es 400 del servidor.
