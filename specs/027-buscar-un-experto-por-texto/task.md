@@ -1,6 +1,6 @@
 # Tareas 027 — Buscar un experto por texto
 
-> **Estado:** T-01 a T-03 activadas por una persona; las demás siguen pendientes.
+> **Estado:** T-01 a T-04 activadas por una persona; las demás siguen pendientes.
 > **Responsable sugerido de la historia:** Alexis (KNOCK-66). Revisión de par: Guillermo.
 
 | Tarea | Qué se hace | Cubre | Depende de | En paralelo con | Responsable sugerido | Estado |
@@ -8,7 +8,7 @@
 | T-01 | Script de `db/` con `sinonimos`, `catalogo_meta`, `busquedas_sin_resultado` (TTL 90 días) e índices de `tecnicos`; semilla de sinónimos; carga en `entrega.js` | R-12, R-13 · CA-03, CA-14 | — | T-02, T-06 | Alexis | hecha |
 | T-02 | Ampliar `SearchNameNormalizer` y escribir `InterpretadorDeConsulta` con sus unitarias | R-02, R-04, R-05 · CA-02, CA-05, CA-06 | — | T-01, T-06 | Alexis | hecha |
 | T-03 | Escribir `OrdenDeResultados` y `CursorDeBusqueda` (huella, tope de 100) con unitarias | R-09, R-11 · CA-08, CA-10, CA-11 | — | T-01, T-02 | Alexis | hecha |
-| T-04 | Escribir `BusquedaStore` (`$geoNear`, filtros de estado, cobertura, prefijos, conteo anónimo) con integración | R-06, R-07, R-08, R-12, R-15 · CA-04, CA-07, CA-09 | T-01 | T-05 | Alexis | pendiente |
+| T-04 | Escribir `BusquedaStore` (`$geoNear`, filtros de estado, cobertura, prefijos, conteo anónimo) con integración | R-06, R-07, R-08, R-12, R-15 · CA-04, CA-07, CA-09 | T-01 | T-05 | Alexis | hecha |
 | T-05 | Escribir `BusquedaService`: coordinación, caché de 30 s, filtro de datos personales (spec 024) antes de contar, 503 | R-03, R-10, R-12, R-13, R-16 · CA-01, CA-03, CA-13, CA-14, CA-15, CA-17 | T-02, T-03 | T-04 | Alexis | pendiente |
 | T-06 | Política `busqueda` en el gateway (30 por minuto por `sub`) y ruta a Mercado | R-14 · CA-16 | — | T-01 a T-03 | Guillermo | pendiente |
 | T-07 | `BusquedaController`, DTOs y `BusquedaQueryValidator` (parámetros repetidos, `limit`, `q`) | R-01, R-02, R-03 · CA-12 | T-05 | — | Alexis | pendiente |
