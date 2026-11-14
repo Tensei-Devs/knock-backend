@@ -3,7 +3,7 @@
 > TT-API-03 (KNOCK-37). Los valores salen de `src/Knock.Api/appsettings.json` (sección `RateLimiting`), sin secretos, y se afinan con el k6 de TT-QA-02.
 > Orden en el pipeline: `docs/MIDDLEWARES.md`. Implementación: `src/Knock.Api/Hosting/RateLimitingExtensions.cs`.
 
-## Políticas (solo por IP)
+## Políticas por IP
 
 | Política | Alcance | Límite (punto de partida) | Ventana | Clave de partición |
 |---|---|---|---|---|
@@ -38,6 +38,10 @@
 - Un valor de red demasiado amplio también permite evadir el límite: usar el CIDR mínimo del ingress.
 
 - `/api/v1/colonias/en-punto` va bajo la política global por IP sin exención (TT-API-07, KNOCK-141).
+
+## Lista de espera en Mercado (spec 023, KNOCK-47)
+
+`POST /api/v1/zonas/lista-espera` tiene además una política por `sub` del JWT de **5 peticiones por hora**, ventana fija, por proceso; la respuesta 429 incluye `Retry-After`. Con una réplica el límite es de 5; con dos puede alcanzar 10 por hora. El límite compartido en Redis queda para KNOCK-247. Se mantienen los límites globales del gateway y el límite por IP de Mercado.
 
 ## Gateway (spec 009, KNOCK-204)
 
