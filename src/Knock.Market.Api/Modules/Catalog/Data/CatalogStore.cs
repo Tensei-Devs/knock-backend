@@ -13,12 +13,14 @@ namespace Knock.Market.Api.Modules.Catalog.Data;
 /// ninguna entrada se arma como JSON. Cada consulta lleva <c>maxTimeMS</c> (<c>Mongo:QueryMaxTimeSeconds</c>).
 /// </summary>
 /// <remarks>
-/// Caché declarada (spec §5; la capa cache-aside es de TT-BD-08): oficios 86400 s; colonias por CP y por <c>_id</c> + CP 86400 s;
-/// colonia por punto sin caché, porque la clave llevaría coordenadas.
+/// Caché en Redis (spec 010, R-01, R-02 y R-04, vía <see cref="ICatalogCache"/>): oficios, colonias por CP y por <c>_id</c> + CP con
+/// vida de 24 horas; colonia por punto sin caché, porque la clave llevaría coordenadas. Escribir (semillas) invalida las claves
+/// afectadas antes de responder.
 /// </remarks>
 internal sealed class CatalogStore(
     [FromKeyedServices(CatalogModuleExtensions.ModuleKey)] IMongoDatabase database,
-    IOptions<KnockMongoOptions> mongoOptions)
+    IOptions<KnockMongoOptions> mongoOptions,
+    ICatalogCache cache)
 {
     public const string OficiosCollection = "oficios";
     public const string ColoniasCollection = "colonias";
@@ -88,11 +90,20 @@ internal sealed class CatalogStore(
     /// <summary>Oficios activos ordenados por <c>nombreBusqueda</c> y, a igual valor, por <c>clave</c> (spec TT-PRU-01 §8 D4).</summary>
     public async Task<IReadOnlyList<OficioListing>> FindActiveOficiosAsync(CancellationToken cancellationToken)
     {
+        if (await cache.GetOficiosAsync(cancellationToken) is { } cached)
+        {
+            return cached;
+        }
+
+        // La generación se captura antes de leer MongoDB: si la siembra invalida entre medias, el guardado se descarta y no resucita lo viejo.
+        var generation = await cache.GetOficiosGenerationAsync(cancellationToken);
         var documents = await ActiveOficiosQuery().ToListAsync(cancellationToken);
-        return [.. documents.Select(document => new OficioListing(
+        var oficios = documents.Select(document => new OficioListing(
             document[ClaveField].AsString,
             document[NombreField].AsString,
-            document[ModalidadField].AsString))];
+            document[ModalidadField].AsString)).ToList();
+        await cache.SetOficiosIfGenerationAsync(oficios, generation, cancellationToken);
+        return oficios;
     }
 
     /// <summary>Colonias cuyo polígono contiene o toca el punto (<c>$geoIntersects</c>), con el desempate; la primera o nada.</summary>
@@ -105,16 +116,45 @@ internal sealed class CatalogStore(
 
     public async Task<IReadOnlyList<string>> FindNamesByPostalCodeAsync(string postalCode, CancellationToken cancellationToken)
     {
+        if (await cache.GetNeighborhoodNamesAsync(postalCode, cancellationToken) is { } cached)
+        {
+            return cached;
+        }
+
+        var generation = await cache.GetNeighborhoodNamesGenerationAsync(postalCode, cancellationToken);
         var documents = await NamesByPostalCodeQuery(postalCode).ToListAsync(cancellationToken);
-        return documents.Select(document => document[NombreField].AsString).ToList();
+        var names = documents.Select(document => document[NombreField].AsString).ToList();
+        await cache.SetNeighborhoodNamesIfGenerationAsync(postalCode, names, generation, cancellationToken);
+        return names;
     }
 
     /// <summary>Indica si hay alguna colonia con ese <c>nombreBusqueda</c> (nombre ya normalizado con <c>SearchNameNormalizer</c>).</summary>
     public async Task<bool> ColoniaNameExistsAsync(string normalizedName, CancellationToken cancellationToken) =>
         await ColoniaNameExistsQuery(normalizedName).FirstOrDefaultAsync(cancellationToken) is not null;
 
-    public async Task<bool> ColoniaExistsAsync(ObjectId id, string postalCode, CancellationToken cancellationToken) =>
-        await ColoniaExistsQuery(id, postalCode).FirstOrDefaultAsync(cancellationToken) is not null;
+    public async Task<bool> ColoniaExistsAsync(ObjectId id, string postalCode, CancellationToken cancellationToken)
+    {
+        if (await cache.GetColoniaExistsAsync(id, postalCode, cancellationToken) is { } cached)
+        {
+            return cached;
+        }
+
+        var generation = await cache.GetColoniaExistsGenerationAsync(id, postalCode, cancellationToken);
+        var exists = await ColoniaExistsQuery(id, postalCode).FirstOrDefaultAsync(cancellationToken) is not null;
+        await cache.SetColoniaExistsIfGenerationAsync(id, postalCode, exists, generation, cancellationToken);
+        return exists;
+    }
+
+    public async Task<(double Latitude, double Longitude)?> FindCenterAsync(ObjectId id, CancellationToken cancellationToken)
+    {
+        var document = await Colonias.Find(_filter.Eq(IdField, id), _findOptions)
+            .Project(Builders<BsonDocument>.Projection.Include(CentroField)).FirstOrDefaultAsync(cancellationToken);
+        if (document is null || !document.TryGetValue(CentroField, out var center) || !center.IsBsonDocument ||
+            !center.AsBsonDocument.TryGetValue("coordinates", out var coordinates) || !coordinates.IsBsonArray || coordinates.AsBsonArray.Count != 2)
+            return null;
+        var values = coordinates.AsBsonArray;
+        return (values[1].ToDouble(), values[0].ToDouble());
+    }
 
     /// <summary>Nombre y modalidad del oficio activo con esa clave (spec 020, R-02).</summary>
     public async Task<OficioListing?> FindActiveOficioAsync(string clave, CancellationToken cancellationToken)
