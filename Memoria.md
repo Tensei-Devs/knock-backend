@@ -1,5 +1,10 @@
 # Memoria — knock-backend
 
+## 2026-11-14 — KNOCK-246: correcciones de CI del contenedor y pruebas demo
+- **Cambios:** el Dockerfile de Market copia únicamente `tecnicos.json` antes de publicar, siguiendo el patrón de Identity; el csproj ya lo incluía. La prueba de guarda construye la URI con credenciales sintéticas mediante `MongoUrlBuilder`, sin excepciones nuevas.
+- **Verificación:** `docker build -f src/Knock.Market.Api/Dockerfile .` pasó tras actualizar la imagen SDK local; en `/app/db` solo está la semilla de técnicos y no se hallaron archivos con nombres habituales de credenciales. Pruebas Demo: 10 unitarias y 51 de base aprobadas; formato correcto. La traza 020 mantiene 13 criterios pendientes de otras tareas.
+- **Límite:** Gitleaks no está instalado localmente; la búsqueda de URI con credenciales en archivos de pruebas Demo no encontró otras coincidencias y el CI debe confirmar el escaneo.
+
 ## 2026-11-14 — KNOCK-40: pruebas de concurrencia y guarda del cargador
 - **Resultado:** dos cargas concurrentes por separado con `_id`, `sub` y `celularHash` comprueban diez documentos demo, identificadores esperados y unicidad; CA-11 sigue parcial: no se sincronizó una colisión después de la preconsulta ni se demostró el rechazo por cada índice. Las pruebas previas cubren conflictos detectados antes de escribir y recuperación de escritura parcial.
 - **CA-12:** `SeedAsync` con host remoto usa Mongo local para observar que no escribe y un doble de caché para comprobar que no se accede a Redis. Las cadenas con credenciales sintéticas se construyen con `MongoUrlBuilder`; EXC-023 no se modifica.
