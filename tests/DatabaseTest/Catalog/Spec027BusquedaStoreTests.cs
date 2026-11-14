@@ -3,6 +3,8 @@ using Knock.DatabaseTest.Support;
 using Knock.IntegrationTest.Support;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Catalog.Data;
+using Knock.Market.Api.Modules.Catalog.Domain;
+using Knock.Market.Api.Modules.Catalog.Services;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -12,6 +14,71 @@ namespace Knock.DatabaseTest.Catalog;
 
 public sealed class Spec027BusquedaStoreTests
 {
+    [Fact]
+    public async Task Servicio_Pagina_Cien_En_DocumentDb_CA_027_01_CA_027_10()
+    {
+        await using var database = await CatalogDatabase.CreateAsync(seeded: false);
+        await ApplyScriptAsync(database);
+        var colonia = ObjectId.GenerateNewId();
+        await database.Database.GetCollection<BsonDocument>("colonias").InsertOneAsync(new BsonDocument { ["_id"] = colonia, ["activo"] = true });
+        await database.Database.GetCollection<BsonDocument>("oficios").InsertOneAsync(new BsonDocument { ["clave"] = "plo", ["nombre"] = "Plomería", ["nombreBusqueda"] = "PLOMERIA", ["modalidad"] = "domicilio", ["activo"] = true });
+        await database.Database.GetCollection<BsonDocument>("sinonimos").InsertOneAsync(new BsonDocument { ["termino"] = "boiler", ["oficioClave"] = "plo", ["version"] = 1 });
+        await database.Database.GetCollection<BsonDocument>("catalogo_meta").InsertOneAsync(new BsonDocument { ["_id"] = "sinonimos", ["version"] = 1 });
+        var docs = Enumerable.Range(0, 130).Select(i =>
+        {
+            var doc = Technician("demo", 0, 10, "activo", false, "ninguno", "plo");
+            doc["coloniaBaseId"] = colonia.ToString();
+            return doc;
+        }).ToArray();
+        await database.Database.GetCollection<BsonDocument>("tecnicos").InsertManyAsync(docs);
+        var options = Options.Create(new KnockMongoOptions());
+        var store = new BusquedaStore(database.Database, options);
+        var source = new BusquedaSource(database.Database, options, database.Get<CatalogStore>(), store);
+        var service = new BusquedaService(source, new DisabledCatalogCache(), new FiltroDatosPersonalesNoDisponible(), TimeProvider.System, System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+        var ids = new List<string>();
+        string? cursor = null;
+        do
+        {
+            var result = await service.SearchAsync(new SearchInput("boiler", colonia.ToString(), null, false, 20, cursor), CancellationToken.None);
+            result.Error.Should().BeNull();
+            result.Response!.Interpretation.Detected!.Key.Should().Be("plo");
+            ids.AddRange(result.Response.Items.Select(item => item.Id));
+            cursor = result.Response.NextCursor;
+        }
+        while (cursor is not null);
+        ids.Should().HaveCount(100).And.OnlyHaveUniqueItems();
+        ids.Should().Equal(docs.OrderBy(d => d["_id"].AsObjectId).Take(100).Select(d => d["_id"].ToString()));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Pagina_Desde_Mongo_Sin_Saltos_Y_Tope_CA_027_10(bool center)
+    {
+        await using var database = await CatalogDatabase.CreateAsync(seeded: false);
+        await ApplyScriptAsync(database);
+        var docs = Enumerable.Range(0, 130).Select(PagedTechnician).ToArray();
+        await database.Database.GetCollection<BsonDocument>("tecnicos").InsertManyAsync(docs);
+        var store = new BusquedaStore(database.Database, Options.Create(new KnockMongoOptions()));
+        var input = new SearchPageRequest("colonia-demo", center ? 0 : null, center ? 0 : null, ["exp"], "plo", ["plo", "ele"], false);
+        var all = await store.FindAsync(input.ColoniaId, input.Latitude, input.Longitude, input.Words, input.Trade, input.ActiveTrades, false, CancellationToken.None);
+        var expected = OrdenDeResultados.Order(all.Select(c => new SearchRank(c.Id, OrdenDeResultados.Classify(c.MatchesName, c.ServesColonia, c.Trades.Contains("plo")).GetValueOrDefault(), c.Verified, c.Rating, c.DistanceKm))).Take(100).Select(x => x.Id).ToArray();
+        database.ClearCommands();
+        var found = new List<string>();
+        SearchRank? last = null;
+        while (found.Count < 100)
+        {
+            var page = await store.FindPageAsync(input, last, Math.Min(21, 101 - found.Count), CancellationToken.None);
+            var selected = page.Take(Math.Min(20, 100 - found.Count)).ToArray();
+            found.AddRange(selected.Select(x => x.Candidate.Id));
+            if (selected.Length == 0) break;
+            last = selected[^1].Rank;
+        }
+        found.Should().Equal(expected).And.OnlyHaveUniqueItems();
+        database.Commands.Where(c => c.Names.FirstOrDefault() == "aggregate" && c["aggregate"] == "tecnicos")
+            .Should().NotBeEmpty().And.OnlyContain(c => c["pipeline"].AsBsonArray.Any(s => s.AsBsonDocument.Contains("$limit") && s["$limit"].ToInt32() <= 21));
+    }
+
     [Fact]
     public async Task Busca_Cobertura_Estado_Prefijo_Verificacion_CA_027_04_CA_027_07_CA_027_09()
     {
@@ -73,6 +140,14 @@ public sealed class Spec027BusquedaStoreTests
         await using var tools = await MongoToolsContainer.StartAsync(await DocumentDbFixture.SharedAsync(), new Dictionary<string, string> { ["KNOCK_DB_MARKET"] = database.DatabaseName });
         var result = await tools.RunAsync("mongosh", "--nodb", "--quiet", "--file", $"{MongoToolsContainer.DbDirectory}/027-catalog-busqueda.js");
         result.ExitCode.Should().Be(0, result.Output);
+    }
+
+    private static BsonDocument PagedTechnician(int i)
+    {
+        var doc = Technician(i < 40 || i >= 80 ? "experto" : "otro", i >= 80 ? 0.4 + i * 0.00001 : 0.001 + i * 0.00001,
+            10, "activo", false, i % 3 == 0 ? "basica" : "ninguno", i >= 80 ? "ele" : "plo");
+        doc["calificacion"] = i % 5;
+        return doc;
     }
 
     private static BsonDocument Technician(string word, double longitude, int radius, string state, bool hidden, string verification, string trade) => new()
