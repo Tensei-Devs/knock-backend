@@ -1,6 +1,6 @@
 # Spec 043 — Bloqueos entre personas y reportes con apelación
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Origen:** `Documentacion/00_Profesores/Desarrollo_Movil/Entregables/Knock_Endpoints_CRUD.xlsx` (revisión 2026-11-02): endpoints BLO-01, BLO-02, BLO-03, REP-01, REP-02, REP-03.
 > **Claves de trabajo:** KNOCK-266 (tarea paraguas de las specs de los endpoints del Excel) · **Sprint:** por definir · **Prioridad:** por definir
 > **Servicio:** Identidad (`Knock.Identity.Api`) · **Módulo:** `Safety` · **Colecciones:** `bloqueos`, `reportes`
@@ -283,6 +283,6 @@ Las pruebas citan el caso como `CA_043_NN` en el nombre (para `python scripts/sd
 - Dependencias: conversaciones y reparto de solicitudes de las specs 026, 028 y 030, y la cola del panel de la spec 053.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: _____________________ fecha: __________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

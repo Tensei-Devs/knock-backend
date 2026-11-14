@@ -1,6 +1,6 @@
 # Spec 049 — Cotización final tras la visita y ajustes de precio
 
-> **Estado:** Borrador · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Origen:** `Documentacion/00_Profesores/Desarrollo_Movil/Entregables/Knock_Endpoints_CRUD.xlsx` (revisión 2026-11-02): endpoints COT-06, COT-07, AJU-01, AJU-02.
 > **Claves de trabajo:** KNOCK-266 (tarea paraguas de las specs de los endpoints del Excel) · **Sprint:** por definir · **Prioridad:** por definir
 > **Servicio:** Mercado (`Knock.Market.Api`) · **Módulo:** `FinalQuotes` · **Colecciones:** `cotizaciones`, `ajustes_precio`
@@ -275,6 +275,6 @@ Las pruebas citan el caso como `CA_049_NN` en el nombre (para `python scripts/sd
 - Dependencias: tareas de vencimiento de la spec 054 y los topes de la spec 020. El cobro de la visita queda fuera de esta spec.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: _____________________ fecha: __________
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)
