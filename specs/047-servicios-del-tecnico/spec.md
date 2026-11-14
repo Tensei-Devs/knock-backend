@@ -28,26 +28,31 @@ Definir y especificar los endpoints SRV-01, SRV-02, SRV-03, SRV-04 del Excel de 
 ## 3. Requisitos
 - **R-01:** `GET /api/v1/tecnicos/{id}/servicios` (leer todos): Servicios y precios de referencia de un técnico. Lo puede llamar: persona con sesión (cliente o técnico). Responde 200 cuando sale bien.
 - **R-02:** Entrada de `GET /api/v1/tecnicos/{id}/servicios`: Ruta: id. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo.
-- **R-03:** Estados de `GET /api/v1/tecnicos/{id}/servicios`: 404. El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
+- **R-03:** Estados de `GET /api/v1/tecnicos/{id}/servicios`: 404 `technician_not_found`. Los códigos de negocio van en inglés y en snake_case.
 - **R-04:** `GET /api/v1/tecnicos/{id}/servicios` se cachea (Sí, 1 minuto); la clave nunca incluye datos personales de otra persona y se invalida al escribir.
 - **R-05:** `POST /api/v1/tecnicos/me/servicios` (crear): Agrega un servicio. Lo puede llamar: cuenta con perfil de técnico. Responde 201 cuando sale bien.
 - **R-06:** Entrada de `POST /api/v1/tecnicos/me/servicios`: Cuerpo: nombre, detalle, precioReferencia, oficio. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400. Reglas: `nombre`: Máximo 60 caracteres; `detalle`: Máximo 150 caracteres; `precioReferencia`: Mayor que 0; `oficio`: Debe existir en oficios.
 - **R-07:** `PUT /api/v1/tecnicos/me/servicios/{id}` (actualizar): Edita un servicio. Lo puede llamar: técnico (dueño). Responde 200 cuando sale bien.
 - **R-08:** Entrada de `PUT /api/v1/tecnicos/me/servicios/{id}`: Ruta: id. Cuerpo: campos. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400.
-- **R-09:** Estados de `PUT /api/v1/tecnicos/me/servicios/{id}`: 404. El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
+- **R-09:** Estados de `PUT /api/v1/tecnicos/me/servicios/{id}`: 404 `service_not_found`. Los códigos de negocio van en inglés y en snake_case.
 - **R-10:** `DELETE /api/v1/tecnicos/me/servicios/{id}` (borrar): Quita un servicio. Lo puede llamar: técnico (dueño). Responde 204 cuando sale bien.
 - **R-11:** Entrada de `DELETE /api/v1/tecnicos/me/servicios/{id}`: Ruta: id. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400.
-- **R-12:** Estados de `DELETE /api/v1/tecnicos/me/servicios/{id}`: 404. El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
-- **R-13:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
-- **R-14:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
-- **R-15:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
-- **R-16:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
+- **R-12:** Estados de `DELETE /api/v1/tecnicos/me/servicios/{id}`: 404 `service_not_found`. Los códigos de negocio van en inglés y en snake_case.
+- **R-13:** **Datos del servicio (SRV-02 y SRV-03).** `nombre` de 1 a 60 caracteres, `detalle` de hasta 150, `precioReferencia` entero positivo en pesos con máximo 100 000 y `oficio` de la lista cerrada y entre los oficios del técnico. En la edición (`PUT`) cambian solo los campos enviados.
+- **R-14:** **Límite por técnico.** Cada técnico puede tener como máximo 30 servicios; el 31.º responde 409 `service_limit_reached`.
+- **R-15:** **Propiedad (SRV-03 y SRV-04).** Un técnico solo edita y elimina sus propios servicios; uno ajeno responde 404 `service_not_found`, sin revelar que existe. Al eliminar, el servicio se borra y deja de verse de inmediato.
+- **R-16:** **Lectura (SRV-01).** Cualquier persona con sesión ve los servicios y los precios de referencia de un técnico visible; no hay paginación (máximo 30); caché de 1 minuto que se invalida al crear, editar o eliminar. Un técnico oculto responde 404 `technician_not_found`.
+- **R-17:** **El precio es de referencia.** El `precioReferencia` solo orienta al cliente y a la referencia de mercado: no obliga al técnico y no sustituye a la cotización de cada solicitud.
+- **R-18:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
+- **R-19:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
+- **R-20:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
+- **R-21:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dado el rol «persona con sesión (cliente o técnico)», cuando llama `GET /api/v1/tecnicos/{id}/servicios` con datos válidos, entonces responde 200 con lo descrito en §5.
 - **CA-02:** Dada una petición sin token o con token vencido, cuando llama `GET /api/v1/tecnicos/{id}/servicios`, entonces responde 401 y no ejecuta la operación.
 - **CA-03:** Dado un valor inválido según las reglas de §6, cuando llama `GET /api/v1/tecnicos/{id}/servicios`, entonces responde 422 con `errors.<campo>`, no repite el valor y no devuelve datos.
-- **CA-04:** Dado el caso «recurso no disponible», cuando llama `GET /api/v1/tecnicos/{id}/servicios`, entonces responde 404 con ProblemDetails y no cambia el estado.
+- **CA-04:** Dado el caso «el técnico no existe o está oculto», cuando llama `GET /api/v1/tecnicos/{id}/servicios`, entonces responde 404 `technician_not_found` con ProblemDetails y no cambia el estado.
 - **CA-05:** Dada una consulta repetida dentro del tiempo de caché, cuando llega la segunda, entonces se responde desde la caché y la base recibe una sola consulta.
 - **CA-06:** Dado el rol «cuenta con perfil de técnico», cuando llama `POST /api/v1/tecnicos/me/servicios` con datos válidos, entonces responde 201 con lo descrito en §5.
 - **CA-07:** Dada una petición sin token o con token vencido, cuando llama `POST /api/v1/tecnicos/me/servicios`, entonces responde 401 y no ejecuta la operación.
@@ -59,16 +64,21 @@ Definir y especificar los endpoints SRV-01, SRV-02, SRV-03, SRV-04 del Excel de 
 - **CA-13:** Dada una persona que no cumple el rol «técnico (dueño)», cuando llama `PUT /api/v1/tecnicos/me/servicios/{id}`, entonces responde 403 y no cambia nada.
 - **CA-14:** Dado un valor inválido según las reglas de §6, cuando llama `PUT /api/v1/tecnicos/me/servicios/{id}`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
 - **CA-15:** Dado un cuerpo que no se puede leer, cuando llama `PUT /api/v1/tecnicos/me/servicios/{id}`, entonces responde 400 y no guarda nada.
-- **CA-16:** Dado el caso «recurso no disponible», cuando llama `PUT /api/v1/tecnicos/me/servicios/{id}`, entonces responde 404 con ProblemDetails y no cambia el estado.
+- **CA-16:** Dado el caso «el servicio no existe o no es del técnico», cuando llama `PUT /api/v1/tecnicos/me/servicios/{id}`, entonces responde 404 `service_not_found` con ProblemDetails y no cambia el estado.
 - **CA-17:** Dado el rol «técnico (dueño)», cuando llama `DELETE /api/v1/tecnicos/me/servicios/{id}` con datos válidos, entonces responde 204 con lo descrito en §5.
 - **CA-18:** Dada una petición sin token o con token vencido, cuando llama `DELETE /api/v1/tecnicos/me/servicios/{id}`, entonces responde 401 y no ejecuta la operación.
 - **CA-19:** Dada una persona que no cumple el rol «técnico (dueño)», cuando llama `DELETE /api/v1/tecnicos/me/servicios/{id}`, entonces responde 403 y no cambia nada.
 - **CA-20:** Dado un valor inválido según las reglas de §6, cuando llama `DELETE /api/v1/tecnicos/me/servicios/{id}`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
-- **CA-21:** Dado el caso «recurso no disponible», cuando llama `DELETE /api/v1/tecnicos/me/servicios/{id}`, entonces responde 404 con ProblemDetails y no cambia el estado.
-- **CA-22:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
-- **CA-23:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
-- **CA-24:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
-- **CA-25:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
+- **CA-21:** Dado el caso «el servicio no existe o no es del técnico», cuando llama `DELETE /api/v1/tecnicos/me/servicios/{id}`, entonces responde 404 `service_not_found` con ProblemDetails y no cambia el estado.
+- **CA-22:** Dado un técnico, cuando agrega un servicio con datos válidos, entonces queda creado; con un precio de 0 o negativo, un nombre de más de 60 caracteres o un oficio que no es suyo responde 422.
+- **CA-23:** Dado un técnico con 30 servicios, cuando agrega uno más, entonces responde 409 `service_limit_reached` y no lo guarda.
+- **CA-24:** Dado el servicio de otro técnico, cuando se intenta editar o borrar, entonces responde 404 `service_not_found` y no cambia nada.
+- **CA-25:** Dado un técnico con servicios, cuando una persona con sesión los consulta, entonces los recibe ordenados por nombre; tras editar uno, la siguiente consulta ya muestra el cambio.
+- **CA-26:** Dada una cotización de una solicitud, cuando el técnico envía un precio distinto del precio de referencia de su servicio, entonces se acepta mientras cumpla las reglas de la spec 020.
+- **CA-27:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
+- **CA-28:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
+- **CA-29:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
+- **CA-30:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
 
 **4.1 Criterio → prueba prevista**
 
@@ -99,6 +109,11 @@ Definir y especificar los endpoints SRV-01, SRV-02, SRV-03, SRV-04 del Excel de 
 | CA-23 | `Spec047Tests.Criterio23_CA_047_23` |
 | CA-24 | `Spec047Tests.Criterio24_CA_047_24` |
 | CA-25 | `Spec047Tests.Criterio25_CA_047_25` |
+| CA-26 | `Spec047Tests.Criterio26_CA_047_26` |
+| CA-27 | `Spec047Tests.Criterio27_CA_047_27` |
+| CA-28 | `Spec047Tests.Criterio28_CA_047_28` |
+| CA-29 | `Spec047Tests.Criterio29_CA_047_29` |
+| CA-30 | `Spec047Tests.Criterio30_CA_047_30` |
 
 ## 5. Contrato
 | ID | Método y ruta | Quién | Entrada | Respuestas |
@@ -116,6 +131,15 @@ Definir y especificar los endpoints SRV-01, SRV-02, SRV-03, SRV-04 del Excel de 
 | SRV-02 | No aplica | No | No |
 | SRV-03 | No aplica | No | No |
 | SRV-04 | No aplica | No | No |
+
+**Códigos de error de negocio**
+
+| ID | Estado | Código | Cuándo |
+|---|---|---|---|
+| SRV-01 | 404 | `technician_not_found` | el técnico no existe o está oculto |
+| SRV-03 | 404 | `service_not_found` | el servicio no existe o no es del técnico |
+| SRV-04 | 404 | `service_not_found` | el servicio no existe o no es del técnico |
+
 
 **Códigos de error:** los de forma salen como 422 con `errors` por campo y los de sesión y límite como 401 y 429; los conflictos de negocio llevan un código en inglés y snake_case que se fija al implementar y se agrega al catálogo.
 
@@ -153,13 +177,13 @@ Definir y especificar los endpoints SRV-01, SRV-02, SRV-03, SRV-04 del Excel de 
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |
 |---|---|---|
-| Acceso a datos de otra persona (IDOR) | Toda consulta y escritura filtra por el `sub` del token; ajeno responde 403 o 404 | CA-08, CA-13, CA-19, CA-22 |
-| Asignación masiva o identificador ajeno en el cuerpo | El DTO no acepta identificadores de persona; se ignoran | CA-08, CA-13, CA-19, CA-22 |
+| Acceso a datos de otra persona (IDOR) | Toda consulta y escritura filtra por el `sub` del token; ajeno responde 403 o 404 | CA-08, CA-13, CA-19, CA-27 |
+| Asignación masiva o identificador ajeno en el cuerpo | El DTO no acepta identificadores de persona; se ignoran | CA-08, CA-13, CA-19, CA-27 |
 | Inyección en filtros y parámetros | Parámetros tipados con validador; nada se concatena en consultas | CA-03, CA-09 a CA-10, CA-14 a CA-15, CA-20 |
 | Ruta sin sesión | JWT obligatorio salvo las públicas | CA-02, CA-07, CA-12, CA-18 |
-| Abuso por repetición o cuerpos grandes | Límite de peticiones, `Retry-After` y tope de cuerpo | CA-24 |
-| Datos personales en registros y errores | Registros sin datos personales; ProblemDetails sin valores | CA-23 |
-| Duplicados por reintento | Regla de estado o índice único, sin `Idempotency-Key` | CA-25 |
+| Abuso por repetición o cuerpos grandes | Límite de peticiones, `Retry-After` y tope de cuerpo | CA-29 |
+| Datos personales en registros y errores | Registros sin datos personales; ProblemDetails sin valores | CA-28 |
+| Duplicados por reintento | Regla de estado o índice único, sin `Idempotency-Key` | CA-30 |
 
 ## 10. Plan de pruebas
 Las pruebas citan el caso como `CA_047_NN` en el nombre (para `python scripts/sdd_lint.py --trace 047`).
@@ -168,17 +192,16 @@ Las pruebas citan el caso como `CA_047_NN` en el nombre (para `python scripts/sd
 |---|---|---|
 | Unitarias | Sí | Validadores, reglas de estado y cálculos del dominio |
 | Integración | Sí | Cada ruta con la base real en contenedor (Testcontainers) y `MarketApiFactory`/fábrica del servicio |
-| Seguridad negativa | Sí | 401, 403/404, 422, 413 y 429 (CA-02 a CA-03, CA-07 a CA-10, CA-12 a CA-15, CA-18 a CA-20, CA-22, CA-24) |
+| Seguridad negativa | Sí | 401, 403/404, 422, 413 y 429 (CA-02 a CA-03, CA-07 a CA-10, CA-12 a CA-15, CA-18 a CA-20, CA-27, CA-29) |
 | Base de datos | Sí | Índices y reglas de cada colección de §6 |
 | Contrato | Sí | OpenAPI regenerado y comparado con `contracts/` |
 | Mutación | Sí | Meta del módulo según la spec 008 |
 | Rendimiento | No aplica | Sin ruta crítica; se mide solo si la spec 034 lo pide |
 
 ## 11. Escenarios
-- **SRV-01** — pantallas: Perfil del técnico.
-- **SRV-02** — pantallas: Mi perfil público; Registro de técnico.
-- **SRV-03** — pantallas: Mi perfil público.
-- **SRV-04** — pantallas: Mi perfil público.
+- **Agregar:** el técnico abre «Mis servicios» → toca «Agregar» → captura nombre, detalle, precio y oficio → el servicio aparece en su perfil.
+- **Ver:** el cliente abre el perfil de un técnico con sesión → ve sus servicios con precios de referencia.
+- **Límite:** un técnico con 30 servicios intenta agregar otro → la app le dice que llegó al límite.
 
 ## 12. Definición de terminado
 - Los criterios de aceptación están cubiertos por pruebas en verde y `sdd_lint --trace 047` sin faltantes.
@@ -191,12 +214,15 @@ Las pruebas citan el caso como `CA_047_NN` en el nombre (para `python scripts/sd
 
 ## 14. Decisiones tomadas sin consulta
 - **D-01:** Se toma el Excel de endpoints como fuente del contrato porque es el insumo acordado para las specs; cualquier diferencia con las specs 020 a 038 se resuelve a favor de la spec numerada.
-- **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case definidos al implementar, siguiendo la convención de errores de la spec 002.
+- **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case (los de §5 y, si falta alguno, los que se fijen al implementar), siguiendo la convención de errores de la spec 002.
 - **D-03:** No se usa `Idempotency-Key`, aunque el Excel lo menciona en creaciones.
+- **D-04:** Máximo 30 servicios por técnico: el Excel no fija el límite y 30 cubre un catálogo amplio.
+- **D-05:** El precio de referencia tiene un máximo de 100 000 pesos, igual que la cotización final (spec 049).
+- **D-06:** Eliminar un servicio lo borra; no hay historial porque las cotizaciones ya guardan su propio precio.
 
 ## 15. Riesgos y dudas abiertas
-- Confirmar la relación entre estos precios de referencia y la referencia de mercado de COT-03 (spec de complementos de cotización).
-- Esta spec se generó a partir del Excel; antes de aprobarla hay que revisar los límites, los textos de error y los plazos con el equipo.
+- Confirmar el límite de 30 servicios por técnico y el máximo de 100 000 pesos.
+- Confirmar si un servicio debe poder desactivarse sin borrarse (hoy solo se elimina).
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: _____________________ fecha: __________
