@@ -56,6 +56,21 @@ petición puede volver a poblarla antes de la siguiente lectura. La ronda `cold`
 histórica solo mide un primer acceso seguido de lecturas posiblemente calientes;
 no demuestra la condición fría por petición con usuarios concurrentes.
 
+## Comparación secuencial fría/caliente (KNOCK-269)
+
+Con Market y el Redis de `deploy/docker-compose.local.yml` aislados y sin otros
+clientes, ejecuta `tests/perf/cache-oficios-p95.sh`. Se pueden pasar
+`COMPOSE_PROJECT_NAME`, `COMPOSE_ENV_FILES` y `KNOCK_BASE_URL` para seleccionar el
+proyecto local. El script borra `catalog:oficios` antes de cada petición fría;
+no borra su generación. Verifica ausencia y repoblación de la clave, estado y
+ETag. Hace 100 peticiones secuenciales por combinación y solo mide el tiempo
+HTTP, no los comandos Redis. En caliente comprueba que la clave permanezca.
+La repoblación indica la lectura de MongoDB según la ruta de `CatalogStore`,
+no es una captura independiente de sus consultas. Requiere Docker local por
+socket Unix, Redis publicado solo en loopback y URL HTTP local. La evidencia de
+la corrida está en `docs/evidencia/knock-269-cache-p95.md`; no compara carga de
+5 usuarios virtuales ni establece capacidad del sistema.
+
 ## Comparar vigencias (R-04)
 
 1. Ajusta `Cache:CatalogLifetimeSeconds` (`.NET` en `src/Knock.Market.Api/appsettings.json`
