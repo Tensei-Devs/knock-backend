@@ -1,6 +1,6 @@
 # Mapa de código
 
-> Generado por `scripts/codemap.py` el 2026-11-14T17:47:49Z. No editar a mano.
+> Generado por `scripts/codemap.py` el 2026-11-14T17:56:08Z. No editar a mano.
 > **Antes de crear una clase, método o archivo, busca aquí o corre `python scripts/codemap.py --query "<qué necesitas>"`.**
 
 ## Resumen
@@ -619,7 +619,7 @@
 - `src/Knock.Identity.Api/Modules/Usuarios/Data/ProfileCacheOptions.cs` — class `ProfileCacheOptions`, class `ProfileCacheOptionsValidator`
   - `Validate()`:25
 - `src/Knock.Identity.Api/Modules/Usuarios/Data/UsuariosStore.cs` — interface `IUsuariosStore`, class `UsuariosStore`, class `BsonValueExtensions`
-  - `DemoConflictAsync()`:60, `UpsertDemoAsync()`:80, `FindProfileAsync()`:115, `UpdateProfileAsync()`:119, `AsNullableString()`:175
+  - `DemoConflictAsync()`:60, `UpsertDemoAsync()`:80, `FindProfileAsync()`:126, `UpdateProfileAsync()`:130, `AsNullableString()`:186
 
 **domain**
 
@@ -633,7 +633,7 @@
 **services**
 
 - `src/Knock.Identity.Api/Modules/Usuarios/Services/DemoClientSeeder.cs` — class `DemoClientSeeder`
-  - `DemoClientSeeder()`:10, `SeedAsync()`:12
+  - `DemoClientSeeder()`:11, `SeedAsync()`:13
 - `src/Knock.Identity.Api/Modules/Usuarios/Services/MarketColoniaCatalog.cs` — class `MarketColoniaCatalog`, record `ExistsResponse`, class `MarketCatalogOptions`
   - `ExistsAsync()`:16, `HasValidBaseUrl()`:65
 - `src/Knock.Identity.Api/Modules/Usuarios/Services/ProfileRules.cs` — class `ProfileOptions`, class `ProfileRules`
