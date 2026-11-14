@@ -42,11 +42,18 @@ Definir y especificar los endpoints ASI-01, ASI-02, ASI-03, ASI-04, ASI-05, ASI-
 - **R-12:** Estados de `PUT /api/v1/asistente/bitacora/{solicitudId}`: 201. El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
 - **R-13:** `GET /api/v1/asistente/bitacora/{solicitudId}` (leer uno): Lee la bitácora guardada al iniciar el trabajo. Lo puede llamar: cuenta con perfil de técnico. Responde 200 cuando sale bien.
 - **R-14:** Entrada de `GET /api/v1/asistente/bitacora/{solicitudId}`: Ruta: solicitudId. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo.
-- **R-15:** Estados de `GET /api/v1/asistente/bitacora/{solicitudId}`: 404. El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
-- **R-16:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
-- **R-17:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
-- **R-18:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
-- **R-19:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
+- **R-15:** Estados de `GET /api/v1/asistente/bitacora/{solicitudId}`: 404 `log_not_found`. Los códigos de negocio van en inglés y en snake_case.
+- **R-16:** **Cliente de IA único.** Todas las rutas llaman al cliente de Azure OpenAI de la spec 024 (modelo `gpt-5-mini`) y nunca a otro proveedor; sin el recurso configurado, las rutas responden 503 con ProblemDetails y la app sigue funcionando sin el asistente.
+- **R-17:** **Límite por persona y por día (429).** Cada persona tiene un límite diario de unidades de IA registrado en `uso_ia` (colección de Mercado), que se consume por turno; al agotarlo responde 429 `ai_daily_limit_reached` con `Retry-After` hasta el día siguiente. El límite exacto lo fija la configuración de la spec 024.
+- **R-18:** **Filtro de datos personales.** Antes de enviar texto al modelo se quitan teléfonos, correos, direcciones y nombres propios; la respuesta del modelo también pasa por el filtro; ni los mensajes ni las respuestas se escriben completos en registros.
+- **R-19:** **Turno del asistente (ASI-01).** `mensaje` de 1 a 1 000 caracteres, `foto` opcional (de la subida privada, spec 032) y `contexto` acotado; el asistente clasifica la categoría, pide la foto si falta y arma la solicitud como borrador que la persona confirma; si detecta un riesgo (como gas) responde primero con instrucciones de seguridad.
+- **R-20:** **Herramientas del técnico (ASI-02 a ASI-04).** Solo técnicos; el resumen y el borrador se arman a partir de una conversación en la que el técnico participa (`conversacionId`) y nunca incluyen teléfono ni dirección; el borrador es editable y explica qué tomó en cuenta; el rango de precio (ASI-04) usa el cálculo de la referencia de mercado y se cachea 1 hora por oficio y tipo.
+- **R-21:** **Bitácora (ASI-05 y ASI-06).** El técnico guarda `sabe`, `porConfirmar` y `queLlevar` (listas de hasta 10 elementos de hasta 200 caracteres) de una solicitud en la que participa; `PUT` crea (201) o reemplaza (200); solo el propio técnico la lee; se borra a los 90 días de terminada la solicitud.
+- **R-22:** **Transparencia.** Toda respuesta generada se muestra a la persona como sugerencia («generado por IA») y nunca se envía ni se guarda como cotización sin que la persona lo confirme.
+- **R-23:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
+- **R-24:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
+- **R-25:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
+- **R-26:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dado el rol «persona con sesión (cliente o técnico)», cuando llama `POST /api/v1/asistente/conversaciones` con datos válidos, entonces responde 200 con lo descrito en §5.
@@ -76,11 +83,18 @@ Definir y especificar los endpoints ASI-01, ASI-02, ASI-03, ASI-04, ASI-05, ASI-
 - **CA-25:** Dada una petición sin token o con token vencido, cuando llama `GET /api/v1/asistente/bitacora/{solicitudId}`, entonces responde 401 y no ejecuta la operación.
 - **CA-26:** Dada una persona que no cumple el rol «cuenta con perfil de técnico», cuando llama `GET /api/v1/asistente/bitacora/{solicitudId}`, entonces responde 403 y no cambia nada.
 - **CA-27:** Dado un valor inválido según las reglas de §6, cuando llama `GET /api/v1/asistente/bitacora/{solicitudId}`, entonces responde 422 con `errors.<campo>`, no repite el valor y no devuelve datos.
-- **CA-28:** Dado el caso «recurso no disponible», cuando llama `GET /api/v1/asistente/bitacora/{solicitudId}`, entonces responde 404 con ProblemDetails y no cambia el estado.
-- **CA-29:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
-- **CA-30:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
-- **CA-31:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
-- **CA-32:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
+- **CA-28:** Dado el caso «no hay bitácora para esa solicitud», cuando llama `GET /api/v1/asistente/bitacora/{solicitudId}`, entonces responde 404 `log_not_found` con ProblemDetails y no cambia el estado.
+- **CA-29:** Dado el servicio de IA no configurado, cuando se llama cualquier ruta del asistente, entonces responde 503 y no se envía nada a ningún proveedor.
+- **CA-30:** Dada una persona que agotó sus unidades del día, cuando pide otro turno, entonces responde 429 `ai_daily_limit_reached` con `Retry-After` y no llama al modelo.
+- **CA-31:** Dado un mensaje con un teléfono y una dirección, cuando se envía al asistente, entonces el modelo recibe el texto sin esos datos y los registros no guardan el mensaje.
+- **CA-32:** Dado un mensaje que menciona olor a gas, cuando se envía, entonces la respuesta empieza con las instrucciones de seguridad; con un mensaje vacío o de más de 1 000 caracteres responde 422.
+- **CA-33:** Dado un técnico que no participa en la conversación, cuando pide el resumen o el borrador, entonces responde 403; y los textos generados no contienen teléfonos ni direcciones.
+- **CA-34:** Dado un técnico con una solicitud, cuando guarda su bitácora, entonces responde 201 y, al guardar de nuevo, 200; otro técnico no la ve (404 `log_not_found` o 403).
+- **CA-35:** Dado un borrador de cotización generado, cuando no lo confirma el técnico, entonces no se envía ni se guarda como cotización.
+- **CA-36:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
+- **CA-37:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
+- **CA-38:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
+- **CA-39:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
 
 **4.1 Criterio → prueba prevista**
 
@@ -118,6 +132,13 @@ Definir y especificar los endpoints ASI-01, ASI-02, ASI-03, ASI-04, ASI-05, ASI-
 | CA-30 | `Spec052Tests.Criterio30_CA_052_30` |
 | CA-31 | `Spec052Tests.Criterio31_CA_052_31` |
 | CA-32 | `Spec052Tests.Criterio32_CA_052_32` |
+| CA-33 | `Spec052Tests.Criterio33_CA_052_33` |
+| CA-34 | `Spec052Tests.Criterio34_CA_052_34` |
+| CA-35 | `Spec052Tests.Criterio35_CA_052_35` |
+| CA-36 | `Spec052Tests.Criterio36_CA_052_36` |
+| CA-37 | `Spec052Tests.Criterio37_CA_052_37` |
+| CA-38 | `Spec052Tests.Criterio38_CA_052_38` |
+| CA-39 | `Spec052Tests.Criterio39_CA_052_39` |
 
 ## 5. Contrato
 | ID | Método y ruta | Quién | Entrada | Respuestas |
@@ -139,6 +160,16 @@ Definir y especificar los endpoints ASI-01, ASI-02, ASI-03, ASI-04, ASI-05, ASI-
 | ASI-04 | No aplica | No | Sí, 1 hora |
 | ASI-05 | No aplica | No | No |
 | ASI-06 | No aplica | No | No |
+
+**Códigos de error de negocio**
+
+| ID | Estado | Código | Cuándo |
+|---|---|---|---|
+| ASI-01 | 429 | `ai_daily_limit_reached` | la persona agotó su límite diario de uso de IA |
+| ASI-02 | 429 | `ai_daily_limit_reached` | la persona agotó su límite diario de uso de IA |
+| ASI-03 | 429 | `ai_daily_limit_reached` | la persona agotó su límite diario de uso de IA |
+| ASI-06 | 404 | `log_not_found` | no hay bitácora para esa solicitud |
+
 
 **Códigos de error:** los de forma salen como 422 con `errors` por campo y los de sesión y límite como 401 y 429; los conflictos de negocio llevan un código en inglés y snake_case que se fija al implementar y se agrega al catálogo.
 
@@ -181,13 +212,13 @@ Definir y especificar los endpoints ASI-01, ASI-02, ASI-03, ASI-04, ASI-05, ASI-
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |
 |---|---|---|
-| Acceso a datos de otra persona (IDOR) | Toda consulta y escritura filtra por el `sub` del token; ajeno responde 403 o 404 | CA-07, CA-11, CA-15, CA-20, CA-26, CA-29 |
-| Asignación masiva o identificador ajeno en el cuerpo | El DTO no acepta identificadores de persona; se ignoran | CA-07, CA-11, CA-15, CA-20, CA-26, CA-29 |
+| Acceso a datos de otra persona (IDOR) | Toda consulta y escritura filtra por el `sub` del token; ajeno responde 403 o 404 | CA-07, CA-11, CA-15, CA-20, CA-26, CA-36 |
+| Asignación masiva o identificador ajeno en el cuerpo | El DTO no acepta identificadores de persona; se ignoran | CA-07, CA-11, CA-15, CA-20, CA-26, CA-36 |
 | Inyección en filtros y parámetros | Parámetros tipados con validador; nada se concatena en consultas | CA-03 a CA-04, CA-08, CA-12, CA-16, CA-21 a CA-22, CA-27 |
 | Ruta sin sesión | JWT obligatorio salvo las públicas | CA-02, CA-06, CA-10, CA-14, CA-19, CA-25 |
-| Abuso por repetición o cuerpos grandes | Límite de peticiones, `Retry-After` y tope de cuerpo | CA-31 |
-| Datos personales en registros y errores | Registros sin datos personales; ProblemDetails sin valores | CA-30 |
-| Duplicados por reintento | Regla de estado o índice único, sin `Idempotency-Key` | CA-32 |
+| Abuso por repetición o cuerpos grandes | Límite de peticiones, `Retry-After` y tope de cuerpo | CA-38 |
+| Datos personales en registros y errores | Registros sin datos personales; ProblemDetails sin valores | CA-37 |
+| Duplicados por reintento | Regla de estado o índice único, sin `Idempotency-Key` | CA-39 |
 
 ## 10. Plan de pruebas
 Las pruebas citan el caso como `CA_052_NN` en el nombre (para `python scripts/sdd_lint.py --trace 052`).
@@ -196,19 +227,16 @@ Las pruebas citan el caso como `CA_052_NN` en el nombre (para `python scripts/sd
 |---|---|---|
 | Unitarias | Sí | Validadores, reglas de estado y cálculos del dominio |
 | Integración | Sí | Cada ruta con la base real en contenedor (Testcontainers) y `MarketApiFactory`/fábrica del servicio |
-| Seguridad negativa | Sí | 401, 403/404, 422, 413 y 429 (CA-02 a CA-04, CA-06 a CA-08, CA-10 a CA-12, CA-14 a CA-16, CA-19 a CA-22, CA-25 a CA-27, CA-29, CA-31) |
+| Seguridad negativa | Sí | 401, 403/404, 422, 413 y 429 (CA-02 a CA-04, CA-06 a CA-08, CA-10 a CA-12, CA-14 a CA-16, CA-19 a CA-22, CA-25 a CA-27, CA-36, CA-38) |
 | Base de datos | Sí | Índices y reglas de cada colección de §6 |
 | Contrato | Sí | OpenAPI regenerado y comparado con `contracts/` |
 | Mutación | Sí | Meta del módulo según la spec 008 |
 | Rendimiento | No aplica | Sin ruta crítica; se mide solo si la spec 034 lo pide |
 
 ## 11. Escenarios
-- **ASI-01** — pantallas: Asistente Knock (No sé cuál).
-- **ASI-02** — pantallas: Mensajes del técnico (Resumir la conversación).
-- **ASI-03** — pantallas: Chat del técnico (Armar cotización con IA).
-- **ASI-04** — pantallas: Cotizar.
-- **ASI-05** — pantallas: Chat del técnico (Guardar en bitácora).
-- **ASI-06** — pantallas: Iniciar trabajo.
+- **Pedir ayuda:** el cliente describe su problema y sube una foto → el asistente clasifica el oficio y arma el borrador de solicitud → el cliente lo revisa y lo envía.
+- **Riesgo de gas:** el cliente escribe que huele a gas → el asistente primero da instrucciones de seguridad y luego sigue.
+- **Cotizar con IA:** el técnico pide el borrador de cotización → lo edita y lo envía; si agotó su límite diario, la app le avisa hasta mañana.
 
 ## 12. Definición de terminado
 - Los criterios de aceptación están cubiertos por pruebas en verde y `sdd_lint --trace 052` sin faltantes.
@@ -221,14 +249,16 @@ Las pruebas citan el caso como `CA_052_NN` en el nombre (para `python scripts/sd
 
 ## 14. Decisiones tomadas sin consulta
 - **D-01:** Se toma el Excel de endpoints como fuente del contrato porque es el insumo acordado para las specs; cualquier diferencia con las specs 020 a 038 se resuelve a favor de la spec numerada.
-- **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case definidos al implementar, siguiendo la convención de errores de la spec 002.
+- **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case (los de §5 y, si falta alguno, los que se fijen al implementar), siguiendo la convención de errores de la spec 002.
 - **D-03:** No se usa `Idempotency-Key`, aunque el Excel lo menciona en creaciones.
+- **D-04:** Se usa solo Azure OpenAI (`gpt-5-mini`) con límites por persona y por día, como autorizó José el 2026-11-11.
+- **D-05:** El asistente nunca actúa solo: toda solicitud o cotización generada la confirma la persona.
+- **D-06:** La bitácora se conserva 90 días tras terminar la solicitud: el Excel no fija el plazo.
 
 ## 15. Riesgos y dudas abiertas
-- Depende del cliente de Azure OpenAI y sus límites por persona y por día (spec 024) y del filtro de datos personales: no se activa sin el recurso aprobado.
-- Confirmar qué datos del chat pueden enviarse al modelo (sin teléfono ni dirección).
-- La bitácora por solicitud guarda texto generado: definir retención.
-- Esta spec se generó a partir del Excel; antes de aprobarla hay que revisar los límites, los textos de error y los plazos con el equipo.
+- Depende del recurso de Azure OpenAI aprobado y de los límites por persona y día de la spec 024: no se activa sin ellos.
+- Confirmar qué datos del chat pueden enviarse al modelo (sin teléfono ni dirección) y la retención de la bitácora (90 días).
+- Confirmar el límite diario de unidades y qué cuenta como una unidad.
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: _____________________ fecha: __________

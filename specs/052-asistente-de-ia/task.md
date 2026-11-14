@@ -12,9 +12,10 @@
 | T-05 | `GET /api/v1/asistente/rango-precio` (ASI-04): DTO, validador, servicio, almacén, controlador y pruebas | R-07 a R-09 · CA-13 a CA-17 | T-01 | otras rutas | por asignar | pendiente |
 | T-06 | `PUT /api/v1/asistente/bitacora/{solicitudId}` (ASI-05): DTO, validador, servicio, almacén, controlador y pruebas | R-10 a R-12 · CA-18 a CA-23 | T-01 | otras rutas | por asignar | pendiente |
 | T-07 | `GET /api/v1/asistente/bitacora/{solicitudId}` (ASI-06): DTO, validador, servicio, almacén, controlador y pruebas | R-13 a R-15 · CA-24 a CA-28 | T-01 | otras rutas | por asignar | pendiente |
-| T-08 | Transversales: `sub` del token, registros sin datos personales, 429 y 413, sin `Idempotency-Key` | R-16 a R-19 · CA-29 a CA-32 | T-02 a T-07 | T-09 | por asignar | pendiente |
-| T-09 | OpenAPI, `docs/endpoints.md` y `docs/rate-limit-matrix.md` | §5 | T-02 a T-07 | T-08 | por asignar | pendiente |
-| T-10 | Gates, `Memoria.md` y revisión de par | §12 | todas | — | por asignar | pendiente |
+| T-08 | Reglas de negocio específicas de la spec (estados, plazos y límites) | R-16 a R-22 · CA-29 a CA-35 | T-01 | otras rutas | por asignar | pendiente |
+| T-09 | Transversales: `sub` del token, registros sin datos personales, 429 y 413, sin `Idempotency-Key` | R-23 a R-26 · CA-36 a CA-39 | T-02 a T-08 | T-10 | por asignar | pendiente |
+| T-10 | OpenAPI, `docs/endpoints.md` y `docs/rate-limit-matrix.md` | §5 | T-02 a T-08 | T-09 | por asignar | pendiente |
+| T-11 | Gates, `Memoria.md` y revisión de par | §12 | todas | — | por asignar | pendiente |
 
 ## Definición de terminado
 - Los criterios de aceptación de `spec.md` están cubiertos por pruebas en verde.
