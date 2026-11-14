@@ -10,9 +10,10 @@
 | T-03 | `POST /api/v1/tecnicos/me/servicios` (SRV-02): DTO, validador, servicio, almacén, controlador y pruebas | R-05 a R-06 · CA-06 a CA-10 | T-01 | otras rutas | por asignar | pendiente |
 | T-04 | `PUT /api/v1/tecnicos/me/servicios/{id}` (SRV-03): DTO, validador, servicio, almacén, controlador y pruebas | R-07 a R-09 · CA-11 a CA-16 | T-01 | otras rutas | por asignar | pendiente |
 | T-05 | `DELETE /api/v1/tecnicos/me/servicios/{id}` (SRV-04): DTO, validador, servicio, almacén, controlador y pruebas | R-10 a R-12 · CA-17 a CA-21 | T-01 | otras rutas | por asignar | pendiente |
-| T-06 | Transversales: `sub` del token, registros sin datos personales, 429 y 413, sin `Idempotency-Key` | R-13 a R-16 · CA-22 a CA-25 | T-02 a T-05 | T-07 | por asignar | pendiente |
-| T-07 | OpenAPI, `docs/endpoints.md` y `docs/rate-limit-matrix.md` | §5 | T-02 a T-05 | T-06 | por asignar | pendiente |
-| T-08 | Gates, `Memoria.md` y revisión de par | §12 | todas | — | por asignar | pendiente |
+| T-06 | Reglas de negocio específicas de la spec (estados, plazos y límites) | R-13 a R-17 · CA-22 a CA-26 | T-01 | otras rutas | por asignar | pendiente |
+| T-07 | Transversales: `sub` del token, registros sin datos personales, 429 y 413, sin `Idempotency-Key` | R-18 a R-21 · CA-27 a CA-30 | T-02 a T-06 | T-08 | por asignar | pendiente |
+| T-08 | OpenAPI, `docs/endpoints.md` y `docs/rate-limit-matrix.md` | §5 | T-02 a T-06 | T-07 | por asignar | pendiente |
+| T-09 | Gates, `Memoria.md` y revisión de par | §12 | todas | — | por asignar | pendiente |
 
 ## Definición de terminado
 - Los criterios de aceptación de `spec.md` están cubiertos por pruebas en verde.

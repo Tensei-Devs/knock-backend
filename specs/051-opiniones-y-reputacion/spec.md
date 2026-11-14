@@ -27,25 +27,31 @@ Definir y especificar los endpoints OPI-01, OPI-02, OPI-03 del Excel de endpoint
 ## 3. Requisitos
 - **R-01:** `GET /api/v1/tecnicos/{id}/opiniones` (leer todos): Opiniones de un técnico con su distribución por estrellas. Lo puede llamar: persona con sesión (cliente o técnico). Responde 200 cuando sale bien.
 - **R-02:** Entrada de `GET /api/v1/tecnicos/{id}/opiniones`: Ruta: id. Query: cursor, limite. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo.
-- **R-03:** Estados de `GET /api/v1/tecnicos/{id}/opiniones`: 404. El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
+- **R-03:** Estados de `GET /api/v1/tecnicos/{id}/opiniones`: 404 `technician_not_found`. Los códigos de negocio van en inglés y en snake_case.
 - **R-04:** `GET /api/v1/tecnicos/{id}/opiniones` pagina por cursor (Por cursor, 20 (máx. 50)): parámetros `cursor` y `limite`, 20 por defecto y 50 como máximo; orden: Orden por fecha descendente.
 - **R-05:** `GET /api/v1/tecnicos/{id}/opiniones` se cachea (Sí, 1 minuto); la clave nunca incluye datos personales de otra persona y se invalida al escribir.
 - **R-06:** `POST /api/v1/visitas/{id}/opinion` (crear): El cliente deja su opinión (hasta 30 días después). Recalcula la reputación del técnico. Lo puede llamar: persona con sesión que sea dueña del recurso. Responde 201 cuando sale bien.
 - **R-07:** Entrada de `POST /api/v1/visitas/{id}/opinion`: Ruta: id. Cuerpo: calificacion, partes, comentario, fotos, guardarTecnicoConfianza. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400. Reglas: `calificacion`: De 1 a 5; `partes`: Cada una de 1 a 5; `comentario`: Máximo 500 caracteres. Moderado; `fotos`: Hasta 3. Moderadas.
-- **R-08:** Estados de `POST /api/v1/visitas/{id}/opinion`: 409 (ya opinó o venció el plazo). El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
+- **R-08:** Estados de `POST /api/v1/visitas/{id}/opinion`: 409 `review_not_allowed` (ya opinó o venció el plazo). Los códigos de negocio van en inglés y en snake_case.
 - **R-09:** `POST /api/v1/opiniones/{id}/respuesta` (actualizar (acción)): El técnico responde a una opinión. Lo puede llamar: técnico (calificado). Responde 200 cuando sale bien.
 - **R-10:** Entrada de `POST /api/v1/opiniones/{id}/respuesta`: Ruta: id. Cuerpo: texto. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400.
-- **R-11:** Estados de `POST /api/v1/opiniones/{id}/respuesta`: 409. El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
-- **R-12:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
-- **R-13:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
-- **R-14:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
-- **R-15:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
+- **R-11:** Estados de `POST /api/v1/opiniones/{id}/respuesta`: 409 `review_already_answered`. Los códigos de negocio van en inglés y en snake_case.
+- **R-12:** **Quién opina y cuándo (OPI-02).** Solo el cliente dueño de una visita `terminada`, **una sola opinión por visita** y hasta 30 días después de terminada; después responde 409 `review_not_allowed`. Solo se opina de servicios hechos por Knock; la opinión sale como «Servicio verificado».
+- **R-13:** **Contenido de la opinión.** `calificacion` entero de 1 a 5 (obligatoria); `partes` opcional con puntualidad, calidad, precio justo y trato, cada una de 1 a 5; `comentario` opcional de hasta 500 caracteres, moderado (spec 031); `fotos` de 0 a 3, moderadas (spec 032); `guardarTecnicoConfianza` opcional para sumar al técnico a los de confianza.
+- **R-14:** **Reputación.** Al guardar una opinión se recalcula la reputación del técnico (promedio con un decimal, distribución de 1 a 5 y nivel) y se guarda ya calculada en su perfil; el cálculo es asíncrono y consistente en menos de 1 minuto.
+- **R-15:** **Respuesta del técnico (OPI-03).** Solo el técnico calificado, **una vez** por opinión; `texto` de 1 a 300 caracteres, moderado; después responde 409 `review_already_answered`.
+- **R-16:** **Lectura (OPI-01).** Lista las opiniones visibles de un técnico con su distribución por estrellas, de la más nueva a la más vieja, por cursor (20 por defecto, máximo 50); caché de 1 minuto. Las opiniones de cuentas eliminadas se muestran como «Usuario eliminado», sin nombre ni foto.
+- **R-17:** **Moderación y reportes.** Una opinión con texto o fotos pendiente de revisión no se publica hasta pasar la moderación (spec 031); una opinión reportada se atiende por el panel (spec 053) y puede ocultarse sin borrarse.
+- **R-18:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
+- **R-19:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
+- **R-20:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
+- **R-21:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dado el rol «persona con sesión (cliente o técnico)», cuando llama `GET /api/v1/tecnicos/{id}/opiniones` con datos válidos, entonces responde 200 con lo descrito en §5.
 - **CA-02:** Dada una petición sin token o con token vencido, cuando llama `GET /api/v1/tecnicos/{id}/opiniones`, entonces responde 401 y no ejecuta la operación.
 - **CA-03:** Dado un valor inválido según las reglas de §6, cuando llama `GET /api/v1/tecnicos/{id}/opiniones`, entonces responde 422 con `errors.<campo>`, no repite el valor y no devuelve datos.
-- **CA-04:** Dado el caso «recurso no disponible», cuando llama `GET /api/v1/tecnicos/{id}/opiniones`, entonces responde 404 con ProblemDetails y no cambia el estado.
+- **CA-04:** Dado el caso «el técnico no existe o está oculto», cuando llama `GET /api/v1/tecnicos/{id}/opiniones`, entonces responde 404 `technician_not_found` con ProblemDetails y no cambia el estado.
 - **CA-05:** Dado un listado con más de 20 elementos, cuando se pide sin `limite`, entonces devuelve 20 y el cursor de la página siguiente; con `limite=51` responde 422.
 - **CA-06:** Dada una consulta repetida dentro del tiempo de caché, cuando llega la segunda, entonces se responde desde la caché y la base recibe una sola consulta.
 - **CA-07:** Dado el rol «persona con sesión que sea dueña del recurso», cuando llama `POST /api/v1/visitas/{id}/opinion` con datos válidos, entonces responde 201 con lo descrito en §5.
@@ -53,17 +59,23 @@ Definir y especificar los endpoints OPI-01, OPI-02, OPI-03 del Excel de endpoint
 - **CA-09:** Dada una persona que no cumple el rol «persona con sesión que sea dueña del recurso», cuando llama `POST /api/v1/visitas/{id}/opinion`, entonces responde 403 y no cambia nada.
 - **CA-10:** Dado un valor inválido según las reglas de §6, cuando llama `POST /api/v1/visitas/{id}/opinion`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
 - **CA-11:** Dado un cuerpo que no se puede leer, cuando llama `POST /api/v1/visitas/{id}/opinion`, entonces responde 400 y no guarda nada.
-- **CA-12:** Dado el caso «ya opinó o venció el plazo», cuando llama `POST /api/v1/visitas/{id}/opinion`, entonces responde 409 con ProblemDetails y no cambia el estado.
+- **CA-12:** Dado el caso «ya opinó de esa visita, la visita no está terminada o pasaron más de 30 días», cuando llama `POST /api/v1/visitas/{id}/opinion`, entonces responde 409 `review_not_allowed` con ProblemDetails y no cambia el estado.
 - **CA-13:** Dado el rol «técnico (calificado)», cuando llama `POST /api/v1/opiniones/{id}/respuesta` con datos válidos, entonces responde 200 con lo descrito en §5.
 - **CA-14:** Dada una petición sin token o con token vencido, cuando llama `POST /api/v1/opiniones/{id}/respuesta`, entonces responde 401 y no ejecuta la operación.
 - **CA-15:** Dada una persona que no cumple el rol «técnico (calificado)», cuando llama `POST /api/v1/opiniones/{id}/respuesta`, entonces responde 403 y no cambia nada.
 - **CA-16:** Dado un valor inválido según las reglas de §6, cuando llama `POST /api/v1/opiniones/{id}/respuesta`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
 - **CA-17:** Dado un cuerpo que no se puede leer, cuando llama `POST /api/v1/opiniones/{id}/respuesta`, entonces responde 400 y no guarda nada.
-- **CA-18:** Dado el caso «recurso no disponible», cuando llama `POST /api/v1/opiniones/{id}/respuesta`, entonces responde 409 con ProblemDetails y no cambia el estado.
-- **CA-19:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
-- **CA-20:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
-- **CA-21:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
-- **CA-22:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
+- **CA-18:** Dado el caso «la opinión ya tiene respuesta del técnico», cuando llama `POST /api/v1/opiniones/{id}/respuesta`, entonces responde 409 `review_already_answered` con ProblemDetails y no cambia el estado.
+- **CA-19:** Dado el cliente de una visita terminada hace menos de 30 días, cuando opina, entonces se crea la opinión; una segunda opinión de la misma visita o pasados 30 días responde 409 `review_not_allowed`.
+- **CA-20:** Dada una opinión con calificación de 0 o 6, un comentario de más de 500 caracteres o más de 3 fotos, cuando se envía, entonces responde 422 y no se guarda.
+- **CA-21:** Dada una opinión nueva, cuando se guarda, entonces la reputación del técnico se recalcula con ella y las consultas posteriores la reflejan.
+- **CA-22:** Dada una opinión sin respuesta, cuando el técnico calificado responde, entonces queda publicada; una segunda respuesta responde 409 `review_already_answered` y la de otro técnico, 403.
+- **CA-23:** Dado un técnico con opiniones, cuando se consultan, entonces salen de la más nueva a la más vieja con su distribución; las de cuentas eliminadas aparecen anonimizadas.
+- **CA-24:** Dada una opinión con comentario, cuando aún no pasa la moderación, entonces no aparece en la lista pública; al aprobarse, sí.
+- **CA-25:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
+- **CA-26:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
+- **CA-27:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
+- **CA-28:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
 
 **4.1 Criterio → prueba prevista**
 
@@ -91,6 +103,12 @@ Definir y especificar los endpoints OPI-01, OPI-02, OPI-03 del Excel de endpoint
 | CA-20 | `Spec051Tests.Criterio20_CA_051_20` |
 | CA-21 | `Spec051Tests.Criterio21_CA_051_21` |
 | CA-22 | `Spec051Tests.Criterio22_CA_051_22` |
+| CA-23 | `Spec051Tests.Criterio23_CA_051_23` |
+| CA-24 | `Spec051Tests.Criterio24_CA_051_24` |
+| CA-25 | `Spec051Tests.Criterio25_CA_051_25` |
+| CA-26 | `Spec051Tests.Criterio26_CA_051_26` |
+| CA-27 | `Spec051Tests.Criterio27_CA_051_27` |
+| CA-28 | `Spec051Tests.Criterio28_CA_051_28` |
 
 ## 5. Contrato
 | ID | Método y ruta | Quién | Entrada | Respuestas |
@@ -106,6 +124,15 @@ Definir y especificar los endpoints OPI-01, OPI-02, OPI-03 del Excel de endpoint
 | OPI-01 | Orden por fecha descendente | Por cursor, 20 (máx. 50) | Sí, 1 minuto |
 | OPI-02 | No aplica | No | No |
 | OPI-03 | No aplica | No | No |
+
+**Códigos de error de negocio**
+
+| ID | Estado | Código | Cuándo |
+|---|---|---|---|
+| OPI-01 | 404 | `technician_not_found` | el técnico no existe o está oculto |
+| OPI-02 | 409 | `review_not_allowed` | ya opinó de esa visita, la visita no está terminada o pasaron más de 30 días |
+| OPI-03 | 409 | `review_already_answered` | la opinión ya tiene respuesta del técnico |
+
 
 **Códigos de error:** los de forma salen como 422 con `errors` por campo y los de sesión y límite como 401 y 429; los conflictos de negocio llevan un código en inglés y snake_case que se fija al implementar y se agrega al catálogo.
 
@@ -149,13 +176,13 @@ Definir y especificar los endpoints OPI-01, OPI-02, OPI-03 del Excel de endpoint
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |
 |---|---|---|
-| Acceso a datos de otra persona (IDOR) | Toda consulta y escritura filtra por el `sub` del token; ajeno responde 403 o 404 | CA-09, CA-15, CA-19 |
-| Asignación masiva o identificador ajeno en el cuerpo | El DTO no acepta identificadores de persona; se ignoran | CA-09, CA-15, CA-19 |
+| Acceso a datos de otra persona (IDOR) | Toda consulta y escritura filtra por el `sub` del token; ajeno responde 403 o 404 | CA-09, CA-15, CA-25 |
+| Asignación masiva o identificador ajeno en el cuerpo | El DTO no acepta identificadores de persona; se ignoran | CA-09, CA-15, CA-25 |
 | Inyección en filtros y parámetros | Parámetros tipados con validador; nada se concatena en consultas | CA-03, CA-10 a CA-11, CA-16 a CA-17 |
 | Ruta sin sesión | JWT obligatorio salvo las públicas | CA-02, CA-08, CA-14 |
-| Abuso por repetición o cuerpos grandes | Límite de peticiones, `Retry-After` y tope de cuerpo | CA-21 |
-| Datos personales en registros y errores | Registros sin datos personales; ProblemDetails sin valores | CA-20 |
-| Duplicados por reintento | Regla de estado o índice único, sin `Idempotency-Key` | CA-22 |
+| Abuso por repetición o cuerpos grandes | Límite de peticiones, `Retry-After` y tope de cuerpo | CA-27 |
+| Datos personales en registros y errores | Registros sin datos personales; ProblemDetails sin valores | CA-26 |
+| Duplicados por reintento | Regla de estado o índice único, sin `Idempotency-Key` | CA-28 |
 
 ## 10. Plan de pruebas
 Las pruebas citan el caso como `CA_051_NN` en el nombre (para `python scripts/sdd_lint.py --trace 051`).
@@ -164,16 +191,16 @@ Las pruebas citan el caso como `CA_051_NN` en el nombre (para `python scripts/sd
 |---|---|---|
 | Unitarias | Sí | Validadores, reglas de estado y cálculos del dominio |
 | Integración | Sí | Cada ruta con la base real en contenedor (Testcontainers) y `MarketApiFactory`/fábrica del servicio |
-| Seguridad negativa | Sí | 401, 403/404, 422, 413 y 429 (CA-02 a CA-03, CA-08 a CA-11, CA-14 a CA-17, CA-19, CA-21) |
+| Seguridad negativa | Sí | 401, 403/404, 422, 413 y 429 (CA-02 a CA-03, CA-08 a CA-11, CA-14 a CA-17, CA-25, CA-27) |
 | Base de datos | Sí | Índices y reglas de cada colección de §6 |
 | Contrato | Sí | OpenAPI regenerado y comparado con `contracts/` |
 | Mutación | Sí | Meta del módulo según la spec 008 |
 | Rendimiento | No aplica | Sin ruta crítica; se mide solo si la spec 034 lo pide |
 
 ## 11. Escenarios
-- **OPI-01** — pantallas: Perfil del técnico; Opiniones.
-- **OPI-02** — pantallas: Calificar.
-- **OPI-03** — pantallas: Mi reputación (Responder).
+- **Calificar:** el cliente recibe el aviso de que su visita terminó → califica con estrellas, escribe un comentario y decide si guarda al técnico de confianza → la reputación del técnico se actualiza.
+- **Responder:** el técnico ve una opinión nueva → escribe su respuesta → queda publicada junto a la opinión.
+- **Fuera de plazo:** pasados 30 días, el cliente ya no puede opinar y la app se lo explica.
 
 ## 12. Definición de terminado
 - Los criterios de aceptación están cubiertos por pruebas en verde y `sdd_lint --trace 051` sin faltantes.
@@ -186,13 +213,16 @@ Las pruebas citan el caso como `CA_051_NN` en el nombre (para `python scripts/sd
 
 ## 14. Decisiones tomadas sin consulta
 - **D-01:** Se toma el Excel de endpoints como fuente del contrato porque es el insumo acordado para las specs; cualquier diferencia con las specs 020 a 038 se resuelve a favor de la spec numerada.
-- **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case definidos al implementar, siguiendo la convención de errores de la spec 002.
+- **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case (los de §5 y, si falta alguno, los que se fijen al implementar), siguiendo la convención de errores de la spec 002.
 - **D-03:** No se usa `Idempotency-Key`, aunque el Excel lo menciona en creaciones.
+- **D-04:** Las opiniones con texto o fotos se publican **después** de pasar la moderación; la calificación numérica cuenta desde que se envía.
+- **D-05:** La respuesta del técnico es una sola y no se edita.
+- **D-06:** El comentario máximo es de 500 caracteres y la respuesta, de 300: el Excel solo fija los 500 del comentario.
 
 ## 15. Riesgos y dudas abiertas
-- Las opiniones con texto o fotos pasan por la moderación (spec 031): confirmar si se publican antes o después de revisarlas.
-- Confirmar el cálculo de la reputación (promedio simple o ponderado por antigüedad).
-- Esta spec se generó a partir del Excel; antes de aprobarla hay que revisar los límites, los textos de error y los plazos con el equipo.
+- Confirmar si la calificación numérica cuenta de inmediato o también espera a la moderación.
+- Confirmar el cálculo de la reputación (promedio simple o ponderado por antigüedad) y los niveles.
+- Confirmar que la respuesta del técnico no puede editarse ni borrarse.
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: _____________________ fecha: __________
