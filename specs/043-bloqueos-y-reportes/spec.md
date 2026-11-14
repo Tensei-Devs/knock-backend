@@ -30,10 +30,10 @@ Definir y especificar los endpoints BLO-01, BLO-02, BLO-03, REP-01, REP-02, REP-
 ## 3. Requisitos
 - **R-01:** `POST /api/v1/usuarios/{id}/bloqueo` (crear): Bloquea a una persona. Lo puede llamar: persona con sesión (cliente o técnico). Responde 201 cuando sale bien.
 - **R-02:** Entrada de `POST /api/v1/usuarios/{id}/bloqueo`: Ruta: id de quien se bloquea. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400.
-- **R-03:** Estados de `POST /api/v1/usuarios/{id}/bloqueo`: 404; 409. El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
+- **R-03:** Estados de `POST /api/v1/usuarios/{id}/bloqueo`: 404 `user_not_found`; 409 `already_blocked`. Los códigos de negocio van en inglés y en snake_case.
 - **R-04:** `DELETE /api/v1/usuarios/{id}/bloqueo` (borrar): Desbloquea (Deshacer). Lo puede llamar: persona con sesión (cliente o técnico). Responde 204 cuando sale bien.
 - **R-05:** Entrada de `DELETE /api/v1/usuarios/{id}/bloqueo`: Ruta: id. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400.
-- **R-06:** Estados de `DELETE /api/v1/usuarios/{id}/bloqueo`: 404. El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
+- **R-06:** Estados de `DELETE /api/v1/usuarios/{id}/bloqueo`: 404 `block_not_found`. Los códigos de negocio van en inglés y en snake_case.
 - **R-07:** `GET /api/v1/me/bloqueos` (leer todos): Lista a quién tiene bloqueado la persona. Lo puede llamar: persona con sesión (cliente o técnico). Responde 200 cuando sale bien.
 - **R-08:** `GET /api/v1/me/bloqueos` pagina por cursor (Por cursor, 20): parámetros `cursor` y `limite`, 20 por defecto y 50 como máximo; orden: No aplica.
 - **R-09:** `POST /api/v1/reportes` (crear): Crea un reporte con motivo, texto y evidencia. Avisa de llamar al 911 si hay peligro. Lo puede llamar: persona con sesión (cliente o técnico). Responde 201 cuando sale bien.
@@ -42,22 +42,29 @@ Definir y especificar los endpoints BLO-01, BLO-02, BLO-03, REP-01, REP-02, REP-
 - **R-12:** `GET /api/v1/reportes/me` pagina por cursor (Por cursor, 20): parámetros `cursor` y `limite`, 20 por defecto y 50 como máximo; orden: Orden por fecha descendente.
 - **R-13:** `POST /api/v1/reportes/{id}/apelacion` (actualizar (acción)): Apela una decisión (una sola vez). Lo puede llamar: persona con sesión que sea afectada del recurso. Responde 200 cuando sale bien.
 - **R-14:** Entrada de `POST /api/v1/reportes/{id}/apelacion`: Ruta: id. Cuerpo: texto. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400.
-- **R-15:** Estados de `POST /api/v1/reportes/{id}/apelacion`: 409. El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
-- **R-16:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
-- **R-17:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
-- **R-18:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
-- **R-19:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
+- **R-15:** Estados de `POST /api/v1/reportes/{id}/apelacion`: 409 `appeal_not_allowed`. Los códigos de negocio van en inglés y en snake_case.
+- **R-16:** **Bloquear (BLO-01 y BLO-02).** Una persona no puede bloquearse a sí misma (422); bloquear dos veces responde 409 `already_blocked`; desbloquear es posible en cualquier momento («Deshacer»). El bloqueo es en un solo sentido pero **corta en ambos**: ninguna de las dos puede enviarse mensajes, pedirse cotización ni verse en búsquedas.
+- **R-17:** **No se revela el bloqueo.** A la persona bloqueada nunca se le dice que fue bloqueada: sus intentos de mensaje o solicitud responden igual que si la otra no estuviera disponible.
+- **R-18:** **Efecto sobre lo abierto.** Bloquear cierra las conversaciones abiertas entre ambas y retira cotizaciones pendientes entre ellas; una visita ya confirmada no se cancela sola: pasa a revisión de soporte.
+- **R-19:** **Lista (BLO-03).** Paginada por cursor (20 por defecto, máximo 50), de más reciente a más antigua, solo con identificador, nombre público y fecha, sin teléfono.
+- **R-20:** **Crear un reporte (REP-01).** `motivo` de una lista cerrada; `descripcion` de 8 a 500 caracteres y moderada (spec 031); `evidencia` de 0 a 5 imágenes (spec 032); `referencia` opcional a una solicitud, visita u opinión; no se puede reportar a uno mismo (422). Si el motivo implica peligro, la respuesta incluye el aviso de llamar al 911.
+- **R-21:** **Lista y apelación (REP-02 y REP-03).** La persona ve solo sus reportes, por cursor (20 por defecto); puede apelar **una sola vez** una decisión ya tomada, con `texto` de 8 a 500 caracteres; la apelación vuelve a revisión por otra persona del panel. Sin decisión o con una apelación previa responde 409 `appeal_not_allowed`; quien no es la persona afectada, 403.
+- **R-22:** **Privacidad del reporte.** La persona reportada nunca ve quién la reportó ni el texto del reporte; la evidencia solo la ve el panel con enlaces firmados de vida corta (spec 025); los registros no llevan el texto ni los identificadores de las dos personas juntos.
+- **R-23:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
+- **R-24:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
+- **R-25:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
+- **R-26:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dado el rol «persona con sesión (cliente o técnico)», cuando llama `POST /api/v1/usuarios/{id}/bloqueo` con datos válidos, entonces responde 201 con lo descrito en §5.
 - **CA-02:** Dada una petición sin token o con token vencido, cuando llama `POST /api/v1/usuarios/{id}/bloqueo`, entonces responde 401 y no ejecuta la operación.
 - **CA-03:** Dado un valor inválido según las reglas de §6, cuando llama `POST /api/v1/usuarios/{id}/bloqueo`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
-- **CA-04:** Dado el caso «recurso no disponible», cuando llama `POST /api/v1/usuarios/{id}/bloqueo`, entonces responde 404 con ProblemDetails y no cambia el estado.
-- **CA-05:** Dado el caso «recurso no disponible», cuando llama `POST /api/v1/usuarios/{id}/bloqueo`, entonces responde 409 con ProblemDetails y no cambia el estado.
+- **CA-04:** Dado el caso «la persona a bloquear no existe», cuando llama `POST /api/v1/usuarios/{id}/bloqueo`, entonces responde 404 `user_not_found` con ProblemDetails y no cambia el estado.
+- **CA-05:** Dado el caso «ya la tiene bloqueada», cuando llama `POST /api/v1/usuarios/{id}/bloqueo`, entonces responde 409 `already_blocked` con ProblemDetails y no cambia el estado.
 - **CA-06:** Dado el rol «persona con sesión (cliente o técnico)», cuando llama `DELETE /api/v1/usuarios/{id}/bloqueo` con datos válidos, entonces responde 204 con lo descrito en §5.
 - **CA-07:** Dada una petición sin token o con token vencido, cuando llama `DELETE /api/v1/usuarios/{id}/bloqueo`, entonces responde 401 y no ejecuta la operación.
 - **CA-08:** Dado un valor inválido según las reglas de §6, cuando llama `DELETE /api/v1/usuarios/{id}/bloqueo`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
-- **CA-09:** Dado el caso «recurso no disponible», cuando llama `DELETE /api/v1/usuarios/{id}/bloqueo`, entonces responde 404 con ProblemDetails y no cambia el estado.
+- **CA-09:** Dado el caso «no hay un bloqueo de esa persona», cuando llama `DELETE /api/v1/usuarios/{id}/bloqueo`, entonces responde 404 `block_not_found` con ProblemDetails y no cambia el estado.
 - **CA-10:** Dado el rol «persona con sesión (cliente o técnico)», cuando llama `GET /api/v1/me/bloqueos` con datos válidos, entonces responde 200 con lo descrito en §5.
 - **CA-11:** Dada una petición sin token o con token vencido, cuando llama `GET /api/v1/me/bloqueos`, entonces responde 401 y no ejecuta la operación.
 - **CA-12:** Dado un listado con más de 20 elementos, cuando se pide sin `limite`, entonces devuelve 20 y el cursor de la página siguiente; con `limite=51` responde 422.
@@ -73,11 +80,18 @@ Definir y especificar los endpoints BLO-01, BLO-02, BLO-03, REP-01, REP-02, REP-
 - **CA-22:** Dada una persona que no cumple el rol «persona con sesión que sea afectada del recurso», cuando llama `POST /api/v1/reportes/{id}/apelacion`, entonces responde 403 y no cambia nada.
 - **CA-23:** Dado un valor inválido según las reglas de §6, cuando llama `POST /api/v1/reportes/{id}/apelacion`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
 - **CA-24:** Dado un cuerpo que no se puede leer, cuando llama `POST /api/v1/reportes/{id}/apelacion`, entonces responde 400 y no guarda nada.
-- **CA-25:** Dado el caso «recurso no disponible», cuando llama `POST /api/v1/reportes/{id}/apelacion`, entonces responde 409 con ProblemDetails y no cambia el estado.
-- **CA-26:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
-- **CA-27:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
-- **CA-28:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
-- **CA-29:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
+- **CA-25:** Dado el caso «ya apeló ese reporte o la decisión aún no existe», cuando llama `POST /api/v1/reportes/{id}/apelacion`, entonces responde 409 `appeal_not_allowed` con ProblemDetails y no cambia el estado.
+- **CA-26:** Dada una persona que bloquea a otra, cuando ambas intentan escribirse o cotizar, entonces no pueden y la bloqueada no sabe que lo está; al desbloquear, se restablece.
+- **CA-27:** Dada una persona bloqueada, cuando intenta escribir o cotizar con quien la bloqueó, entonces la respuesta es la misma que la de un técnico no disponible.
+- **CA-28:** Dado un bloqueo con una conversación abierta, cuando se crea, entonces la conversación se cierra y las cotizaciones pendientes entre ambas se retiran.
+- **CA-29:** Dada una persona con bloqueos, cuando consulta su lista, entonces recibe solo nombre público e identificador, paginados.
+- **CA-30:** Dado un reporte válido, cuando se crea, entonces queda `abierto` y llega a revisión (spec 053); con más de 5 evidencias, una descripción corta o a sí misma responde 422; con motivo de peligro la respuesta incluye el aviso de emergencia.
+- **CA-31:** Dada una decisión tomada, cuando la persona afectada apela, entonces el reporte pasa a `en_apelacion`; una segunda apelación o apelar sin decisión responde 409 `appeal_not_allowed`, y la de otra persona, 403.
+- **CA-32:** Dado un reporte, cuando la persona reportada consulta lo suyo, entonces no ve quién reportó ni el texto; y los registros no vinculan a ambas personas.
+- **CA-33:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
+- **CA-34:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
+- **CA-35:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
+- **CA-36:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
 
 **4.1 Criterio → prueba prevista**
 
@@ -112,6 +126,13 @@ Definir y especificar los endpoints BLO-01, BLO-02, BLO-03, REP-01, REP-02, REP-
 | CA-27 | `Spec043Tests.Criterio27_CA_043_27` |
 | CA-28 | `Spec043Tests.Criterio28_CA_043_28` |
 | CA-29 | `Spec043Tests.Criterio29_CA_043_29` |
+| CA-30 | `Spec043Tests.Criterio30_CA_043_30` |
+| CA-31 | `Spec043Tests.Criterio31_CA_043_31` |
+| CA-32 | `Spec043Tests.Criterio32_CA_043_32` |
+| CA-33 | `Spec043Tests.Criterio33_CA_043_33` |
+| CA-34 | `Spec043Tests.Criterio34_CA_043_34` |
+| CA-35 | `Spec043Tests.Criterio35_CA_043_35` |
+| CA-36 | `Spec043Tests.Criterio36_CA_043_36` |
 
 ## 5. Contrato
 | ID | Método y ruta | Quién | Entrada | Respuestas |
@@ -133,6 +154,16 @@ Definir y especificar los endpoints BLO-01, BLO-02, BLO-03, REP-01, REP-02, REP-
 | REP-01 | No aplica | No | No |
 | REP-02 | Orden por fecha descendente | Por cursor, 20 | No |
 | REP-03 | No aplica | No | No |
+
+**Códigos de error de negocio**
+
+| ID | Estado | Código | Cuándo |
+|---|---|---|---|
+| BLO-01 | 404 | `user_not_found` | la persona a bloquear no existe |
+| BLO-01 | 409 | `already_blocked` | ya la tiene bloqueada |
+| BLO-02 | 404 | `block_not_found` | no hay un bloqueo de esa persona |
+| REP-03 | 409 | `appeal_not_allowed` | ya apeló ese reporte o la decisión aún no existe |
+
 
 **Códigos de error:** los de forma salen como 422 con `errors` por campo y los de sesión y límite como 401 y 429; los conflictos de negocio llevan un código en inglés y snake_case que se fija al implementar y se agrega al catálogo.
 
@@ -193,13 +224,13 @@ Definir y especificar los endpoints BLO-01, BLO-02, BLO-03, REP-01, REP-02, REP-
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |
 |---|---|---|
-| Acceso a datos de otra persona (IDOR) | Toda consulta y escritura filtra por el `sub` del token; ajeno responde 403 o 404 | CA-22, CA-26 |
-| Asignación masiva o identificador ajeno en el cuerpo | El DTO no acepta identificadores de persona; se ignoran | CA-22, CA-26 |
+| Acceso a datos de otra persona (IDOR) | Toda consulta y escritura filtra por el `sub` del token; ajeno responde 403 o 404 | CA-22, CA-33 |
+| Asignación masiva o identificador ajeno en el cuerpo | El DTO no acepta identificadores de persona; se ignoran | CA-22, CA-33 |
 | Inyección en filtros y parámetros | Parámetros tipados con validador; nada se concatena en consultas | CA-03, CA-08, CA-15 a CA-16, CA-23 a CA-24 |
 | Ruta sin sesión | JWT obligatorio salvo las públicas | CA-02, CA-07, CA-11, CA-14, CA-18, CA-21 |
-| Abuso por repetición o cuerpos grandes | Límite de peticiones, `Retry-After` y tope de cuerpo | CA-28 |
-| Datos personales en registros y errores | Registros sin datos personales; ProblemDetails sin valores | CA-27 |
-| Duplicados por reintento | Regla de estado o índice único, sin `Idempotency-Key` | CA-29 |
+| Abuso por repetición o cuerpos grandes | Límite de peticiones, `Retry-After` y tope de cuerpo | CA-35 |
+| Datos personales en registros y errores | Registros sin datos personales; ProblemDetails sin valores | CA-34 |
+| Duplicados por reintento | Regla de estado o índice único, sin `Idempotency-Key` | CA-36 |
 
 ## 10. Plan de pruebas
 Las pruebas citan el caso como `CA_043_NN` en el nombre (para `python scripts/sdd_lint.py --trace 043`).
@@ -208,19 +239,16 @@ Las pruebas citan el caso como `CA_043_NN` en el nombre (para `python scripts/sd
 |---|---|---|
 | Unitarias | Sí | Validadores, reglas de estado y cálculos del dominio |
 | Integración | Sí | Cada ruta con la base real en contenedor (Testcontainers) y `MarketApiFactory`/fábrica del servicio |
-| Seguridad negativa | Sí | 401, 403/404, 422, 413 y 429 (CA-02 a CA-03, CA-07 a CA-08, CA-11, CA-14 a CA-16, CA-18, CA-21 a CA-24, CA-26, CA-28) |
+| Seguridad negativa | Sí | 401, 403/404, 422, 413 y 429 (CA-02 a CA-03, CA-07 a CA-08, CA-11, CA-14 a CA-16, CA-18, CA-21 a CA-24, CA-33, CA-35) |
 | Base de datos | Sí | Índices y reglas de cada colección de §6 |
 | Contrato | Sí | OpenAPI regenerado y comparado con `contracts/` |
 | Mutación | Sí | Meta del módulo según la spec 008 |
 | Rendimiento | No aplica | Sin ruta crítica; se mide solo si la spec 034 lo pide |
 
 ## 11. Escenarios
-- **BLO-01** — pantallas: Chat (menú Bloquear).
-- **BLO-02** — pantallas: Chat (Desbloquear).
-- **BLO-03** — pantallas: Chat.
-- **REP-01** — pantallas: Reportar un problema.
-- **REP-02** — pantallas: Reportar; Centro de ayuda.
-- **REP-03** — pantallas: Reportar.
+- **Bloquear:** durante un chat, la persona toca «Bloquear» → la conversación se cierra → puede deshacerlo desde Ajustes.
+- **Reportar:** la persona reporta a un técnico con motivo, texto y fotos → recibe confirmación → la moderación lo revisa en el panel.
+- **Apelar:** el técnico reportado ve que su perfil fue limitado → apela una vez con su explicación → otra persona del panel lo revisa.
 
 ## 12. Definición de terminado
 - Los criterios de aceptación están cubiertos por pruebas en verde y `sdd_lint --trace 043` sin faltantes.
@@ -233,13 +261,16 @@ Las pruebas citan el caso como `CA_043_NN` en el nombre (para `python scripts/sd
 
 ## 14. Decisiones tomadas sin consulta
 - **D-01:** Se toma el Excel de endpoints como fuente del contrato porque es el insumo acordado para las specs; cualquier diferencia con las specs 020 a 038 se resuelve a favor de la spec numerada.
-- **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case definidos al implementar, siguiendo la convención de errores de la spec 002.
+- **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case (los de §5 y, si falta alguno, los que se fijen al implementar), siguiendo la convención de errores de la spec 002.
 - **D-03:** No se usa `Idempotency-Key`, aunque el Excel lo menciona en creaciones.
+- **D-04:** El bloqueo corta en ambos sentidos aunque solo lo haga una persona.
+- **D-05:** Una visita ya confirmada no se cancela sola al bloquear: pasa a soporte para decidir.
+- **D-06:** La apelación es única y la revisa otra persona del panel distinta de la que decidió.
 
 ## 15. Riesgos y dudas abiertas
-- Los plazos y estados de la apelación los decide la moderación (spec 033 y 031): confirmar el flujo completo con el equipo.
-- Un bloqueo debe cortar chats y cotizaciones abiertos: confirmar el efecto sobre solicitudes en curso.
-- Esta spec se generó a partir del Excel; antes de aprobarla hay que revisar los límites, los textos de error y los plazos con el equipo.
+- Los plazos y estados de la apelación los decide la moderación (specs 033 y 053): confirmar el flujo completo con el equipo.
+- Confirmar el efecto de un bloqueo sobre una visita ya confirmada (se propuso pasarla a soporte).
+- Confirmar la lista de motivos de reporte y cuáles activan el aviso del 911.
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: _____________________ fecha: __________
