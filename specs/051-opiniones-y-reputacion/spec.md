@@ -38,8 +38,8 @@ Definir y especificar los endpoints OPI-01, OPI-02, OPI-03 del Excel de endpoint
 - **R-11:** Estados de `POST /api/v1/opiniones/{id}/respuesta`: 409 `review_already_answered`. Los códigos de negocio van en inglés y en snake_case.
 - **R-12:** **Quién opina y cuándo (OPI-02).** Solo el cliente dueño de una visita `terminada`, **una sola opinión por visita** y hasta 30 días después de terminada; después responde 409 `review_not_allowed`. Solo se opina de servicios hechos por Knock; la opinión sale como «Servicio verificado».
 - **R-13:** **Contenido de la opinión.** `calificacion` entero de 1 a 5 (obligatoria); `partes` opcional con puntualidad, calidad, precio justo y trato, cada una de 1 a 5; `comentario` opcional de hasta 500 caracteres, moderado (spec 031); `fotos` de 0 a 3, moderadas (spec 032); `guardarTecnicoConfianza` opcional para sumar al técnico a los de confianza.
-- **R-14:** **Reputación.** Al guardar una opinión se recalcula la reputación del técnico (promedio con un decimal, distribución de 1 a 5 y nivel) y se guarda ya calculada en su perfil; el cálculo es asíncrono y consistente en menos de 1 minuto.
-- **R-15:** **Respuesta del técnico (OPI-03).** Solo el técnico calificado, **una vez** por opinión; `texto` de 1 a 300 caracteres, moderado; después responde 409 `review_already_answered`.
+- **R-14:** **Reputación.** Al guardar una opinión se recalcula la reputación del técnico (promedio con un decimal, distribución de 1 a 5 y nivel) y se guarda ya calculada en su perfil; el cálculo es asíncrono. Niveles: `nuevo` (menos de 5 opiniones), `confiable` (5 o más y promedio de 4.0 o más) y `destacado` (20 o más y promedio de 4.7 o más). La solicitud de la visita pasa a `calificada` (spec 020).
+- **R-15:** **Respuesta del técnico (OPI-03).** Solo el técnico calificado, **una vez** por opinión; `texto` de 1 a 500 caracteres (igual que el comentario), moderado; después responde 409 `review_already_answered`.
 - **R-16:** **Lectura (OPI-01).** Lista las opiniones visibles de un técnico con su distribución por estrellas, de la más nueva a la más vieja, por cursor (20 por defecto, máximo 50); caché de 1 minuto. Las opiniones de cuentas eliminadas se muestran como «Usuario eliminado», sin nombre ni foto.
 - **R-17:** **Moderación y reportes.** Una opinión con texto o fotos pendiente de revisión no se publica hasta pasar la moderación (spec 031); una opinión reportada se atiende por el panel (spec 053) y puede ocultarse sin borrarse.
 - **R-18:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
@@ -68,7 +68,7 @@ Definir y especificar los endpoints OPI-01, OPI-02, OPI-03 del Excel de endpoint
 - **CA-18:** Dado el caso «la opinión ya tiene respuesta del técnico», cuando llama `POST /api/v1/opiniones/{id}/respuesta`, entonces responde 409 `review_already_answered` con ProblemDetails y no cambia el estado.
 - **CA-19:** Dado el cliente de una visita terminada hace menos de 30 días, cuando opina, entonces se crea la opinión; una segunda opinión de la misma visita o pasados 30 días responde 409 `review_not_allowed`.
 - **CA-20:** Dada una opinión con calificación de 0 o 6, un comentario de más de 500 caracteres o más de 3 fotos, cuando se envía, entonces responde 422 y no se guarda.
-- **CA-21:** Dada una opinión nueva, cuando se guarda, entonces la reputación del técnico se recalcula con ella y las consultas posteriores la reflejan.
+- **CA-21:** Dada una opinión nueva, cuando se guarda, entonces la reputación del técnico se recalcula con ella y las consultas posteriores la reflejan; con 5 opiniones y promedio de 4.2 su nivel es `confiable`; y la solicitud pasa a `calificada`.
 - **CA-22:** Dada una opinión sin respuesta, cuando el técnico calificado responde, entonces queda publicada; una segunda respuesta responde 409 `review_already_answered` y la de otro técnico, 403.
 - **CA-23:** Dado un técnico con opiniones, cuando se consultan, entonces salen de la más nueva a la más vieja con su distribución; las de cuentas eliminadas aparecen anonimizadas.
 - **CA-24:** Dada una opinión con comentario, cuando aún no pasa la moderación, entonces no aparece en la lista pública; al aprobarse, sí.
@@ -215,14 +215,19 @@ Las pruebas citan el caso como `CA_051_NN` en el nombre (para `python scripts/sd
 - **D-01:** Se toma el Excel de endpoints como fuente del contrato porque es el insumo acordado para las specs; cualquier diferencia con las specs 020 a 038 se resuelve a favor de la spec numerada.
 - **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case (los de §5 y, si falta alguno, los que se fijen al implementar), siguiendo la convención de errores de la spec 002.
 - **D-03:** No se usa `Idempotency-Key`, aunque el Excel lo menciona en creaciones.
-- **D-04:** Las opiniones con texto o fotos se publican **después** de pasar la moderación; la calificación numérica cuenta desde que se envía.
-- **D-05:** La respuesta del técnico es una sola y no se edita.
-- **D-06:** El comentario máximo es de 500 caracteres y la respuesta, de 300: el Excel solo fija los 500 del comentario.
+- **D-04:** La calificación numérica cuenta desde que se envía; el comentario y las fotos se publican después de pasar la moderación (spec 031): una opinión no debe perderse por una revisión de texto.
+- **D-05:** La respuesta del técnico es una sola, no se edita y tiene el mismo máximo que el comentario (500).
+- **D-06:** Niveles simples y calculables (`nuevo`, `confiable`, `destacado`): una sola opinión no define a un técnico.
+- **D-07:** Sin compromiso de tiempo para el recálculo: es asíncrono, como dice el Excel.
+
+**Correcciones de la revisión del 2026-11-13** (se conserva lo propuesto antes y se explica el cambio)
+- **C-01:** Reputación: antes con un compromiso de consistencia en menos de 1 minuto; ahora asíncrona, sin plazo.
+- **C-02:** Niveles: antes sin definir; ahora tres niveles con umbrales.
+- **C-03:** Respuesta del técnico: antes 300 caracteres; ahora 500, igual que el comentario.
 
 ## 15. Riesgos y dudas abiertas
-- Confirmar si la calificación numérica cuenta de inmediato o también espera a la moderación.
-- Confirmar el cálculo de la reputación (promedio simple o ponderado por antigüedad) y los niveles.
-- Confirmar que la respuesta del técnico no puede editarse ni borrarse.
+- Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
+- Dependencias: moderación de la spec 031, imágenes de la 032, estado `calificada` de la 020 y el cierre a los 30 días de la 054.
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: _____________________ fecha: __________

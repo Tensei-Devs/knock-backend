@@ -220,14 +220,16 @@ Las pruebas citan el caso como `CA_044_NN` en el nombre (para `python scripts/sd
 - **D-01:** Se toma el Excel de endpoints como fuente del contrato porque es el insumo acordado para las specs; cualquier diferencia con las specs 020 a 038 se resuelve a favor de la spec numerada.
 - **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case (los de §5 y, si falta alguno, los que se fijen al implementar), siguiendo la convención de errores de la spec 002.
 - **D-03:** No se usa `Idempotency-Key`, aunque el Excel lo menciona en creaciones.
-- **D-04:** Conservación de 30 días para los avisos: el Excel solo dice «poco tiempo».
+- **D-04:** Conservación de 30 días para los avisos: los avisos de la cadena de solicitudes pierden vigencia en horas; 30 días cubre el historial sin acumular datos. Es el valor del índice de vencimiento, no una configuración.
 - **D-05:** El contador muestra hasta 99 y la app muestra «99+» después.
-- **D-06:** Los avisos de seguridad no se pueden apagar, como pide el Excel.
+- **D-06:** Los avisos de seguridad no se pueden apagar y las promociones nacen apagadas, como pide el Excel.
+
+**Correcciones de la revisión del 2026-11-13** (se conserva lo propuesto antes y se explica el cambio)
+- **C-01:** Retención: antes quedaba como duda; ahora se fija en 30 días con su justificación.
 
 ## 15. Riesgos y dudas abiertas
-- Confirmar la retención de 30 días antes de borrar los avisos leídos.
-- El despachador de avisos es de la spec 037: confirmar qué eventos crean un aviso dentro de la app y con qué texto.
-- Confirmar si el tipo `promociones` debe existir ya o llegará después.
+- Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
+- Dependencia: el despachador de avisos de la spec 037 es el único que crea avisos.
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: _____________________ fecha: __________

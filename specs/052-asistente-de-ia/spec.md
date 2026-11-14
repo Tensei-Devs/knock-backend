@@ -47,8 +47,8 @@ Definir y especificar los endpoints ASI-01, ASI-02, ASI-03, ASI-04, ASI-05, ASI-
 - **R-17:** **Límite por persona y por día (429).** Cada persona tiene un límite diario de unidades de IA registrado en `uso_ia` (colección de Mercado), que se consume por turno; al agotarlo responde 429 `ai_daily_limit_reached` con `Retry-After` hasta el día siguiente. El límite exacto lo fija la configuración de la spec 024.
 - **R-18:** **Filtro de datos personales.** Antes de enviar texto al modelo se quitan teléfonos, correos, direcciones y nombres propios; la respuesta del modelo también pasa por el filtro; ni los mensajes ni las respuestas se escriben completos en registros.
 - **R-19:** **Turno del asistente (ASI-01).** `mensaje` de 1 a 1 000 caracteres, `foto` opcional (de la subida privada, spec 032) y `contexto` acotado; el asistente clasifica la categoría, pide la foto si falta y arma la solicitud como borrador que la persona confirma; si detecta un riesgo (como gas) responde primero con instrucciones de seguridad.
-- **R-20:** **Herramientas del técnico (ASI-02 a ASI-04).** Solo técnicos; el resumen y el borrador se arman a partir de una conversación en la que el técnico participa (`conversacionId`) y nunca incluyen teléfono ni dirección; el borrador es editable y explica qué tomó en cuenta; el rango de precio (ASI-04) usa el cálculo de la referencia de mercado y se cachea 1 hora por oficio y tipo.
-- **R-21:** **Bitácora (ASI-05 y ASI-06).** El técnico guarda `sabe`, `porConfirmar` y `queLlevar` (listas de hasta 10 elementos de hasta 200 caracteres) de una solicitud en la que participa; `PUT` crea (201) o reemplaza (200); solo el propio técnico la lee; se borra a los 90 días de terminada la solicitud.
+- **R-20:** **Herramientas del técnico (ASI-02 a ASI-04).** Solo técnicos; el resumen y el borrador se arman a partir de una conversación en la que el técnico participa (`conversacionId`) y nunca incluyen teléfono ni dirección; el borrador es editable y explica qué tomó en cuenta. El **rango de precio (ASI-04)** es el rango sugerido que calcula la referencia de mercado de la spec 048 (percentiles 25 a 75 de cotizaciones aceptadas, con el rango general de la categoría como respaldo) y se cachea 1 hora por oficio y tipo; el modelo de aprendizaje automático que sugería el Excel queda para una versión futura cuando existan datos.
+- **R-21:** **Bitácora (ASI-05 y ASI-06).** El técnico guarda `sabe`, `porConfirmar` y `queLlevar` (listas de hasta 10 elementos de hasta 200 caracteres) de una solicitud en la que participa; `PUT` crea (201) o reemplaza (200); solo el propio técnico la lee; se borra 30 días después de cerrarse la solicitud (el periodo de opinión y reporte de la spec 054).
 - **R-22:** **Transparencia.** Toda respuesta generada se muestra a la persona como sugerencia («generado por IA») y nunca se envía ni se guarda como cotización sin que la persona lo confirme.
 - **R-23:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
 - **R-24:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
@@ -88,8 +88,8 @@ Definir y especificar los endpoints ASI-01, ASI-02, ASI-03, ASI-04, ASI-05, ASI-
 - **CA-30:** Dada una persona que agotó sus unidades del día, cuando pide otro turno, entonces responde 429 `ai_daily_limit_reached` con `Retry-After` y no llama al modelo.
 - **CA-31:** Dado un mensaje con un teléfono y una dirección, cuando se envía al asistente, entonces el modelo recibe el texto sin esos datos y los registros no guardan el mensaje.
 - **CA-32:** Dado un mensaje que menciona olor a gas, cuando se envía, entonces la respuesta empieza con las instrucciones de seguridad; con un mensaje vacío o de más de 1 000 caracteres responde 422.
-- **CA-33:** Dado un técnico que no participa en la conversación, cuando pide el resumen o el borrador, entonces responde 403; y los textos generados no contienen teléfonos ni direcciones.
-- **CA-34:** Dado un técnico con una solicitud, cuando guarda su bitácora, entonces responde 201 y, al guardar de nuevo, 200; otro técnico no la ve (404 `log_not_found` o 403).
+- **CA-33:** Dado un técnico que no participa en la conversación, cuando pide el resumen o el borrador, entonces responde 403; los textos generados no contienen teléfonos ni direcciones; y el rango de precio coincide con la referencia de mercado de la spec 048.
+- **CA-34:** Dado un técnico con una solicitud, cuando guarda su bitácora, entonces responde 201 y, al guardar de nuevo, 200; otro técnico no la ve (404 `log_not_found` o 403); y pasados 30 días del cierre se borra.
 - **CA-35:** Dado un borrador de cotización generado, cuando no lo confirma el técnico, entonces no se envía ni se guarda como cotización.
 - **CA-36:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
 - **CA-37:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
@@ -251,14 +251,19 @@ Las pruebas citan el caso como `CA_052_NN` en el nombre (para `python scripts/sd
 - **D-01:** Se toma el Excel de endpoints como fuente del contrato porque es el insumo acordado para las specs; cualquier diferencia con las specs 020 a 038 se resuelve a favor de la spec numerada.
 - **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case (los de §5 y, si falta alguno, los que se fijen al implementar), siguiendo la convención de errores de la spec 002.
 - **D-03:** No se usa `Idempotency-Key`, aunque el Excel lo menciona en creaciones.
-- **D-04:** Se usa solo Azure OpenAI (`gpt-5-mini`) con límites por persona y por día, como autorizó José el 2026-11-11.
-- **D-05:** El asistente nunca actúa solo: toda solicitud o cotización generada la confirma la persona.
-- **D-06:** La bitácora se conserva 90 días tras terminar la solicitud: el Excel no fija el plazo.
+- **D-04:** Se usa solo Azure OpenAI (`gpt-5-mini`) con límites por persona y por día, como autorizó José el 2026-11-11; la facturación ya está activa.
+- **D-05:** El rango de precio usa los percentiles de la referencia de mercado en lugar de un modelo de aprendizaje automático: no hay datos para entrenarlo y los percentiles dan un resultado explicable desde el primer día; el modelo queda para cuando existan datos.
+- **D-06:** El asistente nunca actúa solo: toda solicitud o cotización generada la confirma la persona.
+- **D-07:** Mensaje de 1 000 caracteres como máximo: control del costo de tokens.
+- **D-08:** La bitácora se conserva 30 días después de cerrarse la solicitud, igual que los periodos de opinión y reporte.
+
+**Correcciones de la revisión del 2026-11-13** (se conserva lo propuesto antes y se explica el cambio)
+- **C-01:** ASI-04: antes se decía que usaba la referencia de mercado sin explicar el cambio frente al Excel (aprendizaje automático); ahora la decisión está documentada con su motivo.
+- **C-02:** Bitácora: antes 90 días; ahora 30 días tras el cierre para alinearse con los periodos de la spec 054.
 
 ## 15. Riesgos y dudas abiertas
-- Depende del recurso de Azure OpenAI aprobado y de los límites por persona y día de la spec 024: no se activa sin ellos.
-- Confirmar qué datos del chat pueden enviarse al modelo (sin teléfono ni dirección) y la retención de la bitácora (90 días).
-- Confirmar el límite diario de unidades y qué cuenta como una unidad.
+- Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
+- Dependencias: el recurso de Azure OpenAI y el cliente de la spec 024, el filtro de datos personales y el límite diario (`uso_ia`).
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: _____________________ fecha: __________

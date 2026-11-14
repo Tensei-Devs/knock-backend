@@ -45,10 +45,10 @@ Definir y especificar los endpoints BLO-01, BLO-02, BLO-03, REP-01, REP-02, REP-
 - **R-15:** Estados de `POST /api/v1/reportes/{id}/apelacion`: 409 `appeal_not_allowed`. Los códigos de negocio van en inglés y en snake_case.
 - **R-16:** **Bloquear (BLO-01 y BLO-02).** Una persona no puede bloquearse a sí misma (422); bloquear dos veces responde 409 `already_blocked`; desbloquear es posible en cualquier momento («Deshacer»). El bloqueo es en un solo sentido pero **corta en ambos**: ninguna de las dos puede enviarse mensajes, pedirse cotización ni verse en búsquedas.
 - **R-17:** **No se revela el bloqueo.** A la persona bloqueada nunca se le dice que fue bloqueada: sus intentos de mensaje o solicitud responden igual que si la otra no estuviera disponible.
-- **R-18:** **Efecto sobre lo abierto.** Bloquear cierra las conversaciones abiertas entre ambas y retira cotizaciones pendientes entre ellas; una visita ya confirmada no se cancela sola: pasa a revisión de soporte.
+- **R-18:** **Efecto sobre lo abierto.** Al bloquear se cierra la conversación abierta entre ambas (queda de solo lectura, sin borrar mensajes); desde ese momento no se reparten solicitudes a la persona bloqueada y las cotizaciones de la persona bloqueada no se muestran a quien bloqueó. Las visitas ya confirmadas **no se cancelan**: se completan con el código y la llegada de siempre (spec 022).
 - **R-19:** **Lista (BLO-03).** Paginada por cursor (20 por defecto, máximo 50), de más reciente a más antigua, solo con identificador, nombre público y fecha, sin teléfono.
 - **R-20:** **Crear un reporte (REP-01).** `motivo` de una lista cerrada; `descripcion` de 8 a 500 caracteres y moderada (spec 031); `evidencia` de 0 a 5 imágenes (spec 032); `referencia` opcional a una solicitud, visita u opinión; no se puede reportar a uno mismo (422). Si el motivo implica peligro, la respuesta incluye el aviso de llamar al 911.
-- **R-21:** **Lista y apelación (REP-02 y REP-03).** La persona ve solo sus reportes, por cursor (20 por defecto); puede apelar **una sola vez** una decisión ya tomada, con `texto` de 8 a 500 caracteres; la apelación vuelve a revisión por otra persona del panel. Sin decisión o con una apelación previa responde 409 `appeal_not_allowed`; quien no es la persona afectada, 403.
+- **R-21:** **Lista y apelación (REP-02 y REP-03).** La persona ve solo sus reportes, por cursor (20 por defecto); puede apelar **una sola vez** una decisión ya tomada, con `texto` de 8 a 500 caracteres. La apelación se asigna con prioridad a una persona del panel distinta de la que decidió; si no hay otra con el permiso, la revisa quien lo tenga y queda marcada «misma persona». Sin decisión o con una apelación previa responde 409 `appeal_not_allowed`; quien no es la persona afectada, 403.
 - **R-22:** **Privacidad del reporte.** La persona reportada nunca ve quién la reportó ni el texto del reporte; la evidencia solo la ve el panel con enlaces firmados de vida corta (spec 025); los registros no llevan el texto ni los identificadores de las dos personas juntos.
 - **R-23:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
 - **R-24:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
@@ -83,10 +83,10 @@ Definir y especificar los endpoints BLO-01, BLO-02, BLO-03, REP-01, REP-02, REP-
 - **CA-25:** Dado el caso «ya apeló ese reporte o la decisión aún no existe», cuando llama `POST /api/v1/reportes/{id}/apelacion`, entonces responde 409 `appeal_not_allowed` con ProblemDetails y no cambia el estado.
 - **CA-26:** Dada una persona que bloquea a otra, cuando ambas intentan escribirse o cotizar, entonces no pueden y la bloqueada no sabe que lo está; al desbloquear, se restablece.
 - **CA-27:** Dada una persona bloqueada, cuando intenta escribir o cotizar con quien la bloqueó, entonces la respuesta es la misma que la de un técnico no disponible.
-- **CA-28:** Dado un bloqueo con una conversación abierta, cuando se crea, entonces la conversación se cierra y las cotizaciones pendientes entre ambas se retiran.
+- **CA-28:** Dado un bloqueo con una conversación abierta y una visita confirmada, cuando se crea, entonces la conversación pasa a solo lectura, no se reparten solicitudes a la persona bloqueada y la visita confirmada sigue su curso normal.
 - **CA-29:** Dada una persona con bloqueos, cuando consulta su lista, entonces recibe solo nombre público e identificador, paginados.
 - **CA-30:** Dado un reporte válido, cuando se crea, entonces queda `abierto` y llega a revisión (spec 053); con más de 5 evidencias, una descripción corta o a sí misma responde 422; con motivo de peligro la respuesta incluye el aviso de emergencia.
-- **CA-31:** Dada una decisión tomada, cuando la persona afectada apela, entonces el reporte pasa a `en_apelacion`; una segunda apelación o apelar sin decisión responde 409 `appeal_not_allowed`, y la de otra persona, 403.
+- **CA-31:** Dada una decisión tomada, cuando la persona afectada apela, entonces el reporte pasa a `en_apelacion` y se asigna a otra persona del panel si la hay; una segunda apelación o apelar sin decisión responde 409 `appeal_not_allowed`, y la de otra persona, 403.
 - **CA-32:** Dado un reporte, cuando la persona reportada consulta lo suyo, entonces no ve quién reportó ni el texto; y los registros no vinculan a ambas personas.
 - **CA-33:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
 - **CA-34:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
@@ -263,14 +263,17 @@ Las pruebas citan el caso como `CA_043_NN` en el nombre (para `python scripts/sd
 - **D-01:** Se toma el Excel de endpoints como fuente del contrato porque es el insumo acordado para las specs; cualquier diferencia con las specs 020 a 038 se resuelve a favor de la spec numerada.
 - **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case (los de §5 y, si falta alguno, los que se fijen al implementar), siguiendo la convención de errores de la spec 002.
 - **D-03:** No se usa `Idempotency-Key`, aunque el Excel lo menciona en creaciones.
-- **D-04:** El bloqueo corta en ambos sentidos aunque solo lo haga una persona.
-- **D-05:** Una visita ya confirmada no se cancela sola al bloquear: pasa a soporte para decidir.
-- **D-06:** La apelación es única y la revisa otra persona del panel distinta de la que decidió.
+- **D-04:** El bloqueo corta mensajes y solicitudes en ambos sentidos, como pide el Excel, y no se revela a la persona bloqueada.
+- **D-05:** Las visitas ya confirmadas no se cancelan por un bloqueo: la persona puede cancelarlas ella misma y, si siente peligro, usar el reporte con el aviso del 911; cancelar automáticamente rompería la agenda de la otra parte.
+- **D-06:** La apelación es única y se asigna con prioridad a otra persona del panel, sin bloquearla si el equipo es pequeño.
+
+**Correcciones de la revisión del 2026-11-13** (se conserva lo propuesto antes y se explica el cambio)
+- **C-01:** Efecto del bloqueo: antes cerraba conversaciones, retiraba cotizaciones y pasaba las visitas a soporte; ahora cierra el chat, deja de repartir y ocultar cotizaciones, y no toca visitas confirmadas.
+- **C-02:** Apelación: antes obligaba a otra persona; ahora es preferente y no bloquea.
 
 ## 15. Riesgos y dudas abiertas
-- Los plazos y estados de la apelación los decide la moderación (specs 033 y 053): confirmar el flujo completo con el equipo.
-- Confirmar el efecto de un bloqueo sobre una visita ya confirmada (se propuso pasarla a soporte).
-- Confirmar la lista de motivos de reporte y cuáles activan el aviso del 911.
+- Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
+- Dependencias: conversaciones y reparto de solicitudes de las specs 026, 028 y 030, y la cola del panel de la spec 053.
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: _____________________ fecha: __________

@@ -40,10 +40,10 @@ Definir y especificar los endpoints CAS-01, CAS-02, CAS-03, CAS-04, CAS-05 del E
 - **R-11:** Entrada de `GET /api/v1/me/casa-y-auto/{id}/historial`: Ruta: id. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo.
 - **R-12:** Estados de `GET /api/v1/me/casa-y-auto/{id}/historial`: 404. El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
 - **R-13:** `GET /api/v1/me/casa-y-auto/{id}/historial` pagina por cursor (Por cursor, 20): parámetros `cursor` y `limite`, 20 por defecto y 50 como máximo; orden: Orden por fecha descendente.
-- **R-14:** **Datos del elemento (CAS-02 y CAS-03).** `tipo` de una lista cerrada (auto y los elementos de la casa que defina el catálogo); `nombre` de 2 a 60 caracteres; `anio` solo para autos, entre 1950 y el año actual más 1. En la edición cambian solo los campos enviados.
+- **R-14:** **Datos del elemento (CAS-02 y CAS-03).** `tipo` es `auto`, `electrodomestico`, `instalacion` (boiler, tinaco, calentador, etc.) u `otro`; `nombre` de 2 a 60 caracteres; `anio` solo para autos, entre 1950 y el año actual más 1. En la edición cambian solo los campos enviados.
 - **R-15:** **Límite por persona.** Cada persona puede registrar hasta 20 elementos; el 21.º responde 409 `item_limit_reached`.
 - **R-16:** **Propiedad.** Un elemento ajeno responde 404, sin revelar que existe; todas las lecturas y escrituras filtran por el `sub` del token.
-- **R-17:** **Historial (CAS-05).** Lista, por cursor (20 por defecto, máximo 50) y del más reciente al más antiguo, los trabajos terminados relacionados con ese elemento, tomados de Mercado por consulta interna; solo trae fecha, oficio y técnico, sin precios ni direcciones.
+- **R-17:** **Historial (CAS-05).** Mercado agrega a `solicitudes` un campo **opcional** `elementoId` (ampliación aditiva de la spec 020: no cambia su contrato ni sus pruebas; solo se valida su formato). Identidad devuelve el historial pidiéndolo a Mercado por la ruta interna `GET /api/v1/interno/historial?usuarioId&elementoId` con el token de la spec 037: lista, por cursor (20 por defecto, máximo 50) y del más reciente al más antiguo, las visitas `terminada` de ese cliente con ese `elementoId`, con fecha, oficio y técnico, sin precios ni direcciones.
 - **R-18:** **Eliminar un elemento.** Quitarlo no borra los trabajos pasados de Mercado: solo desliga el historial.
 - **R-19:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
 - **R-20:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
@@ -74,10 +74,10 @@ Definir y especificar los endpoints CAS-01, CAS-02, CAS-03, CAS-04, CAS-05 del E
 - **CA-21:** Dado un valor inválido según las reglas de §6, cuando llama `GET /api/v1/me/casa-y-auto/{id}/historial`, entonces responde 422 con `errors.<campo>`, no repite el valor y no devuelve datos.
 - **CA-22:** Dado el caso «recurso no disponible», cuando llama `GET /api/v1/me/casa-y-auto/{id}/historial`, entonces responde 404 con ProblemDetails y no cambia el estado.
 - **CA-23:** Dado un listado con más de 20 elementos, cuando se pide sin `limite`, entonces devuelve 20 y el cursor de la página siguiente; con `limite=51` responde 422.
-- **CA-24:** Dado un elemento con nombre de 1 carácter, un año fuera de rango o un año en un elemento que no es auto, cuando se guarda, entonces responde 422 y no se guarda.
+- **CA-24:** Dado un elemento con tipo fuera de la lista, nombre de 1 carácter, año fuera de rango o año en un elemento que no es auto, cuando se guarda, entonces responde 422 y no se guarda.
 - **CA-25:** Dada una persona con 20 elementos, cuando registra otro, entonces responde 409 `item_limit_reached`.
 - **CA-26:** Dado el elemento de otra persona, cuando se intenta ver, editar, borrar o pedir su historial, entonces responde 404.
-- **CA-27:** Dado un elemento con trabajos terminados, cuando su dueña consulta el historial, entonces recibe fecha, oficio y técnico de cada trabajo, paginados, sin precios ni direcciones.
+- **CA-27:** Dado un elemento con trabajos terminados, cuando su dueña consulta el historial, entonces recibe fecha, oficio y técnico de cada trabajo, paginados y sin precios ni direcciones; las solicitudes sin `elementoId` no aparecen.
 - **CA-28:** Dado un elemento con historial, cuando se elimina, entonces desaparece de la lista y los trabajos terminados siguen existiendo en Mercado.
 - **CA-29:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
 - **CA-30:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
@@ -213,13 +213,17 @@ Las pruebas citan el caso como `CA_041_NN` en el nombre (para `python scripts/sd
 - **D-01:** Se toma el Excel de endpoints como fuente del contrato porque es el insumo acordado para las specs; cualquier diferencia con las specs 020 a 038 se resuelve a favor de la spec numerada.
 - **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case (los de §5 y, si falta alguno, los que se fijen al implementar), siguiendo la convención de errores de la spec 002.
 - **D-03:** No se usa `Idempotency-Key`, aunque el Excel lo menciona en creaciones.
-- **D-04:** Máximo 20 elementos por persona: el Excel no fija el límite.
-- **D-05:** El historial no muestra precios ni direcciones, solo fecha, oficio y técnico.
+- **D-04:** Se agrega `elementoId` opcional a la solicitud en lugar de armar el historial por oficio y fecha: es exacto, barato y no rompe la spec 020 (campo opcional, sin cambios en lo existente).
+- **D-05:** Máximo 20 elementos por persona: tope de cordura contra abuso.
+- **D-06:** Tipos fijos: `auto`, `electrodomestico`, `instalacion` y `otro`; cubren lo que el Excel menciona («autos y cosas de la casa») sin crear un catálogo administrable.
+
+**Correcciones de la revisión del 2026-11-13** (se conserva lo propuesto antes y se explica el cambio)
+- **C-01:** Historial: antes dependía de un dato que la spec 020 no guarda; ahora se agrega un campo opcional `elementoId` a la solicitud y una ruta interna.
+- **C-02:** Tipos: antes «lista cerrada» sin valores; ahora cuatro valores definidos.
 
 ## 15. Riesgos y dudas abiertas
-- La spec 020 no guarda a qué elemento pertenece una solicitud: para armar el historial hay que agregar un `elementoId` opcional a la solicitud o armarlo por oficio y fecha; decidir al aprobar.
-- Confirmar la lista cerrada de tipos de elementos de la casa.
-- Confirmar el límite de 20 elementos por persona.
+- Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
+- Dependencias: el campo opcional `elementoId` en `solicitudes` y su aceptación en `POST /solicitudes` (se implementa junto con esta spec, sin tocar la 020 aprobada) y las rutas internas de la spec 037 (H-1).
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: _____________________ fecha: __________

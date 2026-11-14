@@ -42,11 +42,11 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 - **R-13:** `POST /api/v1/admin/reportes/{id}/decision` (actualizar (acción)): Asigna gravedad y sanción; avisa a las dos partes sin revelar datos de la otra. Lo puede llamar: personal interno (Moderación (doble verificación)) con doble verificación, spec 033. Responde 200 cuando sale bien.
 - **R-14:** Entrada de `POST /api/v1/admin/reportes/{id}/decision`: Cuerpo: gravedad, sancion, motivo. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400. Reglas: `motivo`: Solo esos valores; `gravedad`: La asigna la moderación.
 - **R-15:** Estados de `POST /api/v1/admin/reportes/{id}/decision`: 404 `report_not_found`. Los códigos de negocio van en inglés y en snake_case.
-- **R-16:** **Cola de verificaciones (VER-03).** Solo con el permiso `verification:review` y doble verificación (spec 033); filtros `estado`, `desde` y `hasta` (rango máximo de 90 días; fuera de rango, 422); por cursor (20 por defecto, máximo 50), de la más antigua a la más reciente; la lista no incluye fotos ni datos personales, solo identificador, nivel, estado y fecha. Una verificación sin revisar a los 7 días vuelve a «sin verificar» (spec 025).
+- **R-16:** **Cola de verificaciones (VER-03).** Solo con el permiso `verification:review` y doble verificación (spec 033); filtros `tipo` (`identidad` o `recuperacion`, esta última de la spec 039), `estado`, `desde` y `hasta` (por omisión, los últimos 30 días); por cursor (20 por defecto, máximo 50), de la más antigua a la más reciente; la lista no incluye fotos ni datos personales, solo identificador, tipo, estado y fecha. Una verificación sin revisar a los 7 días vuelve a «sin verificar» (spec 025).
 - **R-17:** **Abrir una verificación (VER-04).** Entrega enlaces de 5 minutos a las fotos y registra quién las abrió y cuándo (auditoría); los enlaces no se guardan ni se cachean y no se repiten en registros; con las fotos ya destruidas responde 410 `photos_destroyed`.
-- **R-18:** **Decidir una verificación (VER-05).** `decision` es `aprobada` o `rechazada`; `motivo` de 8 a 300 caracteres y obligatorio al rechazar; la decide una persona con el rol verificador que no sea la persona verificada; al decidir se destruye la llave de las fotos (spec 025) y se avisa a la persona. Decidir una ya decidida responde 409 `verification_already_decided`.
-- **R-19:** **Cola de reportes (REP-04).** Solo con `reports:resolve` y doble verificación; filtros `gravedad`, `estado`, `desde` y `hasta`; por cursor (20 por defecto); muestra el motivo y el texto del reporte pero nunca el teléfono ni la dirección de las personas.
-- **R-20:** **Decidir un reporte (REP-05).** `gravedad` de una lista cerrada, `sancion` de una lista cerrada (`ninguna`, `advertencia`, `ocultar_perfil`, `suspender_cuenta`) y `motivo` de 8 a 300 caracteres; se avisa a las dos partes **sin revelar datos de la otra**; la decisión queda auditada; si hay apelación (spec 043), la decide una persona distinta de la que decidió primero.
+- **R-18:** **Decidir una verificación o una recuperación (VER-05).** `decision` es `aprobada` o `rechazada`; `motivo` de 8 a 300 caracteres y obligatorio al rechazar; la decide una persona con el rol verificador que no sea la persona verificada. En una verificación de identidad se destruye la llave de las fotos (spec 025); en una **recuperación de acceso** (spec 039), aprobarla cambia el número de la cuenta al número nuevo ya verificado y cierra las sesiones anteriores. En ambos casos se avisa a la persona. Decidir una ya decidida responde 409 `verification_already_decided`.
+- **R-19:** **Cola de reportes (REP-04).** Solo con `reports:resolve` y doble verificación; filtros `gravedad`, `estado`, `desde` y `hasta` (por omisión, los últimos 30 días); por cursor (20 por defecto); muestra el motivo y el texto del reporte pero nunca el teléfono ni la dirección de las personas.
+- **R-20:** **Decidir un reporte (REP-05).** El moderador asigna la `gravedad` (`critica`, `alta`, `media` o `baja`) y un `motivo` de 8 a 300 caracteres; la respuesta se deriva de la gravedad, como define el Excel: `critica` = suspensión preventiva de la cuenta hasta revisión, `alta` = se oculta al técnico de nuevas solicitudes (`oculto = true`), `media` = advertencia a la persona reportada y `baja` = mediación (aviso a ambas partes para que lo resuelvan, sin sanción). Se avisa a las dos partes **sin revelar datos de la otra** y la decisión queda auditada. Si hay apelación (spec 043), se asigna con prioridad a otra persona del panel.
 - **R-21:** **Sin datos en registros ni caché.** Ninguna ruta de esta spec guarda en registros o caché fotos, enlaces firmados, textos de reportes ni datos personales de las personas revisadas; todas las respuestas llevan `Cache-Control: private, no-store`.
 - **R-22:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
 - **R-23:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
@@ -70,7 +70,7 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 - **CA-14:** Dada una persona que no cumple el rol «personal interno (Verificador (doble verificación)) con doble verificación, spec 033», cuando llama `POST /api/v1/admin/verificaciones/{id}/decision`, entonces responde 403 y no cambia nada.
 - **CA-15:** Dado un valor inválido según las reglas de §6, cuando llama `POST /api/v1/admin/verificaciones/{id}/decision`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
 - **CA-16:** Dado un cuerpo que no se puede leer, cuando llama `POST /api/v1/admin/verificaciones/{id}/decision`, entonces responde 400 y no guarda nada.
-- **CA-17:** Dado el caso «la verificación no existe», cuando llama `POST /api/v1/admin/verificaciones/{id}/decision`, entonces responde 404 `verification_not_found` con ProblemDetails y no cambia el estado.
+- **CA-17:** Dado el caso «la verificación o el caso no existe», cuando llama `POST /api/v1/admin/verificaciones/{id}/decision`, entonces responde 404 `verification_not_found` con ProblemDetails y no cambia el estado.
 - **CA-18:** Dado el caso «ya tiene una decisión o no está en revisión», cuando llama `POST /api/v1/admin/verificaciones/{id}/decision`, entonces responde 409 `verification_already_decided` con ProblemDetails y no cambia el estado.
 - **CA-19:** Dado el rol «personal interno (Moderación (doble verificación)) con doble verificación, spec 033», cuando llama `GET /api/v1/admin/reportes` con datos válidos, entonces responde 200 con lo descrito en §5.
 - **CA-20:** Dada una petición sin token o con token vencido, cuando llama `GET /api/v1/admin/reportes`, entonces responde 401 y no ejecuta la operación.
@@ -83,11 +83,11 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 - **CA-27:** Dado un valor inválido según las reglas de §6, cuando llama `POST /api/v1/admin/reportes/{id}/decision`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
 - **CA-28:** Dado un cuerpo que no se puede leer, cuando llama `POST /api/v1/admin/reportes/{id}/decision`, entonces responde 400 y no guarda nada.
 - **CA-29:** Dado el caso «el reporte no existe», cuando llama `POST /api/v1/admin/reportes/{id}/decision`, entonces responde 404 `report_not_found` con ProblemDetails y no cambia el estado.
-- **CA-30:** Dado un verificador, cuando consulta la cola, entonces ve solo identificador, nivel, estado y fecha, de la más antigua a la más reciente; un rango de más de 90 días responde 422.
+- **CA-30:** Dado un verificador, cuando consulta la cola, entonces ve identificadores, tipo, estado y fecha, de la más antigua a la más reciente y de los últimos 30 días por omisión; un `tipo` o `estado` inválido responde 422.
 - **CA-31:** Dado un verificador que abre una verificación, cuando recibe los enlaces, entonces vencen a los 5 minutos y queda registrada la apertura; con las fotos destruidas responde 410 `photos_destroyed`.
-- **CA-32:** Dada una verificación en revisión, cuando el verificador aprueba o rechaza con motivo, entonces queda decidida, se destruye la llave de las fotos y la persona recibe aviso; rechazar sin motivo responde 422.
+- **CA-32:** Dada una verificación o una recuperación en revisión, cuando el verificador aprueba o rechaza con motivo, entonces queda decidida y se aplica su efecto (llave de fotos destruida o cambio de número con sesiones cerradas) y la persona recibe aviso; rechazar sin motivo responde 422.
 - **CA-33:** Dado un moderador, cuando consulta la cola, entonces ve motivo y texto y ningún teléfono ni dirección; un filtro inválido responde 422.
-- **CA-34:** Dado un reporte abierto, cuando el moderador decide con gravedad, sanción y motivo, entonces ambas partes reciben aviso sin datos de la otra y la decisión queda auditada; la apelación la revisa otra persona.
+- **CA-34:** Dado un reporte abierto, cuando el moderador asigna una gravedad con motivo, entonces se aplica la respuesta de esa gravedad (suspensión, ocultar, advertencia o mediación), ambas partes reciben aviso sin datos de la otra y la decisión queda auditada.
 - **CA-35:** Dadas estas rutas, cuando se inspeccionan registros, caché y encabezados, entonces no aparecen fotos, enlaces ni textos y las respuestas no son cacheables.
 - **CA-36:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
 - **CA-37:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
@@ -163,7 +163,7 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 |---|---|---|---|
 | VER-04 | 404 | `verification_not_found` | la verificación no existe |
 | VER-04 | 410 | `photos_destroyed` | las fotos ya fueron destruidas |
-| VER-05 | 404 | `verification_not_found` | la verificación no existe |
+| VER-05 | 404 | `verification_not_found` | la verificación o el caso no existe |
 | VER-05 | 409 | `verification_already_decided` | ya tiene una decisión o no está en revisión |
 | REP-05 | 404 | `report_not_found` | el reporte no existe |
 
@@ -275,13 +275,20 @@ Las pruebas citan el caso como `CA_053_NN` en el nombre (para `python scripts/sd
 - **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case (los de §5 y, si falta alguno, los que se fijen al implementar), siguiendo la convención de errores de la spec 002.
 - **D-03:** No se usa `Idempotency-Key`, aunque el Excel lo menciona en creaciones.
 - **D-04:** Los enlaces de fotos duran 5 minutos y cada apertura queda auditada, según el Excel.
-- **D-05:** Quien decide una verificación no puede ser la persona verificada.
-- **D-06:** Las sanciones disponibles son `ninguna`, `advertencia`, `ocultar_perfil` y `suspender_cuenta`: el Excel no las enumera.
+- **D-05:** Quien decide una verificación o recuperación no puede ser la persona verificada.
+- **D-06:** La respuesta a un reporte se deriva de la gravedad definida en el Excel (suspensión preventiva, ocultar, advertencia o mediación); no se agrega una lista aparte de sanciones.
+- **D-07:** La cola de recuperaciones de acceso (spec 039) reutiliza la de verificaciones y el permiso `verification:review`: no se crea un panel de soporte.
+- **D-08:** Las colas filtran por fechas con los últimos 30 días por omisión y sin rango máximo: la paginación por cursor ya acota el costo.
+
+**Correcciones de la revisión del 2026-11-13** (se conserva lo propuesto antes y se explica el cambio)
+- **C-01:** Sanciones: antes una lista propia (`ninguna`, `advertencia`, `ocultar_perfil`, `suspender_cuenta`); ahora la respuesta se deriva de la gravedad del Excel.
+- **C-02:** Rango de 90 días en las colas: eliminado; ahora últimos 30 días por omisión.
+- **C-03:** Recuperación de acceso: agregada a la cola de verificaciones (spec 039).
+- **C-04:** Apelación: antes siempre otra persona; ahora con prioridad, sin bloqueo.
 
 ## 15. Riesgos y dudas abiertas
-- Exige el panel con doble factor (spec 033) y los permisos `verification:review` y `reports:resolve`: no se activa sin esa entrada.
-- Confirmar la lista de sanciones y gravedades, y qué permiso exige moderar reportes de opiniones (`reviews:moderate`).
-- Confirmar el máximo de 90 días de rango en las colas y la auditoría de cada vista de fotos (spec 025).
+- Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
+- Dependencias: el panel con doble factor y los permisos `verification:review` y `reports:resolve` (spec 033, H-4), la cuenta de almacenamiento privada de la spec 025 (H-2) y la moderación de la 031.
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: _____________________ fecha: __________

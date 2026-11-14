@@ -289,11 +289,14 @@ Las pruebas citan el caso como `CA_045_NN` en el nombre (para `python scripts/sd
 - **D-04:** La clave de un oficio no se puede cambiar una vez creada, para no romper técnicos y solicitudes que ya la usan.
 - **D-05:** El panel ve la lista de espera solo como conteos por código postal, con celular enmascarado si se necesita.
 - **D-06:** Los oficios pedidos se agrupan por texto normalizado (sin acentos, mayúsculas ni espacios sobrantes).
+- **D-07:** `modalidad` del oficio es `domicilio`, `taller` o `ambos`, igual que la atención del técnico y la modalidad de la visita (spec 021).
+
+**Correcciones de la revisión del 2026-11-13** (se conserva lo propuesto antes y se explica el cambio)
+- **C-01:** `modalidad`: antes «lista cerrada» sin valores; ahora se define con los de la spec 021.
 
 ## 15. Riesgos y dudas abiertas
-- Las rutas de administración exigen el panel con doble factor (spec 033): confirmar los roles que pueden crear y editar oficios y quién ve la lista de espera.
-- La lista de espera se escribe con la spec 023; aquí solo se agrega su lectura interna con conteos.
-- Confirmar la lista cerrada de `modalidad` de un oficio.
+- Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
+- Dependencia: las rutas de administración exigen el panel con doble factor (spec 033, H-4) y el permiso `catalog:manage`.
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: _____________________ fecha: __________
