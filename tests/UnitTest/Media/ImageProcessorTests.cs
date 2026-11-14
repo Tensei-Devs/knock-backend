@@ -62,6 +62,49 @@ public sealed class ImageProcessorTests
         HasApp1Segment(processed.Reduced).Should().BeFalse("reduced bytes carry no APP1 metadata segment");
     }
 
+    [Theory]
+    [InlineData(2, 80, 48, 68, 8)]
+    [InlineData(3, 80, 48, 68, 39)]
+    [InlineData(4, 80, 48, 11, 39)]
+    [InlineData(5, 48, 80, 8, 11)]
+    [InlineData(6, 48, 80, 39, 11)]
+    [InlineData(7, 48, 80, 39, 68)]
+    [InlineData(8, 48, 80, 8, 68)]
+    public async Task Process_ExifOrientation_AppliesToPixelsAndStripsMetadata_CA_013_01(
+        ushort orientation, int width, int height, int markerX, int markerY)
+    {
+        using var bitmap = new SKBitmap(80, 48);
+        using var canvas = new SKCanvas(bitmap);
+        canvas.Clear(SKColors.Blue);
+        using var paint = new SKPaint { Color = SKColors.Red };
+        canvas.DrawRect(4, 2, 16, 14, paint);
+        using var jpeg = bitmap.Encode(SKEncodedImageFormat.Jpeg, 100);
+        byte[] source = jpeg.ToArray();
+        using var input = new MemoryStream();
+        await input.WriteAsync(source.AsMemory(0, 2));
+        await input.WriteAsync(BuildExifApp1(orientation));
+        await input.WriteAsync(source.AsMemory(2));
+        using var sourceCodec = SKCodec.Create(new MemoryStream(input.ToArray()));
+        ((int)sourceCodec.EncodedOrigin).Should().Be(orientation);
+
+        using var processor = CreateProcessor();
+        var outcome = await processor.ProcessAsync(new ArraySegment<byte>(input.ToArray()), CancellationToken.None);
+
+        outcome.Status.Should().Be(MediaOutcomeStatus.Success);
+        outcome.Value!.Width.Should().Be(width);
+        outcome.Value.Height.Should().Be(height);
+        foreach (var bytes in new[] { outcome.Value.Original, outcome.Value.Reduced })
+        {
+            HasApp1Segment(bytes).Should().BeFalse();
+            using var decoded = SKBitmap.Decode(bytes);
+            decoded.Width.Should().Be(width);
+            decoded.Height.Should().Be(height);
+            var marker = decoded.GetPixel(markerX, markerY);
+            marker.Red.Should().BeGreaterThan((byte)200);
+            marker.Blue.Should().BeLessThan((byte)50);
+        }
+    }
+
     [Fact]
     public async Task Process_ReducesLongestSideToConfiguredLimit_OI2_01()
     {
@@ -132,7 +175,7 @@ public sealed class ImageProcessorTests
         return false;
     }
 
-    private static byte[] BuildExifApp1()
+    private static byte[] BuildExifApp1(ushort? orientation = null)
     {
         using var tiff = new MemoryStream();
         using var writer = new BinaryWriter(tiff, System.Text.Encoding.ASCII, leaveOpen: true);
@@ -141,25 +184,34 @@ public sealed class ImageProcessorTests
         writer.Write((byte)'I');
         writer.Write((short)42);
         writer.Write(8u);
-        // IFD0: one entry, the GPS pointer (tag 0x8825, LONG, count 1). GPS IFD follows at offset 26.
-        writer.Write((ushort)1);
+        // IFD0: optional orientation followed by the GPS pointer.
+        int extra = orientation.HasValue ? 12 : 0;
+        writer.Write((ushort)(orientation.HasValue ? 2 : 1));
+        if (orientation.HasValue)
+        {
+            writer.Write((ushort)0x0112); // Orientation, SHORT, count 1
+            writer.Write((ushort)3);
+            writer.Write(1u);
+            writer.Write(orientation.Value);
+            writer.Write((ushort)0);
+        }
         writer.Write((ushort)0x8825);
         writer.Write((ushort)4);
         writer.Write(1u);
-        writer.Write(26u);
+        writer.Write((uint)(26 + extra));
         writer.Write(0u); // next IFD: none
-        // GPS IFD at offset 26: four entries.
+        // GPS IFD: four entries.
         writer.Write((ushort)4);
         WriteAsciiEntry(writer, 0x0001, "N"); // GPSLatitudeRef
-        WriteRationalEntry(writer, 0x0002, 80, 19, 25, 56); // GPSLatitude: 19°25'56/100"
+        WriteRationalEntry(writer, 0x0002, 80 + extra, 19, 25, 56); // GPSLatitude: 19°25'56/100"
         WriteAsciiEntry(writer, 0x0003, "W"); // GPSLongitudeRef
-        WriteRationalEntry(writer, 0x0004, 104, 99, 7, 46); // GPSLongitude: 99°07'46/100"
+        WriteRationalEntry(writer, 0x0004, 104 + extra, 99, 7, 46); // GPSLongitude: 99°07'46/100"
         writer.Write(0u);
-        // Latitude rationals at offset 80.
+        // Latitude rationals.
         WriteRational(writer, 19, 1);
         WriteRational(writer, 25, 1);
         WriteRational(writer, 56, 100);
-        // Longitude rationals at offset 104.
+        // Longitude rationals.
         WriteRational(writer, 99, 1);
         WriteRational(writer, 7, 1);
         WriteRational(writer, 46, 100);
