@@ -71,7 +71,7 @@ public sealed class DemoSeedLoaderTests
     }
 
     [Fact]
-    public async Task NonLocalHost_CA_038_12()
+    public async Task NonDemoDocument_CA_038_12()
     {
         await WithDatabase(async (database, seeder, _) =>
         {
@@ -82,6 +82,19 @@ public sealed class DemoSeedLoaderTests
             Assert.Contains("non-demo", error.Message, StringComparison.Ordinal);
             Assert.Equal(before, await users.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync());
         });
+    }
+
+    [Fact]
+    public async Task RemoteHost_RejectsBeforeMongoWritesAndCacheAccess_CA_038_12()
+    {
+        await WithDatabase(async (database, seeder, _, cache) =>
+        {
+            var users = database.GetCollection<BsonDocument>("usuarios");
+            var before = await users.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+            await Assert.ThrowsAsync<InvalidOperationException>(() => seeder.SeedAsync(_path, CancellationToken.None));
+            Assert.Equal(before, await users.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync());
+            Assert.Equal(0, cache.Accesses);
+        }, connection: "mongodb://remote.invalid");
     }
 
     [Theory]
@@ -174,6 +187,31 @@ public sealed class DemoSeedLoaderTests
             await users.Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("celularHash"), new CreateIndexOptions { Unique = true }));
             await Task.WhenAll(seeder.SeedAsync(_path, CancellationToken.None), seeder.SeedAsync(_path, CancellationToken.None));
             Assert.Equal(10, await users.CountDocumentsAsync(Builders<BsonDocument>.Filter.Eq("demo", true)));
+        });
+    }
+
+    [Theory]
+    [InlineData("_id")]
+    [InlineData("sub")]
+    [InlineData("celularHash")]
+    public async Task ConcurrentLoads_WithEachUniqueIndex_NoDuplicates_CA_038_11(string field)
+    {
+        await WithDatabase(async (database, seeder, _) =>
+        {
+            var users = database.GetCollection<BsonDocument>("usuarios");
+            if (field != "_id")
+            {
+                await users.Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(
+                    Builders<BsonDocument>.IndexKeys.Ascending(field), new CreateIndexOptions { Unique = true }));
+            }
+
+            await Task.WhenAll(seeder.SeedAsync(_path, CancellationToken.None), seeder.SeedAsync(_path, CancellationToken.None));
+            var result = await users.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+            var seeds = BsonSerializer.Deserialize<BsonArray>(await File.ReadAllTextAsync(_path));
+            Assert.Equal(10, result.Count);
+            Assert.All(result, user => Assert.True(user["demo"].AsBoolean));
+            Assert.Equal(10, result.Select(user => user[field]).Distinct().Count());
+            Assert.All(seeds, seed => Assert.Single(result, user => user["_id"] == seed["_id"]));
         });
     }
 
@@ -294,7 +332,7 @@ public sealed class DemoSeedLoaderTests
     private static async Task WithDatabase(Func<IMongoDatabase, DemoClientSeeder, byte[], Task> test)
         => await WithDatabase((db, seeder, key, _) => test(db, seeder, key));
 
-    private static async Task WithDatabase(Func<IMongoDatabase, DemoClientSeeder, byte[], FakeCache, Task> test, bool enabled = true, string environment = "Development")
+    private static async Task WithDatabase(Func<IMongoDatabase, DemoClientSeeder, byte[], FakeCache, Task> test, bool enabled = true, string environment = "Development", string? connection = null)
     {
         var fixture = await DocumentDbFixture.SharedAsync();
         using var client = new MongoClient(fixture.ConnectionString);
@@ -307,7 +345,7 @@ public sealed class DemoSeedLoaderTests
             options.EncryptionKeys.Add(1, Convert.ToBase64String(key));
             options.HmacKeys.Add(1, Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
             var protector = new PhoneProtector(PhoneProtectionKeys.TryCreate(options, out var errors) ?? throw new InvalidOperationException(string.Join(',', errors)));
-            var store = new UsuariosStore(database, Options.Create(new KnockMongoOptions { ConnectionString = fixture.ConnectionString }));
+            var store = new UsuariosStore(database, Options.Create(new KnockMongoOptions { ConnectionString = connection ?? fixture.ConnectionString }));
             var cache = new FakeCache();
             var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Seed:Demo"] = enabled.ToString() }).Build();
             await test(database, new DemoClientSeeder(store, protector, cache, cache.Logger, configuration, new FakeEnvironment { EnvironmentName = environment }), key, cache);
@@ -323,10 +361,12 @@ public sealed class DemoSeedLoaderTests
         public List<string> Removed { get; } = [];
         public CaptureLogger Logger { get; } = new();
         public bool Fail { get; set; }
-        public Task<UserProfile?> GetAsync(string sub, CancellationToken cancellationToken) => Task.FromResult<UserProfile?>(null);
-        public Task SetAsync(UserProfile profile, CancellationToken cancellationToken) => Task.CompletedTask;
+        public int Accesses;
+        public Task<UserProfile?> GetAsync(string sub, CancellationToken cancellationToken) { Interlocked.Increment(ref Accesses); return Task.FromResult<UserProfile?>(null); }
+        public Task SetAsync(UserProfile profile, CancellationToken cancellationToken) { Interlocked.Increment(ref Accesses); return Task.CompletedTask; }
         public Task RemoveAsync(string sub, CancellationToken cancellationToken)
         {
+            Interlocked.Increment(ref Accesses);
             if (Fail) { throw new TimeoutException(); }
             lock (Removed) { Removed.Add(sub); }
             return Task.CompletedTask;
