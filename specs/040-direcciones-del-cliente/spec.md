@@ -154,6 +154,8 @@ Definir y especificar los endpoints DIR-01, DIR-02, DIR-03, DIR-04 del Excel de 
 - Spec 022 de este repositorio.
 - Specs 002, 003, 009, 010 y 011 (estilo, bases de datos, seguridad, caché y registros).
 - Frontend: spec 030 consume este contrato.
+- **Prerrequisitos que hoy no existen (trabajo pendiente, no capacidades implementadas):**
+  - Llaves de cifrado de campo en Key Vault (spec 025) y la copia de la dirección en la visita de la spec 022 (hoy no implementadas)
 
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |

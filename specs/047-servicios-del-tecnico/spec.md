@@ -173,6 +173,8 @@ Definir y especificar los endpoints SRV-01, SRV-02, SRV-03, SRV-04 del Excel de 
 - Spec 020 de este repositorio.
 - Specs 002, 003, 009, 010 y 011 (estilo, bases de datos, seguridad, caché y registros).
 - Frontend: spec 037 consume este contrato.
+- **Prerrequisitos que hoy no existen (trabajo pendiente, no capacidades implementadas):**
+  - Perfil del técnico y catálogo de oficios activos (spec 046, hoy no implementada)
 
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |

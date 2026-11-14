@@ -30,7 +30,7 @@ Fijar en una sola spec cómo funcionan los dos procesos de fondo que sostienen l
 ## 3. Requisitos
 - **R-01:** `outbox` y `tareas_programadas` existen en la base de cada servicio que las usa (Identidad, Mercado y Mensajería) con la forma de §6 y no tienen ruta HTTP pública ni se enrutan por el gateway.
 - **R-02:** Todo evento se escribe en `outbox` **en la misma transacción** que el cambio que lo provoca. Su `_id` es determinista (`{tipo}:{recursoId}:{version}`), de modo que reintentar la operación no lo duplica. La `carga` lleva solo identificadores, nunca teléfono, dirección, nombre ni texto de la persona.
-- **R-03:** El procesador de la bandeja de salida (Mercado e Identidad) reserva un evento a la vez con un solo `findOneAndUpdate` condicionado (`estado = pendiente` y `programadaPara <= ahora`, o `estado = en_proceso` con `reservadaHasta < ahora`), lo pasa a `en_proceso` con `reservadaHasta = ahora + 2 min` y lo entrega a Mensajería por `POST /api/v1/interno/avisos` con el token de la spec 037. Al recibir 202 lo marca `entregado`.
+- **R-03:** El procesador de la bandeja de salida (Mercado e Identidad) reserva un evento a la vez con un solo `findOneAndUpdate` condicionado (`estado = pendiente` y `programadaPara <= ahora`, o `estado = en_proceso` con `reservadaHasta < ahora`), lo pasa a `en_proceso` con `reservadaHasta = ahora + 2 min` y lo entrega al servicio indicado en `destino`: los eventos de aviso van a Mensajería por `POST /api/v1/interno/avisos` (spec 037) y los demás (`CotizacionElegida`, `BloqueoCreado`, `BloqueoEliminado`) a `POST /api/v1/interno/eventos` del servicio destino, siempre con el token de R-15. Al recibir 202 lo marca `entregado`.
 - **R-04:** Si la entrega falla (red, 5xx, 429), suma `intentos` y reprograma con espera exponencial de 5 s, 30 s, 2 min y 10 min; al quinto fallo queda `fallido` y se registra el tipo y el identificador, sin datos personales. Un 401 o 403 no se reintenta: queda `fallido` de inmediato.
 - **R-05:** La entrega es **al menos una vez**: quien recibe es idempotente por `eventoId` (spec 037: 202 también si ya lo recibió) y el procesador nunca marca `entregado` sin haber recibido 202.
 - **R-06:** `tareas_programadas` tiene la forma de la spec 028 (`tipo`, `claveNegocio`, `programadaPara`, `estado`, `intentos`, `reservadaHasta`) y un índice único `{ tipo, claveNegocio }`: programar dos veces la misma tarea no crea un duplicado y responde con la existente.
@@ -42,14 +42,14 @@ Fijar en una sola spec cómo funcionan los dos procesos de fondo que sostienen l
 - **R-12:** Todas las fechas son UTC y el ejecutor y el procesador usan `TimeProvider`, para probar plazos largos con tiempo simulado.
 - **R-13:** Los registros y las métricas de ambos procesos llevan tipo, identificador, intento y resultado, sin datos personales. Hay una alerta cuando exista una tarea o un evento `fallida`/`fallido` o uno con más de 10 minutos de retraso (spec 011).
 - **R-14:** `/health/ready` de cada servicio no depende de estos procesos (spec 006): una cola atrasada no saca al servicio del balanceo; su estado se ve en métricas, no en una ruta pública.
-- **R-15:** **Llamadas internas entre servicios.** Toda llamada interna (no solo la de avisos) usa el mecanismo de la spec 037 R-11: HTTP interno con ingress privado, fuera del gateway, token HMAC de vida corta firmado por el emisor, con `iss`, `aud`, `exp` de 5 minutos como máximo, `jti` único y el claim `permisos` con las rutas que ese emisor puede llamar. Las rutas internas nuevas (`/api/v1/interno/pendientes` y `/api/v1/interno/exportacion` de la spec 039 y `/api/v1/interno/historial` de la spec 041) se agregan a ese esquema con las **mismas dos claves por emisor** (`avisos-key-market` y `avisos-key-identity`), sin secretos nuevos; la spec 037 se amplía por esta spec (no se contradice) y su implementación debe aceptar `permisos` por ruta.
+- **R-15:** **Llamadas internas entre servicios.** Toda llamada interna usa el mecanismo de la spec 037 R-11: HTTP interno con ingress privado, fuera del gateway, token HMAC de vida corta firmado por el emisor, con `iss`, `aud`, `exp` de 5 minutos como máximo, `jti` único y el claim `permisos` con las rutas que ese emisor puede llamar. Las rutas nuevas son `/api/v1/interno/eventos` (en Mercado y Mensajería), `/api/v1/interno/pendientes` y `/api/v1/interno/exportacion` (spec 039) y `/api/v1/interno/historial` (spec 041). **Claves:** lo que ya cubre la spec 037 (Mercado e Identidad hacia Mensajería) usa `avisos-key-market` y `avisos-key-identity`, que Mensajería ya lee; para **Identidad hacia Mercado** se agrega **un secreto nuevo, `interno-key-identity`**, que solo Identidad puede leer para firmar y solo Mercado para verificar, de modo que no se rompe el aislamiento por secreto de la 037 (cada servicio lee solo la clave que necesita). La spec 037 se amplía por esta spec (no se contradice).
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dada la configuración de rutas del gateway y de cada servicio, cuando se inspeccionan, entonces ninguna ruta pública expone `outbox` ni `tareas_programadas` y el gateway no enruta la llamada interna de avisos.
 - **CA-02:** Dado un cambio de negocio que genera un evento, cuando falla la transacción, entonces no queda evento en `outbox`; y cuando sale bien, entonces cambio y evento quedan juntos.
 - **CA-03:** Dada la misma operación repetida, cuando se reintenta, entonces el evento conserva el mismo `_id` y no se duplica.
 - **CA-04:** Dado un evento, cuando se inspecciona su `carga`, entonces solo tiene identificadores, sin teléfono, dirección, nombre ni texto de la persona.
-- **CA-05:** Dado un evento pendiente, cuando el procesador lo toma y Mensajería responde 202, entonces queda `entregado`.
+- **CA-05:** Dado un evento pendiente, cuando el procesador lo toma y el servicio destino responde 202, entonces queda `entregado`.
 - **CA-06:** Dada una falla de red, cuando falla la entrega, entonces `intentos` aumenta y se reprograma con 5 s, 30 s, 2 min y 10 min; al quinto fallo queda `fallido` y se registra sin datos personales.
 - **CA-07:** Dada una respuesta 401 o 403 de Mensajería, cuando el procesador la recibe, entonces el evento queda `fallido` sin reintentos.
 - **CA-08:** Dado un evento entregado dos veces por un reintento, cuando Mensajería lo recibe, entonces responde 202 en ambas y el aviso se crea una sola vez.
@@ -113,7 +113,8 @@ Fijar en una sola spec cómo funcionan los dos procesos de fondo que sostienen l
 | Campo | Tipo | Obligatorio | Reglas y validaciones | Índice |
 |---|---|---|---|---|
 | `_id` | string | Sí | Determinista: `{tipo}:{recursoId}:{version}` | Llave primaria |
-| `tipo` | string | Sí | Lista cerrada (los ocho eventos de aviso de la spec 037 y `sesion_revocada`) | No |
+| `tipo` | string | Sí | Lista cerrada: los ocho eventos de aviso de la spec 037, `sesion_revocada`, `CotizacionElegida`, `BloqueoCreado` y `BloqueoEliminado` | No |
+| `destino` | string | Sí | Servicio que lo recibe: `messaging`, `market` o `identity` | No |
 | `carga` | documento | Sí | Solo identificadores; sin datos personales | No |
 | `estado` | string | Sí | `pendiente`, `en_proceso`, `entregado`, `fallido` | Compuesto |
 | `programadaPara` | fecha UTC | Sí | Cuándo debe entregarse | Compuesto |
@@ -145,6 +146,10 @@ Fijar en una sola spec cómo funcionan los dos procesos de fondo que sostienen l
 ## 8. Dependencias
 - Specs 003 (colecciones técnicas y transacciones), 009 (token interno), 011 (registros y alertas), 006 (salud) y 034 (dos réplicas).
 - Specs 028 y 029 (ejecutor de Mercado y vencimiento), 037 (entrega de avisos), 025 (fotos de verificación y aviso al verificador), 039 (eliminación de cuenta), 050 y 051 (cierre de periodos).
+- **Prerrequisitos que hoy no existen (trabajo pendiente, no capacidades implementadas):**
+  - Entrega interna de avisos y claves por emisor de la spec 037, más el secreto nuevo `interno-key-identity` (hoy no implementados ni creados en Key Vault y Terraform).
+  - Ejecutor de tareas de la spec 028 en Mercado y las colecciones `outbox` y `tareas_programadas` (hoy no existen en `db/`).
+  - Biblioteca técnica compartida (KNOCK-251) para quitar la copia del ejecutor en Identidad.
 
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |
@@ -190,12 +195,13 @@ Las pruebas citan el caso como `CA_054_NN` en el nombre (para `python scripts/sd
 - **D-01:** Los estados siguen a la spec 028 (`pendiente`, `en_proceso`, `hecha`, `fallida`) y no los del Excel (`pendiente`, `tomada`, `hecha`, `fallida`); los campos `programadaPara` y `reservadaHasta` también (en el Excel se llaman `ejecutarEn` y `reservaVence`). Manda la spec numerada.
 - **D-02:** Retención de 14 días para lo terminado y de 90 para lo fallido: el Excel no fija plazos de limpieza; 14 días alcanzan para investigar una incidencia reciente y 90 para revisar fallos, y son el valor de los índices de vencimiento, no una configuración.
 - **D-03:** Las alertas por fallo o atraso de más de 10 minutos salen por las métricas de la spec 011, sin pantalla ni ruta.
-- **D-04:** Las llamadas internas nuevas reutilizan las dos claves por emisor de la spec 037 y limitan lo que cada una puede llamar con `permisos`: así no se agregan secretos ni infraestructura.
+- **D-04:** Las llamadas que la spec 037 ya cubre reutilizan sus dos claves por emisor; solo Identidad hacia Mercado necesita un secreto nuevo (`interno-key-identity`), el mínimo para no dar a Mercado la clave con la que Identidad firma sus avisos. Los `permisos` limitan lo que cada emisor puede llamar.
 - **D-05:** Cada vigencia de las specs 039, 049 y 050 es una tarea del catálogo, para tener un solo mecanismo de plazos.
 
 **Correcciones de la revisión del 2026-11-13** (se conserva lo propuesto antes y se explica el cambio)
 - **C-01:** Catálogo de tareas: antes tenía siete tipos; ahora 12, para cubrir la exportación, la recuperación de acceso y las vigencias de las specs 049 y 050.
-- **C-02:** Llamadas internas: antes solo se definía la entrega de avisos; ahora todas las llamadas internas siguen el esquema de la spec 037 con `permisos` por ruta (R-15).
+- **C-02:** Llamadas internas: antes solo se definía la entrega de avisos; ahora todas las llamadas internas siguen el esquema de la spec 037 con `permisos` por ruta y `destino` en cada evento (R-03 y R-15), con un único secreto nuevo para Identidad hacia Mercado.
+- **C-03:** Primera propuesta de R-15: reutilizar las dos claves de la 037 para todo; se corrigió porque obligaba a Mercado a leer la clave de Identidad, contra el aislamiento por secreto de la spec 037.
 
 ## 15. Riesgos y dudas abiertas
 - Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.

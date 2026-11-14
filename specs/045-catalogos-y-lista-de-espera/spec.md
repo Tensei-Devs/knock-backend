@@ -243,6 +243,8 @@ Definir y especificar los endpoints OFI-02, OFI-03, OFI-04, OFI-05, OFP-01, OFP-
 - Spec 033 de este repositorio.
 - Specs 002, 003, 009, 010 y 011 (estilo, bases de datos, seguridad, caché y registros).
 - Frontend: las specs 035 (app) y 044 (panel web) consumen este contrato.
+- **Prerrequisitos que hoy no existen (trabajo pendiente, no capacidades implementadas):**
+  - Panel con doble factor, permisos y auditoría de la spec 033 (hoy no implementados)
 
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |

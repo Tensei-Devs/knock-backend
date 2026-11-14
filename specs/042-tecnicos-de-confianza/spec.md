@@ -138,6 +138,8 @@ Definir y especificar los endpoints TCO-01, TCO-02, TCO-03 del Excel de endpoint
 - Spec 037 de este repositorio.
 - Specs 002, 003, 009, 010 y 011 (estilo, bases de datos, seguridad, caché y registros).
 - Frontend: spec 032 consume este contrato.
+- **Prerrequisitos que hoy no existen (trabajo pendiente, no capacidades implementadas):**
+  - Almacén de técnicos y su visibilidad de las specs 027 y 028 (hoy no implementados)
 
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |

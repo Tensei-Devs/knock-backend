@@ -5,6 +5,7 @@
 
 | Tarea | Qué se hace | Cubre | Depende de | Paralelo con | Responsable sugerido | Estado |
 |---|---|---|---|---|---|---|
+| T-00 | Prerrequisitos que hoy no existen y no son parte de esta spec: entrega interna de avisos y claves por emisor (spec 037), ejecutor de tareas de la spec 028 y biblioteca compartida (KNOCK-251) | §8 | — | T-01 | por asignar | pendiente |
 | T-01 | Script de `db/` con índices, índice único y TTL de las dos colecciones y prueba de base de datos | §6 · R-01, R-06, R-11 · CA-09, CA-18 | — | T-02, T-04 | por asignar | pendiente |
 | T-02 | Escritura del evento en la misma transacción, `_id` determinista y carga sin datos personales | R-02 · CA-02 a CA-04 | T-01 | T-04 | por asignar | pendiente |
 | T-03 | `ProcesadorDeOutbox` con reserva atómica, entrega a `/interno/avisos`, reintentos y `fallido` | R-03 a R-05 · CA-05 a CA-08 | T-01, T-02 | T-04 | por asignar | pendiente |

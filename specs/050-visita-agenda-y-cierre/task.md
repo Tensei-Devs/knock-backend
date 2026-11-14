@@ -5,6 +5,7 @@
 
 | Tarea | Qué se hace | Cubre | Depende de | Paralelo con | Responsable sugerido | Estado |
 |---|---|---|---|---|---|---|
+| T-00 | Prerrequisitos que hoy no existen y no son parte de esta spec: Ciclo de la visita de las specs 021 y 022 y tareas de la 054 (hoy no implementados); Moderación e imágenes de las specs 031 y 032 (hoy no implementadas) | §8 | — | T-01 | por asignar | pendiente |
 | T-01 | Script de `db/` con colecciones e índices de §6 y prueba de base de datos | §6 | — | T-02 en adelante (con datos de prueba) | por asignar | pendiente |
 | T-02 | `GET /api/v1/agenda` (VIS-02): DTO, validador, servicio, almacén, controlador y pruebas | R-01 a R-03 · CA-01 a CA-05 | T-01 | otras rutas | por asignar | pendiente |
 | T-03 | `POST /api/v1/visitas/{id}/reprogramar` (VIS-04): DTO, validador, servicio, almacén, controlador y pruebas | R-04 a R-06 · CA-06 a CA-11 | T-01 | otras rutas | por asignar | pendiente |

@@ -5,6 +5,7 @@
 
 | Tarea | Qué se hace | Cubre | Depende de | Paralelo con | Responsable sugerido | Estado |
 |---|---|---|---|---|---|---|
+| T-00 | Prerrequisitos que hoy no existen y no son parte de esta spec: Oleadas y tarea `RepartirOleada` de la spec 028 (hoy no implementadas); Bandeja de salida de la spec 054 para el evento `CotizacionElegida` (hoy no implementada) | §8 | — | T-01 | por asignar | pendiente |
 | T-01 | Script de `db/` con colecciones e índices de §6 y prueba de base de datos | §6 | — | T-02 en adelante (con datos de prueba) | por asignar | pendiente |
 | T-02 | `POST /api/v1/solicitudes/{id}/ampliar` (SOL-05): DTO, validador, servicio, almacén, controlador y pruebas | R-01 a R-03 · CA-01 a CA-06 | T-01 | otras rutas | por asignar | pendiente |
 | T-03 | `GET /api/v1/cotizaciones/referencia-mercado` (COT-03): DTO, validador, servicio, almacén, controlador y pruebas | R-04 a R-06 · CA-07 a CA-11 | T-01 | otras rutas | por asignar | pendiente |
