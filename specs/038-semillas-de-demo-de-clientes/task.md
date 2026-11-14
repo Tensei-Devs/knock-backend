@@ -1,11 +1,11 @@
 # Tareas 038 — Semillas de demo de clientes
 
-> **Jira:** KNOCK-40 · **Estado:** pendientes. No se ejecutan hasta que una persona apruebe la spec y se resuelvan las dudas necesarias.
+> **Jira:** KNOCK-40 · **Estado:** spec aprobada; implementación parcial.
 
 | Tarea | Qué se hace | Cubre | Estado |
 |---|---|---|---|
-| T-01 | Aplicar las decisiones de §9 (nombre en `usuarios`, upsert por `_id`, sin caché que invalidar, sin códigos de error) y resolver el acceso a datos. | R-03 a R-06, R-09 · CA-04 a CA-06, CA-08, CA-11 | pendiente |
-| T-02 | Preparar pruebas de archivo y JSON de diez clientes con nombres claramente ficticios; verificar estado, perfil y consentimientos vigentes. | R-01, R-02, R-10 · CA-01 a CA-03, CA-13 | pendiente |
+| T-01 | Aplicar las decisiones de §9 (nombre en `usuarios`, upsert por `_id`, sin caché que invalidar, sin códigos de error) y resolver el acceso a datos. | R-03 a R-06, R-09 · CA-04 a CA-06, CA-08, CA-11 | parcial: extender `SesionesStore` para usuarios y coordinar perfil con `UsuariosStore`; existe caché `perfil:{sub}` y su invalidación en recargas modificadas requiere decisión antes de T-03 |
+| T-02 | Preparar pruebas de archivo y JSON de diez clientes con nombres claramente ficticios; verificar estado, perfil y consentimientos vigentes. | R-01, R-02, R-10 · CA-01 a CA-03, CA-13 | hecha para el archivo; CA-13 tras carga queda en T-03 |
 | T-03 | Extender el acceso a datos de Identidad e implementar cargador con derivación, cifrado y hash, upsert idempotente, validación previa, índices únicos y pruebas de carreras y recuperación de fallos parciales. | R-03 a R-06 · CA-04 a CA-06, CA-08, CA-11 | pendiente |
 | T-04 | Conectar el arranque y probar las guardas de configuración, producción, todos los hosts de `MongoUrl.Servers`, credenciales, rechazo de SRV y documentos no demo, sin escrituras ante rechazo. | R-07 · CA-07, CA-09, CA-12 | pendiente |
 | T-05 | Documentar contenido, carga local, conteo y borrado de demo sin secretos, y carga separada y manual a Azure con `db/entrega.js`. | R-08 · CA-09 | pendiente |
