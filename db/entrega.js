@@ -105,6 +105,19 @@ async function deliver() {
   const writtenOficios = seed('oficios', read('oficios.json'), ['clave']);
   const writtenColonias = seed('colonias', read('colonias.json'), ['municipio', 'cp', 'nombre']);
 
+  // La versión se incrementa antes de insertar nuevos términos: una interrupción nunca reutiliza la versión anterior.
+  const synonyms = read('sinonimos.json');
+  const dictionary = market.getCollection('sinonimos');
+  const metadata = market.getCollection('catalogo_meta');
+  const missing = synonyms.filter((s) => !dictionary.findOne({ termino: s.termino, oficioClave: s.oficioClave }));
+  if (missing.length > 0) {
+    metadata.updateOne({ _id: 'sinonimos' }, { $inc: { version: 1 } }, { upsert: true });
+    const version = metadata.findOne({ _id: 'sinonimos' }).version;
+    for (const synonym of missing) {
+      dictionary.updateOne(synonym, { $setOnInsert: { ...synonym, version } }, { upsert: true });
+    }
+  }
+
   const after = snapshot();
   const postalCodes = new Set([...before.postalCodes, ...after.postalCodes, ...writtenColonias.map((d) => d.cp)]);
   const pairKeys = new Map();
