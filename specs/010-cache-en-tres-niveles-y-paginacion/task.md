@@ -10,7 +10,7 @@
 | T-04 | Configurar las vigencias por tipo de dato | R-04 | hecha (PR #52; verificado en `src`: caché Redis, `ETag`/`If-None-Match` y compresión) |
 | T-05 | Implementar la paginación por cursor y las proyecciones | R-07, R-08 · CA-05 | cerrada por alcance (excepción aprobada en spec §9) |
 | T-06 | Configurar la compresión y los serializadores generados | R-09 · CA-04 | hecha (PR #52; verificado en `src`: caché Redis, `ETag`/`If-None-Match` y compresión) |
-| T-07 | Escribir la prueba de carga con k6 para ajustar vigencias | R-04 | pendiente |
+| T-07 | Escribir la prueba de carga con k6 para ajustar vigencias | R-04 | parcial (KNOCK-269: modos 200 y 304 preparados; faltan las cuatro mediciones verificadas) |
 
 ## Definición de terminado
 - Los criterios de aceptación de `spec.md` están cubiertos por pruebas en verde.
