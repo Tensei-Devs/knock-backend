@@ -1,5 +1,10 @@
 # Memoria — knock-backend
 
+## 2026-11-14 — KNOCK-40: pruebas de concurrencia y guarda del cargador
+- **Resultado:** dos cargas concurrentes por separado con `_id`, `sub` y `celularHash` comprueban diez documentos demo, identificadores esperados y unicidad; CA-11 sigue parcial: no se sincronizó una colisión después de la preconsulta ni se demostró el rechazo por cada índice. Las pruebas previas cubren conflictos detectados antes de escribir y recuperación de escritura parcial.
+- **CA-12:** `SeedAsync` con host remoto usa Mongo local para observar que no escribe y un doble de caché para comprobar que no se accede a Redis. Las cadenas con credenciales sintéticas se construyen con `MongoUrlBuilder`; EXC-023 no se modifica.
+- **A evitar:** interpretar tareas concurrentes como prueba determinista de que una carrera de índice ocurrió, o el trazado por nombre como prueba de cobertura completa.
+
 > Registro del proyecto: estado, decisiones con su fecha y su porqué, y errores a evitar. Los agentes la leen al empezar y agregan una entrada al terminar cada cambio. Sin datos sensibles.
 
 ## 2026-11-11 — Baseline de clones de #52 aceptado por el Tech Lead y seguimiento de EXC-018 (KNOCK-205)
