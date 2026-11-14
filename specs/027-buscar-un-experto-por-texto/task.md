@@ -5,7 +5,7 @@
 
 | Tarea | Qué se hace | Cubre | Depende de | En paralelo con | Responsable sugerido | Estado |
 |---|---|---|---|---|---|---|
-| T-01 | Script de `db/` con `sinonimos`, `catalogo_meta`, `busquedas_sin_resultado` (TTL 90 días) e índices de `tecnicos`; semilla de sinónimos; carga en `entrega.js` | R-12, R-13 · CA-03, CA-14 | — | T-02, T-06 | Alexis | pendiente |
+| T-01 | Script de `db/` con `sinonimos`, `catalogo_meta`, `busquedas_sin_resultado` (TTL 90 días) e índices de `tecnicos`; semilla de sinónimos; carga en `entrega.js` | R-12, R-13 · CA-03, CA-14 | — | T-02, T-06 | Alexis | hecha |
 | T-02 | Ampliar `SearchNameNormalizer` y escribir `InterpretadorDeConsulta` con sus unitarias | R-02, R-04, R-05 · CA-02, CA-05, CA-06 | — | T-01, T-06 | Alexis | pendiente |
 | T-03 | Escribir `OrdenDeResultados` y `CursorDeBusqueda` (huella, tope de 100) con unitarias | R-09, R-11 · CA-08, CA-10, CA-11 | — | T-01, T-02 | Alexis | pendiente |
 | T-04 | Escribir `BusquedaStore` (`$geoNear`, filtros de estado, cobertura, prefijos, conteo anónimo) con integración | R-06, R-07, R-08, R-12, R-15 · CA-04, CA-07, CA-09 | T-01 | T-05 | Alexis | pendiente |
