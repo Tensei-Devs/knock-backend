@@ -52,6 +52,69 @@ internal static class QuoteHttp
 
 public sealed class Spec020CotizacionesTests
 {
+    [Theory]
+    [InlineData("oficioClave", false)]
+    [InlineData("coloniaId", false)]
+    [InlineData("estado", false)]
+    [InlineData("venceEn", false)]
+    [InlineData("dia", false)]
+    [InlineData("dia", true)]
+    [InlineData("oficioClave", true)]
+    [InlineData("coloniaId", true)]
+    [InlineData("estado", true)]
+    [InlineData("venceEn", true)]
+    public async Task Solicitud_Malformada_Se_Trata_Como_Inexistente_CA_020_09(string field, bool wrongType)
+    {
+        using var factory = await MarketApiFactory.CreateAsync();
+        var id = await QuoteHttp.Request(factory);
+        var update = wrongType
+            ? Builders<BsonDocument>.Update.Set(field, new BsonDocument("private", "synthetic-sensitive-value"))
+            : Builders<BsonDocument>.Update.Unset(field);
+        await factory.Requests.UpdateOneAsync(Builders<BsonDocument>.Filter.Eq("_id", id), update);
+        using var client = await QuoteHttp.Technician(factory);
+        using var response = await client.PostAsJsonAsync(QuoteHttp.Route(id), QuoteHttp.Body());
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await factory.Quotes.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Solicitud_Malformada_Registra_Solo_Identificador_CA_020_09()
+    {
+        using var factory = await MarketApiFactory.CreateAsync();
+        var id = await QuoteHttp.Request(factory);
+        await factory.Requests.UpdateOneAsync(Builders<BsonDocument>.Filter.Eq("_id", id),
+            Builders<BsonDocument>.Update.Set("dia", new BsonDocument("private", "synthetic-sensitive-value")));
+        using var client = await QuoteHttp.Technician(factory);
+        var output = await ConsoleCapture.RunAsync(async () =>
+        {
+            using var response = await client.PostAsJsonAsync(QuoteHttp.Route(id), QuoteHttp.Body());
+            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        });
+        output.Should().Contain("Malformed request document").And.Contain(id.ToString());
+        output.Should().NotContain("synthetic-sensitive-value");
+    }
+
+    [Fact]
+    public async Task Tecnico_Con_Id_Malformado_No_Puede_Cotizar_CA_020_09()
+    {
+        using var factory = await MarketApiFactory.CreateAsync();
+        var id = await QuoteHttp.Request(factory);
+        var sub = Guid.NewGuid().ToString("D");
+        await factory.Database.GetCollection<BsonDocument>("tecnicos").InsertOneAsync(new BsonDocument
+        {
+            ["_id"] = "invalid-id",
+            ["usuarioId"] = sub,
+            ["estado"] = "activo",
+            ["oculto"] = false,
+            ["oficios"] = new BsonArray { "plo" },
+            ["coloniaBaseId"] = "test-zone"
+        });
+        using var client = WaitlistHttp.SignedIn(factory, sub);
+        using var response = await client.PostAsJsonAsync(QuoteHttp.Route(id), QuoteHttp.Body());
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await factory.Quotes.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(0);
+    }
+
     [Fact]
     public async Task Envia_Cotizacion_CA_020_06()
     {
