@@ -2,6 +2,7 @@ using Knock.Contracts.Catalog;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Catalog.Data;
 using Knock.Market.Api.Modules.Catalog.Services;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
 namespace Knock.Market.Api.Modules.Catalog;
@@ -35,6 +36,16 @@ public static class CatalogModuleExtensions
             services.AddSingleton<ISearchResponseCache>(sp => sp.GetRequiredService<RedisCatalogCache>());
         }
         services.AddSingleton<CatalogStore>();
+        services.AddOptions<SearchCursorOptions>().BindConfiguration(SearchCursorOptions.SectionName).ValidateOnStart();
+        services.AddSingleton<IValidateOptions<SearchCursorOptions>, SearchCursorOptionsValidator>();
+        services.TryAddSingleton<IFiltroDatosPersonales, FiltroDatosPersonalesNoDisponible>();
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<BusquedaStore>();
+        services.AddSingleton<IBusquedaSource, BusquedaSource>();
+        services.AddSingleton<BusquedaService>(sp => new BusquedaService(
+            sp.GetRequiredService<IBusquedaSource>(), sp.GetRequiredService<ISearchResponseCache>(),
+            sp.GetRequiredService<IFiltroDatosPersonales>(), sp.GetRequiredService<TimeProvider>(),
+            Convert.FromBase64String(sp.GetRequiredService<IOptions<SearchCursorOptions>>().Value.Key!)));
         services.AddSingleton<IWaitlistStore, WaitlistStore>();
         services.AddSingleton<WaitlistService>();
         services.AddSingleton<NeighborhoodLocator>();

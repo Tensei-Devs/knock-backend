@@ -14,7 +14,7 @@ internal sealed record SearchCandidate(string Id, string Name, IReadOnlyList<str
 }
 
 /// <summary>Acceso a candidatos y conteos; el llamador debe filtrar datos personales antes de contar.</summary>
-internal sealed class BusquedaStore(
+internal sealed partial class BusquedaStore(
     [FromKeyedServices(CatalogModuleExtensions.ModuleKey)] IMongoDatabase database,
     IOptions<KnockMongoOptions> options)
 {

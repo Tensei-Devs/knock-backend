@@ -18,7 +18,7 @@
 
 **Qué bloquea:** T-04 espera el script (T-01); T-07 espera el servicio (T-05); T-08 es la última de código. **Qué va en paralelo:** T-01, T-02, T-03 y T-06 arrancan el mismo día y no se pisan (archivos distintos).
 
-**T-05 parcial:** falta integrar el filtro real de la spec 024 (T-03); el #118 no se fusiona sin él. También faltan el servicio, la paginación por clave en MongoDB, el mapeo de errores y la validación de la clave al arrancar. La caché Redis, la validación aislada de clave y el acceso al estado autenticado del cursor son preparación, no un flujo de búsqueda funcional. El sustituto de filtro falla cerrado y aún no está conectado.
+**T-05 parcial:** falta integrar el filtro real de la spec 024 (T-03); el #118 no se fusiona sin él. El servicio usa paginación por clave y el sustituto falla cerrado. La segunda búsqueda aún consulta MongoDB para verificar la versión del diccionario y la colonia: CA-15 sigue parcial. Las semillas actuales de colonias no traen `activo` y R-03 lo exige: el servicio las rechaza hasta que una persona concilie el modelo y las semillas. El servicio devuelve códigos internos; traducirlos a ProblemDetails HTTP corresponde a T-07. Falta también verificar los cambios de configuración del cursor en el despliegue.
 
 ## Definición de terminado
 - Los criterios de aceptación de `spec.md` están cubiertos por pruebas en verde.

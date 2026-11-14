@@ -1,7 +1,13 @@
 using System.Security.Cryptography;
 using AwesomeAssertions;
+using Knock.Market.Api.Modules.Catalog;
 using Knock.Market.Api.Modules.Catalog.Domain;
 using Knock.Market.Api.Modules.Catalog.Services;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using MongoDB.Driver;
 using Xunit;
 
 namespace Knock.UnitTest.Catalog;
@@ -43,5 +49,31 @@ public sealed class Spec027SearchSafetyTests
         wrong.Should().Throw<FormatException>();
         Action invalidCount = () => CursorDeBusqueda.CreateNext(query, last, 100, key);
         invalidCount.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Arranque_Exige_Clave_Cursor_R_027_11(bool configured)
+    {
+        var values = new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:KnockMongo"] = new MongoUrlBuilder { Server = new MongoServerAddress("localhost", 27017) }.ToString(),
+            ["Mongo:MaxPoolSize"] = "5",
+            ["Mongo:Databases:Catalog"] = "market_test",
+            [SearchCursorOptions.KeyName] = configured ? Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)) : null,
+        };
+        using var host = new HostBuilder().ConfigureAppConfiguration(builder => builder.AddInMemoryCollection(values))
+            .ConfigureServices((context, services) => services.AddCatalogModule(context.Configuration)).Build();
+        if (configured)
+        {
+            await host.StartAsync();
+            await host.StopAsync();
+        }
+        else
+        {
+            var act = async () => await host.StartAsync();
+            (await act.Should().ThrowAsync<OptionsValidationException>()).Which.Failures.Should().Contain(f => f.Contains(SearchCursorOptions.KeyName, StringComparison.Ordinal));
+        }
     }
 }
