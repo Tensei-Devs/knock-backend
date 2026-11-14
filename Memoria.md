@@ -597,6 +597,10 @@
 - **Alcance del cambio:** `MediaRules`, el mensaje `MediaRejection.InvalidFile`, la nota de `specs/013/task.md`, HU-002 (CA3 y CA4), TT-API-05 y `docs/referencia/FUNCIONES_Y_FLUJOS.md`. No se tocan `legacy/`, `specs/_legacy/` ni `docs/migracion/`, que son historia.
 - **Pendiente:** `docs/descripcion-del-proyecto.md` (paso 2 de pedir una cotización) sigue diciendo «JPG o PNG, de hasta 8 MB»; lo decide el Tech Lead porque de ese documento salen la constitución y las specs.
 
+## 2026-11-13 — BUG-002, BUG-003 y BUG-004 implementadas; H-01, H-02 y H-03 cerradas (KNOCK-239, KNOCK-240, KNOCK-241)
+- **Estado:** el índice de specs marca las tres como Implementadas; los planes y las tareas dicen qué PR las hizo (#85, #78 y #82, con #86 de Terraform). H-01, H-02 y H-03 pasan a cerradas en `docs/modelo-de-amenazas.md`.
+- **Evidencia:** el líder verificó el gateway desplegado con `GET` a `/health`, `/sitemap.xml` y `/api/v1/me/x`: HSTS `max-age=31536000; includeSubDomains` y sin `Server` ni `X-Powered-By`. Mensajería corre (revisión `0000004`, Healthy) con la llave del JWT y Redis; su ingreso es interno, así que el «401 sin token» se cita con las pruebas del CI.
+- **A evitar:** cerrar un hallazgo con solo la prueba local: el `TestServer` no emite `Server` ni HSTS a `localhost`; la evidencia que cierra es la del despliegue.
 ## 2026-11-12 — KNOCK-208, OI-2: JPEG y reintento de moderación
 - **Estado:** procesamiento de JPEG/PNG/WebP a JPEG sin metadatos, transparencia sobre blanco, reducción a 512 px para perfil y 1600 px para solicitud/trabajo, y una operación concurrente por réplica. Market solicita 0.5 CPU y 1 Gi; no se ha desplegado. El registro temporal conserva la clave aleatoria del blob. La moderación no disponible o agotada conserva la cuarentena y el estado pendiente; se probó un reintento exitoso a nivel de servicio.
 - **Verificación:** compilación sin errores ni advertencias, formato sin cambios, 913 unitarias, 300 de seguridad y 2 integraciones con Azurite en verde. `sdd_lint --trace 013` señala cuatro criterios pendientes de OI-3. No se comprobó el despliegue de Terraform ni el consumo real de memoria.
