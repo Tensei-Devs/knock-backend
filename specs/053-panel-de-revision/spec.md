@@ -32,20 +32,26 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 - **R-03:** `GET /api/v1/admin/verificaciones` pagina por cursor (Por cursor, 20): parámetros `cursor` y `limite`, 20 por defecto y 50 como máximo; orden: Filtro por estado y antigüedad; orden por enviadaEn ascendente.
 - **R-04:** `GET /api/v1/admin/verificaciones/{id}` (leer uno): Abre una verificación; entrega enlaces de 5 minutos a las fotos y registra quién las abrió. Lo puede llamar: personal interno (Verificador (doble verificación)) con doble verificación, spec 033. Responde 200 cuando sale bien.
 - **R-05:** Entrada de `GET /api/v1/admin/verificaciones/{id}`: Ruta: id. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo.
-- **R-06:** Estados de `GET /api/v1/admin/verificaciones/{id}`: 404; 410 (fotos ya destruidas). El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
+- **R-06:** Estados de `GET /api/v1/admin/verificaciones/{id}`: 404 `verification_not_found`; 410 `photos_destroyed` (fotos ya destruidas). Los códigos de negocio van en inglés y en snake_case.
 - **R-07:** `POST /api/v1/admin/verificaciones/{id}/decision` (actualizar (acción)): Aprueba o rechaza con motivo; destruye la llave de las fotos. Lo puede llamar: personal interno (Verificador (doble verificación)) con doble verificación, spec 033. Responde 200 cuando sale bien.
 - **R-08:** Entrada de `POST /api/v1/admin/verificaciones/{id}/decision`: Cuerpo: decision (aprobada|rechazada), motivo. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400. Reglas: `motivo`: Obligatorio si el estado es no_verificado.
-- **R-09:** Estados de `POST /api/v1/admin/verificaciones/{id}/decision`: 404; 409. El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
+- **R-09:** Estados de `POST /api/v1/admin/verificaciones/{id}/decision`: 404 `verification_not_found`; 409 `verification_already_decided`. Los códigos de negocio van en inglés y en snake_case.
 - **R-10:** `GET /api/v1/admin/reportes` (leer todos / filtro): Cola de moderación. Lo puede llamar: personal interno (Moderación (doble verificación)) con doble verificación, spec 033. Responde 200 cuando sale bien.
 - **R-11:** Entrada de `GET /api/v1/admin/reportes`: Query: gravedad, estado, desde, hasta. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo. Reglas: `gravedad`: La asigna la moderación; `estado`: Solo esos valores.
 - **R-12:** `GET /api/v1/admin/reportes` pagina por cursor (Por cursor, 20): parámetros `cursor` y `limite`, 20 por defecto y 50 como máximo; orden: Filtro por gravedad y estado; orden por gravedad y antigüedad.
 - **R-13:** `POST /api/v1/admin/reportes/{id}/decision` (actualizar (acción)): Asigna gravedad y sanción; avisa a las dos partes sin revelar datos de la otra. Lo puede llamar: personal interno (Moderación (doble verificación)) con doble verificación, spec 033. Responde 200 cuando sale bien.
 - **R-14:** Entrada de `POST /api/v1/admin/reportes/{id}/decision`: Cuerpo: gravedad, sancion, motivo. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400. Reglas: `motivo`: Solo esos valores; `gravedad`: La asigna la moderación.
-- **R-15:** Estados de `POST /api/v1/admin/reportes/{id}/decision`: 404. El código de negocio de cada conflicto va en inglés y en snake_case, y se define al implementar.
-- **R-16:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
-- **R-17:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
-- **R-18:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
-- **R-19:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
+- **R-15:** Estados de `POST /api/v1/admin/reportes/{id}/decision`: 404 `report_not_found`. Los códigos de negocio van en inglés y en snake_case.
+- **R-16:** **Cola de verificaciones (VER-03).** Solo con el permiso `verification:review` y doble verificación (spec 033); filtros `estado`, `desde` y `hasta` (rango máximo de 90 días; fuera de rango, 422); por cursor (20 por defecto, máximo 50), de la más antigua a la más reciente; la lista no incluye fotos ni datos personales, solo identificador, nivel, estado y fecha. Una verificación sin revisar a los 7 días vuelve a «sin verificar» (spec 025).
+- **R-17:** **Abrir una verificación (VER-04).** Entrega enlaces de 5 minutos a las fotos y registra quién las abrió y cuándo (auditoría); los enlaces no se guardan ni se cachean y no se repiten en registros; con las fotos ya destruidas responde 410 `photos_destroyed`.
+- **R-18:** **Decidir una verificación (VER-05).** `decision` es `aprobada` o `rechazada`; `motivo` de 8 a 300 caracteres y obligatorio al rechazar; la decide una persona con el rol verificador que no sea la persona verificada; al decidir se destruye la llave de las fotos (spec 025) y se avisa a la persona. Decidir una ya decidida responde 409 `verification_already_decided`.
+- **R-19:** **Cola de reportes (REP-04).** Solo con `reports:resolve` y doble verificación; filtros `gravedad`, `estado`, `desde` y `hasta`; por cursor (20 por defecto); muestra el motivo y el texto del reporte pero nunca el teléfono ni la dirección de las personas.
+- **R-20:** **Decidir un reporte (REP-05).** `gravedad` de una lista cerrada, `sancion` de una lista cerrada (`ninguna`, `advertencia`, `ocultar_perfil`, `suspender_cuenta`) y `motivo` de 8 a 300 caracteres; se avisa a las dos partes **sin revelar datos de la otra**; la decisión queda auditada; si hay apelación (spec 043), la decide una persona distinta de la que decidió primero.
+- **R-21:** **Sin datos en registros ni caché.** Ninguna ruta de esta spec guarda en registros o caché fotos, enlaces firmados, textos de reportes ni datos personales de las personas revisadas; todas las respuestas llevan `Cache-Control: private, no-store`.
+- **R-22:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
+- **R-23:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
+- **R-24:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
+- **R-25:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dado el rol «personal interno (Verificador (doble verificación)) con doble verificación, spec 033», cuando llama `GET /api/v1/admin/verificaciones` con datos válidos, entonces responde 200 con lo descrito en §5.
@@ -57,15 +63,15 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 - **CA-07:** Dada una petición sin token o con token vencido, cuando llama `GET /api/v1/admin/verificaciones/{id}`, entonces responde 401 y no ejecuta la operación.
 - **CA-08:** Dada una persona que no cumple el rol «personal interno (Verificador (doble verificación)) con doble verificación, spec 033», cuando llama `GET /api/v1/admin/verificaciones/{id}`, entonces responde 403 y no cambia nada.
 - **CA-09:** Dado un valor inválido según las reglas de §6, cuando llama `GET /api/v1/admin/verificaciones/{id}`, entonces responde 422 con `errors.<campo>`, no repite el valor y no devuelve datos.
-- **CA-10:** Dado el caso «recurso no disponible», cuando llama `GET /api/v1/admin/verificaciones/{id}`, entonces responde 404 con ProblemDetails y no cambia el estado.
-- **CA-11:** Dado el caso «fotos ya destruidas», cuando llama `GET /api/v1/admin/verificaciones/{id}`, entonces responde 410 con ProblemDetails y no cambia el estado.
+- **CA-10:** Dado el caso «la verificación no existe», cuando llama `GET /api/v1/admin/verificaciones/{id}`, entonces responde 404 `verification_not_found` con ProblemDetails y no cambia el estado.
+- **CA-11:** Dado el caso «las fotos ya fueron destruidas», cuando llama `GET /api/v1/admin/verificaciones/{id}`, entonces responde 410 `photos_destroyed` con ProblemDetails y no cambia el estado.
 - **CA-12:** Dado el rol «personal interno (Verificador (doble verificación)) con doble verificación, spec 033», cuando llama `POST /api/v1/admin/verificaciones/{id}/decision` con datos válidos, entonces responde 200 con lo descrito en §5.
 - **CA-13:** Dada una petición sin token o con token vencido, cuando llama `POST /api/v1/admin/verificaciones/{id}/decision`, entonces responde 401 y no ejecuta la operación.
 - **CA-14:** Dada una persona que no cumple el rol «personal interno (Verificador (doble verificación)) con doble verificación, spec 033», cuando llama `POST /api/v1/admin/verificaciones/{id}/decision`, entonces responde 403 y no cambia nada.
 - **CA-15:** Dado un valor inválido según las reglas de §6, cuando llama `POST /api/v1/admin/verificaciones/{id}/decision`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
 - **CA-16:** Dado un cuerpo que no se puede leer, cuando llama `POST /api/v1/admin/verificaciones/{id}/decision`, entonces responde 400 y no guarda nada.
-- **CA-17:** Dado el caso «recurso no disponible», cuando llama `POST /api/v1/admin/verificaciones/{id}/decision`, entonces responde 404 con ProblemDetails y no cambia el estado.
-- **CA-18:** Dado el caso «recurso no disponible», cuando llama `POST /api/v1/admin/verificaciones/{id}/decision`, entonces responde 409 con ProblemDetails y no cambia el estado.
+- **CA-17:** Dado el caso «la verificación no existe», cuando llama `POST /api/v1/admin/verificaciones/{id}/decision`, entonces responde 404 `verification_not_found` con ProblemDetails y no cambia el estado.
+- **CA-18:** Dado el caso «ya tiene una decisión o no está en revisión», cuando llama `POST /api/v1/admin/verificaciones/{id}/decision`, entonces responde 409 `verification_already_decided` con ProblemDetails y no cambia el estado.
 - **CA-19:** Dado el rol «personal interno (Moderación (doble verificación)) con doble verificación, spec 033», cuando llama `GET /api/v1/admin/reportes` con datos válidos, entonces responde 200 con lo descrito en §5.
 - **CA-20:** Dada una petición sin token o con token vencido, cuando llama `GET /api/v1/admin/reportes`, entonces responde 401 y no ejecuta la operación.
 - **CA-21:** Dada una persona que no cumple el rol «personal interno (Moderación (doble verificación)) con doble verificación, spec 033», cuando llama `GET /api/v1/admin/reportes`, entonces responde 403 y no cambia nada.
@@ -76,11 +82,17 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 - **CA-26:** Dada una persona que no cumple el rol «personal interno (Moderación (doble verificación)) con doble verificación, spec 033», cuando llama `POST /api/v1/admin/reportes/{id}/decision`, entonces responde 403 y no cambia nada.
 - **CA-27:** Dado un valor inválido según las reglas de §6, cuando llama `POST /api/v1/admin/reportes/{id}/decision`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
 - **CA-28:** Dado un cuerpo que no se puede leer, cuando llama `POST /api/v1/admin/reportes/{id}/decision`, entonces responde 400 y no guarda nada.
-- **CA-29:** Dado el caso «recurso no disponible», cuando llama `POST /api/v1/admin/reportes/{id}/decision`, entonces responde 404 con ProblemDetails y no cambia el estado.
-- **CA-30:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
-- **CA-31:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
-- **CA-32:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
-- **CA-33:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
+- **CA-29:** Dado el caso «el reporte no existe», cuando llama `POST /api/v1/admin/reportes/{id}/decision`, entonces responde 404 `report_not_found` con ProblemDetails y no cambia el estado.
+- **CA-30:** Dado un verificador, cuando consulta la cola, entonces ve solo identificador, nivel, estado y fecha, de la más antigua a la más reciente; un rango de más de 90 días responde 422.
+- **CA-31:** Dado un verificador que abre una verificación, cuando recibe los enlaces, entonces vencen a los 5 minutos y queda registrada la apertura; con las fotos destruidas responde 410 `photos_destroyed`.
+- **CA-32:** Dada una verificación en revisión, cuando el verificador aprueba o rechaza con motivo, entonces queda decidida, se destruye la llave de las fotos y la persona recibe aviso; rechazar sin motivo responde 422.
+- **CA-33:** Dado un moderador, cuando consulta la cola, entonces ve motivo y texto y ningún teléfono ni dirección; un filtro inválido responde 422.
+- **CA-34:** Dado un reporte abierto, cuando el moderador decide con gravedad, sanción y motivo, entonces ambas partes reciben aviso sin datos de la otra y la decisión queda auditada; la apelación la revisa otra persona.
+- **CA-35:** Dadas estas rutas, cuando se inspeccionan registros, caché y encabezados, entonces no aparecen fotos, enlaces ni textos y las respuestas no son cacheables.
+- **CA-36:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
+- **CA-37:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
+- **CA-38:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
+- **CA-39:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
 
 **4.1 Criterio → prueba prevista**
 
@@ -119,6 +131,12 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 | CA-31 | `Spec053Tests.Criterio31_CA_053_31` |
 | CA-32 | `Spec053Tests.Criterio32_CA_053_32` |
 | CA-33 | `Spec053Tests.Criterio33_CA_053_33` |
+| CA-34 | `Spec053Tests.Criterio34_CA_053_34` |
+| CA-35 | `Spec053Tests.Criterio35_CA_053_35` |
+| CA-36 | `Spec053Tests.Criterio36_CA_053_36` |
+| CA-37 | `Spec053Tests.Criterio37_CA_053_37` |
+| CA-38 | `Spec053Tests.Criterio38_CA_053_38` |
+| CA-39 | `Spec053Tests.Criterio39_CA_053_39` |
 
 ## 5. Contrato
 | ID | Método y ruta | Quién | Entrada | Respuestas |
@@ -138,6 +156,17 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 | VER-05 | No aplica | No | No |
 | REP-04 | Filtro por gravedad y estado; orden por gravedad y antigüedad | Por cursor, 20 | No |
 | REP-05 | No aplica | No | No |
+
+**Códigos de error de negocio**
+
+| ID | Estado | Código | Cuándo |
+|---|---|---|---|
+| VER-04 | 404 | `verification_not_found` | la verificación no existe |
+| VER-04 | 410 | `photos_destroyed` | las fotos ya fueron destruidas |
+| VER-05 | 404 | `verification_not_found` | la verificación no existe |
+| VER-05 | 409 | `verification_already_decided` | ya tiene una decisión o no está en revisión |
+| REP-05 | 404 | `report_not_found` | el reporte no existe |
+
 
 **Códigos de error:** los de forma salen como 422 con `errors` por campo y los de sesión y límite como 401 y 429; los conflictos de negocio llevan un código en inglés y snake_case que se fija al implementar y se agrega al catálogo.
 
@@ -206,13 +235,13 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 ## 9. Amenazas y controles
 | Amenaza | Control | Casos que lo prueban |
 |---|---|---|
-| Acceso a datos de otra persona (IDOR) | Toda consulta y escritura filtra por el `sub` del token; ajeno responde 403 o 404 | CA-03, CA-08, CA-14, CA-21, CA-26, CA-30 |
-| Asignación masiva o identificador ajeno en el cuerpo | El DTO no acepta identificadores de persona; se ignoran | CA-03, CA-08, CA-14, CA-21, CA-26, CA-30 |
+| Acceso a datos de otra persona (IDOR) | Toda consulta y escritura filtra por el `sub` del token; ajeno responde 403 o 404 | CA-03, CA-08, CA-14, CA-21, CA-26, CA-36 |
+| Asignación masiva o identificador ajeno en el cuerpo | El DTO no acepta identificadores de persona; se ignoran | CA-03, CA-08, CA-14, CA-21, CA-26, CA-36 |
 | Inyección en filtros y parámetros | Parámetros tipados con validador; nada se concatena en consultas | CA-04, CA-09, CA-15 a CA-16, CA-22, CA-27 a CA-28 |
 | Ruta sin sesión | JWT obligatorio salvo las públicas | CA-02, CA-07, CA-13, CA-20, CA-25 |
-| Abuso por repetición o cuerpos grandes | Límite de peticiones, `Retry-After` y tope de cuerpo | CA-32 |
-| Datos personales en registros y errores | Registros sin datos personales; ProblemDetails sin valores | CA-31 |
-| Duplicados por reintento | Regla de estado o índice único, sin `Idempotency-Key` | CA-33 |
+| Abuso por repetición o cuerpos grandes | Límite de peticiones, `Retry-After` y tope de cuerpo | CA-38 |
+| Datos personales en registros y errores | Registros sin datos personales; ProblemDetails sin valores | CA-37 |
+| Duplicados por reintento | Regla de estado o índice único, sin `Idempotency-Key` | CA-39 |
 
 ## 10. Plan de pruebas
 Las pruebas citan el caso como `CA_053_NN` en el nombre (para `python scripts/sdd_lint.py --trace 053`).
@@ -221,18 +250,16 @@ Las pruebas citan el caso como `CA_053_NN` en el nombre (para `python scripts/sd
 |---|---|---|
 | Unitarias | Sí | Validadores, reglas de estado y cálculos del dominio |
 | Integración | Sí | Cada ruta con la base real en contenedor (Testcontainers) y `MarketApiFactory`/fábrica del servicio |
-| Seguridad negativa | Sí | 401, 403/404, 422, 413 y 429 (CA-02 a CA-04, CA-07 a CA-09, CA-13 a CA-16, CA-20 a CA-22, CA-25 a CA-28, CA-30, CA-32) |
+| Seguridad negativa | Sí | 401, 403/404, 422, 413 y 429 (CA-02 a CA-04, CA-07 a CA-09, CA-13 a CA-16, CA-20 a CA-22, CA-25 a CA-28, CA-36, CA-38) |
 | Base de datos | Sí | Índices y reglas de cada colección de §6 |
 | Contrato | Sí | OpenAPI regenerado y comparado con `contracts/` |
 | Mutación | Sí | Meta del módulo según la spec 008 |
 | Rendimiento | No aplica | Sin ruta crítica; se mide solo si la spec 034 lo pide |
 
 ## 11. Escenarios
-- **VER-03** — pantallas: Panel de administración.
-- **VER-04** — pantallas: Panel de administración.
-- **VER-05** — pantallas: Panel de administración.
-- **REP-04** — pantallas: Panel de administración.
-- **REP-05** — pantallas: Panel de administración.
+- **Verificar:** el verificador abre la cola → abre una verificación → ve las fotos 5 minutos → la aprueba y se destruye la llave de las fotos.
+- **Moderar:** el moderador abre un reporte con evidencia → asigna gravedad y sanción → ambas partes reciben aviso sin datos de la otra.
+- **Apelación:** la persona sancionada apela → otra persona del panel revisa y confirma o revierte.
 
 ## 12. Definición de terminado
 - Los criterios de aceptación están cubiertos por pruebas en verde y `sdd_lint --trace 053` sin faltantes.
@@ -245,13 +272,16 @@ Las pruebas citan el caso como `CA_053_NN` en el nombre (para `python scripts/sd
 
 ## 14. Decisiones tomadas sin consulta
 - **D-01:** Se toma el Excel de endpoints como fuente del contrato porque es el insumo acordado para las specs; cualquier diferencia con las specs 020 a 038 se resuelve a favor de la spec numerada.
-- **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case definidos al implementar, siguiendo la convención de errores de la spec 002.
+- **D-02:** Los conflictos de negocio llevan códigos en inglés y snake_case (los de §5 y, si falta alguno, los que se fijen al implementar), siguiendo la convención de errores de la spec 002.
 - **D-03:** No se usa `Idempotency-Key`, aunque el Excel lo menciona en creaciones.
+- **D-04:** Los enlaces de fotos duran 5 minutos y cada apertura queda auditada, según el Excel.
+- **D-05:** Quien decide una verificación no puede ser la persona verificada.
+- **D-06:** Las sanciones disponibles son `ninguna`, `advertencia`, `ocultar_perfil` y `suspender_cuenta`: el Excel no las enumera.
 
 ## 15. Riesgos y dudas abiertas
-- Exige el panel con doble factor (spec 033) y los roles Verificador y Moderación: no se activa sin esa entrada.
-- Las fotos de verificación se ven solo con enlaces firmados de vida corta (spec 025): confirmar auditoría de cada vista.
-- Esta spec se generó a partir del Excel; antes de aprobarla hay que revisar los límites, los textos de error y los plazos con el equipo.
+- Exige el panel con doble factor (spec 033) y los permisos `verification:review` y `reports:resolve`: no se activa sin esa entrada.
+- Confirmar la lista de sanciones y gravedades, y qué permiso exige moderar reportes de opiniones (`reviews:moderate`).
+- Confirmar el máximo de 90 días de rango en las colas y la auditoría de cada vista de fotos (spec 025).
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: _____________________ fecha: __________
