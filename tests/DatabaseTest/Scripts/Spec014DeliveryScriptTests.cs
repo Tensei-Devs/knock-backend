@@ -61,6 +61,16 @@ public sealed class Spec014DeliveryScriptTests
 
             var marketCollections = await (await market.ListCollectionNamesAsync()).ToListAsync();
             marketCollections.Should().Contain(["solicitudes", "cotizaciones"], "el script 020 de la spec 020 también corre en la entrega");
+            marketCollections.Should().Contain(["sinonimos", "catalogo_meta", "busquedas_sin_resultado", "tecnicos"]);
+            (await MongoIndexes.DescribeAsync(market, "sinonimos")).Should().Contain("termino_1_oficioClave_1 termino:1,oficioClave:1 unique ttl:-");
+            (await MongoIndexes.DescribeAsync(market, "sinonimos")).Should().Contain("oficioClave_1 oficioClave:1 - ttl:-");
+            (await MongoIndexes.DescribeAsync(market, "busquedas_sin_resultado")).Should().Contain("creadoEn_1 creadoEn:1 - ttl:7776000");
+            (await MongoIndexes.DescribeAsync(market, "busquedas_sin_resultado")).Should().Contain("terminoNormalizado_1_dia_1 terminoNormalizado:1,dia:1 unique ttl:-");
+            (await MongoIndexes.DescribeAsync(market, "tecnicos")).Should().Contain("oficios_1_estado_1_oculto_1 oficios:1,estado:1,oculto:1 - ttl:-");
+            (await MongoIndexes.DescribeAsync(market, "tecnicos")).Should().Contain("palabrasBusqueda_1 palabrasBusqueda:1 - ttl:-");
+            var synonyms = market.GetCollection<BsonDocument>("sinonimos");
+            (await synonyms.CountDocumentsAsync(new BsonDocument("termino", "boiler"))).Should().Be(1);
+            (await market.GetCollection<BsonDocument>("catalogo_meta").Find(new BsonDocument("_id", "sinonimos")).SingleAsync())["version"].AsInt32.Should().BeGreaterThan(0);
 
             var electricity = await market.GetCollection<BsonDocument>("oficios").Find(new BsonDocument("clave", "ele")).SingleAsync();
             electricity["_id"].AsObjectId.ToString().Should().Be("6adfe9802fb81ddc3fc17f73", "las semillas conservan sus _id fijos");
@@ -99,7 +109,7 @@ public sealed class Spec014DeliveryScriptTests
     private static async Task<List<string>> SnapshotAsync(IMongoDatabase database)
     {
         var all = new List<string>();
-        foreach (var collection in new[] { "oficios", "colonias" })
+        foreach (var collection in new[] { "oficios", "colonias", "sinonimos", "catalogo_meta" })
         {
             var documents = await database.GetCollection<BsonDocument>(collection).Find(FilterDefinition<BsonDocument>.Empty).SortBy(d => d["_id"]).ToListAsync();
             all.AddRange(documents.Select(d => collection + " " + d.ToJson()));

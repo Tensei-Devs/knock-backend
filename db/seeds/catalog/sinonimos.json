@@ -1,0 +1,19 @@
+[
+  { "termino": "boiler", "oficioClave": "plo" },
+  { "termino": "calentador", "oficioClave": "plo" },
+  { "termino": "fuga", "oficioClave": "plo" },
+  { "termino": "tinaco", "oficioClave": "plo" },
+  { "termino": "tuberia", "oficioClave": "plo" },
+  { "termino": "llave", "oficioClave": "plo" },
+  { "termino": "luz", "oficioClave": "ele" },
+  { "termino": "apagon", "oficioClave": "ele" },
+  { "termino": "contacto", "oficioClave": "ele" },
+  { "termino": "cortocircuito", "oficioClave": "ele" },
+  { "termino": "foco", "oficioClave": "ele" },
+  { "termino": "frenos", "oficioClave": "mec" },
+  { "termino": "auto", "oficioClave": "mec" },
+  { "termino": "carro", "oficioClave": "mec" },
+  { "termino": "motor", "oficioClave": "mec" },
+  { "termino": "afinacion", "oficioClave": "mec" },
+  { "termino": "llanta", "oficioClave": "mec" }
+]
