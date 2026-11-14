@@ -31,7 +31,7 @@ internal sealed class QuoteStore(
             }
             catch (MongoCommandException ex) when (ex.Code == 112)
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(20 * (attempt + 1)), cancellationToken);
+                await Task.Yield();
             }
         }
         return await SaveOnceAsync(requestId, technicianId, sub, trade, body, now, cancellationToken);
