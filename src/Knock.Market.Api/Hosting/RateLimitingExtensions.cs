@@ -34,6 +34,7 @@ internal sealed class RateLimitSettings
 internal static class RateLimitingExtensions
 {
     public const string WaitlistPolicy = "waitlist";
+    public const string QuotePolicy = "quotes";
     private const string _healthPath = "/health";
     private const string _readyPath = "/health/ready";
     private const string _unknownClient = "unknown";
@@ -59,6 +60,9 @@ internal static class RateLimitingExtensions
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
             options.AddPolicy(WaitlistPolicy, context => context.User.FindFirst("sub")?.Value is { Length: > 0 } subject
                 ? RateLimitPartition.GetFixedWindowLimiter(subject, _ => FixedWindow(new RateLimitPolicySettings { PermitLimit = 5, Window = TimeSpan.FromHours(1) }))
+                : RateLimitPartition.GetNoLimiter(_unknownClient));
+            options.AddPolicy(QuotePolicy, context => context.User.FindFirst("sub")?.Value is { Length: > 0 } subject
+                ? RateLimitPartition.GetFixedWindowLimiter(subject, _ => FixedWindow(new RateLimitPolicySettings { PermitLimit = 3, Window = TimeSpan.FromMinutes(1) }))
                 : RateLimitPartition.GetNoLimiter(_unknownClient));
             options.GlobalLimiter = PartitionedRateLimiter.CreateChained(
                 PartitionedRateLimiter.Create<HttpContext, string>(context => GlobalPartition(context, global, ready)),
