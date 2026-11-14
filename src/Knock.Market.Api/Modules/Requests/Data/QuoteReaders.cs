@@ -14,10 +14,31 @@ internal sealed class MongoTechnicianDirectory(
     IOptions<KnockMongoOptions> options) : ITechnicianDirectory
 {
     public async Task<Technician?> FindBySubAsync(string sub, CancellationToken cancellationToken)
+        => await FindAsync(sub, FilterDefinition<BsonDocument>.Empty, cancellationToken);
+
+    public async Task<Technician?> FindEligibleAsync(string sub, QuoteRequestSnapshot request, CancellationToken cancellationToken)
+    {
+        var filters = Builders<BsonDocument>.Filter;
+        FilterDefinition<BsonDocument> coverage;
+        if (request.Latitude is null || request.Longitude is null)
+        {
+            coverage = filters.Eq("coloniaBaseId", request.ColoniaId);
+        }
+        else
+        {
+            var alternatives = Enumerable.Range(1, 30).Select(radius =>
+                filters.Eq("radioAtencionKm", radius) & new BsonDocument("ubicacionBase", new BsonDocument("$geoWithin",
+                    new BsonDocument("$centerSphere", new BsonArray { new BsonArray { request.Longitude.Value, request.Latitude.Value }, radius / 6371.0 }))));
+            coverage = filters.Or(alternatives);
+        }
+        return await FindAsync(sub, filters.Eq("oficios", request.Trade) & coverage, cancellationToken);
+    }
+
+    private async Task<Technician?> FindAsync(string sub, FilterDefinition<BsonDocument> eligibility, CancellationToken cancellationToken)
     {
         var filter = Builders<BsonDocument>.Filter.Eq("usuarioId", sub)
             & Builders<BsonDocument>.Filter.Eq("estado", "activo")
-            & Builders<BsonDocument>.Filter.Eq("oculto", false);
+            & Builders<BsonDocument>.Filter.Eq("oculto", false) & eligibility;
         var projection = Builders<BsonDocument>.Projection.Include("usuarioId").Include("estado").Include("oculto")
             .Include("oficios").Include("coloniaBaseId").Include("ubicacionBase").Include("radioAtencionKm");
         var doc = await database.GetCollection<BsonDocument>("tecnicos")

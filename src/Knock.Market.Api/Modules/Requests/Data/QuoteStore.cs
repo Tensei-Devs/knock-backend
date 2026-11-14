@@ -13,8 +13,9 @@ namespace Knock.Market.Api.Modules.Requests.Data;
 internal sealed class QuoteStore(
     [FromKeyedServices(RequestsModuleExtensions.ModuleKey)] IMongoDatabase database,
     IOptions<KnockMongoOptions> options,
-    IOptions<QuotePricingOptions> pricing) : IQuoteWriter
+    IOptions<QuotePricingOptions> pricing) : IQuoteWriter, ICreatedQuote
 {
+    public QuoteResponse? CreatedQuote { get; private set; }
     private static readonly string[] _openStates = ["enviada", "cotizando"];
     private static readonly string[] _liveStates = ["enviada", "aceptada"];
     public Task<QuoteCheckResult> SaveAsync(string requestId, string technicianId, string sub, string trade, QuoteValidationInput body, DateTimeOffset now, CancellationToken cancellationToken) =>
@@ -57,9 +58,13 @@ internal sealed class QuoteStore(
                 if (await quotes.CountDocumentsAsync(transaction, live, new CountOptions { MaxTime = options.Value.QueryMaxTime }, token) >= RequestRules.MaxLiveQuotes)
                     throw new DomainException(DomainErrorKind.Conflict, "quote_quota_full");
                 var quoteId = ObjectId.GenerateNewId();
-                await quotes.InsertOneAsync(transaction, CreateQuote(quoteId, requestId, technicianId, sub, trade, body, now), cancellationToken: token);
+                var quote = CreateQuote(quoteId, requestId, technicianId, sub, trade, body, now);
+                await quotes.InsertOneAsync(transaction, quote, cancellationToken: token);
                 var message = new BsonDocument { ["_id"] = quoteId, ["tipo"] = "CotizacionEnviada", ["estado"] = "pendiente", ["creadoEn"] = now.UtcDateTime, ["solicitudId"] = requestId, ["cotizacionId"] = quoteId };
                 await database.GetCollection<BsonDocument>("outbox").InsertOneAsync(transaction, message, cancellationToken: token);
+                CreatedQuote = new QuoteResponse(quoteId.ToString(), requestId.ToString(), "enviada", body.TipoPrecio!, body.Precio,
+                    body.PrecioMin, body.PrecioMax, quote["tope"].AsInt32, quote["requiereAprobacion"].AsBoolean,
+                    body.Dia!.Value, body.Hora!, body.Nota, now);
                 return QuoteCheckResult.Created;
             }, cancellationToken: cancellationToken);
         }

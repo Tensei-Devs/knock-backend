@@ -12,6 +12,7 @@ internal sealed record QuoteRequestSnapshot(string Trade, string ColoniaId, Requ
 internal interface ITechnicianDirectory
 {
     Task<Technician?> FindBySubAsync(string sub, CancellationToken cancellationToken);
+    Task<Technician?> FindEligibleAsync(string sub, QuoteRequestSnapshot request, CancellationToken cancellationToken);
     Task<bool> ExistsAsync(string sub, CancellationToken cancellationToken);
 }
 
@@ -25,6 +26,14 @@ internal enum QuoteCheckResult { NotATechnician, NotFound, RequestNotQuotable, I
 internal interface IQuoteWriter
 {
     Task<QuoteCheckResult> SaveAsync(string requestId, string technicianId, string sub, string trade, QuoteValidationInput body, DateTimeOffset now, CancellationToken cancellationToken);
+}
+
+internal sealed record QuoteResponse(string Id, string SolicitudId, string Estado, string TipoPrecio, decimal? Precio,
+    decimal? PrecioMin, decimal? PrecioMax, int Tope, bool RequiereAprobacion, DateOnly Dia, string Hora, string? Nota, DateTimeOffset CreadoEn);
+
+internal interface ICreatedQuote
+{
+    QuoteResponse? CreatedQuote { get; }
 }
 
 internal enum NoteModerationResult { Approved, Rejected, Unavailable }
@@ -41,19 +50,26 @@ internal sealed class UnavailableNoteModerator : INoteModerator
 
 internal sealed class QuoteService(ITechnicianDirectory technicians, IQuoteRequestReader requests, QuoteValidator validator, TimeProvider clock, INoteModerator moderator, IQuoteWriter writer)
 {
+    public QuoteResponse? CreatedQuote => (writer as ICreatedQuote)?.CreatedQuote;
+    public IDictionary<string, string[]> Errors { get; private set; } = new Dictionary<string, string[]>();
     public async Task<QuoteCheckResult> SendAsync(string sub, string solicitudId, QuoteValidationInput body, CancellationToken cancellationToken = default)
     {
         var technician = await technicians.FindBySubAsync(sub, cancellationToken);
         if (technician is null)
             return await technicians.ExistsAsync(sub, cancellationToken) ? QuoteCheckResult.NotFound : QuoteCheckResult.NotATechnician;
         var request = await requests.FindAsync(solicitudId, cancellationToken);
-        if (request is null || technician.Estado != "activo" || technician.Oculto ||
+        if (request is null || await technicians.FindEligibleAsync(sub, request, cancellationToken) is null || technician.Estado != "activo" || technician.Oculto ||
             !technician.Oficios.Contains(request.Trade, StringComparer.Ordinal) || !Covers(technician, request))
             return QuoteCheckResult.NotFound;
         if (!RequestRules.AcceptsQuotes(request.State) || request.ExpiresAt <= clock.GetUtcNow())
             return QuoteCheckResult.RequestNotQuotable;
-        if (!(await validator.ValidateAsync(body with { RequestDate = request.Day }, cancellationToken)).IsValid)
+        var validation = await validator.ValidateAsync(body with { RequestDate = request.Day }, cancellationToken);
+        if (!validation.IsValid)
+        {
+            Errors = validation.Errors.GroupBy(x => char.ToLowerInvariant(x.PropertyName[0]) + x.PropertyName[1..])
+                .ToDictionary(x => x.Key, x => x.Select(e => e.ErrorMessage).ToArray());
             return QuoteCheckResult.Invalid;
+        }
         if (body.Nota is not null)
         {
             var moderation = await moderator.ModerateAsync(body.Nota, cancellationToken);
