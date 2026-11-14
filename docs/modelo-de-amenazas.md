@@ -177,7 +177,7 @@ Verificación del líder sobre el gateway desplegado, con `GET` a tres rutas (TC
 
 Mensajería (H-03): `knock-messaging` corre en la revisión `0000004` (Healthy, creada el 2026-11-13) con `Jwt__SigningKey` y la conexión a Redis, e ingreso interno. Como no se consulta desde fuera, su «401 sin token» no se puede mostrar con `curl`: lo cubren las pruebas del CI `SecurityTest/Messaging/AuthenticationTests` (TC-BUG-004-01) y las demás de `tests/SecurityTest/Messaging`.
 
-**Hallazgos altos abiertos: ninguno** (ni en el escaneo ni en las brechas del modelo). Las brechas medias (H-03, H-04, H-06, H-08) y bajas (H-01, H-02, H-05, H-07) se registran para su triage en Jira.
+**Hallazgos altos abiertos: ninguno** (ni en el escaneo ni en las brechas del modelo). Las brechas H-01, H-02 y H-03 están cerradas (2026-11-13); las medias H-04, H-06 y H-08 y las bajas H-05 y H-07 se registran para su triage en Jira.
 
 ## 4. Pendiente de la tarea KNOCK-78 fuera de este documento
 

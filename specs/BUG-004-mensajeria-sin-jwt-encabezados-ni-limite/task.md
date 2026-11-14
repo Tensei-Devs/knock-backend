@@ -1,6 +1,6 @@
 # BUG-004 — tareas
 
-> Servicio afectado: Messaging. Spec aprobada el 2026-11-10; nada implementado todavía.
+> Servicio afectado: Messaging. Spec aprobada el 2026-11-10. **Implementada** en el PR #82 (KNOCK-241); Mensajería desplegada el 2026-11-13.
 
 ## T1 — Autenticación JWT y sesión cancelada
 - **Estado:** hecha (PR #82). Esquema JWT, política por defecto «exigir sesión», comprobación de sesión cancelada en Redis (503 si no responde) y arranque con falla rápida.
