@@ -9,7 +9,7 @@
 | T-03 | Extender el acceso a datos de Identidad e implementar cargador con derivación, cifrado y hash, upsert idempotente, validación previa, índices únicos y pruebas de carreras y recuperación de fallos parciales. | R-03 a R-06 · CA-04 a CA-06, CA-08, CA-11 | parcial: CA-06 y frontera verificadas; carrera de dos cargas y recuperación parcial probadas; faltan las carreras por separado de cada índice único exigidas por CA-11 |
 | T-04 | Conectar el arranque y probar las guardas de configuración, producción, todos los hosts de `MongoUrl.Servers`, credenciales, rechazo de SRV y documentos no demo, sin escrituras ante rechazo. | R-07 · CA-07, CA-09, CA-12 | hecha para conexión y guardas; evidencia de dos arranques CA-09 pendiente en T-06 |
 | T-05 | Documentar contenido, carga local, conteo y borrado de demo sin secretos, y carga separada y manual a Azure con `db/entrega.js`. | R-08 · CA-09 | hecha; `entrega.js` no carga clientes demo en Azure, aclarado en README |
-| T-06 | Ejecutar pruebas por caso, dos arranques con conteos y build/formato; revisar convención de errores y actualizar memoria. | R-01 a R-10 · CA-01 a CA-13 | pendiente |
+| T-06 | Ejecutar pruebas por caso, dos arranques con conteos y build/formato; revisar convención de errores y actualizar memoria. | R-01 a R-10 · CA-01 a CA-13 | parcial: CA-09 verificado en documentdb-local aislado, sin documentos previos: readiness 200 y conteos 10 / 10; CA-10 build Release sin restore, 0 errores/advertencias, y formato sin cambios. Quedan las carreras de CA-11 por separado y revisión de errores |
 
 ## Definición de terminado
 Casos y comandos verificados con evidencia sin secretos, CI en verde, revisión de par y `Memoria.md` actualizado.
