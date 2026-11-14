@@ -57,6 +57,39 @@ internal sealed class UsuariosStore(
 
     private IMongoCollection<BsonDocument> Users { get; } = database.GetCollection<BsonDocument>(UsersCollection);
 
+    internal async Task UpsertDemoAsync(BsonDocument desired, CancellationToken cancellationToken)
+    {
+        var id = desired["_id"];
+        var existing = await Users.Find(_filter.Eq("_id", id), _findOptions).FirstOrDefaultAsync(cancellationToken);
+        if (existing is null)
+        {
+            await Users.InsertOneAsync(desired, cancellationToken: cancellationToken);
+            return;
+        }
+
+        var compared = desired.DeepClone().AsBsonDocument;
+        var previous = existing.DeepClone().AsBsonDocument;
+        foreach (var field in new[] { "celularCifrado", "celularCifradoVersion", "version" })
+        {
+            compared.Remove(field);
+            previous.Remove(field);
+        }
+
+        if (compared.Equals(previous))
+        {
+            return;
+        }
+
+        desired["version"] = existing["version"].AsInt32 + 1;
+        var result = await Users.ReplaceOneAsync(
+            _filter.And(_filter.Eq("_id", id), _filter.Eq("version", existing["version"])), desired,
+            cancellationToken: cancellationToken);
+        if (result.MatchedCount != 1)
+        {
+            throw new InvalidOperationException("Demo account changed concurrently.");
+        }
+    }
+
     public async Task<UserProfile?> FindProfileAsync(string sub, CancellationToken cancellationToken) =>
         ToProfile(await Users.Find(_filter.Eq(SubField, sub), _findOptions).Project(_profileProjection).Limit(1)
             .FirstOrDefaultAsync(cancellationToken));
