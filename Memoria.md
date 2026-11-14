@@ -644,3 +644,8 @@
 - **Por qué:** el rechazo ocurre dentro de Kestrel; el gateway también corre sobre Kestrel, así que el 400 sale antes de llegar a Mercado. No hay nada razonable que hacer en la aplicación.
 - **Alcance:** solo texto de `specs/023-zona-por-ubicacion-o-codigo-postal/spec.md`; no se tocó ningún campo de aprobación ni el código.
 - **A evitar:** esperar 422 para `%00` en pruebas o en el DAST; es 400 del servidor.
+
+## 2026-11-14 — Gitleaks marca todos los PR por dos cadenas sintéticas de la rama de KNOCK-40 (EXC-023)
+- **Qué pasó:** el commit 72c27e4 de la rama de KNOCK-40 trae en `DemoSeedGuardTests.cs` (líneas 17 y 40) cadenas de conexión de MongoDB inventadas para probar la guarda de host. Gitleaks revisa el historial de todas las ramas, así que desde ese push falló en todos los PR nuevos, incluso en los que solo cambian documentación (#113).
+- **Decisión (Tech Lead):** se aceptan las dos huellas en `.gitleaksignore`, con la EXC-023 en `security/exceptions.yaml` (vence 2026-12-04 o al fusionar la rama), igual que EXC-019. No se reescribe el historial ni se toca la regla.
+- **A evitar:** escribir en pruebas una cadena de conexión completa con usuario y clave aunque sea inventada; constrúyela en el código sin ese formato.
