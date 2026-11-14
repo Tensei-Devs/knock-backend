@@ -2,6 +2,9 @@ extern alias identity;
 using System.Security.Cryptography;
 using System.Text;
 using Knock.IntegrationTest.Support;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
@@ -24,6 +27,32 @@ public sealed class DemoSeedLoaderTests
     private static readonly string _path = Path.Combine(CatalogTestDatabase.SeedsDirectory, "demo", "identity", "usuarios.json");
 
     [Theory]
+    [InlineData(false, "Development")]
+    [InlineData(true, "Production")]
+    public async Task EnvironmentGuard_CA_038_07(bool enabled, string environment)
+    {
+        await WithDatabase(async (database, seeder, _, _) =>
+        {
+            await Assert.ThrowsAsync<InvalidOperationException>(() => seeder.SeedAsync("missing-file", CancellationToken.None));
+            Assert.Equal(0, await database.GetCollection<BsonDocument>("usuarios").CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty));
+        }, enabled, environment);
+    }
+
+    [Fact]
+    public async Task NonLocalHost_CA_038_12()
+    {
+        await WithDatabase(async (database, seeder, _) =>
+        {
+            var users = database.GetCollection<BsonDocument>("usuarios");
+            await users.InsertOneAsync(new BsonDocument { ["_id"] = ObjectId.GenerateNewId() });
+            var before = await users.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+            var error = await Assert.ThrowsAsync<InvalidOperationException>(() => seeder.SeedAsync("missing-file", CancellationToken.None));
+            Assert.Contains("non-demo", error.Message, StringComparison.Ordinal);
+            Assert.Equal(before, await users.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync());
+        });
+    }
+
+    [Theory]
     [InlineData("sub")]
     [InlineData("celularHash")]
     public async Task UniqueConflict_CA_038_11(string field)
@@ -34,7 +63,7 @@ public sealed class DemoSeedLoaderTests
             await seeder.SeedAsync(_path, CancellationToken.None);
             var sample = await users.Find(FilterDefinition<BsonDocument>.Empty).FirstAsync();
             await users.DeleteManyAsync(FilterDefinition<BsonDocument>.Empty);
-            var existing = new BsonDocument { ["_id"] = ObjectId.GenerateNewId(), [field] = sample[field], ["demo"] = false };
+            var existing = new BsonDocument { ["_id"] = ObjectId.GenerateNewId(), [field] = sample[field], ["demo"] = true };
             await users.InsertOneAsync(existing);
             var error = await Assert.ThrowsAsync<InvalidOperationException>(() => seeder.SeedAsync(_path, CancellationToken.None));
             Assert.Contains(field, error.Message, StringComparison.Ordinal);
@@ -224,7 +253,7 @@ public sealed class DemoSeedLoaderTests
     private static async Task WithDatabase(Func<IMongoDatabase, DemoClientSeeder, byte[], Task> test)
         => await WithDatabase((db, seeder, key, _) => test(db, seeder, key));
 
-    private static async Task WithDatabase(Func<IMongoDatabase, DemoClientSeeder, byte[], FakeCache, Task> test)
+    private static async Task WithDatabase(Func<IMongoDatabase, DemoClientSeeder, byte[], FakeCache, Task> test, bool enabled = true, string environment = "Development")
     {
         var fixture = await DocumentDbFixture.SharedAsync();
         using var client = new MongoClient(fixture.ConnectionString);
@@ -237,9 +266,10 @@ public sealed class DemoSeedLoaderTests
             options.EncryptionKeys.Add(1, Convert.ToBase64String(key));
             options.HmacKeys.Add(1, Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
             var protector = new PhoneProtector(PhoneProtectionKeys.TryCreate(options, out var errors) ?? throw new InvalidOperationException(string.Join(',', errors)));
-            var store = new UsuariosStore(database, Options.Create(new KnockMongoOptions()));
+            var store = new UsuariosStore(database, Options.Create(new KnockMongoOptions { ConnectionString = fixture.ConnectionString }));
             var cache = new FakeCache();
-            await test(database, new DemoClientSeeder(store, protector, cache, Microsoft.Extensions.Logging.Abstractions.NullLogger<DemoClientSeeder>.Instance), key, cache);
+            var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Seed:Demo"] = enabled.ToString() }).Build();
+            await test(database, new DemoClientSeeder(store, protector, cache, Microsoft.Extensions.Logging.Abstractions.NullLogger<DemoClientSeeder>.Instance, configuration, new FakeEnvironment { EnvironmentName = environment }), key, cache);
         }
         finally
         {
@@ -259,5 +289,13 @@ public sealed class DemoSeedLoaderTests
             lock (Removed) { Removed.Add(sub); }
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class FakeEnvironment : IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = Environments.Development;
+        public string ApplicationName { get; set; } = string.Empty;
+        public string ContentRootPath { get; set; } = string.Empty;
+        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
     }
 }

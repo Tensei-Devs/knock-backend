@@ -3,15 +3,18 @@ using Knock.Identity.Api.Modules.Sesiones.Services;
 using Knock.Identity.Api.Modules.Usuarios.Data;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
-using StackExchange.Redis;
 
 namespace Knock.Identity.Api.Modules.Usuarios.Services;
 
-/// <summary>Preparación parcial de la demo; no se registra ni conecta al arranque hasta implementar las guardas.</summary>
-internal sealed partial class DemoClientSeeder(UsuariosStore store, PhoneProtector phones, IProfileCache cache, ILogger<DemoClientSeeder> logger)
+/// <summary>Carga las cuentas de demostración tras validar el destino.</summary>
+internal sealed partial class DemoClientSeeder(
+    UsuariosStore store, PhoneProtector phones, IProfileCache cache, ILogger<DemoClientSeeder> logger,
+    IConfiguration configuration, IHostEnvironment environment)
 {
     public async Task SeedAsync(string path, CancellationToken cancellationToken)
     {
+        CheckEnvironment();
+        await store.ValidateDemoAsync(cancellationToken);
         var input = BsonSerializer.Deserialize<BsonArray>(await File.ReadAllTextAsync(path, cancellationToken));
         var documents = new List<BsonDocument>();
         var ids = new HashSet<ObjectId>();
@@ -73,11 +76,7 @@ internal sealed partial class DemoClientSeeder(UsuariosStore store, PhoneProtect
 
         foreach (var document in documents)
         {
-            try
-            {
-                await cache.RemoveAsync(document["sub"].AsString, cancellationToken);
-            }
-            catch (Exception exception) when (exception is RedisException or TimeoutException)
+            if (!await DemoProfileCache.TryRemoveAsync(cache, document["sub"].AsString, cancellationToken))
             {
                 LogCacheUnavailable(logger);
             }
@@ -86,6 +85,14 @@ internal sealed partial class DemoClientSeeder(UsuariosStore store, PhoneProtect
 
     [LoggerMessage(EventId = 2250, Level = LogLevel.Warning, Message = "Demo profile cache invalidation unavailable; a later load will retry")]
     private static partial void LogCacheUnavailable(ILogger logger);
+
+    private void CheckEnvironment()
+    {
+        if (!DemoSeedStartup.ShouldRun(configuration.GetValue<bool>("Seed:Demo"), environment.EnvironmentName))
+        {
+            throw new InvalidOperationException("Demo seed is disabled or the environment is Production.");
+        }
+    }
 
     private static void ValidateFields(BsonDocument entry)
     {
