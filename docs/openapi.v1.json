@@ -5,6 +5,294 @@
     "version": "1.0.0"
   },
   "paths": {
+    "/api/v{version}/me/tecnicos-confianza": {
+      "get": {
+        "tags": [
+          "TrustedTechnicians"
+        ],
+        "summary": "Los técnicos guardados, del más reciente al más antiguo, con paginación por cursor. Un técnico oculto no aparece.",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "description": "Page size, 1 to 50. Defaults to 20.",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrustedTechnicianPage"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrustedTechnicianPage"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrustedTechnicianPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v{version}/me/tecnicos-confianza/{tecnicoId}": {
+      "put": {
+        "tags": [
+          "TrustedTechnicians"
+        ],
+        "summary": "Guarda al técnico: 201 la primera vez y 200 al repetir, sin duplicar. Un técnico que no existe o está oculto responde 404 `technician_not_found`.",
+        "parameters": [
+          {
+            "name": "tecnicoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrustedTechnician"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrustedTechnician"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrustedTechnician"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrustedTechnician"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrustedTechnician"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrustedTechnician"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "TrustedTechnicians"
+        ],
+        "summary": "Quita al técnico de la lista: 204; si no estaba, 404 `trusted_technician_not_found`.",
+        "parameters": [
+          {
+            "name": "tecnicoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v{version}/tecnicos": {
       "post": {
         "tags": [
@@ -1079,6 +1367,91 @@
         }
       }
     },
+    "/api/v{version}/solicitudes/{id}/conversacion": {
+      "get": {
+        "tags": [
+          "ConversationPermission"
+        ],
+        "summary": "El permiso del par (solicitud, técnico) para quien pide: el cliente dueño debe mandar `tecnicoId`; el técnico no (se ignora si lo manda). Cualquier otro caso es 404 uniforme.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tecnicoId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermisoConversacion"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermisoConversacion"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermisoConversacion"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v{version}/solicitudes/{id}/cotizaciones": {
       "post": {
         "tags": [
@@ -1399,6 +1772,133 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v{version}/interno/historial": {
+      "get": {
+        "tags": [
+          "InternalHistory"
+        ],
+        "summary": "Visitas terminadas del cliente ligadas al elemento, de la más reciente a la más antigua, por cursor. Sin precios ni direcciones.",
+        "parameters": [
+          {
+            "name": "usuarioId",
+            "in": "query",
+            "description": "The sub of the client whose finished visits are listed.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "elementoId",
+            "in": "query",
+            "description": "The element id (24 hexadecimal characters) linked to the requests.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "description": "Page size, 1 to 50. Defaults to 20.",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CursorPageOfHistoryEntryResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CursorPageOfHistoryEntryResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CursorPageOfHistoryEntryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1922,6 +2422,193 @@
             "description": "Too Many Requests",
             "content": {
               "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v{version}/busqueda": {
+      "get": {
+        "tags": [
+          "Busqueda"
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Obligatorio; texto normalizado de 2 a 80 caracteres.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "coloniaId",
+            "in": "query",
+            "description": "Obligatorio; ObjectId de la colonia activa.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "oficio",
+            "in": "query",
+            "description": "Clave opcional de un oficio activo.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "soloVerificados",
+            "in": "query",
+            "description": "Booleano opcional true o false; por defecto false.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Cursor opaco de la consulta y versión del diccionario.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Entero de 1 a 20; por defecto 20.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BusquedaResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BusquedaResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BusquedaResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
                 }
@@ -2569,6 +3256,154 @@
         },
         "description": "Estado del interruptor: `disponibleHoy` es derivado de `disponibleHasta` (UTC), que con el interruptor encendido es hoy a las 23:59:59 de la ciudad."
       },
+      "BusquedaInterpretacion": {
+        "required": [
+          "estado",
+          "oficioDetectado",
+          "oficiosSugeridos"
+        ],
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string"
+          },
+          "oficioDetectado": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BusquedaOficio"
+              }
+            ]
+          },
+          "oficiosSugeridos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/BusquedaOficio"
+            }
+          }
+        }
+      },
+      "BusquedaItem": {
+        "required": [
+          "id",
+          "nombre",
+          "oficios",
+          "calificacion",
+          "totalResenas",
+          "verificado",
+          "nivelVerificacion",
+          "coloniaBase",
+          "distanciaKm",
+          "atiendeTuColonia",
+          "fotoUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "oficios": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BusquedaOficio"
+            }
+          },
+          "calificacion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "totalResenas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "verificado": {
+            "type": "boolean"
+          },
+          "nivelVerificacion": {
+            "type": "string"
+          },
+          "coloniaBase": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "distanciaKm": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "atiendeTuColonia": {
+            "type": "boolean"
+          },
+          "fotoUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "BusquedaOficio": {
+        "required": [
+          "clave",
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "clave": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          }
+        }
+      },
+      "BusquedaResponse": {
+        "required": [
+          "interpretacion",
+          "items",
+          "nextCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "interpretacion": {
+            "$ref": "#/components/schemas/BusquedaInterpretacion"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BusquedaItem"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "ChooseQuoteBody": {
         "required": [
           "cotizacionId"
@@ -2705,9 +3540,40 @@
               "string"
             ],
             "description": "De 8 a 200 caracteres; obligatoria en modalidad domicilio y no admitida en taller. Se guarda cifrada."
+          },
+          "elementoId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Opcional (spec 041, R-19, ampliación aditiva de la spec 020): identificador (24 hexadecimales) de un elemento de «Mi casa y mi auto» al que se liga el trabajo. Solo se valida su formato; nunca se devuelve."
           }
         },
         "description": "Cuerpo de `POST /solicitudes` (spec 020, R-01). El 422 lo da `CreateRequestBodyValidator`; nunca repite el valor recibido."
+      },
+      "CursorPageOfHistoryEntryResponse": {
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HistoryEntryResponse"
+            },
+            "description": "Elementos de la página, como máximo int PageLimit.Max."
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Cursor opaco para pedir la página siguiente, o `null` si no hay más."
+          }
+        },
+        "description": "Una página de un listado paginado por cursor (`cursor`, `limit`, `nextCursor`); `NextCursor` es `null` en la última página."
       },
       "DayScheduleDto": {
         "required": [
@@ -2740,6 +3606,26 @@
           }
         },
         "description": "Horario de un día (spec 046, R-47): `dia` de `lunes` a `domingo`; abierto con una o dos franjas `HH:mm`, o cerrado sin franjas."
+      },
+      "HistoryEntryResponse": {
+        "required": [
+          "fecha",
+          "oficio",
+          "tecnico"
+        ],
+        "type": "object",
+        "properties": {
+          "fecha": {
+            "type": "string"
+          },
+          "oficio": {
+            "type": "string"
+          },
+          "tecnico": {
+            "type": "string"
+          }
+        },
+        "description": "Un trabajo terminado del historial (spec 041, R-17): día de la visita (`YYYY-MM-DD`), oficio y nombre del técnico. Sin precios ni direcciones."
       },
       "NeighborhoodAtPointColoniaResponse": {
         "required": [
@@ -2819,6 +3705,68 @@
           }
         },
         "description": "Oficio activo del catálogo tal como lo ve la app: solo clave, nombre y modalidad (nunca id ni activo)."
+      },
+      "PermisoConversacion": {
+        "required": [
+          "solicitudId",
+          "tecnicoId",
+          "clienteId",
+          "tecnicoUsuarioId",
+          "rol",
+          "abierta",
+          "motivoCierre",
+          "elegido",
+          "visitaId",
+          "servicio",
+          "coloniaNombre",
+          "tecnicoPublico"
+        ],
+        "type": "object",
+        "properties": {
+          "solicitudId": {
+            "type": "string"
+          },
+          "tecnicoId": {
+            "type": "string"
+          },
+          "clienteId": {
+            "type": "string"
+          },
+          "tecnicoUsuarioId": {
+            "type": "string"
+          },
+          "rol": {
+            "type": "string"
+          },
+          "abierta": {
+            "type": "boolean"
+          },
+          "motivoCierre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "elegido": {
+            "type": "boolean"
+          },
+          "visitaId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "servicio": {
+            "type": "string"
+          },
+          "coloniaNombre": {
+            "type": "string"
+          },
+          "tecnicoPublico": {
+            "$ref": "#/components/schemas/TecnicoPublicoConversacion"
+          }
+        },
+        "description": "Lo que Mercado dice a Mensajería sobre quién puede conversar en el par (solicitud, técnico) y si la conversación está abierta (spec 030, R-02 y R-03). La ruta que lo\ndevuelve no se publica en el gateway: solo la llama Mensajería por la red interna con la sesión de quien pide. string PermisoConversacion.Rol es `cliente` o `tecnico`."
       },
       "ProblemDetails": {
         "type": "object",
@@ -3804,6 +4752,25 @@
         },
         "description": "Perfil propio recién creado (201). Nunca trae la dirección del taller, el teléfono ni la ubicación."
       },
+      "TecnicoPublicoConversacion": {
+        "required": [
+          "nombre",
+          "fotoUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "fotoUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Datos públicos del técnico de una conversación: solo nombre y foto, nunca contacto (spec 030, R-06)."
+      },
       "TimeRangeDto": {
         "required": [
           "inicio",
@@ -3825,6 +4792,60 @@
           }
         },
         "description": "Franja de 24 horas en la hora de la ciudad, con inicio anterior al fin."
+      },
+      "TrustedTechnician": {
+        "required": [
+          "tecnicoId",
+          "nombre",
+          "fotoUrl",
+          "nivelVerificacion",
+          "guardadoEn"
+        ],
+        "type": "object",
+        "properties": {
+          "tecnicoId": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "fotoUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nivelVerificacion": {
+            "type": "string"
+          },
+          "guardadoEn": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "description": "Un técnico guardado como de confianza: solo datos públicos, nunca teléfono, WhatsApp ni dirección (spec 042, R-12)."
+      },
+      "TrustedTechnicianPage": {
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrustedTechnician"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Una página de la lista; `NextCursor` falta en la última."
       },
       "TrustNotice": {
         "required": [
@@ -4281,6 +5302,9 @@
       "name": "Arrival"
     },
     {
+      "name": "Busqueda"
+    },
+    {
       "name": "ChooseQuote"
     },
     {
@@ -4290,7 +5314,13 @@
       "name": "Colonias"
     },
     {
+      "name": "ConversationPermission"
+    },
+    {
       "name": "Cotizaciones"
+    },
+    {
+      "name": "InternalHistory"
     },
     {
       "name": "ListaEspera"
@@ -4312,6 +5342,9 @@
     },
     {
       "name": "TrustNotice"
+    },
+    {
+      "name": "TrustedTechnicians"
     },
     {
       "name": "Visitas"
