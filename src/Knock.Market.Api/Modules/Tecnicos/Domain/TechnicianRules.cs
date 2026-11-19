@@ -16,12 +16,19 @@ internal static class TechnicianRules
     /// <summary>409 de TEC-01 (spec 046, §5).</summary>
     public const string AlreadyTechnicianCode = "already_a_technician";
 
+    /// <summary>404 de TEC-05, TEC-06 y TEC-07: el técnico no existe o está oculto (spec 046, §5).</summary>
+    public const string TechnicianNotFoundCode = "technician_not_found";
+
     /// <summary>
     /// Tope técnico de claves en el cuerpo para acotar la entrada; la regla de negocio no tiene máximo (D-07) y el catálogo es más corto que esto.
     /// </summary>
     public const int MaxTradesInBody = 50;
 
     public static readonly IReadOnlySet<int> Radii = new HashSet<int> { 3, 5, 8, 12 };
+
+    /// <summary>Visible para clientes: <c>activo</c>, no oculto y sin un ocultamiento vigente de la moderación (R-42).</summary>
+    public static bool IsVisible(string estado, bool oculto, DateTime? ocultoHasta, DateTime nowUtc) =>
+        estado == ActiveState && !oculto && (ocultoHasta is null || ocultoHasta <= nowUtc);
 
     public static bool IsKnownAttention(string? attention) => attention is Taller or Domicilio or Ambos;
 
