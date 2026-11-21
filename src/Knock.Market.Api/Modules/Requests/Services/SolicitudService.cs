@@ -112,7 +112,11 @@ internal sealed class SolicitudService(
             now.UtcDateTime);
 
         await store.InsertAsync(record, message, cancellationToken);
-        return new CreateRequestOutcome(CreateRequestStatus.Created, await ClientViewAsync(record, totalQuotes: 0, cancellationToken));
+        return new CreateRequestOutcome(
+            CreateRequestStatus.Created,
+            (await ClientViewAsync(record, totalQuotes: 0, cancellationToken))
+                with
+            { PuedeVolverAPedir = null });
     }
 
     /// <summary>Solicitudes del cliente, de la más reciente a la más antigua. Un cursor que no se puede decodificar lanza 400 <c>invalid_cursor</c>.</summary>
