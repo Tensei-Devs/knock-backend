@@ -10,8 +10,11 @@
 | Global | Cualquier ruta salvo `/health` y `/health/ready` | 100 peticiones | 1 minuto (fija) | IP del cliente |
 | Propia `/health/ready` | Solo `/health/ready` (TT-API-06) | 60 peticiones | 1 minuto (fija) | IP del cliente |
 | Estricta `/auth` | `/api/v{n}/auth/*` | 10 peticiones | 1 minuto (fija) | IP del cliente |
+| Estricta del panel (spec 033) | `/api/v{n}/panel/sesion/*` y `/api/v{n}/panel/activacion` | 10 peticiones | 1 minuto (fija) | IP del cliente (contador propio `ratelimit:panel-sesion:{ip}` en el gateway) |
 
 **Mensajería** (`Knock.Messaging.Api`, BUG-004 / KNOCK-241) aplica el mismo mecanismo por IP con dos políticas, sin la estricta de `/auth` (no tiene rutas de sesión): **Global** 100 peticiones por minuto (cualquier ruta salvo `/health` y `/health/ready`) y **propia de `/health/ready`** 60 por minuto, configuradas en `RateLimiting:Global` y `RateLimiting:Ready` de su `appsettings.json`. Responde `429` con `Retry-After`. El chat de 30 mensajes por minuto por persona lo define la spec 026. **Límite conocido (aceptado):** el limitador vive en la memoria de cada réplica, así que con 2 réplicas el límite efectivo se duplica, igual que en Identidad y Mercado (se mueve a Redis en el Sprint 5). Además, la IP del cliente solo es la real cuando `ForwardedHeaders` confía en la red del ingreso (`ForwardedHeaders:KnownNetworks`, del #61, KNOCK-201, que Mensajería ya usa): si el despliegue no la fija, Mensajería ve la IP del proxy y el límite se comparte entre todos los clientes. La prueba de «otra IP no se ve afectada» (TC-BUG-004-04) fija la IP con un encabezado de prueba, no de punta a punta.
+
+**Panel interno (spec 033, KNOCK-75).** Los cinco endpoints de sesión y activación del panel llevan la política estricta por IP de arriba, con la misma configuración (`RateLimiting:Auth`) y contador aparte del de `/auth`. El resto de `/api/v{n}/panel/**` lleva la política por usuario del gateway (`RateLimiting:User`) con el `sub` del token del panel (contador propio `ratelimit:panel-user:{sub}`). Aparte de ellos, los fallos de TOTP se cuentan por IP en Redis (`panel:fallos-ip:{ip}`: 10 en 15 minutos dan 429 `limit_exceeded`) y por cuenta en MongoDB (5 en 15 minutos dan 429 `locked`); ver la spec 033, R-11.
 
 - Las peticiones a `/auth/*` cuentan en las dos políticas (la estricta y la global).
 - `/health` (sin comprobaciones) es la **única exención** del límite. `/health/ready` hace un ping a MongoDB por petición anónima, así que desde TT-API-06 (KNOCK-138) tiene su propia política por IP (60 por minuto) y no cuenta en la global.
@@ -57,7 +60,7 @@
 
 `GET /api/v1/tecnicos/{id}` es pública y no tiene política propia: rigen los límites globales del gateway y el límite por IP de Mercado. La caché de 1 minuto del perfil reduce las lecturas a MongoDB por técnico.
 
-`PUT /api/v1/tecnicos/me`, `PUT /api/v1/tecnicos/me/disponibilidad` y `GET`/`PUT /api/v1/tecnicos/me/horarios` no tienen política propia: solo los usa el propio técnico y cada escritura toca un único documento, así que rigen los límites globales del gateway y el límite por IP de Mercado. Los cuerpos se limitan a 8 KB, 1 KB y 4 KB (413).
+`PUT /api/v1/tecnicos/me`, `PUT /api/v1/tecnicos/me/disponibilidad`, `GET`/`PUT /api/v1/tecnicos/me/horarios` y `GET /api/v1/tecnicos/me/trabajo` no tienen política propia: rigen los límites globales del gateway y el límite por IP de Mercado. Los cuerpos de las escrituras se limitan a 8 KB, 1 KB y 4 KB (413).
 
 `GET /api/v1/tecnicos/autocompletar` es pública: la frena el límite global por IP del gateway y de Mercado (R-41) y la caché de 30 s por texto. `GET /api/v1/tecnicos/{id}/llega-a-mi-colonia` pide sesión y usa los límites globales; su caché de 1 minuto evita repetir la lectura.
 
@@ -70,6 +73,10 @@
 ## Cotizaciones en Mercado (spec 020, KNOCK-74)
 
 `POST /api/v1/solicitudes/{id}/cotizaciones` añade una ventana fija de **3 peticiones por minuto por `sub`** y por proceso, además de los límites generales. La cuarta responde 429 con `Retry-After`. Con dos réplicas pueden pasar hasta 6 por minuto; el límite compartido queda para KNOCK-247.
+
+## Descarte en el gateway (spec 028, KNOCK-68)
+
+`POST /api/v1/solicitudes/{id}/descartar` suma una ventana fija de **30 peticiones por hora por `sub`**, compartida mediante Redis (`ratelimit:descarte:*`). La petición 31 responde 429 con `Retry-After`; si Redis falla responde 503. También aplican los límites generales del gateway. La bandeja no tiene límite específico adicional.
 
 ## Direcciones del cliente en Identidad (spec 040, KNOCK-285)
 
@@ -104,3 +111,10 @@ Las cinco rutas de `/api/v1/me/casa-y-auto` (CAS-01 a CAS-05) no tienen polític
 ## Cuenta y datos personales en Identidad (spec 039, KNOCK-284)
 
 Políticas por `sub` del JWT (ventana fija, por proceso; con dos réplicas el límite efectivo se duplica), todas con 429 y `Retry-After`: `POST /me/cambio-numero` **3 por hora** (R-20), `POST /me/cambio-numero/confirmar` **5 por hora**, `POST /me/exportaciones` **3 por hora** y `POST /me/eliminacion` **5 por hora**; estos tres últimos son valores propuestos porque la spec no los fija. `POST /recuperacion-acceso` (pública) tiene **3 por hora por IP** y además **3 por hora por número** (nuevo y anterior, contados por su HMAC en `RecoveryAttemptLimiter`, en memoria del proceso). `GET/PUT /me/consentimientos`, `GET /me/pendientes` y `POST /me/eliminacion/cancelar` usan solo el límite general. Cuerpos: 4 KiB en cambio de número y recuperación, 8 KiB en eliminación, 1 KiB en consentimientos, exportaciones y cancelar (413). Para que las políticas por persona lean el `sub`, Identidad ejecuta `UseAuthentication` antes de `UseRateLimiter`.
+
+## Verificación de identidad en Identidad (spec 025, KNOCK-79)
+
+`POST /api/v1/me/verificacion` tiene una política por `sub` de **3 creaciones por hora** (`RateLimitingExtensions.VerificationCreatePolicy`, con `SubjectPolicy` y partición compartida); la respuesta 429 incluye `Retry-After`. Frena el uso de la creación como oráculo de CURP (§9). `GET /api/v1/me/verificacion` usa los límites globales. El cuerpo se limita a 8 KB (413).
+## Exploración sin cuenta (HU-005, KNOCK-53)
+
+Las lecturas públicas de exploración son `GET /api/v1/oficios`, `GET /api/v1/tecnicos/autocompletar` y `GET /api/v1/tecnicos/{id}`; no tienen política propia: las frena el límite global por IP del gateway y de Mercado (100 por minuto), no uno de 60. El criterio CA4 de la HU-005 pide 429 tras 60 peticiones por minuto por IP; bajar el valor es una decisión pendiente del equipo, porque la matriz parte de TT-API-03 con 100 y afectaría a toda la API. `/api/v1/busqueda` y `/api/v1/zonas/cp/{cp}` piden sesión por decisión de las specs 027 y 023 (la apertura de zonas a la exploración sigue como pregunta abierta en la 023). TC-HU-005-04 comprueba en el gateway que las tres rutas públicas responden sin token y dan 429 con `Retry-After` al pasar el límite configurado.

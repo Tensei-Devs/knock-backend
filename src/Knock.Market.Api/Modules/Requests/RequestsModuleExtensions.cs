@@ -1,11 +1,13 @@
 using Knock.Contracts.Moderation;
 using Knock.Market.Api.Common.Crypto;
+using Knock.Market.Api.Common.TareasProgramadas;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Requests.Data;
 using Knock.Market.Api.Modules.Requests.Domain;
 using Knock.Market.Api.Modules.Requests.Services;
 using Knock.Market.Api.Modules.Requests.Validators;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using MongoDB.Driver;
 
 namespace Knock.Market.Api.Modules.Requests;
 
@@ -24,17 +26,29 @@ public static class RequestsModuleExtensions
             .ValidateOnStart();
         services.AddOptions<QuotePricingOptions>().BindConfiguration(QuotePricingOptions.SectionName);
         services.AddKnockMongoDatabase(ModuleKey);
+        services.AddScoped<ITareasProgramadasStore>(provider => new TareasProgramadasStore(provider.GetRequiredKeyedService<IMongoDatabase>(ModuleKey)));
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<ITechnicianDirectory, MongoTechnicianDirectory>();
         services.AddScoped<IQuoteRequestReader, MongoQuoteRequestReader>();
         services.AddScoped<QuoteValidator>();
         services.AddScoped<INoteModerator, UnavailableNoteModerator>();
         services.AddScoped<IQuoteWriter, QuoteStore>();
+        services.AddScoped<QuoteStore>();
+        services.AddScoped<MyQuotesService>();
         services.AddScoped<QuoteService>();
         services.AddOptions<FieldEncryptionOptions>().BindConfiguration(FieldEncryptionOptions.SectionName);
         services.AddSingleton<FieldCipher>();
         services.AddScoped<IOutbox, MongoOutbox>();
+        services.AddScoped<CandidatosStore>();
+        services.AddScoped<EnviosStore>();
+        services.AddScoped<BandejaService>();
+        services.AddScoped<RepartoStore>();
+        services.AddScoped<RepartoService>();
+        services.AddScoped<IManejadorDeTarea, RepartirOleada>();
+        services.AddScoped<IManejadorDeTarea, RevisarOleada>();
         services.AddScoped<RequestsStore>();
+        services.AddScoped<CierreDeSolicitudStore>();
+        services.AddScoped<CierreDeSolicitudService>();
         // Fotos y moderación: hasta que lleguen los servicios reales (spec 013, OI-2) fallan cerrado; las pruebas los sustituyen por dobles.
         services.TryAddScoped<IRequestPhotos, UnavailableRequestPhotos>();
         services.TryAddSingleton<IContentModerator, UnavailableContentModerator>();

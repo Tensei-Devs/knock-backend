@@ -48,6 +48,9 @@ internal static class RateLimitingExtensions
     /// <summary>Spec 039: programar la eliminación de la cuenta (USR-10). Valor propuesto: la spec no fija límite, solo registra el 429.</summary>
     public const string DeletionPolicy = "eliminacion";
 
+    /// <summary>Spec 025 (R-19): crear una verificación, 3 por hora por persona.</summary>
+    public const string VerificationCreatePolicy = "verificacion-crear";
+
     private const string _healthPath = "/health";
     private const string _readyPath = "/health/ready";
     private const string _unknownClient = "unknown";
@@ -76,6 +79,7 @@ internal static class RateLimitingExtensions
             options.AddPolicy(AccessRecoveryPolicy, context => SharedPartition($"recuperacion:{ClientKey(context)}", new RateLimitPolicySettings { PermitLimit = 3, Window = TimeSpan.FromHours(1) }, services));
             options.AddPolicy(ExportPolicy, SubjectPolicy(ExportPolicy, 3, TimeSpan.FromHours(1), services));
             options.AddPolicy(DeletionPolicy, SubjectPolicy(DeletionPolicy, 5, TimeSpan.FromHours(1), services));
+            options.AddPolicy(VerificationCreatePolicy, SubjectPolicy(VerificationCreatePolicy, 3, TimeSpan.FromHours(1), services));
             options.GlobalLimiter = PartitionedRateLimiter.CreateChained(
                 PartitionedRateLimiter.Create<HttpContext, string>(context => GlobalPartition(context, global, ready, services)),
                 PartitionedRateLimiter.Create<HttpContext, string>(context =>
@@ -143,8 +147,14 @@ internal static class RateLimitingExtensions
         return segments.Length >= 3
             && segments[0].Equals("api", StringComparison.OrdinalIgnoreCase)
             && (segments[1][0] is 'v' or 'V')
-            && segments[2].Equals("auth", StringComparison.OrdinalIgnoreCase);
+            && (segments[2].Equals("auth", StringComparison.OrdinalIgnoreCase) || IsPanelSessionPath(segments));
     }
+
+    /// <summary>Spec 033, R-27: <c>/api/v{n}/panel/sesion/*</c> y <c>/api/v{n}/panel/activacion</c> llevan el mismo límite estricto por IP que <c>/auth</c>.</summary>
+    private static bool IsPanelSessionPath(string[] segments) =>
+        segments.Length >= 4
+        && segments[2].Equals("panel", StringComparison.OrdinalIgnoreCase)
+        && (segments[3].Equals("sesion", StringComparison.OrdinalIgnoreCase) || segments[3].Equals("activacion", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// IP de la conexión (ya sustituida por la reenviada solo si viene de un proxy de confianza). IPv4 mapeada se normaliza y las IPv6
