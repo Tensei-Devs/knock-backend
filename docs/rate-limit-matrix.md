@@ -85,6 +85,8 @@
 ## Técnicos de confianza en Mercado (spec 042, KNOCK-91)
 
 `GET`, `PUT` y `DELETE /api/v1/me/tecnicos-confianza` comparten la política `tecnicos-confianza`: **30 peticiones por minuto por `sub`**, por proceso (ventana fija del limitador de Mercado), además de los límites generales. La 31.ª responde 429 con `Retry-After`. `PUT` y `DELETE` no llevan cuerpo: más de 1 KiB responde 413. Con dos réplicas pueden pasar hasta 60 por minuto; el límite compartido queda para KNOCK-247.
+
+Las rutas de servicios del técnico (`GET /api/v1/tecnicos/{id}/servicios` y `POST`, `PUT`, `DELETE /api/v1/tecnicos/me/servicios`) comparten la política `tecnicos-servicios`: **30 peticiones por minuto por `sub`**, por proceso, además de los límites generales. La 31.ª responde 429 con `Retry-After`. Cuerpos de más de 2 KiB (1 KiB en `DELETE`) responden 413 (spec 047, KNOCK-57).
 ## Chat de visita en Mensajería (spec 026, KNOCK-62)
 
 `EnviarMensaje` del hub `/hubs/chat` limita a **30 mensajes por minuto por persona** (`Chat:MensajesPorMinuto`, de 1 a 600), con una ventana fija de 60 segundos y un contador compartido en Redis (`chat:limite:{sub}`) que se incrementa y vence en una sola operación atómica, así que dos copias del servicio comparten el total. Al pasarse, la invocación responde `{ ok: false, codigo: "message_limit", reintentarEnSegundos }` y el mensaje no se retransmite. El saludo del hub (`POST /hubs/chat/negotiate`) y sus reintentos son peticiones HTTP y siguen los límites generales del gateway y del servicio. Si Redis no responde, el saludo responde 503 y no se acepta la conexión.
