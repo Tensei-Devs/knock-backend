@@ -14,12 +14,69 @@ Un perfil de **Front Door Standard**, un endpoint y tres rutas (las dos últimas
 
 Las fotos de verificación y todo contenido privado **no pasan** por el borde (ADR-007, punto 4): viven en otra cuenta, con enlaces firmados de 5 minutos.
 
-## Requisitos previos (los hace una persona; no los hace el código)
-1. Registrar el proveedor: `az provider register --namespace Microsoft.Cdn` (ADR-006 lo dejó pendiente hasta decidir usar CDN).
-2. Que existan el grupo de recursos y el estado remoto (`bootstrap/bootstrap.sh` ya los crea) y que `apps/` esté desplegado (de ahí sale la dirección del gateway; si no, pasar `-var gateway_host=<fqdn>`).
-3. Decidir el origen estático del panel y la landing (`static_host`); si todavía no existe, se deja vacío y no se crea esa ruta.
+## Valores que fija quien aplica (no están en el repositorio)
+| Valor | Qué es | De dónde sale |
+|---|---|---|
+| `<ID>` | ID de la suscripción de Azure | `az account show --query id -o tsv` (es el mismo de la variable `AZURE_SUBSCRIPTION_ID` del repositorio) |
+| `<RG>` | grupo de recursos donde vive la infraestructura | el que usó `up.sh` (por omisión `rg-knock-dev`); Terraform **no** lo crea |
+| `<sufijo>` | `name_suffix` (2 a 8 letras o números) | el mismo con que se creó `infra/` |
+| `<host-estático>` | origen del contenido estático del panel y la landing, sin `https://` | por ejemplo el endpoint web de una cuenta de almacenamiento; si todavía no existe, **omitir `static_host`** y no se crea esa ruta |
+| `<host-imágenes>` | host del almacenamiento público de imágenes, sin `https://` | sale de `public_images_base_url` de `infra/` (`terraform output public_images_base_url` en `deploy/infra`); es opcional |
 
-## Cómo se prueba sin tocar Azure
+## Pasos para aplicar (en orden, copiables; los corre una persona con su sesión de Azure)
+> No corras esto hasta tener **el primer despliegue exitoso y la evidencia**. El tráfico real seguirá entrando por el gateway.
+
+**1. Sesión y suscripción**
+```
+az login
+az account set --subscription "<ID>"
+az account show --query "{suscripcion:name, id:id, usuario:user.name}" -o table
+```
+**2. Registrar el proveedor de CDN** (una sola vez por suscripción; ADR-006 lo dejó pendiente)
+```
+az provider register --namespace Microsoft.Cdn
+az provider show --namespace Microsoft.Cdn --query registrationState -o tsv     # espera «Registered» (unos minutos)
+```
+**3. Permisos que necesitas**
+- Para registrar el proveedor: rol **Contributor** u **Owner** en la suscripción (permiso `Microsoft.Cdn/register/action`). Si ya lo registró alguien, no hace falta.
+- Para crear y borrar Front Door: **Contributor** sobre el grupo de recursos `<RG>`.
+- Para el estado remoto (`edge.tfstate` y la lectura de `apps.tfstate`): **Storage Blob Data Contributor** sobre la cuenta `stknocktfstate` (el backend usa Microsoft Entra, `use_azuread_auth = true`).
+- Comprobación: `az role assignment list --assignee "$(az ad signed-in-user show --query id -o tsv)" --all -o table`.
+
+**4. Terraform init con el backend y la clave de `edge.tfstate`** (la clave ya viene en `backend.hcl`: `edge.tfstate`)
+```
+cd deploy/edge
+terraform init -backend-config=backend.hcl
+```
+**5. Plan (solo lectura)**
+```
+terraform plan -out edge.tfplan -var subscription_id=<ID> -var resource_group_name=<RG> -var name_suffix=<sufijo> \
+  [-var static_host=<host-estático>] [-var public_images_host=<host-imágenes>]
+```
+Debe mostrar **solo creaciones** y terminar con `Plan: 5 to add, 0 to change, 0 to destroy.` (sin los dos opcionales; con ambos, `Plan: 11 to add`). Los recursos son: `azurerm_cdn_frontdoor_profile.this`, `…_endpoint.this`, `…_origin_group.gateway`, `…_origin.gateway` y `…_route.gateway` (más los de `static` e `images` si los pasaste). Si aparece algún `change`, `replace` o `destroy`, **no apliques**. Si falla al leer `apps.tfstate`, pasa `-var gateway_host=<fqdn del gateway sin https://>`.
+
+**6. Apply**
+```
+terraform apply edge.tfplan
+```
+**7. Verificar** (la propagación del borde tarda unos 10 a 20 minutos)
+```
+terraform output edge_url
+curl -sS -o /dev/null -w "%{http_code}\n" "$(terraform output -raw edge_url)/health"        # 200: llega al gateway
+curl -sS -o /dev/null -w "%{http_code}\n" "$(terraform output -raw edge_url)/api/v1/oficios"  # igual que por la dirección directa del gateway
+az afd profile show --resource-group <RG> --profile-name "afd-knock-dev-<sufijo>" --query "{estado:provisioningState,sku:sku.name}" -o table
+```
+Compara con la dirección directa (`gateway_url` de `apps/`): las respuestas deben ser iguales. La salida `frontdoor_id` es el valor de `X-Azure-FDID` (mejora documentada, no requisito). Guarda la captura como evidencia.
+
+**8. Destruir** (al terminar la demostración; la cuota base se deja de cobrar al borrarse el perfil)
+```
+cd deploy/edge
+terraform init -backend-config=backend.hcl
+terraform destroy -var subscription_id=<ID> -var resource_group_name=<RG> -var name_suffix=<sufijo>
+```
+Solo borra lo de `edge.tfstate` (perfil, endpoint, orígenes y rutas de Front Door); no toca el gateway, las imágenes ni la base. Después `az afd profile list --resource-group <RG> -o table` debe salir vacío. No hay que cambiar código: nada apunta al borde.
+
+## Validación sin Azure (ya hecha por el agente)
 ```
 cd deploy/edge
 terraform init -backend=false
@@ -28,12 +85,7 @@ cd ../modules/edge
 terraform init -backend=false
 terraform test        # proveedor simulado: 3 pruebas, no crea nada
 ```
-**Plan de solo lectura contra Azure: no se pudo preparar aquí.** `terraform plan` necesita la sesión de Azure de quien despliega y el estado remoto real; el agente no tiene ninguna. Quien aplique debe correr primero:
-```
-terraform init -backend-config=backend.hcl
-terraform plan -var subscription_id=<ID> -var resource_group_name=<RG> -var name_suffix=<sufijo> [-var static_host=<host>] [-var public_images_host=<host>]
-```
-El plan debe mostrar **solo creaciones** (con ambos opcionales vacíos: perfil, endpoint, grupo de orígenes, origen y ruta del gateway = 5 recursos; con ambos, 11). Si aparece algún reemplazo o destrucción, no aplicar.
+El agente **no** pudo correr un `plan` contra Azure: necesita tu sesión y el estado remoto real. El paso 5 es el primer plan real.
 
 ## Costo estimado para unos pocos días (cifras del ADR-007, consultadas el 2026-11-06: **verificarlas antes del apply**)
 | Concepto | Tarifa | Unos pocos días |
@@ -44,14 +96,6 @@ El plan debe mostrar **solo creaciones** (con ambos opcionales vacíos: perfil, 
 | Premium (no se usa) | 330 USD al mes | descartado por costo |
 
 Sin tráfico igual se cobra la cuota base, por eso se aplica solo después de la evidencia y se destruye al terminar. Sale del crédito de Azure for Students (ADR-006). Standard **no incluye las reglas administradas del WAF**; solo reglas personalizadas.
-
-## Cómo destruirlo
-```
-cd deploy/edge
-terraform init -backend-config=backend.hcl
-terraform destroy -var subscription_id=<ID> -var resource_group_name=<RG> -var name_suffix=<sufijo>
-```
-Solo borra el perfil de Front Door y sus rutas (estado `edge.tfstate`); no toca el gateway, las imágenes ni la base. La cuota base se deja de cobrar al borrarse el perfil. Para volver al estado anterior no hace falta cambiar código: el cliente seguía usando la dirección directa del gateway y la dirección base de imágenes es configurable (ADR-007).
 
 ## Mejoras documentadas (no bloquean el apply ni la demostración)
 Solo harían falta si algún día el tráfico real se enruta por el borde; mientras el gateway siga como entrada principal no aplican:
