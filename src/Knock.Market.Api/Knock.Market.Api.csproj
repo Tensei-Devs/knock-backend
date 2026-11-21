@@ -23,6 +23,10 @@
     <PackageReference Include="StackExchange.Redis" Version="2.13.23" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Modules\Assistant\Prompts\*.md" LogicalName="Assistant.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Modules\Assistant\Plantillas\*.md" LogicalName="Assistant.%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="Knock.UnitTest" />
     <InternalsVisibleTo Include="Knock.IntegrationTest" />
     <InternalsVisibleTo Include="Knock.SecurityTest" />
