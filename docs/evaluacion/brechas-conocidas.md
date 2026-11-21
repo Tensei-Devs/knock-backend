@@ -95,3 +95,9 @@ oche-2026-11-21\` (bundle) y pueden empujarse cuando se decida.
 Nueve ramas locales sin PR: `chore/KNOCK-288-contrato-api-c87ab21` (base), las de repositorios (direcciones, casa y auto, técnicos de confianza, mis datos, zona, búsqueda, trabajo), `fix/KNOCK-288-rutas-protegidas-por-omision` (**hallazgo de seguridad: lista de rutas públicas, la revisa el Tech Lead antes de abrir PR**) y `docs/KNOCK-288-task-states-app`. Verificadas en un árbol combinado (formato, análisis y 1 026 pruebas). Respaldo en `_respaldos
 oche-2026-11-21ront-*.bundle`.
 
+### Detalle de la moderación del panel (spec 053, KNOCK-86)
+Las rutas `/api/v1/admin/verificaciones` y `/api/v1/admin/reportes` están en el PR #236 (abierto, sin fusionar). Exigen el permiso `verification:review` (roles `administrador` y `verificador`) o `reports:resolve` (roles `administrador` y `moderador`), con la sesión del panel. Tres límites que hay que declarar:
+1. **Las fotos de verificación no se entregan todavía.** Abrir el detalle de una verificación depende de `IVerificationPhotoLinks`; en esta rama queda `UnavailableVerificationPhotoLinks` (falla cerrado) hasta que llegue el adaptador real de la pila de KNOCK-79 y KNOCK-86.
+2. **La `descripcion` de un reporte es texto libre y no se enmascara.** La cola muestra motivo y texto escritos por el usuario; podrían incluir datos personales que el usuario haya puesto ahí. No se devuelven teléfono ni dirección.
+3. **El límite de peticiones de las rutas `/admin` lo aplica el gateway** (contador por el `sub` del panel). Identity no tiene una política de límite propia para esas rutas; depende de que el tráfico pase por el gateway.
+
