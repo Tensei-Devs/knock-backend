@@ -1,5 +1,6 @@
 using System.Net;
 using AwesomeAssertions;
+using Knock.Contracts.Safety;
 using Knock.IntegrationTest.Support;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -201,5 +202,23 @@ public sealed class Spec043BloqueosTests
             var body = ProblemBody.Reasons(await response.Content.ReadAsStringAsync());
             body.Should().NotContain(scenario.Caller).And.NotContain(target).And.NotContain("Demo Privado Nombre");
         }
+    }
+
+    [Fact]
+    public async Task Bloquear_Y_Desbloquear_Publican_Un_Evento_Cada_Uno_Sin_Datos_Personales_CA_043_33()
+    {
+        await using var scenario = await SafetyHost.StartAsync();
+        var target = await scenario.SeedUserAsync("Demo Evento");
+
+        using var created = await scenario.SendAsync(HttpMethod.Post, $"/api/v1/usuarios/{target}/bloqueo", scenario.Caller);
+        using var repeated = await scenario.SendAsync(HttpMethod.Post, $"/api/v1/usuarios/{target}/bloqueo", scenario.Caller);
+        using var removed = await scenario.SendAsync(HttpMethod.Delete, $"/api/v1/usuarios/{target}/bloqueo", scenario.Caller);
+
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        repeated.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        removed.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        scenario.Events.Published.Should().HaveCount(2, "el segundo bloqueo fue 409 y no emite nada");
+        scenario.Events.Published[0].Should().BeOfType<BlockCreated>().Which.Should().Match<BlockCreated>(e => e.BlockerId == scenario.Caller && e.BlockedId == target);
+        scenario.Events.Published[1].Should().BeOfType<BlockRemoved>().Which.Should().Match<BlockRemoved>(e => e.BlockerId == scenario.Caller && e.BlockedId == target);
     }
 }

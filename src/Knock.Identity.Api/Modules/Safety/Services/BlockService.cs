@@ -1,3 +1,4 @@
+using Knock.Contracts.Safety;
 using Knock.Identity.Api.Common.Errors;
 using Knock.Identity.Api.Modules.Safety.Data;
 using Knock.Identity.Api.Modules.Safety.Domain;
@@ -16,9 +17,9 @@ internal enum BlockOutcome
 /// <summary>
 /// Bloqueos entre personas (spec 043, BLO-01 a BLO-03). La persona de cada operación es siempre la del <c>sub</c> del token (R-24). Bloquear a alguien que no existe es 404 y bloquear a
 /// quien ya se bloqueó, 409; no se puede bloquear a uno mismo. A la persona bloqueada no se le avisa (R-17). Los efectos sobre mensajes, solicitudes y búsquedas en otros servicios
-/// se aplican con los eventos de la bandeja de salida (R-23), que este paso todavía no emite. No toca MongoDB.
+/// se aplican con los eventos <c>BloqueoCreado</c> y <c>BloqueoEliminado</c> (R-23), que salen por <see cref="IBlockEvents"/>: la bandeja real llega con la spec 054. No toca MongoDB.
 /// </summary>
-internal sealed class BlockService(BloqueosStore store, IUsuariosApi users, TimeProvider clock)
+internal sealed class BlockService(BloqueosStore store, IUsuariosApi users, TimeProvider clock, IBlockEvents events)
 {
     private const string _publicNameFallback = "Usuario de Knock";
 
@@ -41,6 +42,7 @@ internal sealed class BlockService(BloqueosStore store, IUsuariosApi users, Time
             throw new DomainException(DomainErrorKind.Conflict, "The person is already blocked.", SafetyErrorCodes.AlreadyBlockedCode);
         }
 
+        await events.PublishCreatedAsync(new BlockCreated(sub, targetId, now), cancellationToken);
         return BlockOutcome.Blocked;
     }
 
@@ -51,6 +53,8 @@ internal sealed class BlockService(BloqueosStore store, IUsuariosApi users, Time
         {
             throw new DomainException(DomainErrorKind.NotFound, "There is no block for that person.", SafetyErrorCodes.BlockNotFoundCode);
         }
+
+        await events.PublishRemovedAsync(new BlockRemoved(sub, targetId, clock.GetUtcNow().UtcDateTime), cancellationToken);
     }
 
     /// <summary>Las personas bloqueadas por quien llama, con su nombre público. Un cursor que no se puede leer lanza 400 (<c>invalid_safety_cursor</c>).</summary>
