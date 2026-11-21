@@ -13,6 +13,14 @@ internal static class MediaRules
     public const int MaxSidePixels = 8_000;
     /// <summary>Bits aleatorios del nombre de blob (spec 032): 128, en 32 caracteres hexadecimales.</summary>
     public const int BlobKeyHexLength = 32;
+    /// <summary>Ventana para confirmar una subida: <c>confirmarAntesDe = creadoEn + 30 minutos</c> (spec 058, D2).</summary>
+    public static readonly TimeSpan ConfirmationWindow = TimeSpan.FromMinutes(30);
+    /// <summary>Un archivo pendiente o rechazado se borra solo (TTL) a los 7 días: <c>expiraEn = creadoEn + 7 días</c> (spec 058, R-07).</summary>
+    public static readonly TimeSpan PendingRetention = TimeSpan.FromDays(7);
+    /// <summary>Un archivo listo no caduca: su <c>expiraEn</c> se fija a esta fecha lejana (spec 058, R-07; mismo mecanismo que la spec 032).</summary>
+    public static readonly DateTimeOffset NeverExpires = new(9999, 12, 31, 0, 0, 0, TimeSpan.Zero);
+    /// <summary>Tope por defecto de subidas pendientes vigentes por persona (spec 058, R-09; igual al de la spec 032).</summary>
+    public const int DefaultMaxPendingUploads = 10;
     /// <summary>Vida de cualquier SAS que emite el módulo.</summary>
     public static readonly TimeSpan SasLifetime = TimeSpan.FromMinutes(5);
 

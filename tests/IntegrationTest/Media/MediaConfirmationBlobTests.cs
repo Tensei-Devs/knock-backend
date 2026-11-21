@@ -9,13 +9,14 @@ using MarketApi::Knock.Market.Api.Modules.Media.Data;
 using MarketApi::Knock.Market.Api.Modules.Media.Domain;
 using MarketApi::Knock.Market.Api.Modules.Media.Services;
 using Microsoft.Extensions.Options;
+using MongoDB.Driver;
 using SkiaSharp;
 
 namespace Knock.IntegrationTest.Media;
 
 /// <summary>
 /// OI-2: confirmation flow against real Azurite (quarantine → process → moderate → final container → delete quarantine),
-/// with the real <see cref="AzureMediaBlobStore"/>, <see cref="BlobMediaFileStore"/> and SkiaSharp processor.
+/// with the real <see cref="AzureMediaBlobStore"/>, <see cref="MongoMediaFileStore"/> and SkiaSharp processor.
 /// The client upload to quarantine is simulated directly (SAS links are OI-3).
 /// </summary>
 public class MediaConfirmationBlobTests
@@ -41,7 +42,7 @@ public class MediaConfirmationBlobTests
     {
         await using var azurite = await AzuriteFixture.StartAsync();
         using var processor = CreateProcessor();
-        var (service, options, store) = CreateService(azurite, processor, ModerationOutcome.Allowed);
+        var (service, options, store) = await CreateServiceAsync(azurite, processor, ModerationOutcome.Allowed);
         byte[] photo = Jpeg(800, 400);
 
         var ticket = await service.CreateUploadAsync(_ownerId, "perfil", "image/jpeg", photo.Length, CancellationToken.None);
@@ -72,7 +73,7 @@ public class MediaConfirmationBlobTests
     {
         await using var azurite = await AzuriteFixture.StartAsync();
         using var processor = CreateProcessor();
-        var (service, options, store) = CreateService(azurite, processor, ModerationOutcome.Allowed);
+        var (service, options, store) = await CreateServiceAsync(azurite, processor, ModerationOutcome.Allowed);
         byte[] pdf = "%PDF-1.7\n% malicious payload disguised as a .jpg\n"u8.ToArray();
 
         var ticket = await service.CreateUploadAsync(_ownerId, "perfil", "image/jpeg", pdf.Length, CancellationToken.None);
@@ -96,13 +97,17 @@ public class MediaConfirmationBlobTests
         await container.GetBlobClient(key).UploadAsync(BinaryData.FromBytes(content));
     }
 
-    private static (MediaService Service, MediaOptions Options, IMediaFileStore Store) CreateService(
+    private static async Task<(MediaService Service, MediaOptions Options, IMediaFileStore Store)> CreateServiceAsync(
         AzuriteFixture azurite, ImageProcessor processor, ModerationOutcome outcome)
     {
+        var documentDb = await DocumentDbFixture.SharedAsync();
+#pragma warning disable CA2000 // el cliente vive lo que la prueba: el contenedor compartido se desecha al final de la ejecución
+        var database = new MongoClient(documentDb.ConnectionString).GetDatabase("s058_conf_" + Guid.NewGuid().ToString("N"));
+#pragma warning restore CA2000
         var options = new MediaOptions { ReducedMaxSide = 512, MaxConcurrentProcessing = 2 };
         var configured = Options.Create(options);
         var blobs = new BlobServiceClient(azurite.ConnectionString);
-        var store = new BlobMediaFileStore(blobs, configured);
+        var store = new MongoMediaFileStore(database, Options.Create(new MarketApi::Knock.Market.Api.Hosting.KnockMongoOptions()));
         var service = new MediaService(
             store,
             new AzureMediaBlobStore(blobs, configured),
