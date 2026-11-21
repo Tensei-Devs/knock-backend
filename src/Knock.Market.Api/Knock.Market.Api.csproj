@@ -24,6 +24,8 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Modules\Moderation\Services\lista-local.es-MX.txt" WithCulture="false" LogicalName="lista-local.es-MX.txt" />
+    <EmbeddedResource Include="Modules\Assistant\Prompts\*.md" LogicalName="Assistant.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Modules\Assistant\Plantillas\*.md" LogicalName="Assistant.%(Filename)%(Extension)" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Knock.UnitTest" />
