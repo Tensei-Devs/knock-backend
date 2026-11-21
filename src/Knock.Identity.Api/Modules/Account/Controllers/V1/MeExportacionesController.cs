@@ -19,7 +19,7 @@ internal sealed class MeExportacionesController(DataExportService exports) : Acc
 
     /// <summary>USR-06. Pide la descarga de todos los datos propios; se entrega en 48 horas. Una sola en curso por persona.</summary>
     [HttpPost]
-    [EnableRateLimiting(RateLimitingExtensions.ExportPolicy)]
+    [EnableRateLimiting(IdentityRateLimits.ExportPolicy)]
     [RequestSizeLimit(MaxBodyBytes)]
     [ProducesResponseType(StatusCodes.Status202Accepted)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]

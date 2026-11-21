@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using AwesomeAssertions;
 using Knock.Gateway.Hosting;
+using Knock.Hosting.RateLimiting;
 using Knock.IntegrationTest.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.JsonWebTokens;

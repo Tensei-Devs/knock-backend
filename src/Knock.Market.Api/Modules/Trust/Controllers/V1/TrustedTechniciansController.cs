@@ -19,7 +19,7 @@ namespace Knock.Market.Api.Modules.Trust.Controllers.V1;
 [Route("api/v{version:apiVersion}/me/tecnicos-confianza")]
 [Authorize]
 [PrivateNoStore]
-[EnableRateLimiting(RateLimitingExtensions.TrustPolicy)]
+[EnableRateLimiting(MarketRateLimits.TrustPolicy)]
 internal sealed class TrustedTechniciansController(TrustService service) : ControllerBase
 {
     /// <summary>Estas rutas no llevan cuerpo: un cuerpo de más de 1 KiB responde 413 (spec 009).</summary>

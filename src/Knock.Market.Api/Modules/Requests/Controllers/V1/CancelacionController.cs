@@ -24,7 +24,7 @@ internal sealed class CancelacionController(CierreDeSolicitudService service) : 
     /// <summary>Cancela la solicitud del cliente mientras no tenga cita. Es idempotente: repetirla devuelve el mismo cuerpo sin otro evento.</summary>
     [HttpPost]
     [RequestSizeLimit(CancelRequestBody.MaxBodyBytes)]
-    [EnableRateLimiting(RateLimitingExtensions.CancelRequestPolicy)]
+    [EnableRateLimiting(MarketRateLimits.CancelRequestPolicy)]
     [ProducesResponseType<CancelRequestResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, ProblemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, ProblemJson)]

@@ -23,7 +23,7 @@ internal sealed class ChooseQuoteController(ChooseQuoteService service) : Busine
     /// <summary>Elige la cotización de una solicitud propia; la elección y sus efectos ocurren en una sola transacción.</summary>
     [HttpPost]
     [RequestSizeLimit(ChooseQuoteBody.MaxBodyBytes)]
-    [EnableRateLimiting(RateLimitingExtensions.ChooseQuotePolicy)]
+    [EnableRateLimiting(MarketRateLimits.ChooseQuotePolicy)]
     [ProducesResponseType<Appointment>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, ProblemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, ProblemJson)]
