@@ -21,7 +21,7 @@ internal sealed class MeVerificacionController(VerificationService verifications
     /// <summary>Crea la verificación en <c>en_captura</c> con su consentimiento. Las fotos llegan con la tarea T-04 (enlaces de subida).</summary>
     [HttpPost]
     [RequestSizeLimit(CreateVerificationRequest.MaxBodyBytes)]
-    [EnableRateLimiting(RateLimitingExtensions.VerificationCreatePolicy)]
+    [EnableRateLimiting(IdentityRateLimits.VerificationCreatePolicy)]
     [ProducesResponseType<VerificationCreatedResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]

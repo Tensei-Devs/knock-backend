@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Knock.Identity.Api.Common.Errors;
+using Knock.Hosting.RateLimiting;
 using Knock.Identity.Api.Hosting;
 using Knock.Identity.Api.Modules.Panel.Data;
 using Knock.Identity.Api.Modules.Panel.Domain;
@@ -111,7 +112,7 @@ internal sealed partial class AuditoriaPanel(
             return (CliOrigin, Guid.NewGuid().ToString("N"));
         }
 
-        return (ipHasher.Hash(RateLimitingExtensions.ClientKey(context)), CorrelationId.Current(context) ?? context.TraceIdentifier);
+        return (ipHasher.Hash(RequestKeys.ClientKey(context)), CorrelationId.Current(context) ?? context.TraceIdentifier);
     }
 
     // El registro técnico lleva solo el nombre del evento: ni sub, sid, IP ni datos de la petición.

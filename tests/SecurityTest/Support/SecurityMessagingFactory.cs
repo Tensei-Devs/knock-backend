@@ -68,7 +68,7 @@ internal sealed class InfraProbeController : ControllerBase
     public IActionResult Public() => Ok(new ProbeBody("ok"));
 
     [HttpPost("crear")]
-    [EnableRateLimiting(RateLimitingExtensions.CreateConversationPolicy)]
+    [EnableRateLimiting(MessagingRateLimits.CreateConversationPolicy)]
     public IActionResult Create() => StatusCode(StatusCodes.Status201Created);
 }
 
