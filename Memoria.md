@@ -1133,3 +1133,10 @@
 - **Qué cambió:** `specs/README.md` agrega la fila 059 (Suspensión preventiva en casos críticos, Borrador), que el PR #182 había dejado fuera.
 - **Por qué:** el índice debe listar toda spec del repositorio; una persona o una herramienta que lea primero el índice no veía la 059.
 - **A evitar:** agregar una carpeta de spec sin su fila en el índice en el mismo cambio.
+
+## 2026-11-20 · KNOCK-73 · Spec 030 T-05 y T-07: crear y leer conversaciones, lista, no leídas, historial y leído
+- **Qué cambió:** módulo Conversaciones de Mensajería con `ConversacionesController`, `LecturaController`, `ConversacionService`, `LecturaService`, `ConversacionesStore` y `MensajesStore` (`EnsureIndexesAsync` con los nombres de `db/030-conversaciones.js`), cursor opaco `PageCursor`, validadores, aviso de seguridad en `Conversaciones:AvisoSeguridad` y `INotificadorEnVivo` (evento `noLeidos`). `IPermisoDeConversacion` y `market_unavailable` se copiaron idénticos al PR de T-04 para que el merge sea limpio.
+- **Por qué:** la app necesita crear/ver conversaciones y el globo de no leídos antes del envío (T-06) y el hub (T-08).
+- **Decisiones (con porqué):** (1) La lista mezcla en memoria dos consultas, una por índice de rol, en vez de un `$or` ordenado que no usa ambos índices. (2) `leido` recalcula el contador con los mensajes de la otra parte y solo lo aplica si `ultimoMensajeEn` no cambió (reintenta 3 veces) para no pisar un mensaje nuevo. (3) El aviso `noLeidos` es de mejor esfuerzo y no registra la excepción (el grupo lleva el `sub`). (4) Los errores del servicio no llevan `Cache-Control` porque el manejador de excepciones limpia los encabezados. (5) `scripts/export_openapi.py` no se tocó (zona protegida): el contrato de Mensajería queda propuesto en el PR.
+- **A evitar:** registrar `IPermisoDeConversacion` aquí (lo registra T-04; sin él el servicio responde 500 al crear en ejecución real); usar `tecnicoId` del cuerpo en vez del del permiso; negar valores sobre el cuerpo completo de un error (usar `ProblemBody.Reasons`).
+
