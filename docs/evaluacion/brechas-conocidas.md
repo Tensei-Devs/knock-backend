@@ -35,3 +35,14 @@ Lista honesta de lo que **no** está o **no actúa** hoy, para que nadie (person
 
 ## E. Conteos que hay que fijar
 - **Agentes y skills:** `.agents/` tiene 7 agentes y 17 skills (canónica); `.opencode/` tiene 11 y 25. `docs/EVALUACION.md` aún muestra cifras anteriores y debe regenerarse desde `generado/cifras.md`.
+
+## F. Trabajo empezado por agentes y NO terminado (no está en `sprint-05` ni en ningún PR)
+Se declara aquí para que no se infiera de las specs como si existiera. Todo está solo en ramas locales sin verificar.
+| Qué | Estado | Por qué no se terminó |
+|---|---|---|
+| Spec 049 (cotización final y ajuste de precio: COT-06, COT-07, AJU-01, AJU-02) | Un commit local de trabajo en curso (12 archivos); **no se compiló ni se probó**; sin pruebas `CA_049_*`, sin script `db/` de `ajustes_precio`, sin documentación ni OpenAPI. No tiene tarjeta de Jira. | La cola de compilación se detuvo por poca memoria y no alcanzó el tiempo |
+| Spec 050 (visita, agenda y cierre) | No se inició | Sin tiempo; tarjetas HU-034, HU-039, HU-040, HU-041 y HU-023 en «Por hacer» |
+| Spec 058 T-02 a T-09 (almacén de archivos de Media en MongoDB) | Store parcial sin verificar y trabajo sin commitear | El agente se cortó por límite de uso |
+| Spec 055 etapa 3 (KNOCK-281: logging, observabilidad, Redis/Health, Mongo, seguridad HTTP a `Knock.Hosting`) | Solo 47 archivos sin commitear; ninguna pieza completa | Sin responsable en Jira y sin tiempo |
+| Spec 039: exportación de datos, eliminación de cuenta al vencer la gracia, cola del panel de recuperación, ruta interna de Mercado y aviso de sesión revocada | Los endpoints existen; los procesos de fondo no | Dependen del ejecutor y la bandeja de la spec 054 (no existe) |
+| Spec 054 (bandeja de salida y tareas programadas) | No iniciada | Prerrequisito de 037, 039, 044 y 057 |
