@@ -44,6 +44,7 @@ internal static class VerificationErrors
 {
     public const string ConsentRequiredCode = "consent_required";
     public const string CurpInvalidCode = "curp_invalid";
+    public const string CurpDuplicateCode = "curp_duplicate";
     public const string UnderReviewCode = "verification_under_review";
     public const string AlreadyVerifiedCode = "already_verified";
     public const string AlreadyFullyVerifiedCode = "already_fully_verified";

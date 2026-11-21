@@ -179,6 +179,8 @@ public sealed class Spec025ServicioTests
             Created = verification;
             return Task.CompletedTask;
         }
+
+        public Task<bool> ExistsLiveCurpAsync(IReadOnlyCollection<string> curpHmacs, string exceptSub, CancellationToken cancellationToken) => Task.FromResult(false);
     }
 
     private sealed class FixedClock(DateTimeOffset now) : TimeProvider
