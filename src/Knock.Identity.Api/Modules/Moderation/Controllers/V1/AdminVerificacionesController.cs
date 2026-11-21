@@ -1,8 +1,8 @@
 using Asp.Versioning;
 using Knock.Identity.Api.Modules.Moderation.Dtos;
 using Knock.Identity.Api.Modules.Moderation.Services;
+using Knock.Identity.Api.Modules.Panel;
 using Knock.Identity.Api.Modules.Panel.Authorization;
-using Knock.Identity.Api.Modules.Panel.Domain;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Knock.Identity.Api.Modules.Moderation.Controllers.V1;
@@ -14,7 +14,7 @@ namespace Knock.Identity.Api.Modules.Moderation.Controllers.V1;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/admin/verificaciones")]
-[RequierePermiso(PanelPermisos.VerificationReview)]
+[RequierePermiso(PanelApiPermissions.VerificationReview)]
 internal sealed class AdminVerificacionesController(VerificationReviewService service) : ControllerBase
 {
     private const string _problemJson = "application/problem+json";

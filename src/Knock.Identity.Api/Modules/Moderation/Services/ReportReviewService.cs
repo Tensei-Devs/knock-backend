@@ -2,8 +2,7 @@ using Knock.Identity.Api.Common.Errors;
 using Knock.Identity.Api.Modules.Moderation.Data;
 using Knock.Identity.Api.Modules.Moderation.Domain;
 using Knock.Identity.Api.Modules.Moderation.Dtos;
-using Knock.Identity.Api.Modules.Panel.Data;
-using Knock.Identity.Api.Modules.Panel.Services;
+using Knock.Identity.Api.Modules.Panel;
 using MongoDB.Bson;
 
 namespace Knock.Identity.Api.Modules.Moderation.Services;
@@ -15,7 +14,7 @@ namespace Knock.Identity.Api.Modules.Moderation.Services;
 internal sealed class ReportReviewService(
     IReportReviewStore store,
     IReportDecisionEffects effects,
-    AuditoriaPanel audit,
+    IPanelApi panel,
     TimeProvider clock)
 {
     private static readonly string[] _pendingStates = ["abierto", "en_apelacion"];
@@ -51,7 +50,7 @@ internal sealed class ReportReviewService(
         var result = await store.DecideAsync(
             new ReportDecisionRecord(objectId, severity, response, body.Motivo!.Trim(), actor.Sub, now),
             (session, decided) => effects.ApplyAsync(session, new ReportDecisionApplied(id, severity, response, decided.ReporterId, decided.ReportedId, actor.Sub), cancellationToken),
-            session => audit.WriteInTransactionAsync(session, PanelAuditValues.TipoAccion, ModerationAuditEvents.ReportDecided, severity, actor.Sub, id, cancellationToken),
+            session => panel.RecordActionInTransactionAsync(session, ModerationAuditEvents.ReportDecided, severity, actor.Sub, id, cancellationToken),
             cancellationToken);
         return result.Outcome switch
         {
