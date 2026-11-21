@@ -18,7 +18,7 @@ internal sealed class CierreDeSolicitudStore(
     private static readonly string[] _open = ["enviada", "cotizando"];
     private static readonly string[] _deliverable = ["activo", "cotizado"];
 
-    private const int MaxConflictAttempts = 6;
+    private const int _maxConflictAttempts = 6;
 
     private static bool IsWriteConflict(MongoException exception) =>
         exception.HasErrorLabel("TransientTransactionError")
@@ -33,7 +33,7 @@ internal sealed class CierreDeSolicitudStore(
         DateTime now,
         CancellationToken cancellationToken)
     {
-        for (var attempt = 1; attempt <= MaxConflictAttempts; attempt++)
+        for (var attempt = 1; attempt <= _maxConflictAttempts; attempt++)
         {
             using var session = await database.Client.StartSessionAsync(
                 cancellationToken: cancellationToken);
@@ -47,14 +47,10 @@ internal sealed class CierreDeSolicitudStore(
             }
             catch (MongoException exception) when (IsWriteConflict(exception))
             {
-                if (attempt == MaxConflictAttempts)
+                if (attempt == _maxConflictAttempts)
                 {
                     throw;
                 }
-
-                await Task.Delay(
-                    TimeSpan.FromMilliseconds(50 * attempt),
-                    cancellationToken);
             }
         }
 
