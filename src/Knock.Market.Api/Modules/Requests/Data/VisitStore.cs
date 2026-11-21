@@ -54,7 +54,6 @@ internal sealed class VisitStore(
 {
     private const string _stateField = "estado";
     private const string _updatedField = "actualizadoEn";
-    private const int _maxConflictAttempts = 5;
 
     private static readonly string[] _openStates = [VisitRules.Confirmed, VisitRules.InProgress];
 
@@ -181,33 +180,9 @@ internal sealed class VisitStore(
         }, false, cancellationToken);
     }
 
-    /// <summary>
-    /// Corre la transacción y reintenta los conflictos de escritura entre peticiones simultáneas (código 112 o la etiqueta <c>TransientTransactionError</c>) hasta cinco veces con una espera
-    /// corta. Si el conflicto no se resuelve, devuelve <paramref name="conflictResult"/> (la petición «no se aplicó») y el llamador explica la visita con su estado actual: un conflicto
-    /// nunca sale como 500.
-    /// </summary>
-    private async Task<T> InTransactionAsync<T>(Func<IClientSessionHandle, CancellationToken, Task<T>> body, T conflictResult, CancellationToken cancellationToken)
-    {
-        for (var attempt = 1; attempt <= _maxConflictAttempts; attempt++)
-        {
-            using var session = await database.Client.StartSessionAsync(cancellationToken: cancellationToken);
-            try
-            {
-                return await session.WithTransactionAsync(body, cancellationToken: cancellationToken);
-            }
-            catch (MongoException exception) when (IsWriteConflict(exception))
-            {
-                await Task.Delay(10 * attempt, cancellationToken);
-            }
-        }
-
-        return conflictResult;
-    }
-
-    private static bool IsWriteConflict(MongoException exception) =>
-        exception.HasErrorLabel("TransientTransactionError")
-        || exception is MongoCommandException { Code: 112 }
-        || exception is MongoWriteException { WriteError.Code: 112 };
+    /// <summary>Corre la transacción con el reintento de conflictos compartido del módulo (<see cref="MarketTransactions"/>).</summary>
+    private Task<T> InTransactionAsync<T>(Func<IClientSessionHandle, CancellationToken, Task<T>> body, T conflictResult, CancellationToken cancellationToken) =>
+        MarketTransactions.RunAsync(database, body, conflictResult, cancellationToken);
 
     private static FilterDefinition<BsonDocument> OpenToAttempts(ObjectId id)
     {
@@ -238,7 +213,7 @@ internal sealed class VisitStore(
         { "tecnicoUsuarioId", visit.TechnicianUserId },
     };
 
-    private static VisitRecord ToRecord(BsonDocument d) => new(
+    internal static VisitRecord ToRecord(BsonDocument d) => new(
         d["_id"].AsObjectId,
         d["solicitudId"].AsObjectId,
         d["cotizacionId"].AsObjectId,
