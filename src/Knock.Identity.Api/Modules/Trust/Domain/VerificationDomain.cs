@@ -47,6 +47,13 @@ internal static class VerificationErrors
     public const string UnderReviewCode = "verification_under_review";
     public const string AlreadyVerifiedCode = "already_verified";
     public const string AlreadyFullyVerifiedCode = "already_fully_verified";
+    public const string TypeInvalidCode = "type_invalid";
+    public const string PhotoNotUploadedCode = "photo_not_uploaded";
+    public const string PhotoAlreadyConfirmedCode = "photo_already_confirmed";
+    public const string CaptureExpiredCode = "capture_expired";
+    public const string ContentInvalidCode = "content_invalid";
+    public const string PhotosMissingCode = "photos_missing";
+    public const string StorageUnavailableCode = "verification_storage_unavailable";
 }
 
 /// <summary>
