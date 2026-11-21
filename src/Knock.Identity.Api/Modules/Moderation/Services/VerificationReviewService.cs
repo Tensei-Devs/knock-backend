@@ -95,7 +95,7 @@ internal sealed partial class VerificationReviewService(
             case DecisionStoreOutcome.AlreadyDecided:
                 throw AlreadyDecided();
             case DecisionStoreOutcome.CurpDuplicate:
-                throw new DomainException(DomainErrorKind.Conflict, "The CURP already belongs to a verified account.", VerificationErrors.CurpDuplicateCode);
+                throw new DomainException(DomainErrorKind.Conflict, "The CURP already belongs to a verified account.", TrustApiErrorCodes.CurpDuplicate);
         }
 
         await DeleteBlobsAsync(id, cancellationToken);

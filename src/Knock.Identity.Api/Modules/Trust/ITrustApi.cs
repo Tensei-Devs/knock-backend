@@ -1,5 +1,11 @@
 namespace Knock.Identity.Api.Modules.Trust;
 
+/// <summary>Códigos de negocio de la spec 025 que otros módulos devuelven tal cual (§5).</summary>
+public static class TrustApiErrorCodes
+{
+    public const string CurpDuplicate = "curp_duplicate";
+}
+
 /// <summary>Lo que el módulo de confianza ofrece a los demás módulos de Identidad sin que lean su dominio (spec 025).</summary>
 public interface ITrustApi
 {
