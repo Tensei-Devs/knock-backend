@@ -2818,7 +2818,7 @@
         "tags": [
           "Solicitudes"
         ],
-        "summary": "Solicitudes del `sub` del token, de la más reciente a la más antigua, con paginación por cursor.",
+        "summary": "Solicitudes del `sub` del token, las activas primero y cada grupo de la más reciente a la más antigua, con paginación por cursor.",
         "parameters": [
           {
             "name": "Cursor",
