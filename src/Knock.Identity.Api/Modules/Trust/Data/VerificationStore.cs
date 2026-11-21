@@ -51,6 +51,12 @@ internal interface IVerificationStore
     /// En una transacción: cancela la captura viva de la persona (R-07: una sola por persona), guarda la verificación nueva en <c>en_captura</c> y su consentimiento.
     /// </summary>
     Task CreateAsync(NewVerification verification, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Si otra persona (distinta de <paramref name="exceptSub"/>) tiene una verificación vigente (<c>en_revision</c> o <c>verificada</c>) con alguno de esos HMAC de
+    /// CURP (R-06). Recibe un HMAC por cada versión de llave configurada: así una llave rotada no deja pasar duplicados guardados con la anterior.
+    /// </summary>
+    Task<bool> ExistsLiveCurpAsync(IReadOnlyCollection<string> curpHmacs, string exceptSub, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -155,6 +161,18 @@ internal sealed class VerificationStore(
                 return true;
             },
             cancellationToken: cancellationToken);
+    }
+
+    public async Task<bool> ExistsLiveCurpAsync(IReadOnlyCollection<string> curpHmacs, string exceptSub, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(curpHmacs);
+        if (curpHmacs.Count == 0)
+        {
+            return false;
+        }
+
+        var filter = _filter.In("curpHmac", curpHmacs) & _filter.Eq("curpVigente", true) & _filter.Ne(_userIdField, exceptSub);
+        return await Verifications.Find(filter, FindOptions).Project(Builders<BsonDocument>.Projection.Include(_idField)).Limit(1).AnyAsync(cancellationToken);
     }
 
     private static BsonDocument ToDocument(NewVerification v) => new()

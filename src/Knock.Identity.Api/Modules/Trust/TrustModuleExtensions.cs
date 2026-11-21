@@ -1,6 +1,8 @@
+using Knock.Identity.Api.Modules.Trust.Crypto;
 using Knock.Identity.Api.Modules.Trust.Data;
 using Knock.Identity.Api.Modules.Trust.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Knock.Identity.Api.Modules.Trust;
 
@@ -18,6 +20,9 @@ public static class TrustModuleExtensions
         services.AddSingleton<VerificationStore>();
         services.AddSingleton<IVerificationStore>(provider => provider.GetRequiredService<VerificationStore>());
         services.AddScoped<VerificationService>();
+        services.AddOptions<CurpHmacOptions>().BindConfiguration(CurpHmacOptions.SectionName);
+        services.AddSingleton(provider => CurpHmacOptions.Create(provider.GetRequiredService<IOptions<CurpHmacOptions>>()));
+        services.AddScoped<CurpDuplicateGuard>();
         return services;
     }
 }
