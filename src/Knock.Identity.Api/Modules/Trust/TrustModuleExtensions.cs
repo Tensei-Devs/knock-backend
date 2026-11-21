@@ -28,6 +28,7 @@ public static class TrustModuleExtensions
         services.TryAddSingleton<IVerificationKeyWrapper, UnavailableVerificationKeyWrapper>();
         services.AddSingleton<CifradoDeVerificacion>();
         services.AddSingleton<FotoVerificacionStore>();
+        services.TryAddSingleton<IVerificationEvents, PendingVerificationEvents>();
         return services;
     }
 }
