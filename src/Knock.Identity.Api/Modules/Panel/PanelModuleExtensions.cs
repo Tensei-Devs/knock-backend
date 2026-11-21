@@ -23,6 +23,7 @@ public static class PanelModuleExtensions
         services.AddSingleton<IPanelActivacionesStore>(provider => provider.GetRequiredService<PanelActivacionesStore>());
         services.AddSingleton<PanelAuditoriaStore>();
         services.AddSingleton<IPanelAuditoriaStore>(provider => provider.GetRequiredService<PanelAuditoriaStore>());
+        services.AddSingleton<IPanelAuditoriaEnTransaccion>(provider => provider.GetRequiredService<PanelAuditoriaStore>());
         services.AddSingleton<IPanelDesafios, RedisPanelDesafios>();
         services.AddSingleton<IPanelCuentaCache, RedisPanelCuentaCache>();
         services.AddSingleton<IPanelSidCanceller, RedisPanelSidCanceller>();
