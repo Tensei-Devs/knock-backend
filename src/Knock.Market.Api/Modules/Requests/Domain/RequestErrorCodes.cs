@@ -18,5 +18,6 @@ internal static class RequestErrorCodes
     public const string RequestCancelledCode = "request_cancelled";
     public const string RequestWithoutQuotesCode = "request_without_quotes";
     public const string QuoteUnavailableCode = "quote_unavailable";
+    public const string RequestWithAppointmentCode = "request_with_appointment";
     public const string ServiceUnavailableCode = "service_unavailable";
 }

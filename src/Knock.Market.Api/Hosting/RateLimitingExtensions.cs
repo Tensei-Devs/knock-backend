@@ -38,6 +38,9 @@ internal static class RateLimitingExtensions
 
     /// <summary>Crear solicitudes: 10 por hora por persona (spec 020, §5), además del límite general.</summary>
     public const string CreateRequestPolicy = "solicitudes-crear";
+
+    /// <summary>Cancelar solicitudes: 10 por hora por persona (spec 029, R-14).</summary>
+    public const string CancelRequestPolicy = "solicitudes-cancelar";
     public const string QuotePolicy = "quotes";
     public const string CompareQuotesPolicy = "cotizaciones-comparar";
     public const string ChooseQuotePolicy = "cotizaciones-elegir";
@@ -71,6 +74,7 @@ internal static class RateLimitingExtensions
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
             options.AddPolicy(WaitlistPolicy, SubjectPolicy(WaitlistPolicy, 5, TimeSpan.FromHours(1), services));
             options.AddPolicy(CreateRequestPolicy, SubjectPolicy(CreateRequestPolicy, 10, TimeSpan.FromHours(1), services));
+            options.AddPolicy(CancelRequestPolicy, SubjectPolicy(CancelRequestPolicy, 10, TimeSpan.FromHours(1), services));
             options.AddPolicy(QuotePolicy, SubjectPolicy(QuotePolicy, 3, TimeSpan.FromMinutes(1), services));
             options.AddPolicy(CompareQuotesPolicy, SubjectPolicy(CompareQuotesPolicy, 60, TimeSpan.FromMinutes(1), services));
             options.AddPolicy(ChooseQuotePolicy, SubjectPolicy(ChooseQuotePolicy, 10, TimeSpan.FromMinutes(1), services));
