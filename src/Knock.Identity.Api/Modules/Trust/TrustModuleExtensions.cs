@@ -29,6 +29,9 @@ public static class TrustModuleExtensions
         services.AddSingleton<CifradoDeVerificacion>();
         services.AddSingleton<FotoVerificacionStore>();
         services.TryAddSingleton<IVerificationEvents, PendingVerificationEvents>();
+        services.AddSingleton<IVerificationExpiryStore, VerificationExpiryStore>();
+        services.AddScoped<VerificationExpiryService>();
+        services.AddHostedService<VencimientoVerificaciones>();
         return services;
     }
 }
