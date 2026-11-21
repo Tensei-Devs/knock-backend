@@ -7,7 +7,7 @@ name: sonarcloud
 # tenga el árbol de compilación.
 # Alcance: solo la rama principal `main` (el plan gratuito de SonarCloud analiza esa rama y los PR; aquí no se analizan PR).
 # Un `workflow_run` solo se ejecuta si este archivo ya está en la rama predeterminada (`main`): no habrá análisis hasta que llegue
-# a `main` con la promoción (paso 3). Antes de eso, `workflow_dispatch` tampoco aparece en la interfaz hasta estar en `main`.
+# a `main` con la promoción (paso 3). Sin `workflow_dispatch`: Checkov (CKV_GHA_7) exige que no tenga entradas.
 # Seguridad: solo corre para corridas de `ci-pr` disparadas por un push a `main` (código ya revisado y fusionado),
 # nunca para PR: el token no se expone a código de un PR. Permisos mínimos; acciones fijadas a SHA.
 # Configuración en GitHub (no se leen ni se crean aquí): secreto SONAR_TOKEN y variables SONAR_ORGANIZATION y SONAR_PROJECT_KEY.
@@ -17,38 +17,26 @@ on:
     workflows: [ci-pr]
     types: [completed]
     branches: [main]
-  workflow_dispatch:
-    inputs:
-      ci_run_id:
-        description: "Id de una corrida de ci-pr que tenga el artefacto api-reports"
-        required: true
-      sha:
-        description: "Commit de esa corrida"
-        required: true
-      branch:
-        description: "Rama de esa corrida"
-        required: true
 
 permissions:
   contents: read
   actions: read
 
 concurrency:
-  group: sonarcloud-${{ github.event.workflow_run.head_branch || inputs.branch }}
+  group: sonarcloud-${{ github.event.workflow_run.head_branch }}
   cancel-in-progress: true
 
 env:
   DOTNET_NOLOGO: "true"
   DOTNET_CLI_TELEMETRY_OPTOUT: "true"
   SONAR_SCANNER_VERSION: "12.0.0"
-  CI_RUN_ID: ${{ github.event.workflow_run.id || inputs.ci_run_id }}
-  CI_SHA: ${{ github.event.workflow_run.head_sha || inputs.sha }}
-  CI_BRANCH: ${{ github.event.workflow_run.head_branch || inputs.branch }}
-
+  CI_RUN_ID: ${{ github.event.workflow_run.id }}
+  CI_SHA: ${{ github.event.workflow_run.head_sha }}
+  
 jobs:
   sonarcloud:
     name: SonarCloud (informativo, fuera del gate)
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion != 'cancelled')
+    if: github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion != 'cancelled'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
