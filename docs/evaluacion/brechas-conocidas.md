@@ -56,3 +56,42 @@ Los 9 endpoints (USR-03 a USR-11) existen y tienen pruebas; quedan **cinco tarea
 5. El aviso `sesion_revocada`: solo se registra en `PendingAccountOutbox`.
 
 **Diferencia entre la historia y la spec (HU-006, KNOCK-104):** la historia habla de un «código SMS» para eliminar la cuenta; la spec 039 lo sustituyó por **reautenticación con Firebase**. Lo que vale es la spec; el texto de la historia debe corregirse.
+
+## G. Ramas y PR que quedan fuera del primer ciclo (pendientes, no perdidos)
+Nada se descarta por no haber llegado a `sprint-05`: lo que no entre en el segundo ciclo (empieza el domingo antes de las 15:00) sigue como trabajo pendiente. Estado a 2026-11-21 por la tarde. Ninguna de estas ramas se ha borrado. Las ramas «solo local» tienen respaldo en `_respaldos
+oche-2026-11-21\` (bundle) y pueden empujarse cuando se decida.
+
+### G.1 PR abiertos (en GitHub)
+| PR | Rama · SHA | Tarjeta | Estado |
+|---|---|---|---|
+| #239 | `feature/KNOCK-70-cancelar-solicitud-paquete` · `67660c31` | KNOCK-70 (Alexis) | Abierto, CI rojo real: formato (`CierreDeSolicitudStore.cs`, prefijo `_`) y Semgrep (`Task.Delay` en `Modules/**`). Lo corrige su autor; luego debe traer `sprint-05` y regenerar `docs/openapi.v1.json` |
+| #240 | `feature/KNOCK-71-plazo-configurable-paquete` · `11e42167` | KNOCK-71 (Alexis) | Abierto, **en conflicto** con `sprint-05`; lo resuelve su autor |
+| #243 | `feature/KNOCK-280-limitador-hosting` · `780f76bd` | KNOCK-280 (Erick) | Abierto, CI rojo por formato (`FINALNEWLINE` en `GatewayRateLimits.cs`, `IMPORTS` en `AuditoriaPanel.cs`); lo corrige su autor. Choque conocido con KNOCK-70 en `RateLimitingExtensions.cs` de Market |
+| #229 | `feature/KNOCK-90-tecnicos-lista` · `d9e555bb` | KNOCK-90 (Erick) | Abierto; falta traer `sprint-05` (conflictos en `TechnicianProfileStore.cs`, `task.md` y archivos generados) y mover su entrada de `Memoria.md` a `docs/memoria/`. Lo hace Erick |
+| #237 | `feature/KNOCK-60-notifications-indexes` · `c076c891` | KNOCK-60 (responsable sin confirmar: `task.md` dice Alexis, Jira dice Guillermo) | Abierto, sin fusionar a propósito; faltan responsable y validar nombres de campo y TTL |
+| #236 | `feature/KNOCK-86-moderation-verifications` · `58b9df7b` | KNOCK-86 (José) | Abierto, sin fusionar a propósito (PII y seguridad); CI en curso tras el contrato de Identity regenerado |
+| #245 | `docs/KNOCK-298-ajuste-plazo-evaluacion` · `3c0bcf47` | KNOCK-298 (José) | Abierto, solo documentación; falta su CI |
+
+### G.2 Ramas solo locales (sin PR, con respaldo en bundle)
+| Rama · SHA | Tarjeta | Estado |
+|---|---|---|
+| `feature/KNOCK-79-curp-hmac-cifrado` · `aea95003` | KNOCK-79 (Erick en Jira) | Terminada y verificada en local; **criptografía y PII**, pendiente de decisión del Tech Lead y de repartir las tareas de la spec 025 |
+| `feature/KNOCK-79-foto-verificacion-store` · `74639bac`, `…-verificacion-confirmar-enviar` · `f0a6d820`, `…-verificacion-docs-contrato` · `11f8a182`, `…-verificacion-azure-AUTORIZACION` · `d12a627b` | KNOCK-79 | Apiladas; sin verificar de punta a punta; la última toca el cliente de Azure y Key Vault |
+| `feature/KNOCK-87-vencimiento-fotos-verificacion` · `fea68c0a`, `feature/KNOCK-87-verification-photo-purge` · `056c34c6` | KNOCK-87 (Guillermo en Jira) | Incompletas; dependen de la spec 025 y de la 054 |
+| `feature/KNOCK-86-photo-links-adapter-codemap` · `464c1329` | KNOCK-86 | Apilada sobre la del PR #236 y sobre KNOCK-79; verificada en local (codemap 0 violaciones), sin PR |
+| `feature/KNOCK-172-almacen-blob` · `34265bed` → `…-limites-redis` · `a4c0e19e` → `…-subidas-endpoints` · `42d5cdbd` → `…-openapi-AUTORIZACION` · `26ea0d98` | KNOCK-172 (José) | Verificadas en local (unitarias, arquitectura y contrato); **seguridad y criptografía (SAS, HMAC)**; la última regenera OpenAPI (archivo protegido) |
+| `feature/KNOCK-171-moderacion-contenido` · `c4d9b93e`, `…-content-safety-infra-AUTORIZACION` · `dc7dd600` | KNOCK-171 (José) | **No verificadas**; la segunda toca Terraform y gasto de Azure |
+| `feature/KNOCK-63-cliente-ia-azure-openai` · `01a6de4d`, `feature/KNOCK-99-asistente-ia` · `6b789df5` | KNOCK-63 (Alexis en Jira) y KNOCK-99 (Erick) | **No verificadas**; el tope de tokens y el ADR-008 los decide el Tech Lead |
+| `feature/KNOCK-185-archivos-store` · `ddc2c9ca` | KNOCK-185 (Alexis) | **No verificada, no revisar todavía** (spec 058 T-02); hay trabajo sin commitear respaldado en `wip2\` |
+| `feature/KNOCK-91-confianza-script-prueba` · `460a9507` | KNOCK-91 (Guillermo) | Prueba de BD de la spec 042; sin PR; responsable por confirmar |
+| `feature/KNOCK-95-bloqueo-eventos` · `64b5482d` | KNOCK-95 (Alexis) | Puerto de eventos de bloqueo; sin PR |
+| `feature/KNOCK-57-servicios-tecnico` · `af745950` | KNOCK-57 (Erick) | Spec 047, 5 rutas; falta asignar tareas en `task.md`; sin PR |
+| `chore/KNOCK-280-retirar-exc-025-AUTORIZACION` · `50f43978` | KNOCK-280 (Erick) | Archivo protegido (`security/exceptions.yaml`); autorizar junto con #243 |
+| `feature/SIN-TARJETA-cotizacion-final-ajustes` · `ee0a7240` | sin tarjeta (spec 049) | **Incompleta, no compilada ni probada**; sin pruebas, sin script `db/` ni documentación |
+| `feature/KNOCK-281-catalogo-hosting` (base `cd5c452d`), `feature/KNOCK-105-in-app-notices` (base `7bd8046c`) | KNOCK-281 (sin responsable), KNOCK-105 (Guillermo) | Solo trabajo sin commitear, respaldado como parches en `wip2\`; ninguna pieza completa |
+| `chore/SIN-TARJETA-cdn-front-door-AUTORIZACION` · `53ae082f`, `chore/SIN-TARJETA-sonarcloud-AUTORIZACION` · `8ae5a2c4` | KNOCK-296, KNOCK-297 | Versiones anteriores de lo ya fusionado en #231 y #232; se conservan hasta confirmar que ya no hacen falta |
+
+### G.3 Frontend (KNOCK-288, conexión de la maqueta a la API real)
+Nueve ramas locales sin PR: `chore/KNOCK-288-contrato-api-c87ab21` (base), las de repositorios (direcciones, casa y auto, técnicos de confianza, mis datos, zona, búsqueda, trabajo), `fix/KNOCK-288-rutas-protegidas-por-omision` (**hallazgo de seguridad: lista de rutas públicas, la revisa el Tech Lead antes de abrir PR**) y `docs/KNOCK-288-task-states-app`. Verificadas en un árbol combinado (formato, análisis y 1 026 pruebas). Respaldo en `_respaldos
+oche-2026-11-21ront-*.bundle`.
+
