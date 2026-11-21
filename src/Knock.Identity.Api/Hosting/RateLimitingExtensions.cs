@@ -51,6 +51,9 @@ internal static class RateLimitingExtensions
     /// <summary>Spec 025 (R-19): crear una verificación, 3 por hora por persona.</summary>
     public const string VerificationCreatePolicy = "verificacion-crear";
 
+    /// <summary>Spec 025 (R-19): confirmar una foto de verificación, 10 por hora por persona.</summary>
+    public const string VerificationConfirmPolicy = "verificacion-confirmar";
+
     private const string _healthPath = "/health";
     private const string _readyPath = "/health/ready";
     private const string _unknownClient = "unknown";
@@ -80,6 +83,7 @@ internal static class RateLimitingExtensions
             options.AddPolicy(ExportPolicy, SubjectPolicy(ExportPolicy, 3, TimeSpan.FromHours(1), services));
             options.AddPolicy(DeletionPolicy, SubjectPolicy(DeletionPolicy, 5, TimeSpan.FromHours(1), services));
             options.AddPolicy(VerificationCreatePolicy, SubjectPolicy(VerificationCreatePolicy, 3, TimeSpan.FromHours(1), services));
+            options.AddPolicy(VerificationConfirmPolicy, SubjectPolicy(VerificationConfirmPolicy, 10, TimeSpan.FromHours(1), services));
             options.GlobalLimiter = PartitionedRateLimiter.CreateChained(
                 PartitionedRateLimiter.Create<HttpContext, string>(context => GlobalPartition(context, global, ready, services)),
                 PartitionedRateLimiter.Create<HttpContext, string>(context =>

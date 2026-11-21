@@ -1,6 +1,9 @@
+using Knock.Identity.Api.Modules.Trust.Crypto;
 using Knock.Identity.Api.Modules.Trust.Data;
 using Knock.Identity.Api.Modules.Trust.Services;
+using Knock.Identity.Api.Modules.Trust.Storage;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Knock.Identity.Api.Modules.Trust;
 
@@ -17,6 +20,18 @@ public static class TrustModuleExtensions
         services.AddSingleton<VerificationStore>();
         services.AddSingleton<IVerificationStore>(provider => provider.GetRequiredService<VerificationStore>());
         services.AddScoped<VerificationService>();
+        services.AddOptions<CurpHmacOptions>().BindConfiguration(CurpHmacOptions.SectionName);
+        services.AddSingleton(provider => CurpHmacOptions.Create(provider.GetRequiredService<IOptions<CurpHmacOptions>>()));
+        services.AddScoped<CurpDuplicateGuard>();
+        // Dependencias de infraestructura con valor por omisión que FALLA CERRADO (503): el cliente real de Blob y de Key Vault se registra antes de AddTrustModule() y las reemplaza.
+        services.TryAddSingleton<IVerificationBlobStore, UnavailableVerificationBlobStore>();
+        services.TryAddSingleton<IVerificationKeyWrapper, UnavailableVerificationKeyWrapper>();
+        services.AddSingleton<CifradoDeVerificacion>();
+        services.AddSingleton<FotoVerificacionStore>();
+        services.TryAddSingleton<IVerificationEvents, PendingVerificationEvents>();
+        services.AddSingleton<IVerificationExpiryStore, VerificationExpiryStore>();
+        services.AddScoped<VerificationExpiryService>();
+        services.AddHostedService<VencimientoVerificaciones>();
         return services;
     }
 }
