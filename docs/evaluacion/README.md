@@ -7,6 +7,7 @@ Esta carpeta junta, en un solo lugar, lo que un evaluador necesita para comproba
 | `generar_evidencia.py` | Generador (solo lectura, sin dependencias). `python docs/evaluacion/generar_evidencia.py [--gh] [--sonar]` |
 | `generado/cifras.json` y `generado/cifras.md` | Salida del generador: endpoints, pruebas (recuento estático), agentes y skills, memoria, specs, réplicas por entorno y, opcionalmente, GitHub y el quality gate de SonarCloud, cada cifra con su método, fecha y SHA |
 | `brechas-conocidas.md` | Lo que **no** está o no actúa hoy, dicho sin adornos |
+| `evidencia-despues-del-despliegue.md` | Lista de comandos, en orden, para correr apenas haya un SHA final desplegado |
 
 ## Cómo regenerar
 ```
