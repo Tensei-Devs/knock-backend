@@ -1,0 +1,24 @@
+using Microsoft.AspNetCore.Mvc;
+
+namespace Knock.Messaging.Api.Modules.Notices.Dtos;
+
+/// <summary>Consulta de <c>GET /api/v1/avisos</c> (AVI-01). Cada valor llega como texto para que un valor inválido responda 422 y no un 400 del enlace de datos.</summary>
+internal sealed class ListNoticesQuery
+{
+    [FromQuery(Name = "cursor")]
+    public string? Cursor { get; init; }
+
+    [FromQuery(Name = "limite")]
+    public string? Limite { get; init; }
+
+    [FromQuery(Name = "leido")]
+    public string? Leido { get; init; }
+
+    [FromQuery(Name = "comoRol")]
+    public string? ComoRol { get; init; }
+}
+
+/// <summary>Un aviso tal como lo ve la persona (R-10): sin códigos de visita, direcciones ni datos sensibles.</summary>
+internal sealed record NoticeResponse(string Id, string Tipo, string ComoRol, string Titulo, string Texto, object? Destino, bool Leido, DateTime CreadoEn);
+
+internal sealed record NoticeListResponse(IReadOnlyList<NoticeResponse> Items, string? SiguienteCursor);

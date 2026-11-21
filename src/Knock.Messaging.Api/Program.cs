@@ -3,6 +3,7 @@ using Knock.Hosting.ForwardedHeaders;
 using Knock.Messaging.Api.Hosting;
 using Knock.Messaging.Api.Modules.Chat;
 using Knock.Messaging.Api.Modules.Conversaciones;
+using Knock.Messaging.Api.Modules.Notices;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -29,6 +30,8 @@ builder.Services.AddKnockData();
 builder.Services.AddChatModule().AddKnockChatBridge();
 // Spec 030: errores de dominio de Conversaciones como ProblemDetails y cliente del permiso de Mercado con caché de 60 s (usa Services:Market que valida AddChatModule).
 builder.Services.AddConversacionesModule();
+// Spec 044: avisos dentro de la app (bandeja, contador y preferencias); solo lee, los avisos los crea el despachador de la spec 037.
+builder.Services.AddNoticesModule();
 
 var app = builder.Build();
 
