@@ -13,6 +13,19 @@ internal sealed class CierreDeSolicitudStore(
     private static readonly string[] _open = ["enviada", "cotizando"];
     private static readonly string[] _deliverable = ["activo", "cotizado"];
 
+    /// <summary>Identificadores de hasta <paramref name="limit"/> solicitudes abiertas con <c>venceEn</c> cumplido, de las que vencen antes (índice <c>{ estado, venceEn }</c>).</summary>
+    public async Task<IReadOnlyList<ObjectId>> FindExpiredAsync(DateTime now, int limit, CancellationToken cancellationToken)
+    {
+        var f = Builders<BsonDocument>.Filter;
+        var documents = await database.GetCollection<BsonDocument>("solicitudes")
+            .Find(f.In("estado", _open) & f.Lte("venceEn", now))
+            .Sort(Builders<BsonDocument>.Sort.Ascending("venceEn"))
+            .Project(Builders<BsonDocument>.Projection.Include("_id"))
+            .Limit(limit)
+            .ToListAsync(cancellationToken);
+        return [.. documents.Select(d => d["_id"].AsObjectId)];
+    }
+
     public async Task<CierreResult> CloseAsync(ObjectId id, string? clientId, string? reason, bool expire, DateTime now, CancellationToken cancellationToken)
     {
         using var session = await database.Client.StartSessionAsync(cancellationToken: cancellationToken);

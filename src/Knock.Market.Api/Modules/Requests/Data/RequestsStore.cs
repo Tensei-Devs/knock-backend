@@ -60,6 +60,8 @@ internal sealed class RequestsStore(
             {
                 await Requests.InsertOneAsync(transaction, ToDocument(record), cancellationToken: token);
                 await outbox.AddAsync(transaction, message, token);
+                // Spec 029, R-08: la tarea de vencimiento nace en la misma transacción que la solicitud.
+                await new TareasProgramadasStore(database).ScheduleByKeyAsync(transaction, "VencerSolicitud", record.Id.ToString(), record.VenceEnUtc, record.CreadoEnUtc, token);
                 if (waves?.Value.Habilitado == true)
                 {
                     await new TareasProgramadasStore(database).ScheduleAsync(transaction, "RepartirOleada", record.Id, 1, record.CreadoEnUtc, record.CreadoEnUtc, token);
