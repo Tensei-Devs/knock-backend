@@ -15,6 +15,9 @@ internal sealed record NoticePage(IReadOnlyList<StoredNotice> Items, NoticeCurso
 internal interface INoticesStore
 {
     Task<NoticePage> ListAsync(string userId, bool? read, string? role, NoticeCursor? after, int limit, CancellationToken cancellationToken);
+
+    /// <summary>Cantidad de avisos sin leer de la persona, contada hasta <paramref name="cap"/>.</summary>
+    Task<int> CountUnreadAsync(string userId, int cap, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -71,6 +74,12 @@ internal sealed class NoticesStore(
             : null;
         return new NoticePage(items, next);
     }
+
+    public async Task<int> CountUnreadAsync(string userId, int cap, CancellationToken cancellationToken) =>
+        (int)await Notices.CountDocumentsAsync(
+            _filter.And(_filter.Eq(_userField, userId), _filter.Eq(_readField, false)),
+            new CountOptions { Limit = cap, MaxTime = mongoOptions.Value.QueryMaxTime },
+            cancellationToken);
 
     /// <summary>Índices de la spec 044 (§6). Idempotente; el script <c>db/044-avisos-dentro-de-la-app.js</c> hace lo mismo.</summary>
     public async Task EnsureIndexesAsync(CancellationToken cancellationToken)

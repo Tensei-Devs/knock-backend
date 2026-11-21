@@ -29,5 +29,14 @@ internal sealed class AvisosController(NoticesService notices) : ControllerBase
     public async Task<IActionResult> List([FromQuery] ListNoticesQuery query, CancellationToken cancellationToken) =>
         Sub() is { } sub ? Ok(await notices.ListAsync(sub, query, cancellationToken)) : Unauthorized();
 
+    /// <summary>Cantidad de avisos sin leer, hasta 99; no se cachea.</summary>
+    [HttpGet("no-leidos/contador")]
+    [EnableRateLimiting(RateLimitingExtensions.NoticesReadPolicy)]
+    [ProducesResponseType<UnreadCountResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests)]
+    public async Task<IActionResult> CountUnread(CancellationToken cancellationToken) =>
+        Sub() is { } sub ? Ok(await notices.CountUnreadAsync(sub, cancellationToken)) : Unauthorized();
+
     private string? Sub() => User.FindFirst("sub")?.Value is { Length: > 0 } sub ? sub : null;
 }

@@ -38,6 +38,12 @@ public sealed partial class Spec044AvisosTests
                 : null;
             return Task.FromResult(new Data.NoticePage(page, next));
         }
+
+        public Task<int> CountUnreadAsync(string userId, int cap, CancellationToken cancellationToken)
+        {
+            LastUser = userId;
+            return Task.FromResult(Math.Min(cap, Notices.Count(n => n.User == userId && !n.Read)));
+        }
     }
 
     private static string Id(int n) => n.ToString("x24", System.Globalization.CultureInfo.InvariantCulture);
