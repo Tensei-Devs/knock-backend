@@ -44,6 +44,9 @@ internal static class RateLimitingExtensions
     private const int _devicesPerHour = 30;
     private const int _messagesPerMinute = 30;
     private const string _messageLimitCode = "message_limit";
+    /// <summary>Leer avisos y preferencias: 120 por minuto por persona (spec 044, R-17).</summary>
+    public const string NoticesReadPolicy = "avisos-leer";
+
     private const string _healthPath = "/health";
     private const string _readyPath = "/health/ready";
     private const string _unknownClient = "unknown";
@@ -71,6 +74,7 @@ internal static class RateLimitingExtensions
             options.AddPolicy(CreateConversationPolicy, SubjectPolicy(CreateConversationPolicy, 20, TimeSpan.FromHours(1), provider));
             options.AddPolicy(SendMessagePolicy, SubjectPolicy(SendMessagePolicy, _messagesPerMinute, TimeSpan.FromMinutes(1), provider));
             options.AddPolicy(DevicesPolicy, SubjectPolicy(DevicesPolicy, _devicesPerHour, TimeSpan.FromHours(1), provider));
+            options.AddPolicy(NoticesReadPolicy, SubjectPolicy(NoticesReadPolicy, 120, TimeSpan.FromMinutes(1), provider));
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context => Partition(context, global, ready));
             options.OnRejected = async (context, _) =>
             {
