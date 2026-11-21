@@ -32,6 +32,15 @@ internal enum PriceType
 /// <summary>Conversión entre los estados del dominio y los nombres guardados en las colecciones.</summary>
 internal static class RequestStates
 {
+    /// <summary>Solicitudes que siguen en curso (spec 020, R-09 enmendada): <c>enviada</c>, <c>cotizando</c> y <c>cita_confirmada</c>.</summary>
+    public static readonly IReadOnlyList<RequestState> Active = [RequestState.Enviada, RequestState.Cotizando, RequestState.CitaConfirmada];
+
+    /// <summary>Solicitudes terminadas: <c>terminada</c>, <c>calificada</c>, <c>cancelada</c> y <c>vencida</c>.</summary>
+    public static readonly IReadOnlyList<RequestState> Finished = [RequestState.Terminada, RequestState.Calificada, RequestState.Cancelada, RequestState.Vencida];
+
+    /// <summary>Grupo del listado: <c>0</c> activas, <c>1</c> terminadas.</summary>
+    public static int GroupOf(RequestState state) => Active.Contains(state) ? 0 : 1;
+
     public static string ToStored(RequestState state) => state switch
     {
         RequestState.Enviada => "enviada",
