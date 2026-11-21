@@ -1,3 +1,4 @@
+using Knock.Identity.Api.Modules.Moderation.Services;
 using Knock.Identity.Api.Modules.Trust.Crypto;
 using Knock.Identity.Api.Modules.Trust.Data;
 using Knock.Identity.Api.Modules.Trust.Services;
@@ -29,6 +30,9 @@ public static class TrustModuleExtensions
         services.AddSingleton<CifradoDeVerificacion>();
         services.AddSingleton<FotoVerificacionStore>();
         services.TryAddSingleton<IVerificationEvents, PendingVerificationEvents>();
+        // Reemplazan a los valores por omisión del panel (spec 053) sin importar el orden de registro.
+        services.Replace(ServiceDescriptor.Singleton<IVerificationPhotoLinks, TrustVerificationPhotoLinks>());
+        services.Replace(ServiceDescriptor.Singleton<IVerificationBlobPurger, TrustVerificationBlobPurger>());
         services.AddSingleton<IVerificationExpiryStore, VerificationExpiryStore>();
         services.AddScoped<VerificationExpiryService>();
         services.AddHostedService<VencimientoVerificaciones>();
