@@ -13,6 +13,9 @@ internal sealed class ImagenesOptions
     /// <summary>Contenedor público; la dirección base termina en <c>/imagenes-publicas</c>.</summary>
     public const string ContenedorPublico = "imagenes-publicas";
 
+    /// <summary>Contenedor de cuarentena de la cuenta privada: recibe los bytes sin procesar que sube la persona (spec 032, R-01).</summary>
+    public const string ContenedorCuarentena = "imagenes-cuarentena";
+
     /// <summary>Dirección base de las imágenes públicas: <c>https://host/imagenes-publicas</c>.</summary>
     public string? BaseUrlPublica { get; set; }
 }
