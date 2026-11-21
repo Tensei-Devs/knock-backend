@@ -23,7 +23,8 @@ internal sealed record RequestRecord(
     string? DireccionCifrada,
     RequestState Estado,
     DateTime VenceEnUtc,
-    DateTime CreadoEnUtc);
+    DateTime CreadoEnUtc,
+    string? ElementoId = null);
 
 /// <summary>Una página de solicitudes propias y el cursor de la siguiente, o <see langword="null"/> en la última.</summary>
 internal sealed record RequestRecordPage(IReadOnlyList<RequestRecord> Items, string? NextCursor);
@@ -35,7 +36,8 @@ internal sealed record RequestRecordPage(IReadOnlyList<RequestRecord> Items, str
 internal sealed class RequestsStore(
     [FromKeyedServices(RequestsModuleExtensions.ModuleKey)] IMongoDatabase database,
     IOptions<KnockMongoOptions> mongoOptions,
-    IOutbox outbox)
+    IOutbox outbox,
+    IOptions<OleadasOptions>? waves = null)
 {
     public const string RequestsCollection = "solicitudes";
     public const string QuotesCollection = "cotizaciones";
@@ -58,6 +60,10 @@ internal sealed class RequestsStore(
             {
                 await Requests.InsertOneAsync(transaction, ToDocument(record), cancellationToken: token);
                 await outbox.AddAsync(transaction, message, token);
+                if (waves?.Value.Habilitado == true)
+                {
+                    await new TareasProgramadasStore(database).ScheduleAsync(transaction, "RepartirOleada", record.Id, 1, record.CreadoEnUtc, record.CreadoEnUtc, token);
+                }
                 return true;
             },
             cancellationToken: cancellationToken);
@@ -146,14 +152,22 @@ internal sealed class RequestsStore(
             document.Add("direccionCifrada", record.DireccionCifrada);
         }
 
+        if (record.ElementoId is not null)
+        {
+            // Spec 041, R-19: opcional y aditivo; sin él el documento queda como antes.
+            document.Add("elementoId", record.ElementoId);
+        }
+
         document.Add("estado", RequestStates.ToStored(record.Estado));
+        document.Add("oleadaActual", 0);
+        document.Add("cotizacionesActivas", 0);
         document.Add("venceEn", record.VenceEnUtc);
         document.Add("creadoEn", record.CreadoEnUtc);
         document.Add("actualizadoEn", record.CreadoEnUtc);
         return document;
     }
 
-    private static RequestRecord ToRecord(BsonDocument document) => new(
+    internal static RequestRecord ToRecord(BsonDocument document) => new(
         document["_id"].AsObjectId,
         document["clienteId"].AsString,
         document["oficioClave"].AsString,
@@ -169,5 +183,6 @@ internal sealed class RequestsStore(
         document.TryGetValue("direccionCifrada", out var address) && address.IsString ? address.AsString : null,
         RequestStates.ParseRequest(document["estado"].AsString),
         document["venceEn"].ToUniversalTime(),
-        document["creadoEn"].ToUniversalTime());
+        document["creadoEn"].ToUniversalTime(),
+        document.TryGetValue("elementoId", out var elementId) && elementId.IsString ? elementId.AsString : null);
 }
