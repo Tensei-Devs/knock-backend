@@ -47,7 +47,8 @@ internal sealed class UnavailableVerificationBlobStore : IVerificationBlobStore
 
     public Task<bool> WriteFinalAsync(string blobName, byte[] content, CancellationToken cancellationToken) => throw Unavailable();
 
-    public Task DeleteQuarantineAsync(string blobName, CancellationToken cancellationToken) => throw Unavailable();
+    /// <summary>Sin almacenamiento configurado nada pudo escribirse: borrar no hace nada. Fallar aquí bloquearía la purga (spec 057) y la baja de cuenta (spec 039) sin motivo.</summary>
+    public Task DeleteQuarantineAsync(string blobName, CancellationToken cancellationToken) => Task.CompletedTask;
 
-    public Task DeleteFinalAsync(string blobName, CancellationToken cancellationToken) => throw Unavailable();
+    public Task DeleteFinalAsync(string blobName, CancellationToken cancellationToken) => Task.CompletedTask;
 }
