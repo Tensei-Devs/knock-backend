@@ -305,3 +305,67 @@ excepciones:
     creada: 2026-11-15
     vence: 2027-02-13
     plan: mover el contador y el limitador a la biblioteca técnica compartida de KNOCK-251, quitar los marcadores y las huellas de la línea base de clones y retirar esta excepción antes de vencer.
+  - id: EXC-026
+    herramienta: trivy
+    regla: CVE-2026-97054 (HIGH, stdlib de Go 1.27.3; corregido en 1.27.4) en usr/bin/pebble de la imagen base mcr.microsoft.com/dotnet/aspnet:11.0
+    alcance: solo ese CVE en .trivyignore, para las imágenes de Gateway, Identidad, Mercado y Mensajería, que usan esa imagen base; cualquier otro hallazgo sigue bloqueando
+    justificacion: >-
+      Trivy 0.76.1 bloquea el chequeo Contenedor de los PR desde el 2026-11-19 porque la base aspnet:11.0 (construida por Microsoft el 2026-11-10) trae el binario pebble compilado con Go 1.27.3.
+      El binario es una herramienta de la imagen que nuestras APIs no ejecutan, y el CVE trata de servidores HTTP/1 con MaxBytesReader. Aún no existe una imagen base corregida y el sprint 5 cierra el 2026-11-22.
+      Decisión del líder del 2026-11-19: aceptar el hallazgo con vencimiento corto en lugar de esperar la imagen. Evidencia: corrida de ci-pr del 2026-11-19 (ejemplo: PR #158, job Contenedor de Gateway,
+      «Total: 1 (HIGH: 1)» en usr/bin/pebble).
+    responsable: José Julián Hernández Hernández
+    creada: 2026-11-19
+    vence: 2026-12-03
+    plan: cuando Microsoft publique una aspnet:11.0 con Go 1.27.4 o superior, volver a correr el CI, quitar la línea de .trivyignore y retirar esta excepción (KNOCK-290); si no hay imagen corregida antes de vencer, se revisa o se renueva con la decisión del líder.
+  - id: EXC-027
+    herramienta: gitleaks
+    regla: knock-mongodb-connection-string y generic-api-key
+    alcance: las huellas 28273243e79a874c99d33e23fe3a8e7d38b04767:tests/UnitTest/Panel/PanelFakes.cs:knock-mongodb-connection-string:160, :280 y :348, e0b8aac104197397959eadc41fe4398d5254c744:tests/UnitTest/Panel/Spec033AuditoriaTests.cs:knock-mongodb-connection-string:27 be3f8c97688c131b8b210782800200772d2adb77:tests/UnitTest/Panel/Spec033TotpDominioTests.cs:generic-api-key:160 y d4e6580e5e320bb5f16d04102e7f673e6d41f265:Memoria.md:knock-mongodb-connection-string:991 (la cadena de ejemplo citada en la entrada de Memoria.md de esta misma excepción) en .gitleaksignore (commits de la rama feature/KNOCK-75-panel-2fa-permissions; solo esas líneas de esos archivos en esos commits)
+    justificacion: >-
+      Falso positivo. PanelFakes y Spec033AuditoriaTests lanzan una excepción con una cadena de conexión de MongoDB inventada (usuario, clave y host de ejemplo) para comprobar que el servicio del panel nunca deja salir el texto de un error de la base de datos (spec 033); no es una credencial de ningún servicio.
+      La línea 160 de Spec033TotpDominioTests usa el secreto de ejemplo publicado en el estándar TOTP (RFC 6238) para comprobar el enlace otpauth; es un valor público de prueba.
+      Los commits quedan en el historial y Gitleaks revisa todas las ramas, por lo que marca todos los PR del repositorio. No se reescribe el historial. Las reglas siguen activas para cualquier otro archivo.
+      Evidencia: hallazgo de Gitleaks 8.30.1 sobre todas las ramas del 2026-11-19 (reglas knock-mongodb-connection-string y generic-api-key, esos archivos y esas líneas), que puso en rojo el check de secretos de los PR #179 a #194 y los de Alexis.
+    responsable: José Julián Hernández Hernández
+    creada: 2026-11-19
+    vence: 2027-02-17
+    plan: en un commit posterior de la rama del panel las cadenas de prueba se arman sin el formato completo de conexión (sin usuario:clave@host) y el secreto TOTP se lee de una constante de prueba que no parezca una llave; las huellas se quedan mientras esos commits existan en el historial y la excepción se renueva si vence antes de que deje de analizarse.
+  - id: EXC-028
+    herramienta: jscpd, codemap
+    regla: código duplicado (jscpd:ignore)
+    alcance: solo el bloque de TokenValidationParameters del token del panel (de «options.MapInboundClaims = false;» hasta el cierre de «new TokenValidationParameters {...};»), entre «// jscpd:ignore-start -- EXC-028» y «// jscpd:ignore-end», en src/Knock.Gateway/Hosting/PanelGatewayExtensions.cs, src/Knock.Market.Api/Hosting/AuthenticationExtensions.cs y src/Knock.Identity.Api/Modules/Panel/Authorization/PanelBearer.cs (3 archivos, un bloque en cada uno); no se amplía
+    justificacion: >-
+      KNOCK-75 (spec 033): la configuración de validación del token del panel en Gateway e Identidad es la misma del esquema de Market (emisor, audiencia, llave, algoritmo HS256 y cero holgura de reloj).
+      La constitución no permite compartir código entre servicios y aún no existe la biblioteca compartida Knock.Hosting (spec 055, etapa 3, KNOCK-281), por lo que el bloque se copia. Cada servicio lo prueba por separado.
+      Decisión del Tech Lead del 2026-11-20: aceptar la copia temporal con excepción ligada a KNOCK-281 en lugar de disfrazarla.
+    responsable: José Julián Hernández Hernández
+    creada: 2026-11-20
+    vence: 2027-02-18
+    plan: mover la configuración a Knock.Hosting en la etapa 3 (KNOCK-281), quitar los marcadores y retirar esta excepción antes de vencer.
+  - id: EXC-029
+    herramienta: checkov
+    regla: CKV2_AZURE_47, CKV_AZURE_34, CKV_AZURE_190 (lectura anónima por blob) y, para la cuenta pública, CKV_AZURE_206, CKV_AZURE_33, CKV2_AZURE_21, CKV_AZURE_59, CKV2_AZURE_33 y CKV2_AZURE_1
+    alcance: deploy/modules/shared/main.tf, solo los recursos azurerm_storage_account.public_images y azurerm_storage_container.public_images; la cuenta privada sigue cubierta por EXC-013
+    justificacion: >-
+      Spec 032 y ADR-007 opción D (KNOCK-172): las imágenes públicas ya procesadas y moderadas se sirven por lectura anónima a nivel de blob, sin listado y sin CDN; se lee un archivo solo si se conoce su nombre.
+      Es una cuenta aparte de la privada, sin llaves compartidas (las SAS son de delegación de usuario con la identidad administrada), con TLS 1.2, solo HTTPS y sin reglas de CORS.
+      Replicación geográfica, endpoints privados, llaves administradas por el cliente y diagnóstico de lecturas tienen costo y no aplican a contenido público. El diseño fue aprobado por el líder técnico;
+      la regla CKV2_AZURE_47 es la que hacía fallar el chequeo de Checkov del PR #187.
+    responsable: José Julián Hernández Hernández
+    creada: 2026-11-20
+    vence: 2027-02-18
+    plan: cuando exista una CDN o Front Door (ADR-007), servir las imágenes por ahí y cerrar el acceso anónimo directo, o renovar con decisión del líder; retirar los #checkov:skip de esa cuenta y de ese contenedor y esta excepción.
+  - id: EXC-030
+    herramienta: jscpd, codemap
+    regla: código duplicado (jscpd:ignore) y huella estructural de codemap
+    alcance: solo los bloques copiados de Market e Identity en cuatro archivos nuevos de Mensajería, entre «// jscpd:ignore-start -- EXC-030» y «// jscpd:ignore-end»: src/Knock.Messaging.Api/Hosting/ValidationExtensions.cs (la clase ValidationFilter), src/Knock.Messaging.Api/Hosting/InternalControllersExtensions.cs (AddInternalControllers y InternalControllerFeatureProvider), src/Knock.Messaging.Api/Modules/Conversaciones/Domain/DomainException.cs (DomainException y DomainErrors) y src/Knock.Messaging.Api/Modules/Conversaciones/DomainExceptionHandler.cs. No se toca Market ni Identity.
+    justificacion: >-
+      KNOCK-72 (spec 030, infraestructura de controllers de Mensajería, PR #206): Mensajería necesita el filtro de validación (422 sin valores), el catálogo de errores de dominio con su manejador y el descubrimiento de controllers internal que ya tienen Market e Identity.
+      La constitución no permite compartir código entre servicios fuera de Knock.Contracts y Knock.Hosting, y esas piezas aún no están en la biblioteca (spec 055, etapa 3, KNOCK-281), por lo que se copian sin cambios y cada servicio las prueba por separado.
+      Son 6 bloques de 14 a 42 líneas (125 líneas, 0.18 % del código) y 3 grupos nuevos en la línea base de codemap (57 contra 54 en sprint-05).
+      Esta excepción se aparta de R-09 de la spec 055 (desde la etapa 1, una copia nueva de una pieza del catálogo no se acepta con una excepción nueva). Moverlas ahora exige cambiar Market (DomainException se usa en 15 archivos de código y 26 de pruebas). Decisión del Tech Lead del 2026-11-20: aceptar la copia temporal ligada a KNOCK-281.
+    responsable: José Guillermo Rangel Hernández
+    creada: 2026-11-20
+    vence: 2027-02-18
+    plan: mover estas piezas a Knock.Hosting en la etapa 3 (KNOCK-281), borrar las copias de Mensajería y de Market con sus marcadores y retirar esta excepción antes de vencer.
