@@ -120,6 +120,8 @@ locals {
         Busqueda__Cursor__Key = "search-cursor-key"
         # Valida los tokens de servicio de Identidad (ruta interna de historial, spec 041); mismo secreto que lee Identidad.
         Security__InternalTokens__IdentityKey = "interno-key-identity"
+        # Llave del token del panel (esquema PanelBearer de Mercado, spec 045 R-20): el mismo secreto que ya leen el gateway e Identity; sin ella las rutas /admin de Mercado no validan el token.
+        PanelJwt__SigningKey = "panel-jwt-signing-key"
       })
     }
   }
