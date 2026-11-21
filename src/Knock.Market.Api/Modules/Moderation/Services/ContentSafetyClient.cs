@@ -6,7 +6,7 @@ using System.Text.Json;
 using Azure.Core;
 using Microsoft.Extensions.Options;
 
-namespace Knock.Market.Api.Common.Moderation;
+namespace Knock.Market.Api.Modules.Moderation.Services;
 
 /// <summary>Severidad por categoría que devolvió Azure (0, 2, 4 o 6 con la salida de cuatro niveles).</summary>
 internal sealed record SafetyAnalysis(IReadOnlyDictionary<string, int> Severities);

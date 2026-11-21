@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Options;
 
-namespace Knock.Market.Api.Common.Moderation;
+namespace Knock.Market.Api.Modules.Moderation.Services;
 
 /// <summary>Modo de operación (spec 031, R-15): <c>azure</c> llama a Content Safety; <c>solo_local</c> aprueba lo que pasa la lista local y solo existe en desarrollo.</summary>
 internal static class ModerationModes

@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace Knock.Market.Api.Common.Moderation;
+namespace Knock.Market.Api.Modules.Moderation.Services;
 
 
 /// <summary>

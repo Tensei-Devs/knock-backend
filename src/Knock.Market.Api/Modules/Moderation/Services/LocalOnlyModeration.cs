@@ -1,7 +1,8 @@
+using Knock.Market.Api.Modules.Moderation.Data;
 using Knock.Contracts.Moderation;
 using Microsoft.Extensions.Options;
 
-namespace Knock.Market.Api.Common.Moderation;
+namespace Knock.Market.Api.Modules.Moderation.Services;
 
 /// <summary>
 /// Moderador sin Azure: se usa con <c>Moderacion:Habilitado</c> apagado (por omisión) o con el modo de desarrollo <c>solo_local</c>. Reutiliza <see cref="ContentSafetyModerator"/>, que en esos modos

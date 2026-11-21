@@ -1,6 +1,6 @@
 using Knock.Contracts.Moderation;
 
-namespace Knock.Market.Api.Common.Moderation;
+namespace Knock.Market.Api.Modules.Moderation.Services;
 
 /// <summary>Plantillas locales versionadas en español de México (spec 031, R-14). Sin revelar la categoría, el término ni la severidad. Revisión humana: son texto que ve la persona.</summary>
 internal static class PlantillasDeModeracion

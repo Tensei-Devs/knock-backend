@@ -1,11 +1,11 @@
 using System.Globalization;
 using System.Text;
 
-namespace Knock.Market.Api.Common.Moderation;
+namespace Knock.Market.Api.Modules.Moderation.Services;
 
 /// <summary>
 /// Normalizador de la lista local (spec 031, R-03). Función pura y sin estado: minúsculas, sin acentos, sustituciones comunes («4» por «a», «0» por «o»…) y sin letras ni signos repetidos
-/// (tres o más iguales se vuelven uno). Es el punto que mutan las pruebas de mutación.
+/// (las repeticiones se vuelven una sola). Es el punto que mutan las pruebas de mutación.
 /// </summary>
 internal static class NormalizadorDeModeracion
 {
@@ -22,7 +22,7 @@ internal static class NormalizadorDeModeracion
         ['7'] = 't',
     };
 
-    /// <summary>Devuelve el texto en minúsculas, sin marcas combinantes, con las sustituciones aplicadas y las repeticiones de tres o más reducidas a una. Conserva los espacios y signos.</summary>
+    /// <summary>Devuelve el texto en minúsculas, sin marcas combinantes, con las sustituciones aplicadas y las repeticiones reducidas a una. Conserva los espacios y signos.</summary>
     public static string Normalizar(string text)
     {
         ArgumentNullException.ThrowIfNull(text);
@@ -41,7 +41,7 @@ internal static class NormalizadorDeModeracion
             var current = _substitutions.TryGetValue(lowered, out var replacement) ? replacement : lowered;
             run = current == previous ? run + 1 : 1;
             previous = current;
-            if (run <= 2)
+            if (run == 1)
             {
                 builder.Append(current);
             }

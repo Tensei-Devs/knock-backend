@@ -1,10 +1,11 @@
+using Knock.Market.Api.Modules.Moderation.Data;
 using System.Diagnostics.Metrics;
 using System.Security.Cryptography;
 using Knock.Contracts.Moderation;
 using Knock.Market.Api.Modules.Assistant.Services;
 using Microsoft.Extensions.Options;
 
-namespace Knock.Market.Api.Common.Moderation;
+namespace Knock.Market.Api.Modules.Moderation.Services;
 
 /// <summary>
 /// Coordina los pasos de la moderación (spec 031, R-03 a R-12 y R-17): longitud, lista local, filtro de datos personales, caché, topes en Redis, Azure y registro de uso. Falla cerrado: nunca devuelve
@@ -29,21 +30,23 @@ internal sealed partial class ContentSafetyModerator(
 
     private readonly ModerationOptions _options = options.Value;
 
-    public async Task<ModerationVerdict> ModerateTextAsync(TextModerationRequest request, CancellationToken cancellationToken)
+    public Task<ModerationVerdict> ModerateTextAsync(TextModerationRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var started = clock.GetTimestamp();
-        var verdict = await DecideTextAsync(request, cancellationToken);
-        await RecordAsync(request.Context, "texto", verdict, started, cancellationToken);
-        return verdict;
+        return TimedAsync(request.Context, "texto", () => DecideTextAsync(request, cancellationToken), cancellationToken);
     }
 
-    public async Task<ModerationVerdict> ModerateImageAsync(ImageModerationRequest request, CancellationToken cancellationToken)
+    public Task<ModerationVerdict> ModerateImageAsync(ImageModerationRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+        return TimedAsync(request.Context, "imagen", () => DecideImageAsync(request, cancellationToken), cancellationToken);
+    }
+
+    private async Task<ModerationVerdict> TimedAsync(ModerationContext context, string type, Func<Task<ModerationVerdict>> decide, CancellationToken cancellationToken)
+    {
         var started = clock.GetTimestamp();
-        var verdict = await DecideImageAsync(request, cancellationToken);
-        await RecordAsync(request.Context, "imagen", verdict, started, cancellationToken);
+        var verdict = await decide();
+        await RecordAsync(context, type, verdict, started, cancellationToken);
         return verdict;
     }
 

@@ -1,10 +1,12 @@
+using Knock.Market.Api.Modules.Moderation.Data;
+using Knock.Market.Api.Modules.Moderation.Services;
 using Knock.Contracts.Moderation;
 using Knock.Market.Api.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 
-namespace Knock.Market.Api.Common.Moderation;
+namespace Knock.Market.Api.Modules.Moderation;
 
 /// <summary>
 /// Adaptador del contrato de la spec 013 (<see cref="IContentModerator"/>) sobre el de la spec 031. Los llamadores existentes (solicitudes, notas, imágenes) no cambian: reciben la decisión real.
@@ -31,7 +33,7 @@ internal sealed class LegacyContentModeratorAdapter(IContentModeration moderatio
         verdict.Categories.Count > 0 ? verdict.Categories[0] : null);
 }
 
-internal static class ModerationModuleExtensions
+public static class ModerationModuleExtensions
 {
     public const string MongoModule = "Moderation";
 
@@ -39,7 +41,7 @@ internal static class ModerationModuleExtensions
     /// Registra la moderación de la spec 031 (R-02). Sin <c>Moderacion:Habilitado</c> (por omisión) solo registra el moderador que rechaza con la lista local y falla cerrado en lo demás: no necesita
     /// Redis, MongoDB ni Azure. Debe llamarse ANTES de los módulos que registran su <see cref="IContentModerator"/> de respaldo (usan <c>TryAdd</c>).
     /// </summary>
-    public static IServiceCollection AddKnockModeration(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddModerationModule(this IServiceCollection services, IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);

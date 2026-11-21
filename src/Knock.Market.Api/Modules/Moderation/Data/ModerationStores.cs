@@ -4,7 +4,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using StackExchange.Redis;
 
-namespace Knock.Market.Api.Common.Moderation;
+namespace Knock.Market.Api.Modules.Moderation.Data;
 
 internal enum QuotaResult { Reserved, MonthlyExhausted, PersonExhausted, Unavailable }
 

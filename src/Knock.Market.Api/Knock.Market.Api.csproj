@@ -23,7 +23,7 @@
     <PackageReference Include="StackExchange.Redis" Version="2.13.23" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Common\Moderation\lista-local.es-MX.txt" />
+    <EmbeddedResource Include="Modules\Moderation\Services\lista-local.es-MX.txt" WithCulture="false" LogicalName="lista-local.es-MX.txt" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Knock.UnitTest" />
