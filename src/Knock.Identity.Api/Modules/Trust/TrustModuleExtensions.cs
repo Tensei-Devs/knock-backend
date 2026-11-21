@@ -14,6 +14,7 @@ public static class TrustModuleExtensions
         services.AddOptions<VerificationOptions>().BindConfiguration(VerificationOptions.SectionName)
             .Validate(o => !string.IsNullOrWhiteSpace(o.AvisoVersion) && !string.IsNullOrWhiteSpace(o.AvisoTexto), "Verificacion:AvisoVersion and AvisoTexto are required.")
             .ValidateOnStart();
+        services.AddSingleton<ITrustApi, TrustApi>();
         services.AddSingleton<VerificationStore>();
         services.AddSingleton<IVerificationStore>(provider => provider.GetRequiredService<VerificationStore>());
         services.AddScoped<VerificationService>();
