@@ -1,6 +1,6 @@
 # ADR-007 — CDN de las imágenes públicas
 
-> **Estado:** Aprobada
+> **Estado:** Aprobada (la actualización de 2026-11-21 está pendiente de firma)
 > **Complementa:** la sección 10 de `docs/DECISION_TECNICA.md`, el [ADR-006](ADR-006-costos-y-ventana-de-evaluacion.md) y la spec 013.
 > **Tarea:** TT-GES-10 (KNOCK-182) · Impacto de implementación: TT-API-10, TT-AZ-02, TT-CD-02.
 
@@ -14,6 +14,16 @@ Hechos de la documentación (consulta del 2026-11-06):
 - La salida de datos a internet de Azure incluye **100 GB gratis al mes**; después, 0.087 USD por GB en el primer tramo ([precios de ancho de banda](https://azure.microsoft.com/en-us/pricing/details/bandwidth/)).
 - El almacenamiento Blob (Hot, LRS, West US) cuesta 0.0208 USD por GB al mes según la API de precios de Azure, consultada en `docs/evidencia/KNOCK-145-costo-cero.md`.
 - Como referencia, Cloudflare publica un plan **Free de 0 USD al mes que incluye CDN**, pensado para proyectos personales o que no son críticos para el negocio y sin SLA de disponibilidad ([planes de Cloudflare](https://www.cloudflare.com/plans/network-cdn/)); y, por omisión, guarda en caché los archivos por extensión, entre ellas JPG, PNG, GIF, WEBP y SVG ([comportamiento de caché](https://developers.cloudflare.com/cache/concepts/default-cache-behavior/)).
+
+## Actualización de 2026-11-21: la CDN no se puede desplegar en esta suscripción
+> **Estado:** Módulo preparado y validado (terraform validate, 3 de 3 pruebas con proveedor simulado, plan real con 8 recursos a crear y 0 a destruir); no desplegado porque la suscripción Azure for Students prohíbe Front Door (error 400, 2026-11-21). **No está implementada.** El punto 15c queda parcial. Esta actualización está pendiente de firma en la sección «Aprobación».
+
+- **Qué se hizo.** Se preparó el módulo de Terraform de **Azure Front Door Standard** (`deploy/modules/edge` y `deploy/edge`, estado propio `edge.tfstate`) delante del gateway y de las imágenes públicas. Pasó `terraform validate` y `terraform test` (3 de 3 con proveedor simulado), y el `plan` real contra Azure mostró **8 recursos a crear y 0 a destruir**.
+- **Qué pasó al aplicar.** Azure rechazó la creación del perfil. Mensaje literal: `400 BadRequest: Free Trial and Student account is forbidden for Azure Frontdoor resources`, al crear `module.edge.azurerm_cdn_frontdoor_profile.this` con `terraform apply` el 2026-11-21 (suscripción Azure for Students). Después del fallo, `terraform state list` en `deploy/edge` salió vacío y `az resource list -g rg-knock-dev` no mostró ningún recurso `afd`: no quedó nada creado.
+- **Consecuencia.** Front Door (y por tanto cualquier CDN de Azure creable hoy, ver las opciones A a C) **no está disponible** en la suscripción Azure for Students. No se intentaron alternativas ni se cambió de suscripción. Las imágenes públicas siguen saliendo del Blob con `Cache-Control` largo e inmutable (opción D) y la dirección base sigue siendo configurable.
+- **Riesgo académico.** Igual que antes: el punto 15c puede calificarse como incompleto. El módulo preparado y el mensaje de error de Azure son la evidencia de que se intentó y de por qué no se pudo.
+- **El módulo queda en el repositorio** por si en el futuro se usa otra suscripción; no se aplica desde el CI.
+- **Lo que no cambia:** las fotos de verificación y todo contenido privado nunca pasan por una CDN (punto 4).
 
 ## Opciones comparadas
 | Opción | Se puede crear hoy | Costo | Cumple «CDN» | Riesgo para lo privado |
@@ -47,7 +57,7 @@ Hechos de la documentación (consulta del 2026-11-06):
 ## Costo
 - Opción D: almacenamiento a 0.0208 USD por GB al mes (unos 0.21 USD por cada 10 GB) y salida gratis hasta 100 GB al mes; después, 0.087 USD por GB. Con las fotos reducidas de tamaño (R-03 de la spec 013), el uso del piloto queda por debajo de esos 100 GB.
 - Opción E (no adoptada): 0 USD por la CDN según el plan Free; el almacenamiento y el origen costarían igual que en D.
-- Opción B, solo como referencia para el líder: la cuota base, cobrada por hora de uso, equivale a unos 12.8 USD para la ventana de evaluación del 25 de noviembre al 5 de diciembre (35 USD × 11 días ÷ 30), más solicitudes y salida. Saldría del crédito de Azure for Students (ADR-006). **No se recomienda ni se despliega.**
+- Opción B, solo como referencia para el líder: la cuota base, cobrada por hora de uso, equivale a unos 1.2 USD al día; para unos pocos días desde hoy, de 3.5 a 5.8 USD (35 USD × 3 a 5 días ÷ 30), más solicitudes y salida. La evaluación es el lunes 2026-11-23. Saldría del crédito de Azure for Students (ADR-006). **No se recomienda ni se despliega.**
 
 ## Consecuencias
 - TT-API-10 no crea ningún recurso de CDN; implementa el contenedor público, el encabezado `Cache-Control` y la dirección base configurable. TT-CD-02 conserva a Front Door con WAF solo para la API si el Tech Lead lo autoriza por separado; este ADR no lo decide.
@@ -58,4 +68,5 @@ Hechos de la documentación (consulta del 2026-11-06):
 
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [ ] Revisor 1 — actualización de 2026-11-21 (sí hay CDN): pendiente de firma del Tech Lead
 - [x] Sin conflicto con la constitución
