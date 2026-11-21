@@ -5,7 +5,10 @@ name: sonarcloud
 # Reutiliza la cobertura que ya genera `ci-pr`: descarga el artefacto `api-reports` de esa corrida y convierte su
 # `reports/coverage/Cobertura.xml` al formato genérico de Sonar. Solo compila (sin pruebas) para que el analizador de C#
 # tenga el árbol de compilación.
-# Seguridad: solo corre para corridas de `ci-pr` disparadas por un push a las ramas fijas (código ya revisado y fusionado),
+# Alcance: solo la rama principal `main` (el plan gratuito de SonarCloud analiza esa rama y los PR; aquí no se analizan PR).
+# Un `workflow_run` solo se ejecuta si este archivo ya está en la rama predeterminada (`main`): no habrá análisis hasta que llegue
+# a `main` con la promoción (paso 3). Antes de eso, `workflow_dispatch` tampoco aparece en la interfaz hasta estar en `main`.
+# Seguridad: solo corre para corridas de `ci-pr` disparadas por un push a `main` (código ya revisado y fusionado),
 # nunca para PR: el token no se expone a código de un PR. Permisos mínimos; acciones fijadas a SHA.
 # Configuración en GitHub (no se leen ni se crean aquí): secreto SONAR_TOKEN y variables SONAR_ORGANIZATION y SONAR_PROJECT_KEY.
 
@@ -13,7 +16,7 @@ on:
   workflow_run:
     workflows: [ci-pr]
     types: [completed]
-    branches: [main, release, develop, "sprint-*"]
+    branches: [main]
   workflow_dispatch:
     inputs:
       ci_run_id:
