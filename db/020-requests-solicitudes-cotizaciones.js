@@ -18,8 +18,9 @@ for (const name of ["solicitudes", "cotizaciones"]) {
   }
 }
 
-// solicitudes: las del cliente (más recientes primero), el barrido de vencimiento por estado y fecha, y la búsqueda de las abiertas por oficio.
+// solicitudes: las del cliente (más recientes primero) y, por estado, las del listado «activas primero» (enmienda KNOCK-69, T-16; mismo índice que db/048), el barrido de vencimiento por estado y fecha, y la búsqueda de las abiertas por oficio.
 requestsMarket.solicitudes.createIndex({ clienteId: 1, creadoEn: -1 }, { name: "clienteId_1_creadoEn_-1" });
+requestsMarket.solicitudes.createIndex({ clienteId: 1, estado: 1, creadoEn: -1 }, { name: "clienteId_1_estado_1_creadoEn_-1" });
 requestsMarket.solicitudes.createIndex({ estado: 1, venceEn: 1 }, { name: "estado_1_venceEn_1" });
 requestsMarket.solicitudes.createIndex({ oficioClave: 1, estado: 1 }, { name: "oficioClave_1_estado_1" });
 
