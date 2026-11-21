@@ -46,6 +46,8 @@ internal static class RateLimitingExtensions
 
     /// <summary>Registro como técnico: 5 por hora por persona (spec 046, R-52).</summary>
     public const string RegisterTechnicianPolicy = "tecnicos-registro";
+    public const string AssistantAiPolicy = "asistente-ia";
+    public const string AssistantReadPolicy = "asistente-consulta";
     private const string _healthPath = "/health";
     private const string _readyPath = "/health/ready";
     private const string _unknownClient = "unknown";
@@ -77,6 +79,8 @@ internal static class RateLimitingExtensions
             options.AddPolicy(ArrivalPolicy, SubjectPolicy(ArrivalPolicy, 5, TimeSpan.FromMinutes(1), services));
             options.AddPolicy(TrustPolicy, SubjectPolicy(TrustPolicy, 30, TimeSpan.FromMinutes(1), services));
             options.AddPolicy(RegisterTechnicianPolicy, SubjectPolicy(RegisterTechnicianPolicy, 5, TimeSpan.FromHours(1), services));
+            options.AddPolicy(AssistantAiPolicy, SubjectPolicy(AssistantAiPolicy, 10, TimeSpan.FromMinutes(1), services));
+            options.AddPolicy(AssistantReadPolicy, SubjectPolicy(AssistantReadPolicy, 60, TimeSpan.FromMinutes(1), services));
             options.GlobalLimiter = PartitionedRateLimiter.CreateChained(
                 PartitionedRateLimiter.Create<HttpContext, string>(context => GlobalPartition(context, global, ready, services)),
                 PartitionedRateLimiter.Create<HttpContext, string>(context =>
