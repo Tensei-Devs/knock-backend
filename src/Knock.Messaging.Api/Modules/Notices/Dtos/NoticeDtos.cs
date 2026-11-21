@@ -22,3 +22,6 @@ internal sealed class ListNoticesQuery
 internal sealed record NoticeResponse(string Id, string Tipo, string ComoRol, string Titulo, string Texto, object? Destino, bool Leido, DateTime CreadoEn);
 
 internal sealed record NoticeListResponse(IReadOnlyList<NoticeResponse> Items, string? SiguienteCursor);
+
+/// <summary>Contador de no leídos, hasta 99; <c>MasDe99</c> avisa a la app que debe mostrar «99+».</summary>
+internal sealed record UnreadCountResponse(int Cantidad, bool MasDe99);

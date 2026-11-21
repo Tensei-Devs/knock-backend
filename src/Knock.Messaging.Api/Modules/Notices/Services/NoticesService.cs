@@ -21,6 +21,13 @@ internal sealed class NoticesService(INoticesStore store)
         return new NoticeListResponse([.. page.Items.Select(ToResponse)], page.Next?.Encode());
     }
 
+    public async Task<UnreadCountResponse> CountUnreadAsync(string sub, CancellationToken cancellationToken)
+    {
+        // Se cuenta uno más del máximo mostrado para saber si hay «99+».
+        var count = await store.CountUnreadAsync(sub, NoticeRules.MaxUnreadShown + 1, cancellationToken);
+        return new UnreadCountResponse(Math.Min(count, NoticeRules.MaxUnreadShown), count > NoticeRules.MaxUnreadShown);
+    }
+
     private static NoticeResponse ToResponse(StoredNotice notice) => new(
         notice.Id, notice.Type, notice.Role, notice.Title, notice.Text, notice.Target is null ? null : BsonTypeMapper.MapToDotNetValue(notice.Target), notice.Read, notice.CreatedAt);
 }
