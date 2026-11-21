@@ -46,3 +46,13 @@ Se declara aquí para que no se infiera de las specs como si existiera. Todo est
 | Spec 055 etapa 3 (KNOCK-281: logging, observabilidad, Redis/Health, Mongo, seguridad HTTP a `Knock.Hosting`) | Solo 47 archivos sin commitear; ninguna pieza completa | Sin responsable en Jira y sin tiempo |
 | Spec 039: exportación de datos, eliminación de cuenta al vencer la gracia, cola del panel de recuperación, ruta interna de Mercado y aviso de sesión revocada | Los endpoints existen; los procesos de fondo no | Dependen del ejecutor y la bandeja de la spec 054 (no existe) |
 | Spec 054 (bandeja de salida y tareas programadas) | No iniciada | Prerrequisito de 037, 039, 044 y 057 |
+
+### Detalle de la spec 039 (cuenta y datos personales)
+Los 9 endpoints (USR-03 a USR-11) existen y tienen pruebas; quedan **cinco tareas parciales** que dependen del ejecutor y la bandeja de la spec 054 (que no existe) y de infraestructura:
+1. `PrepararExportacion`: el ZIP, el contenedor `exportaciones` y el aviso con enlace.
+2. `EliminarCuenta`: el borrado real cuando vence el plazo de gracia.
+3. La cola del panel (spec 053) para la recuperación de acceso.
+4. La ruta interna de Mercado: hoy `UnavailableMarketAccountClient` responde 503.
+5. El aviso `sesion_revocada`: solo se registra en `PendingAccountOutbox`.
+
+**Diferencia entre la historia y la spec (HU-006, KNOCK-104):** la historia habla de un «código SMS» para eliminar la cuenta; la spec 039 lo sustituyó por **reautenticación con Firebase**. Lo que vale es la spec; el texto de la historia debe corregirse.
