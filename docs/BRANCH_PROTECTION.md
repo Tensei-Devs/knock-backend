@@ -19,7 +19,7 @@ Activar:
   - [x] Require conversation resolution before merging
 - [x] **Require status checks to pass**
   - [x] Require branches to be up to date before merging
-  - Check requerido: **`gate`** (ci-pr), que incluye el análisis estático con Semgrep (job `sast`). No se exige ningún check de CodeQL: no se contrata GitHub Advanced Security (KNOCK-64; ver `docs/QA_DEVSECOPS.md` §3.1).
+  - Checks requeridos: **`gate`** (ci-pr) y **`Etiqueta de puntos del PR (spec 012)`** (pr-points.yml, aparte para que la etiqueta no reinicie el CI), que incluye el análisis estático con Semgrep (job `sast`). No se exige ningún check de CodeQL: no se contrata GitHub Advanced Security (KNOCK-64; ver `docs/QA_DEVSECOPS.md` §3.1).
 - [x] **Require signed commits** (recomendado)
 - Bypass list: **vacía** (nadie se salta las reglas, tampoco los admins).
 

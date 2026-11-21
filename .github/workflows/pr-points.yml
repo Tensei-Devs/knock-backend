@@ -1,0 +1,38 @@
+name: pr-points
+
+# Etiqueta de puntos del PR (spec 012). Vive aparte de ci-pr para que poner o quitar la etiqueta no reinicie el CI
+# completo (ci-pr cancela la corrida anterior del mismo PR). Es ligero: solo lee las etiquetas del evento.
+# Su check debe estar en los checks requeridos de la rama (docs/BRANCH_PROTECTION.md), junto con `gate`.
+on:
+  pull_request:
+    branches: [main, release, develop, "sprint-*"]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-points-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pr-points:
+    name: Etiqueta de puntos del PR (spec 012)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      # Las etiquetas salen del evento (no hay llamadas a la API ni token); llegan por entorno, nunca dentro del script.
+      - name: Etiqueta puntos-<componente>-N
+        env:
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: python scripts/ci/version.py check-labels

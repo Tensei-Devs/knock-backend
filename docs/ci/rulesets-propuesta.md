@@ -6,10 +6,10 @@
 
 | Check (nombre exacto en GitHub) | Workflow / job | ¿Obligatorio? | Por qué |
 |---|---|---|---|
-| `gate` | `ci-pr.yml` / `gate` | **Sí** | Corre siempre (`if: always()`) y falla si cualquier verificación bloqueante falla; su nombre no cambia aunque se agreguen o quiten jobs. |
+| `gate` | `ci-pr.yml` / `gate` | **Sí** | Corre salvo que la corrida se cancele (`if: ${{ !cancelled() }}`) y falla si cualquier verificación bloqueante falla; su nombre no cambia aunque se agreguen o quiten jobs. |
 | `Detectar proyecto, cambios y spec` | `ci-pr.yml` / `detect` | No | Lo cubre `gate`. |
 | `Rama, commits y PR (branch-name)` | `ci-pr.yml` / `pr-meta` | No | Lo cubre `gate`; hoy se salta sin `ENFORCE_BRANCH_RULES=true`. |
-| `Etiqueta de puntos del PR (spec 012)` | `ci-pr.yml` / `pr-points` | No | Lo cubre `gate`. |
+| `Etiqueta de puntos del PR (spec 012)` | `pr-points.yml` / `pr-points` | **Sí** (junto con `gate`) | Vive fuera de `ci-pr` para que poner o quitar la etiqueta no reinicie el CI completo; por eso `gate` ya no la cubre. |
 | `governance / Gobierno SDD y arquitectura` | `_governance.yml` | No | Lo cubre `gate`. |
 | `API — build, formato y pruebas` | `ci-pr.yml` / `build-test` | No | Lo cubre `gate`. |
 | `SAST (Semgrep con reglas de Knock)` | `ci-pr.yml` / `sast` | No | Lo cubre `gate`. |
