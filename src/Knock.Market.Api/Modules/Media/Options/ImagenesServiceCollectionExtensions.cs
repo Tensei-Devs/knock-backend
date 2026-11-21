@@ -26,6 +26,10 @@ internal static class ImagenesServiceCollectionExtensions
         services.TryAddSingleton<IAlmacenBlob>(CrearAlmacen);
         services.TryAddSingleton<ProcesadorImagen>(provider => new ProcesadorImagen(provider.GetRequiredService<ImageProcessor>()));
         services.AddLimitesImagen();
+        services.TryAddSingleton<IAlmacenLectura>(provider => (AlmacenBlob)provider.GetRequiredService<IAlmacenBlob>());
+        services.TryAddSingleton<IAccesosPrivadosStore, AccesosPrivadosStore>();
+        services.TryAddSingleton<IHuellaSub, HuellaSubHmac>();
+        services.TryAddSingleton<IEnlacesPrivados, EnlacesPrivados>();
         services.TryAddSingleton<SubidaImagenService>();
         return services;
     }

@@ -18,6 +18,9 @@ internal sealed class ImagenesOptions
 
     /// <summary>Dirección base de las imágenes públicas: <c>https://host/imagenes-publicas</c>.</summary>
     public string? BaseUrlPublica { get; set; }
+
+    /// <summary>Llave de búsqueda (Base64, de Key Vault; spec 009, R-07) para la huella HMAC del <c>sub</c> en <c>accesos_privados</c>. Solo se exige al emitir un enlace privado.</summary>
+    public string? LlaveBusqueda { get; set; }
 }
 
 /// <summary>Valida <c>Imagenes:*</c> al arrancar; cada mensaje nombra la llave y nunca repite su valor (spec 032, CA-24).</summary>

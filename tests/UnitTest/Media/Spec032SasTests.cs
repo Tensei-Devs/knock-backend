@@ -114,7 +114,7 @@ public sealed class Spec032SasTests
         return new AlmacenBlob(privada, publica, reloj ?? new RelojFalso(_ahora));
     }
 
-    private static UserDelegationKey NuevaLlave(DateTimeOffset desde) => BlobsModelFactory.UserDelegationKey(
+    internal static UserDelegationKey NuevaLlave(DateTimeOffset desde) => BlobsModelFactory.UserDelegationKey(
         "00000000-0000-0000-0000-000000000001",
         "00000000-0000-0000-0000-000000000002",
         desde,
@@ -124,7 +124,7 @@ public sealed class Spec032SasTests
         Convert.ToBase64String(new byte[32]));
 
     /// <summary>Servicio de Blob sin red: solo entrega una llave de delegación fija y cuenta cuántas se pidieron.</summary>
-    private sealed class ServicioFalso(string cuenta, DateTimeOffset desde) : BlobServiceClient(new Uri($"https://{cuenta}.blob.core.windows.net"))
+    internal sealed class ServicioFalso(string cuenta, DateTimeOffset desde) : BlobServiceClient(new Uri($"https://{cuenta}.blob.core.windows.net"))
     {
         public int LlavesPedidas { get; private set; }
 
@@ -137,7 +137,7 @@ public sealed class Spec032SasTests
         }
     }
 
-    private sealed class RelojFalso(DateTimeOffset inicial) : TimeProvider
+    internal sealed class RelojFalso(DateTimeOffset inicial) : TimeProvider
     {
         private DateTimeOffset _actual = inicial;
 
