@@ -89,6 +89,9 @@ internal static class RateLimitingExtensions
             && segments[2].Equals(segment, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>Rutas del panel interno: <c>/api/v{n}/panel/**</c> (spec 033) y <c>/api/v{n}/admin/**</c> (spec 053): las dos solo aceptan el token del panel y cuentan por el <c>sub</c> del panel.</summary>
+    internal static bool IsPanelApiPath(PathString path) => IsApiPath(path, "panel") || IsApiPath(path, "admin");
+
     /// <summary>Spec 033, R-27: <c>/api/v{n}/panel/sesion/*</c> y <c>/api/v{n}/panel/activacion</c>, los endpoints de sesión del panel que llevan el límite estricto por IP.</summary>
     internal static bool IsPanelSessionPath(PathString path)
     {
@@ -169,7 +172,7 @@ internal sealed class UserRateLimitMiddleware(RequestDelegate next, IRequestCoun
         ArgumentNullException.ThrowIfNull(context);
         var sub = context.User.Identity?.IsAuthenticated == true ? context.User.FindFirst("sub")?.Value : null;
         if (sub is not null
-            && (await RateLimitCheck.RejectedAsync(context, counter, RateLimitingExtensions.IsApiPath(context.Request.Path, "panel") ? $"ratelimit:panel-user:{sub}" : $"ratelimit:user:{sub}", options.Value.User)
+            && (await RateLimitCheck.RejectedAsync(context, counter, RateLimitingExtensions.IsPanelApiPath(context.Request.Path) ? $"ratelimit:panel-user:{sub}" : $"ratelimit:user:{sub}", options.Value.User)
                 || (RateLimitingExtensions.IsApiPath(context.Request.Path, "busqueda") && await RateLimitCheck.RejectedAsync(context, counter, $"ratelimit:busqueda:{sub}", options.Value.Search))
                 || (IsDiscard(context.Request) && await RateLimitCheck.RejectedAsync(context, counter, $"ratelimit:descarte:{sub}", options.Value.Discard))))
         {

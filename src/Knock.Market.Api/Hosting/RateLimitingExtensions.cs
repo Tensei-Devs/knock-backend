@@ -44,6 +44,9 @@ internal static class RateLimitingExtensions
     public const string ArrivalPolicy = "visitas-llegada";
     public const string TrustPolicy = "tecnicos-confianza";
 
+    /// <summary>Rutas de administración del panel (spec 045): 60 por minuto por IP; el token del panel no pasa por el esquema de la app, así que el sub aún no está disponible en el limitador.</summary>
+    public const string AdminPolicy = "admin-catalogo";
+
     /// <summary>Registro como técnico: 5 por hora por persona (spec 046, R-52).</summary>
     public const string RegisterTechnicianPolicy = "tecnicos-registro";
     public const string AssistantAiPolicy = "asistente-ia";
@@ -78,6 +81,7 @@ internal static class RateLimitingExtensions
             options.AddPolicy(ChooseQuotePolicy, SubjectPolicy(ChooseQuotePolicy, 10, TimeSpan.FromMinutes(1), services));
             options.AddPolicy(ArrivalPolicy, SubjectPolicy(ArrivalPolicy, 5, TimeSpan.FromMinutes(1), services));
             options.AddPolicy(TrustPolicy, SubjectPolicy(TrustPolicy, 30, TimeSpan.FromMinutes(1), services));
+            options.AddPolicy(AdminPolicy, context => SharedPartition($"{AdminPolicy}:{ClientKey(context)}", new RateLimitPolicySettings { PermitLimit = 60, Window = TimeSpan.FromMinutes(1) }, services));
             options.AddPolicy(RegisterTechnicianPolicy, SubjectPolicy(RegisterTechnicianPolicy, 5, TimeSpan.FromHours(1), services));
             options.AddPolicy(AssistantAiPolicy, SubjectPolicy(AssistantAiPolicy, 10, TimeSpan.FromMinutes(1), services));
             options.AddPolicy(AssistantReadPolicy, SubjectPolicy(AssistantReadPolicy, 60, TimeSpan.FromMinutes(1), services));
