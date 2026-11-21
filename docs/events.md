@@ -20,3 +20,11 @@ Mercado escribe cada evento en `outbox` en la misma transacción que el cambio d
 | `VisitaBloqueada` | 022 | Al tercer intento fallido (Identidad abre un reporte de gravedad alta) | `visitaId`, `solicitudId`, `clienteId`, `tecnicoUsuarioId` |
 | `VisitaCerrada` | 022 | Al pasar la visita a `cancelada`, `terminada`, `no_presentado` o bloqueada | `visitaId`, `motivo` (`cancelada`, `terminada`, `no_presentado`, `bloqueada`) |
 | `AvisoConfianzaPreparado` | 022 | Cada vez que el cliente prepara el aviso (`_id` `{visitaId}:{n}`) | `visitaId`, `solicitudId`, `clienteId`, `tecnicoUsuarioId` |
+
+## Eventos de Mensajería en el buzón de salida (spec 030)
+
+| Evento | Spec | Cuándo | `datos` |
+|---|---|---|---|
+| `MensajeNuevo` | 030 | Al guardar un mensaje de una conversación, en la misma transacción (`_id` `MensajeNuevo:{mensajeId}`, colección `outbox` de `messaging`) | `conversacionId`, `destinatarioUsuarioId` (nunca el texto) |
+
+Los eventos en vivo del hub (`mensajeConversacion` y `noLeidos`) no son del buzón: se publican por SignalR después de confirmar el guardado (ver `docs/endpoints.md`). La entrega del aviso push que consume `MensajeNuevo` es de la spec de notificaciones (HU-050).

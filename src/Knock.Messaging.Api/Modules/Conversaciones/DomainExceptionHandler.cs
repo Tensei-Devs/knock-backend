@@ -20,7 +20,7 @@ internal sealed class DomainExceptionHandler : IExceptionHandler
         }
 
         var status = DomainErrors.ToStatusCode(domain.Kind);
-        await ProblemResponses.WriteAsync(httpContext, status, ReasonPhrases.GetReasonPhrase(status), domain.Code);
+        await ProblemResponses.WriteAsync(httpContext, status, ReasonPhrases.GetReasonPhrase(status), domain.Code, domain.Extensions);
         return true;
     }
 }

@@ -35,16 +35,25 @@ public sealed class DomainException : Exception
     }
 
     public DomainException(DomainErrorKind kind, string message, string? code)
+        : this(kind, message, code, null)
+    {
+    }
+
+    public DomainException(DomainErrorKind kind, string message, string? code, IReadOnlyDictionary<string, string>? extensions)
         : base(message)
     {
         Kind = kind;
         Code = code;
+        Extensions = extensions;
     }
 
     public DomainErrorKind Kind { get; }
 
     /// <summary>Código estable opcional; nunca lleva datos de la persona ni del recurso.</summary>
     public string? Code { get; }
+
+    /// <summary>Datos estables que salen en el ProblemDetails junto al <c>code</c> (por ejemplo <c>motivoCierre</c>); nunca datos de la persona.</summary>
+    public IReadOnlyDictionary<string, string>? Extensions { get; }
 }
 
 /// <summary>Código HTTP de cada tipo del catálogo de dominio.</summary>
