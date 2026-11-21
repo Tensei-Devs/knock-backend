@@ -10,7 +10,7 @@ internal sealed record ConsumptionReservation(string User, DateOnly Day, Guid Id
 
 internal sealed record ReservationResult(ConsumptionResult Result, ConsumptionReservation? Reservation);
 
-internal sealed class ConsumoIaStore(IConnectionMultiplexer redis)
+internal sealed class ConsumoIaStore(IConnectionMultiplexer redis) : IConsumoIa
 {
     private const string _reserveScript = """
         local global = tonumber(redis.call('GET', KEYS[1]) or '0')
