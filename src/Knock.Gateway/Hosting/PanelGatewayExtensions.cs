@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using Knock.Hosting.RateLimiting;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -133,7 +134,7 @@ internal sealed class PanelTokenMiddleware(RequestDelegate next, GatewayPanelSet
     public async Task InvokeAsync(HttpContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
-        var isPanelPath = RateLimitingExtensions.IsApiPath(context.Request.Path, "panel");
+        var isPanelPath = RequestKeys.IsApiPath(context.Request.Path, "panel");
         var jwt = ReadBearer(context);
         if (jwt is not null && jwt.Audiences.Contains(panel.Audience, StringComparer.Ordinal) != isPanelPath)
         {

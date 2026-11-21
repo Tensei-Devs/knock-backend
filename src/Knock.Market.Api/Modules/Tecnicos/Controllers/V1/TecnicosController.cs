@@ -27,7 +27,7 @@ internal sealed class TecnicosController(TechnicianRegistrationService registrat
     [HttpPost]
     [Authorize]
     [RequestSizeLimit(RegisterTechnicianBody.MaxBodyBytes)]
-    [EnableRateLimiting(RateLimitingExtensions.RegisterTechnicianPolicy)]
+    [EnableRateLimiting(MarketRateLimits.RegisterTechnicianPolicy)]
     [ProducesResponseType<TechnicianResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, _problemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]

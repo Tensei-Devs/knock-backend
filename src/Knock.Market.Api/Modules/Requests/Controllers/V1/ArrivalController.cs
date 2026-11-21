@@ -27,7 +27,7 @@ internal sealed class ArrivalController(ArrivalService service) : BusinessRuleCo
     /// </summary>
     [HttpPost]
     [RequestSizeLimit(ArrivalBody.MaxBodyBytes)]
-    [EnableRateLimiting(Hosting.RateLimitingExtensions.ArrivalPolicy)]
+    [EnableRateLimiting(Hosting.MarketRateLimits.ArrivalPolicy)]
     [ProducesResponseType<VisitResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, ProblemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, ProblemJson)]

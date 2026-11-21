@@ -23,7 +23,7 @@ internal sealed class QuoteComparisonController(QuoteComparisonService service) 
 
     /// <summary>Cotizaciones de una solicitud propia, con el orden pedido. El <c>sub</c> del token debe ser el del dueño; cualquier otro recibe 404.</summary>
     [HttpGet]
-    [EnableRateLimiting(RateLimitingExtensions.CompareQuotesPolicy)]
+    [EnableRateLimiting(MarketRateLimits.CompareQuotesPolicy)]
     [ProducesResponseType<QuoteComparison>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, _problemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]

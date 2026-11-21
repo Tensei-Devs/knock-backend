@@ -24,7 +24,7 @@ internal sealed class AccessRecoveryController(AccessRecoveryService recovery) :
     /// Siempre responde 202 sin revelar si la cuenta existe.
     /// </summary>
     [HttpPost]
-    [EnableRateLimiting(RateLimitingExtensions.AccessRecoveryPolicy)]
+    [EnableRateLimiting(IdentityRateLimits.AccessRecoveryPolicy)]
     [RequestSizeLimit(MaxBodyBytes)]
     [ProducesResponseType(StatusCodes.Status202Accepted)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
