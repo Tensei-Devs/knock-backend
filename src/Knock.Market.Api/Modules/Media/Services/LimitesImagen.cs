@@ -1,6 +1,4 @@
 using System.Collections.Concurrent;
-using Knock.Market.Api.Hosting;
-using StackExchange.Redis;
 
 namespace Knock.Market.Api.Modules.Media.Services;
 
@@ -14,15 +12,6 @@ internal sealed record ResultadoLimite(bool Permitido, TimeSpan ReintentarEn);
 internal interface IContadorVentana
 {
     Task<(long Cuenta, TimeSpan Restante)> GolpearAsync(string llave, TimeSpan ventana, CancellationToken cancellationToken);
-}
-
-/// <summary>Contador compartido entre réplicas: incremento y vencimiento en una sola operación atómica de Redis (patrón del gateway).</summary>
-internal sealed class ContadorVentanaRedis(IConnectionMultiplexer redis) : IContadorVentana
-{
-    private readonly RedisRequestCounter _contador = new(redis);
-
-    public Task<(long Cuenta, TimeSpan Restante)> GolpearAsync(string llave, TimeSpan ventana, CancellationToken cancellationToken) =>
-        _contador.HitAsync(llave, ventana, cancellationToken);
 }
 
 /// <summary>Contador en memoria de una sola instancia: respaldo cuando Redis no está disponible y doble de pruebas.</summary>
@@ -68,7 +57,7 @@ internal sealed class LimitesImagen(IContadorVentana principal, IContadorVentana
         {
             golpe = await principal.GolpearAsync(llave, Ventana, cancellationToken);
         }
-        catch (Exception ex) when (ex is RedisException or TimeoutException or InvalidOperationException)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             golpe = await respaldo.GolpearAsync(llave, Ventana, cancellationToken);
         }

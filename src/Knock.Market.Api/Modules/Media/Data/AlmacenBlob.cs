@@ -16,12 +16,47 @@ internal sealed record PropiedadesBlob(long Bytes, string ETag);
 /// <summary>Llave de delegación de usuario con su cuenta, para reutilizarla mientras le quede margen.</summary>
 internal sealed record LlaveDelegacion(UserDelegationKey Llave, string Cuenta);
 
+/// <summary>El almacenamiento no respondió o falló (5xx, red, autenticación): el endpoint responde 503 <c>storage_unavailable</c> (spec 032, R-17).</summary>
+#pragma warning disable CA1032, S3871 // interna: solo la traducen el servicio y el controller del módulo
+internal sealed class AlmacenNoDisponibleException : Exception
+{
+    public AlmacenNoDisponibleException()
+        : base("Blob storage is unavailable.")
+    {
+    }
+
+    public AlmacenNoDisponibleException(string message)
+        : base(message)
+    {
+    }
+
+    public AlmacenNoDisponibleException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
+}
+#pragma warning restore CA1032, S3871
+
+/// <summary>Operaciones de Blob que necesita el servicio de subidas; permite probar el servicio sin almacenamiento.</summary>
+internal interface IAlmacenBlob
+{
+    Task<EnlaceSubida> CrearEnlaceSubidaAsync(string nombreBlob, string tipoContenido, CancellationToken cancellationToken);
+
+    Task<PropiedadesBlob?> ObtenerPropiedadesAsync(string nombreBlob, CancellationToken cancellationToken);
+
+    Task<byte[]?> DescargarAsync(string nombreBlob, PropiedadesBlob esperado, int maximoBytes, CancellationToken cancellationToken);
+
+    Task<bool> PublicarAsync(string ruta, byte[] bytes, CancellationToken cancellationToken);
+
+    Task BorrarCuarentenaAsync(string nombreBlob, CancellationToken cancellationToken);
+}
+
 /// <summary>
 /// Único punto del módulo <c>Media</c> que habla con Azure Blob para las imágenes públicas (spec 032, plan, paso 3).
 /// Usa dos clientes: el de la cuenta privada (cuarentena y llave de delegación) y el de la cuenta pública (publicación).
 /// Las SAS son siempre de delegación de usuario, firmadas con la identidad administrada del servicio; nunca de llave de cuenta (R-02).
 /// </summary>
-internal sealed class AlmacenBlob(BlobServiceClient privado, BlobServiceClient publico, TimeProvider reloj) : IDisposable
+internal sealed class AlmacenBlob(BlobServiceClient privado, BlobServiceClient publico, TimeProvider reloj) : IAlmacenBlob, IDisposable
 {
     /// <summary>Vigencia de una SAS de subida o de lectura (R-05, R-16).</summary>
     internal static readonly TimeSpan VigenciaSas = TimeSpan.FromMinutes(5);
@@ -45,7 +80,10 @@ internal sealed class AlmacenBlob(BlobServiceClient privado, BlobServiceClient p
     public static string NuevoNombreCuarentena() => RandomNumberGenerator.GetHexString(32, lowercase: true);
 
     /// <summary>Emite la SAS <c>cw</c> de un solo blob de cuarentena, solo HTTPS, que vence a los 5 minutos (R-05, CA-01).</summary>
-    public async Task<EnlaceSubida> CrearEnlaceSubidaAsync(string nombreBlob, string tipoContenido, CancellationToken cancellationToken)
+    public Task<EnlaceSubida> CrearEnlaceSubidaAsync(string nombreBlob, string tipoContenido, CancellationToken cancellationToken) =>
+        Proteger(() => CrearEnlaceSubidaCore(nombreBlob, tipoContenido, cancellationToken));
+
+    private async Task<EnlaceSubida> CrearEnlaceSubidaCore(string nombreBlob, string tipoContenido, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(nombreBlob);
         ArgumentException.ThrowIfNullOrWhiteSpace(tipoContenido);
@@ -61,7 +99,10 @@ internal sealed class AlmacenBlob(BlobServiceClient privado, BlobServiceClient p
     }
 
     /// <summary>Propiedades del blob de cuarentena, o <see langword="null"/> si la persona no subió nada (R-06, R-07).</summary>
-    public async Task<PropiedadesBlob?> ObtenerPropiedadesAsync(string nombreBlob, CancellationToken cancellationToken)
+    public Task<PropiedadesBlob?> ObtenerPropiedadesAsync(string nombreBlob, CancellationToken cancellationToken) =>
+        Proteger(() => ObtenerPropiedadesCore(nombreBlob, cancellationToken));
+
+    private async Task<PropiedadesBlob?> ObtenerPropiedadesCore(string nombreBlob, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(nombreBlob);
         try
@@ -79,7 +120,10 @@ internal sealed class AlmacenBlob(BlobServiceClient privado, BlobServiceClient p
     /// Descarga el blob solo si sigue siendo la versión consultada y nunca más de <paramref name="maximoBytes"/> + 1 bytes;
     /// devuelve <see langword="null"/> si cambió o desapareció.
     /// </summary>
-    public async Task<byte[]?> DescargarAsync(string nombreBlob, PropiedadesBlob esperado, int maximoBytes, CancellationToken cancellationToken)
+    public Task<byte[]?> DescargarAsync(string nombreBlob, PropiedadesBlob esperado, int maximoBytes, CancellationToken cancellationToken) =>
+        Proteger(() => DescargarCore(nombreBlob, esperado, maximoBytes, cancellationToken));
+
+    private async Task<byte[]?> DescargarCore(string nombreBlob, PropiedadesBlob esperado, int maximoBytes, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(nombreBlob);
         ArgumentNullException.ThrowIfNull(esperado);
@@ -106,7 +150,10 @@ internal sealed class AlmacenBlob(BlobServiceClient privado, BlobServiceClient p
     /// Publica los bytes recodificados en <c>imagenes-publicas/{ruta}</c> con caché inmutable (R-11). Si ya existe un blob con ese
     /// nombre no lo reescribe (mismo contenido): devuelve <see langword="false"/> en ese caso y <see langword="true"/> si lo creó.
     /// </summary>
-    public async Task<bool> PublicarAsync(string ruta, byte[] bytes, CancellationToken cancellationToken)
+    public Task<bool> PublicarAsync(string ruta, byte[] bytes, CancellationToken cancellationToken) =>
+        Proteger(() => PublicarCore(ruta, bytes, cancellationToken));
+
+    private async Task<bool> PublicarCore(string ruta, byte[] bytes, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(ruta);
         ArgumentNullException.ThrowIfNull(bytes);
@@ -132,7 +179,14 @@ internal sealed class AlmacenBlob(BlobServiceClient privado, BlobServiceClient p
     }
 
     /// <summary>Borra el blob de cuarentena (publicada, rechazada o inválida); no falla si ya no existe (R-19).</summary>
-    public async Task BorrarCuarentenaAsync(string nombreBlob, CancellationToken cancellationToken)
+    public Task BorrarCuarentenaAsync(string nombreBlob, CancellationToken cancellationToken) =>
+        Proteger(async () =>
+        {
+            await BorrarCore(nombreBlob, cancellationToken);
+            return true;
+        });
+
+    private async Task BorrarCore(string nombreBlob, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(nombreBlob);
         await _cuarentena.GetBlobClient(nombreBlob).DeleteIfExistsAsync(cancellationToken: cancellationToken);
@@ -155,6 +209,22 @@ internal sealed class AlmacenBlob(BlobServiceClient privado, BlobServiceClient p
             StartsOn = ahora - ToleranciaReloj,
         };
         return new BlobUriBuilder(blob.Uri) { Sas = sas.ToSasQueryParameters(llave.Llave, llave.Cuenta) }.ToUri();
+    }
+
+    private static async Task<T> Proteger<T>(Func<Task<T>> operacion)
+    {
+        try
+        {
+            return await operacion();
+        }
+        catch (RequestFailedException ex)
+        {
+            throw new AlmacenNoDisponibleException("Blob storage is unavailable.", ex);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new AlmacenNoDisponibleException("Blob storage is unavailable.", ex);
+        }
     }
 
     private async Task<LlaveDelegacion> ObtenerLlaveAsync(DateTimeOffset ahora, CancellationToken cancellationToken)
