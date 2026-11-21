@@ -152,6 +152,12 @@ internal interface IPanelAuditoriaStore
     Task InsertAsync(PanelAuditEntry entry, CancellationToken cancellationToken);
 }
 
+/// <summary>Inserción de la auditoría dentro de una transacción ajena (spec 053, R-22): sigue siendo solo inserción.</summary>
+internal interface IPanelAuditoriaEnTransaccion
+{
+    Task InsertAsync(PanelAuditEntry entry, StoreTransaction transaction, CancellationToken cancellationToken);
+}
+
 /// <summary>Desafío de un solo uso y fallos por IP en Redis (R-07, R-11).</summary>
 internal interface IPanelDesafios
 {
