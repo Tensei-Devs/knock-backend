@@ -3,6 +3,7 @@ using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
+using Knock.Market.Api.Modules.Media.Domain;
 using Knock.Market.Api.Modules.Media.Options;
 
 namespace Knock.Market.Api.Modules.Media.Data;
@@ -51,12 +52,18 @@ internal interface IAlmacenBlob
     Task BorrarCuarentenaAsync(string nombreBlob, CancellationToken cancellationToken);
 }
 
+/// <summary>Emisión de SAS de lectura para blobs de la cuenta privada (spec 032, R-16).</summary>
+internal interface IAlmacenLectura
+{
+    Task<EnlaceSubida> CrearEnlaceLecturaAsync(string contenedor, string nombreBlob, CancellationToken cancellationToken);
+}
+
 /// <summary>
 /// Único punto del módulo <c>Media</c> que habla con Azure Blob para las imágenes públicas (spec 032, plan, paso 3).
 /// Usa dos clientes: el de la cuenta privada (cuarentena y llave de delegación) y el de la cuenta pública (publicación).
 /// Las SAS son siempre de delegación de usuario, firmadas con la identidad administrada del servicio; nunca de llave de cuenta (R-02).
 /// </summary>
-internal sealed class AlmacenBlob(BlobServiceClient privado, BlobServiceClient publico, TimeProvider reloj) : IAlmacenBlob, IDisposable
+internal sealed class AlmacenBlob(BlobServiceClient privado, BlobServiceClient publico, TimeProvider reloj) : IAlmacenBlob, IAlmacenLectura, IDisposable
 {
     /// <summary>Vigencia de una SAS de subida o de lectura (R-05, R-16).</summary>
     internal static readonly TimeSpan VigenciaSas = TimeSpan.FromMinutes(5);
@@ -96,6 +103,28 @@ internal sealed class AlmacenBlob(BlobServiceClient privado, BlobServiceClient p
             ["Content-Type"] = tipoContenido,
         };
         return new EnlaceSubida(url, ahora + VigenciaSas, encabezados);
+    }
+
+    /// <summary>
+    /// SAS de lectura (<c>r</c>) de un solo blob de la cuenta privada, 5 minutos, solo HTTPS, con <c>Cache-Control: no-store</c> y <c>Content-Disposition: inline</c> forzados (R-16).
+    /// Nunca firma blobs de <c>imagenes-cuarentena</c> ni de la cuenta pública.
+    /// </summary>
+    public Task<EnlaceSubida> CrearEnlaceLecturaAsync(string contenedor, string nombreBlob, CancellationToken cancellationToken) =>
+        Proteger(() => CrearEnlaceLecturaCore(contenedor, nombreBlob, cancellationToken));
+
+    private async Task<EnlaceSubida> CrearEnlaceLecturaCore(string contenedor, string nombreBlob, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(contenedor);
+        ArgumentException.ThrowIfNullOrWhiteSpace(nombreBlob);
+        if (!BlobPrivado.ContenedoresPermitidos.Contains(contenedor))
+        {
+            throw new ArgumentException("The container is not readable through private links.", nameof(contenedor));
+        }
+
+        var ahora = reloj.GetUtcNow();
+        var llave = await ObtenerLlaveAsync(ahora, cancellationToken);
+        var url = FirmarBlob(privado.GetBlobContainerClient(contenedor).GetBlobClient(nombreBlob), llave, BlobSasPermissions.Read, ahora, forzarSinCache: true);
+        return new EnlaceSubida(url, ahora + VigenciaSas, new Dictionary<string, string>());
     }
 
     /// <summary>Propiedades del blob de cuarentena, o <see langword="null"/> si la persona no subió nada (R-06, R-07).</summary>
@@ -196,7 +225,7 @@ internal sealed class AlmacenBlob(BlobServiceClient privado, BlobServiceClient p
     /// Firma la dirección de un solo blob con la llave de delegación: HTTPS, de un minuto antes a 5 minutos después de <paramref name="ahora"/>.
     /// Es estática y recibe la llave para poder probarse sin red.
     /// </summary>
-    internal static Uri FirmarBlob(BlobClient blob, LlaveDelegacion llave, BlobSasPermissions permisos, DateTimeOffset ahora)
+    internal static Uri FirmarBlob(BlobClient blob, LlaveDelegacion llave, BlobSasPermissions permisos, DateTimeOffset ahora, bool forzarSinCache = false)
     {
         ArgumentNullException.ThrowIfNull(blob);
         ArgumentNullException.ThrowIfNull(llave);
@@ -208,6 +237,12 @@ internal sealed class AlmacenBlob(BlobServiceClient privado, BlobServiceClient p
             Protocol = SasProtocol.Https,
             StartsOn = ahora - ToleranciaReloj,
         };
+        if (forzarSinCache)
+        {
+            sas.CacheControl = "no-store";
+            sas.ContentDisposition = ContentDispositionPublico;
+        }
+
         return new BlobUriBuilder(blob.Uri) { Sas = sas.ToSasQueryParameters(llave.Llave, llave.Cuenta) }.ToUri();
     }
 
