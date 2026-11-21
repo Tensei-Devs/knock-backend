@@ -59,8 +59,6 @@ jobs:
           EVENT_BEFORE: ${{ github.event.before }}
         run: |
           {
-            echo "api=$([ -f Knock.slnx ] && echo true || echo false)"
-            echo "docker=$(ls src/*/Dockerfile >/dev/null 2>&1 && echo true || echo false)"
             echo "iac=$([ -d deploy/infra ] && echo true || echo false)"
             echo "dast=$([ -f deploy/docker-compose.ci.yml ] && [ -f tests/smoke/smoke.sh ] && echo true || echo false)"
           } >> "$GITHUB_OUTPUT"
@@ -73,7 +71,8 @@ jobs:
           fi
           # La trazabilidad caso ↔ prueba solo tiene sentido si el PR toca código o pruebas; los PR de configuración,
           # documentación o gobierno de una tarea con spec no deben fallar por «casos sin prueba».
-          CHANGED=$(git diff --name-only "$BASE_SHA" HEAD 2>/dev/null || true)
+          # --no-renames: un archivo movido de src/ a docs/ debe listar también la ruta de origen.
+          CHANGED=$(git diff --name-only --no-renames "$BASE_SHA" HEAD 2>/dev/null || true)
           if [ -z "$BASE_SHA" ]; then
             # Push: `before` cubre todos los commits del push, no solo el último. `before` de ceros =
             # rama nueva: no hay base y se considera que cambió todo.
@@ -83,6 +82,28 @@ jobs:
               CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "__ALL__")
             fi
           fi
+          # PR de solo documentación: no compila ni prueba nada. Solo se decide en pull_request (BASE_SHA presente) y
+          # solo si la lista de cambios no está vacía ni es «__ALL__»; ante cualquier duda, se corre todo.
+          # Es documentación lo que está bajo docs/, specs/ o Documentacion/, o un .md en la raíz, SALVO docs/openapi*.json:
+          # ContractTest y Spec002ApiStyleTests lo leen y el job de la API lo regenera, así que cuenta como código.
+          is_doc() {
+            grep -qE '^docs/openapi[^/]*\.json$' <<<"$1" && return 1
+            grep -qE '^(docs|specs|Documentacion)/|^[^/]+\.md$' <<<"$1"
+          }
+          CODE=true
+          if [ -n "$BASE_SHA" ] && [ -n "$CHANGED" ] && [ "$CHANGED" != "__ALL__" ]; then
+            CODE=false
+            while IFS= read -r f; do
+              if ! is_doc "$f"; then CODE=true; break; fi
+            done <<<"$CHANGED"
+          fi
+          if [ "$CODE" = false ]; then
+            echo "::notice::PR de solo documentación: se omiten build, pruebas y contenedores."
+          fi
+          {
+            echo "api=$([ "$CODE" = true ] && [ -f Knock.slnx ] && echo true || echo false)"
+            echo "docker=$([ "$CODE" = true ] && ls src/*/Dockerfile >/dev/null 2>&1 && echo true || echo false)"
+          } >> "$GITHUB_OUTPUT"
           # Cambios por servicio (KNOCK-202): solo se construye lo afectado. Un cambio en los
           # contratos compartidos (Knock.Contracts) o en archivos compartidos de compilación
           # (Directory.Build.*, Directory.Packages.props, global.json, NuGet.config, *.sln/*.slnx,
