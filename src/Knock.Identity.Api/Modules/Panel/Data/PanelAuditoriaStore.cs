@@ -32,8 +32,8 @@ internal sealed class PanelAuditoriaStore([FromKeyedServices(DataExtensions.Data
     public Task InsertAsync(PanelAuditEntry entry, CancellationToken cancellationToken) =>
         Entries.InsertOneAsync(ToDocument(entry), cancellationToken: cancellationToken);
 
-    public Task InsertAsync(PanelAuditEntry entry, IClientSessionHandle session, CancellationToken cancellationToken) =>
-        Entries.InsertOneAsync(session, ToDocument(entry), cancellationToken: cancellationToken);
+    public Task InsertAsync(PanelAuditEntry entry, StoreTransaction transaction, CancellationToken cancellationToken) =>
+        Entries.InsertOneAsync((IClientSessionHandle)transaction.Handle, ToDocument(entry), cancellationToken: cancellationToken);
 
     private static BsonDocument ToDocument(PanelAuditEntry entry)
     {

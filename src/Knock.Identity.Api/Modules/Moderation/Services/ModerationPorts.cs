@@ -2,8 +2,8 @@ using Knock.Identity.Api.Common.Errors;
 using Knock.Identity.Api.Modules.Moderation.Data;
 using Knock.Identity.Api.Modules.Moderation.Domain;
 using Knock.Identity.Api.Modules.Moderation.Dtos;
+using Knock.Identity.Api.Modules.Panel.Data;
 using MongoDB.Bson;
-using MongoDB.Driver;
 
 namespace Knock.Identity.Api.Modules.Moderation.Services;
 
@@ -57,7 +57,7 @@ internal interface IAccessRecoveryReviews
 {
     Task<IReadOnlyList<QueuedVerification>> ListAsync(string state, DateTime from, DateTime to, ReviewCursor? after, int take, CancellationToken cancellationToken);
 
-    Task<RecoveryDecisionOutcome> DecideAsync(ObjectId id, bool approved, string deciderSub, Func<IClientSessionHandle, Task> writeAudit, CancellationToken cancellationToken);
+    Task<RecoveryDecisionOutcome> DecideAsync(ObjectId id, bool approved, string deciderSub, Func<StoreTransaction, Task> writeAudit, CancellationToken cancellationToken);
 }
 
 /// <summary>Sin la spec 039 la cola de recuperaciones está vacía y ningún identificador es una recuperación.</summary>
@@ -66,7 +66,7 @@ internal sealed class NoAccessRecoveryReviews : IAccessRecoveryReviews
     public Task<IReadOnlyList<QueuedVerification>> ListAsync(string state, DateTime from, DateTime to, ReviewCursor? after, int take, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<QueuedVerification>>([]);
 
-    public Task<RecoveryDecisionOutcome> DecideAsync(ObjectId id, bool approved, string deciderSub, Func<IClientSessionHandle, Task> writeAudit, CancellationToken cancellationToken) =>
+    public Task<RecoveryDecisionOutcome> DecideAsync(ObjectId id, bool approved, string deciderSub, Func<StoreTransaction, Task> writeAudit, CancellationToken cancellationToken) =>
         Task.FromResult(RecoveryDecisionOutcome.NotFound);
 }
 
@@ -79,7 +79,7 @@ internal sealed record ReportDecisionApplied(string ReportId, string Severity, s
 /// </summary>
 internal interface IReportDecisionEffects
 {
-    Task ApplyAsync(IClientSessionHandle session, ReportDecisionApplied decision, CancellationToken cancellationToken);
+    Task ApplyAsync(StoreTransaction transaction, ReportDecisionApplied decision, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -88,5 +88,5 @@ internal interface IReportDecisionEffects
 /// </summary>
 internal sealed class NoReportDecisionEffects : IReportDecisionEffects
 {
-    public Task ApplyAsync(IClientSessionHandle session, ReportDecisionApplied decision, CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task ApplyAsync(StoreTransaction transaction, ReportDecisionApplied decision, CancellationToken cancellationToken) => Task.CompletedTask;
 }
