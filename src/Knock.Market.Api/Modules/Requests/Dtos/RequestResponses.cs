@@ -26,7 +26,8 @@ internal sealed record RequestResponse(
     string? Direccion,
     int? TotalCotizaciones,
     DateTimeOffset VenceEn,
-    DateTimeOffset CreadoEn);
+    DateTimeOffset CreadoEn,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] bool? PuedeVolverAPedir = null);
 
 /// <summary>Fila de <c>GET /solicitudes</c>: sin descripción, dirección ni enlaces de fotos. <c>VisitaId</c> solo está si ya se eligió una cotización (spec 021, R-22).</summary>
 internal sealed record RequestSummary(

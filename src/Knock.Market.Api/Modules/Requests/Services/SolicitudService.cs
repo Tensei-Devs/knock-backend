@@ -162,6 +162,12 @@ internal sealed class SolicitudService(
             return await ClientViewAsync(record, totals.GetValueOrDefault(record.Id), cancellationToken);
         }
 
+        // Spec 029, R-13: una solicitud cancelada o vencida solo la ve su dueño; el técnico recibe 404.
+        if (TransicionesDeSolicitud.IsClosedWithoutAppointment(record.Estado))
+        {
+            return null;
+        }
+
         return await TechnicianMaySeeAsync(sub, record, cancellationToken) ? await TechnicianViewAsync(record, cancellationToken) : null;
     }
 
@@ -215,7 +221,9 @@ internal sealed class SolicitudService(
         address,
         totalQuotes,
         new DateTimeOffset(record.VenceEnUtc, TimeSpan.Zero),
-        new DateTimeOffset(record.CreadoEnUtc, TimeSpan.Zero));
+        new DateTimeOffset(record.CreadoEnUtc, TimeSpan.Zero),
+        // Solo la vista del cliente (la que trae totalCotizaciones) lo lleva: spec 029, R-13.
+        totalQuotes is null ? null : TransicionesDeSolicitud.IsClosedWithoutAppointment(record.Estado));
 
     /// <summary>La dirección va atada a su solicitud: copiada a otro documento no se descifra.</summary>
     internal static string AddressContext(ObjectId id) => $"solicitudes|direccion|{id}";
