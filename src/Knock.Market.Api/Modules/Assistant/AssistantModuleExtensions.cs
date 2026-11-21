@@ -25,6 +25,16 @@ public static class AssistantModuleExtensions
         services.TryAddSingleton<IAiImageSource, UnavailableAiImageSource>();
         services.AddSingleton(_ => PlantillaIa.Load());
         services.AddSingleton<IAiClient, AiClient>();
+        services.AddKnockMongoDatabase(MongoModule);
+        services.AddMemoryCache();
+        services.TryAddSingleton<IAsistenteCuentas, UnavailableAsistenteCuentas>();
+        services.TryAddSingleton<IConversacionesAsistente, UnavailableConversaciones>();
+        services.TryAddSingleton<ISolicitudesAsistente, UnavailableSolicitudes>();
+        services.TryAddSingleton<IReferenciaMercado, UnavailableReferenciaMercado>();
+        services.AddSingleton<IBitacoraStore>(provider => new BitacoraStore(provider.GetRequiredKeyedService<IMongoDatabase>(MongoModule)));
+        services.AddSingleton<AsistenteService>();
+        services.AddSingleton<RangoPrecioService>();
+        services.AddSingleton<BitacoraService>();
         var options = configuration.GetSection(AssistantOptions.SectionName).Get<AssistantOptions>() ?? new AssistantOptions();
         if (options.Habilitado)
         {
@@ -43,7 +53,6 @@ public static class AssistantModuleExtensions
     private static void AddAzure(IServiceCollection services, AssistantOptions options)
     {
         services.AddKnockRedis();
-        services.AddKnockMongoDatabase(MongoModule);
         services.AddHttpClient<IProveedorIa, ProveedorIa>(http =>
         {
             http.BaseAddress = new Uri(options.AzureOpenAI.Endpoint!, UriKind.Absolute);
