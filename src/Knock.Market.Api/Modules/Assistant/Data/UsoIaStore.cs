@@ -5,7 +5,7 @@ namespace Knock.Market.Api.Modules.Assistant.Data;
 
 internal sealed record UsageRecord(string UserId, string Function, string Model, string PromptVersion, int InputTokens, int OutputTokens, int LatencyMs, string Origin, string? FallbackReason, bool Truncated, DateTime CreatedAt);
 
-internal sealed class UsoIaStore(IMongoDatabase database)
+internal sealed class UsoIaStore(IMongoDatabase database) : IUsoIa
 {
     public Task SaveAsync(UsageRecord usage, CancellationToken cancellationToken)
     {
