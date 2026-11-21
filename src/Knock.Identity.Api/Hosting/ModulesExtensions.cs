@@ -2,6 +2,7 @@
 using Knock.Identity.Api.Modules.Account;
 using Knock.Identity.Api.Modules.Addresses;
 using Knock.Identity.Api.Modules.HomeAndCar;
+using Knock.Identity.Api.Modules.Moderation;
 using Knock.Identity.Api.Modules.Panel;
 using Knock.Identity.Api.Modules.Safety;
 using Knock.Identity.Api.Modules.Sesiones;
@@ -13,6 +14,6 @@ namespace Knock.Identity.Api.Hosting;
 internal static class ModulesExtensions
 {
     /// <summary>Registra los módulos del servicio de Identidad.</summary>
-    public static IServiceCollection AddKnockModules(this IServiceCollection services) => services.AddSesionesModule().AddUsuariosModule().AddSafetyModule().AddAccountModule().AddAddressesModule().AddHomeAndCarModule().AddPanelModule().AddTrustModule();
+    public static IServiceCollection AddKnockModules(this IServiceCollection services) => services.AddSesionesModule().AddUsuariosModule().AddSafetyModule().AddAccountModule().AddAddressesModule().AddHomeAndCarModule().AddPanelModule().AddTrustModule().AddModerationModule();
 }
 // jscpd:ignore-end

@@ -115,11 +115,11 @@ internal sealed class SolicitudService(
         return new CreateRequestOutcome(CreateRequestStatus.Created, await ClientViewAsync(record, totalQuotes: 0, cancellationToken));
     }
 
-    /// <summary>Solicitudes del cliente, de la más reciente a la más antigua. Un cursor que no se puede decodificar lanza 400 <c>invalid_cursor</c>.</summary>
+    /// <summary>Solicitudes del cliente, activas primero y cada grupo de la más reciente a la más antigua. Un cursor que no se puede decodificar lanza 400 <c>invalid_cursor</c>.</summary>
     public async Task<RequestPage> ListAsync(string clientId, ListRequestsQuery query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
-        (DateTime, ObjectId)? after = string.IsNullOrEmpty(query.Cursor) ? null : RequestCursor.Decode(query.Cursor);
+        (int, DateTime, ObjectId)? after = string.IsNullOrEmpty(query.Cursor) ? null : RequestCursor.DecodeGrouped(query.Cursor);
         var page = await store.ListAsync(clientId, query.Estado, after, query.Limit, cancellationToken);
         var ids = page.Items.Select(item => item.Id).ToList();
         var totals = await store.CountLiveQuotesAsync(ids, cancellationToken);

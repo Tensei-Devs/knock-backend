@@ -57,6 +57,8 @@ public static class CatalogModuleExtensions
         services.AddScoped<CatalogSeeder>();
         services.AddScoped<OficioQueries>();
         services.AddScoped<ZonaService>();
+        services.AddSingleton<CatalogAdminStore>();
+        services.AddSingleton<CatalogAdminService>();
         return services;
     }
 }
