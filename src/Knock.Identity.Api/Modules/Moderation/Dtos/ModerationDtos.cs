@@ -11,17 +11,9 @@ internal sealed class ReviewRoute
     public string? Id { get; set; }
 }
 
-/// <summary>Parámetros de <c>GET /admin/verificaciones</c> (spec 053, R-02 y R-16). Las fechas son UTC ISO 8601.</summary>
-internal sealed class VerificationQueueQuery
+/// <summary>Filtros de fecha y paginación comunes de las colas del panel (spec 053).</summary>
+internal abstract class QueueQueryBase
 {
-    [FromQuery(Name = "tipo")]
-    [Description("identidad (default) or recuperacion.")]
-    public string? Tipo { get; set; }
-
-    [FromQuery(Name = "estado")]
-    [Description("en_revision by default.")]
-    public string? Estado { get; set; }
-
     [FromQuery(Name = "desde")]
     public DateTimeOffset? Desde { get; set; }
 
@@ -35,6 +27,19 @@ internal sealed class VerificationQueueQuery
     [FromQuery(Name = "limite")]
     [Description("Page size, 1 to 50. Defaults to 20.")]
     public int Limite { get; set; } = 20;
+}
+
+/// <summary>Parámetros de <c>GET /admin/verificaciones</c> (spec 053, R-02 y R-16). Las fechas son UTC ISO 8601.</summary>
+internal sealed class VerificationQueueQuery : QueueQueryBase
+{
+    [FromQuery(Name = "tipo")]
+    [Description("identidad (default) or recuperacion.")]
+    public string? Tipo { get; set; }
+
+    [FromQuery(Name = "estado")]
+    [Description("en_revision by default.")]
+    public string? Estado { get; set; }
+
 }
 
 /// <summary>Una fila de la cola: solo identificador, tipo, estado y fecha; nunca fotos ni datos personales (R-16).</summary>
@@ -62,7 +67,7 @@ internal sealed class VerificationDecisionBody
 internal sealed record VerificationDecisionResult(string Id, string Estado, DateTime DecididaEn);
 
 /// <summary>Parámetros de <c>GET /admin/reportes</c> (spec 053, R-11 y R-19).</summary>
-internal sealed class ReportQueueQuery
+internal sealed class ReportQueueQuery : QueueQueryBase
 {
     [FromQuery(Name = "gravedad")]
     public string? Gravedad { get; set; }
@@ -71,19 +76,6 @@ internal sealed class ReportQueueQuery
     [Description("abierto and en_apelacion by default.")]
     public string? Estado { get; set; }
 
-    [FromQuery(Name = "desde")]
-    public DateTimeOffset? Desde { get; set; }
-
-    [FromQuery(Name = "hasta")]
-    public DateTimeOffset? Hasta { get; set; }
-
-    [FromQuery(Name = "cursor")]
-    [Description("Opaque cursor returned as nextCursor by the previous page.")]
-    public string? Cursor { get; set; }
-
-    [FromQuery(Name = "limite")]
-    [Description("Page size, 1 to 50. Defaults to 20.")]
-    public int Limite { get; set; } = 20;
 }
 
 /// <summary>Una fila de la cola de reportes: motivo y texto, nunca teléfono ni dirección (R-19).</summary>
