@@ -51,7 +51,7 @@ internal sealed class SolicitudesController(SolicitudService service) : Controll
         };
     }
 
-    /// <summary>Solicitudes del <c>sub</c> del token, de la más reciente a la más antigua, con paginación por cursor.</summary>
+    /// <summary>Solicitudes del <c>sub</c> del token, las activas primero y cada grupo de la más reciente a la más antigua, con paginación por cursor.</summary>
     [HttpGet]
     [ProducesResponseType<RequestPage>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, _problemJson)]
