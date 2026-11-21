@@ -11,8 +11,7 @@ internal sealed record CreateVerificationRequest(string? Nivel, bool? AceptaBiom
 }
 
 /// <summary>
-/// Una foto del nivel. <c>urlSubida</c> y <c>venceEn</c> son el enlace firmado de 5 minutos (R-08); llegan con la tarea T-04 (cuenta de almacenamiento privada), así
-/// que por ahora van en <see langword="null"/>.
+/// Una foto del nivel. <c>urlSubida</c> y <c>venceEn</c> son el enlace firmado de escritura de 5 minutos (R-08). El enlace no se guarda, no se cachea y no se registra.
 /// </summary>
 internal sealed record VerificationPhotoResponse(string Tipo, string Estado, string? UrlSubida, DateTime? VenceEn);
 
@@ -36,3 +35,9 @@ internal sealed record VerificationStatusResponse(
     DateTime? DecididoEn,
     DateTime? ExpiraEn,
     bool PuedeReintentar);
+
+/// <summary>Respuesta 200 de confirmar una foto (R-10).</summary>
+internal sealed record PhotoConfirmedResponse(string Tipo, string Estado);
+
+/// <summary>Respuesta 200 de enviar a revisión (R-13).</summary>
+internal sealed record VerificationSentResponse(string Id, string Estado, DateTime EnviadoEn, DateTime ExpiraEn);

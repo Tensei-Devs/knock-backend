@@ -122,7 +122,7 @@ public sealed class Spec025FotosTests
         public override DateTimeOffset GetUtcNow() => now;
     }
 
-    private sealed class MemoryBlobs : IVerificationBlobStore
+    internal sealed class MemoryBlobs : IVerificationBlobStore
     {
         public Dictionary<string, byte[]> Quarantine { get; } = [];
 
@@ -162,7 +162,7 @@ public sealed class Spec025FotosTests
         }
     }
 
-    private sealed class MemoryWrapper : IVerificationKeyWrapper
+    internal sealed class MemoryWrapper : IVerificationKeyWrapper
     {
         private readonly byte[] _kek = RandomNumberGenerator.GetBytes(32);
 
