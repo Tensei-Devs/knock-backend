@@ -23,6 +23,9 @@ internal static class IdentityRateLimits
     /// <summary>Spec 025 (R-19): crear una verificación, 3 por hora por persona.</summary>
     public const string VerificationCreatePolicy = "verificacion-crear";
 
+    /// <summary>Spec 025 (R-19): confirmar una foto de verificación, 10 por hora por persona.</summary>
+    public const string VerificationConfirmPolicy = "verificacion-confirmar";
+
     /// <summary>
     /// Límite por IP: política global, estricta para <c>/api/v{n}/auth/*</c> y la sesión del panel (spec 033, R-27) y propia para <c>/health/ready</c>.
     /// </summary>
@@ -39,7 +42,8 @@ internal static class IdentityRateLimits
                 .PerClient(AccessRecoveryPolicy, "recuperacion", 3, TimeSpan.FromHours(1))
                 .PerSubject(ExportPolicy, 3, TimeSpan.FromHours(1))
                 .PerSubject(DeletionPolicy, 5, TimeSpan.FromHours(1))
-                .PerSubject(VerificationCreatePolicy, 3, TimeSpan.FromHours(1)),
+                .PerSubject(VerificationCreatePolicy, 3, TimeSpan.FromHours(1))
+                .PerSubject(VerificationConfirmPolicy, 10, TimeSpan.FromHours(1)),
         });
 
     /// <summary>Spec 033, R-27: <c>/api/v{n}/panel/sesion/*</c> y <c>/api/v{n}/panel/activacion</c> llevan el mismo límite estricto por IP que <c>/auth</c>.</summary>

@@ -1,10 +1,13 @@
 using AwesomeAssertions;
 using Knock.Identity.Api.Common.Errors;
+using Knock.Identity.Api.Modules.Trust.Crypto;
 using Knock.Identity.Api.Modules.Trust.Data;
 using Knock.Identity.Api.Modules.Trust.Dtos;
 using Knock.Identity.Api.Modules.Trust.Services;
+using Knock.Identity.Api.Modules.Trust.Storage;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
+using System.Security.Cryptography;
 using Xunit;
 
 namespace Knock.UnitTest.Identity;
@@ -20,10 +23,24 @@ public sealed class Spec025ServicioTests
 
     private static (VerificationService Service, FakeStore Store) Create(string state = "activa", StoredVerification? latest = null, string? device = "dispositivo-1")
     {
+        var rig = CreateRig(state, latest, device);
+        return (rig.Service, rig.Store);
+    }
+
+    internal static Rig CreateRig(string state = "activa", StoredVerification? latest = null, string? device = "dispositivo-1")
+    {
         var store = new FakeStore(state, latest, device);
         var options = Options.Create(new VerificationOptions { AvisoVersion = "1.0", AvisoTexto = "Texto del aviso" });
-        return (new VerificationService(store, options, new FixedClock(_now)), store);
+        var clock = new FixedClock(_now);
+        var blobs = new Spec025FotosTests.MemoryBlobs();
+        var crypto = new CifradoDeVerificacion(new Spec025FotosTests.MemoryWrapper());
+        var curp = new CurpHmac(new CurpHmacKeys(new Dictionary<int, byte[]> { [1] = RandomNumberGenerator.GetBytes(32) }, 1));
+        var events = new FakeEvents();
+        var service = new VerificationService(store, options, clock, curp, new CurpDuplicateGuard(curp, store), crypto, new FotoVerificacionStore(blobs, crypto, clock), events);
+        return new Rig(service, store, blobs, events, crypto);
     }
+
+    internal sealed record Rig(VerificationService Service, FakeStore Store, Spec025FotosTests.MemoryBlobs Blobs, FakeEvents Events, CifradoDeVerificacion Crypto);
 
     private static StoredVerification Latest(string state, string? granted = null, string? reason = null) =>
         new(ObjectId.GenerateNewId(), "basica", state, granted, reason, [new StoredPhoto("ine_frente", "cifrada"), new StoredPhoto("selfie", "cifrada")],
@@ -68,7 +85,7 @@ public sealed class Spec025ServicioTests
         var created = await service.CreateAsync("sub-1", "sid-1", Request(), CancellationToken.None);
         created!.Estado.Should().Be("en_captura");
         created.Fotos.Select(f => f.Tipo).Should().Equal("ine_frente", "selfie");
-        created.Fotos.Should().OnlyContain(f => f.Estado == "pendiente" && f.UrlSubida == null);
+        created.Fotos.Should().OnlyContain(f => f.Estado == "pendiente" && f.UrlSubida != null);
         created.CapturaVenceEn.Should().Be(_now.UtcDateTime.AddHours(24));
     }
 
@@ -163,9 +180,30 @@ public sealed class Spec025ServicioTests
         status.PuedeReintentar.Should().BeTrue();
     }
 
-    private sealed class FakeStore(string state, StoredVerification? latest, string? device) : IVerificationStore
+    internal sealed class FakeEvents : IVerificationEvents
+    {
+        public List<string> Published { get; } = [];
+
+        public Task PublishAsync(string eventType, string sub, string? verificationId, CancellationToken cancellationToken)
+        {
+            Published.Add(eventType);
+            return Task.CompletedTask;
+        }
+    }
+
+    internal sealed class FakeStore(string state, StoredVerification? latest, string? device) : IVerificationStore
     {
         public NewVerification? Created { get; private set; }
+
+        public VerificationForCapture? Owned { get; set; }
+
+        public bool LiveCurp { get; set; }
+
+        public SubmitOutcome SubmitResult { get; set; } = SubmitOutcome.Submitted;
+
+        public List<string> Encrypted { get; } = [];
+
+        public (DateTime SentAt, DateTime ExpiresAt)? Submitted { get; private set; }
 
         public Task<VerificationAccount?> FindAccountAsync(string sub, CancellationToken cancellationToken) =>
             Task.FromResult<VerificationAccount?>(new VerificationAccount(ObjectId.GenerateNewId(), state));
@@ -180,10 +218,25 @@ public sealed class Spec025ServicioTests
             return Task.CompletedTask;
         }
 
-        public Task<bool> ExistsLiveCurpAsync(IReadOnlyCollection<string> curpHmacs, string exceptSub, CancellationToken cancellationToken) => Task.FromResult(false);
+        public Task<bool> ExistsLiveCurpAsync(IReadOnlyCollection<string> curpHmacs, string exceptSub, CancellationToken cancellationToken) => Task.FromResult(LiveCurp);
+
+        public Task<VerificationForCapture?> FindOwnedAsync(string sub, ObjectId id, CancellationToken cancellationToken) =>
+            Task.FromResult(Owned is not null && Owned.Id == id ? Owned : null);
+
+        public Task<bool> MarkPhotoEncryptedAsync(ObjectId id, string type, DateTime confirmedAt, CancellationToken cancellationToken)
+        {
+            Encrypted.Add(type);
+            return Task.FromResult(true);
+        }
+
+        public Task<SubmitOutcome> SubmitAsync(string sub, ObjectId id, DateTime sentAt, DateTime expiresAt, CancellationToken cancellationToken)
+        {
+            Submitted = (sentAt, expiresAt);
+            return Task.FromResult(SubmitResult);
+        }
     }
 
-    private sealed class FixedClock(DateTimeOffset now) : TimeProvider
+    internal sealed class FixedClock(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
     }

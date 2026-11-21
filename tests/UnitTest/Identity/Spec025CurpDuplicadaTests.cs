@@ -31,6 +31,12 @@ public sealed class Spec025CurpDuplicadaTests
         public Task<StoredVerification?> FindLatestAsync(string sub, CancellationToken cancellationToken) => throw new NotSupportedException();
 
         public Task CreateAsync(NewVerification verification, CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<VerificationForCapture?> FindOwnedAsync(string sub, ObjectId id, CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<bool> MarkPhotoEncryptedAsync(ObjectId id, string type, DateTime confirmedAt, CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<SubmitOutcome> SubmitAsync(string sub, ObjectId id, DateTime sentAt, DateTime expiresAt, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 
     [Fact]
