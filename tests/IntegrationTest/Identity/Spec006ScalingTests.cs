@@ -3,6 +3,8 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using AwesomeAssertions;
 using Knock.IntegrationTest.Support;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Xunit;
 
 namespace Knock.IntegrationTest.Identity;
@@ -15,7 +17,66 @@ namespace Knock.IntegrationTest.Identity;
 /// </summary>
 public sealed class Spec006ScalingTests
 {
+    private const int _rateLimitFallbackEventId = 247;
+
     private static readonly Uri _meUri = new("/api/v1/me", UriKind.Relative);
+
+    [Fact]
+    public async Task ConcurrentRequests_TwoInstances_DoNotExceedSharedLimit_R_006_05()
+    {
+        var settings = new Dictionary<string, string?> { ["RateLimiting:Global:PermitLimit"] = "2" };
+        using var logs = new CapturingLoggerProvider();
+        void Capture(IServiceCollection services) => services.AddLogging(logging => logging.AddProvider(logs));
+        using var first = await IdentityApiFactory.CreateAsync(settings, Capture);
+        using var second = await IdentityApiFactory.CreateAsync(settings, Capture);
+        using var client1 = first.CreateClient();
+        using var client2 = second.CreateClient();
+
+        // Calentamiento: una petición por copia con otra IP, para que la conexión a Redis y el script ya estén listos antes de la ráfaga.
+        foreach (var client in new[] { client1, client2 })
+        {
+            using var warmUp = new HttpRequestMessage(HttpMethod.Get, _meUri);
+            warmUp.Headers.Add(IdentityApiFactory.RemoteIpHeader, $"198.19.{RandomNumberGenerator.GetInt32(1, 255)}.{RandomNumberGenerator.GetInt32(1, 255)}");
+            using var warmUpResponse = await client.SendAsync(warmUp);
+        }
+
+        var ip = $"198.20.{RandomNumberGenerator.GetInt32(1, 255)}.{RandomNumberGenerator.GetInt32(1, 255)}";
+        client1.DefaultRequestHeaders.Add(IdentityApiFactory.RemoteIpHeader, ip);
+        client2.DefaultRequestHeaders.Add(IdentityApiFactory.RemoteIpHeader, ip);
+        var summary = await ResponseSummary.ReadAsync(await Task.WhenAll(Enumerable.Range(0, 20).Select(i => (i % 2 == 0 ? client1 : client2).GetAsync(_meUri))));
+
+        var fallbacks = logs.Count(_rateLimitFallbackEventId);
+        var because = $"respuestas: {summary}; respaldo por copia (evento {_rateLimitFallbackEventId}): {fallbacks} {logs.Messages(_rateLimitFallbackEventId)}. Con 4 o 6 respuestas 401 y respaldo > 0, Redis no estaba disponible y cada copia contó por su cuenta";
+        summary.Count(HttpStatusCode.Unauthorized).Should().Be(2, because);
+        summary.Count(HttpStatusCode.TooManyRequests).Should().Be(18, because);
+        fallbacks.Should().Be(0, because);
+    }
+
+    [Fact]
+    public async Task TwoInstances_ShareIpLimit_R_006_05()
+    {
+        var settings = new Dictionary<string, string?> { ["RateLimiting:Global:PermitLimit"] = "2" };
+        using var first = await IdentityApiFactory.CreateAsync(settings);
+        using var second = await IdentityApiFactory.CreateAsync(settings);
+        using var client1 = first.CreateClient();
+        using var client2 = second.CreateClient();
+        var ip = $"198.18.{RandomNumberGenerator.GetInt32(1, 255)}.{RandomNumberGenerator.GetInt32(1, 255)}";
+        client1.DefaultRequestHeaders.Add(IdentityApiFactory.RemoteIpHeader, ip);
+        client2.DefaultRequestHeaders.Add(IdentityApiFactory.RemoteIpHeader, ip);
+
+        using var one = await client1.GetAsync(_meUri);
+        using var two = await client2.GetAsync(_meUri);
+        using var three = await client1.GetAsync(_meUri);
+
+        one.StatusCode.Should().NotBe(HttpStatusCode.TooManyRequests);
+        two.StatusCode.Should().NotBe(HttpStatusCode.TooManyRequests);
+        three.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
+        three.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
+        var multiplexer = first.Services.GetService(typeof(StackExchange.Redis.IConnectionMultiplexer)) as StackExchange.Redis.IConnectionMultiplexer;
+        var key = "ratelimit:identity:" + Convert.ToHexStringLower(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes($"global:{ip}")));
+        (await multiplexer!.GetDatabase().KeyExistsAsync(key)).Should().BeTrue();
+        key.Should().NotContain(ip);
+    }
 
     [Fact]
     public async Task OneInstanceDown_TheOtherServesAndTheSessionStaysValid_CA_006_01()

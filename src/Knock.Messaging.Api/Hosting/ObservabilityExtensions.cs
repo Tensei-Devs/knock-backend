@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using Azure.Monitor.OpenTelemetry.Exporter;
+using Knock.Hosting.Logging;
 using Microsoft.AspNetCore.Diagnostics;
 using OpenTelemetry;
 using OpenTelemetry.Context.Propagation;
@@ -124,7 +125,7 @@ internal static class ObservabilityExtensions
             })
             .WithMetrics(metrics =>
             {
-                metrics.AddAspNetCoreInstrumentation().AddMeter("System.Runtime");
+                metrics.AddAspNetCoreInstrumentation().AddMeter("System.Runtime", Knock.Messaging.Api.Modules.Chat.Services.ChatMetrics.MeterName);
                 if (status.Enabled)
                 {
                     metrics.AddAzureMonitorMetricExporter(exporter => Configure(MetricsSignal, exporter));
