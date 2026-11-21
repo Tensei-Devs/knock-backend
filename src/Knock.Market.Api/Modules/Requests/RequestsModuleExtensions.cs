@@ -53,6 +53,9 @@ public static class RequestsModuleExtensions
         services.AddScoped<RepartoService>();
         services.AddScoped<IManejadorDeTarea, RepartirOleada>();
         services.AddScoped<IManejadorDeTarea, RevisarOleada>();
+        services.AddScoped<TareasProgramadasStore>(provider => new TareasProgramadasStore(provider.GetRequiredKeyedService<IMongoDatabase>(ModuleKey)));
+        services.AddScoped<IManejadorDeTarea, VencerSolicitud>();
+        services.AddScoped<IManejadorDeTarea, BarrerVencidas>();
         services.AddScoped<RequestsStore>();
         services.AddScoped<CierreDeSolicitudStore>();
         services.AddScoped<CierreDeSolicitudService>();
