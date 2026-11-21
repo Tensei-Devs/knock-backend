@@ -152,9 +152,6 @@ internal interface IPanelAuditoriaStore
     Task InsertAsync(PanelAuditEntry entry, CancellationToken cancellationToken);
 }
 
-/// <summary>Manija opaca de la transacción de MongoDB de un almacén: los servicios la pasan sin conocer el controlador de MongoDB (spec 003, CA-003-02); solo los almacenes la abren.</summary>
-internal readonly record struct StoreTransaction(object Handle);
-
 /// <summary>Inserción de la auditoría dentro de una transacción ajena (spec 053, R-22): sigue siendo solo inserción.</summary>
 internal interface IPanelAuditoriaEnTransaccion
 {

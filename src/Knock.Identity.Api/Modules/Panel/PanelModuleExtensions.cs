@@ -30,6 +30,7 @@ public static class PanelModuleExtensions
         services.AddHttpContextAccessor();
         services.AddSingleton<PanelIpHasher>();
         services.AddSingleton<AuditoriaPanel>();
+        services.AddSingleton<IPanelApi, PanelApi>();
         services.AddSingleton(provider => PanelSettings.Create(provider.GetRequiredService<IConfiguration>(), provider.GetRequiredService<IHostEnvironment>()));
         services.AddOptions<PanelTotpOptions>().BindConfiguration(PanelTotpOptions.SectionName);
         services.AddSingleton(provider => PanelTotpKeys.CreateOrThrow(provider.GetRequiredService<IOptions<PanelTotpOptions>>().Value));

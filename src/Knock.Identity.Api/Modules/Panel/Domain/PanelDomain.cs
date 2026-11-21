@@ -5,8 +5,8 @@ namespace Knock.Identity.Api.Modules.Panel.Domain;
 /// <summary>Lista cerrada de permisos del panel (spec 033, R-02). Cambiarla exige una spec.</summary>
 internal static class PanelPermisos
 {
-    public const string VerificationReview = "verification:review";
-    public const string ReportsResolve = "reports:resolve";
+    public const string VerificationReview = PanelApiPermissions.VerificationReview;
+    public const string ReportsResolve = PanelApiPermissions.ReportsResolve;
     public const string ReviewsModerate = "reviews:moderate";
     public const string CatalogManage = "catalog:manage";
     public const string MetricsRead = "metrics:read";

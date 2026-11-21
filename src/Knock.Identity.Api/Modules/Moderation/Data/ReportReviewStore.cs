@@ -1,6 +1,6 @@
 using Knock.Identity.Api.Hosting;
+using Knock.Identity.Api.Modules.Panel;
 using Knock.Identity.Api.Modules.Moderation.Domain;
-using Knock.Identity.Api.Modules.Panel.Data;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
