@@ -1,4 +1,5 @@
 using Knock.Messaging.Api.Modules.Chat.Services;
+using Knock.Messaging.Api.Modules.Conversaciones.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
@@ -10,14 +11,14 @@ namespace Knock.Messaging.Api.Modules.Chat;
 /// conserva solo en la memoria de esa conexión y se descarta al cerrarla (R-09).
 /// </summary>
 [Authorize]
-internal sealed class ChatHub(UnionService union, MensajeService messages, ChatMetrics metrics, ILogger<ChatHub> logger) : Hub
+internal sealed class ChatHub(UnionService union, MensajeService messages, AccesoAConversacionService conversaciones, ChatMetrics metrics, ILogger<ChatHub> logger) : Hub
 {
     private const string _stateKey = "knock.chat.state";
 
     private static readonly Action<ILogger, Exception?> _opened = LoggerMessage.Define(LogLevel.Information, new EventId(1, "ChatOpened"), "Chat connection opened");
     private static readonly Action<ILogger, Exception?> _closed = LoggerMessage.Define(LogLevel.Information, new EventId(2, "ChatClosed"), "Chat connection closed");
 
-    public override Task OnConnectedAsync()
+    public override async Task OnConnectedAsync()
     {
         var http = Context.GetHttpContext();
         var token = http?.Request.Headers.Authorization.ToString() is { Length: > 7 } header && header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
@@ -26,7 +27,13 @@ internal sealed class ChatHub(UnionService union, MensajeService messages, ChatM
         Context.Items[_stateKey] = new ChatConnectionState(Context.User?.FindFirst("sub")?.Value ?? string.Empty, token);
         metrics.ConnectionsOpened.Add(1);
         _opened(logger, null);
-        return base.OnConnectedAsync();
+        // Spec 030, R-15: cada conexión recibe el contador de su persona en el grupo propio; no hay otra forma de entrar a ese grupo.
+        if (Context.User?.FindFirst("sub")?.Value is { Length: > 0 } sub)
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, NotificadorEnVivo.UserGroup(sub), Context.ConnectionAborted);
+        }
+
+        await base.OnConnectedAsync();
     }
 
     public override Task OnDisconnectedAsync(Exception? exception)
@@ -76,6 +83,28 @@ internal sealed class ChatHub(UnionService union, MensajeService messages, ChatM
         }
 
         return result;
+    }
+
+    /// <summary>Entra al grupo de la conversación si quien pide es uno de sus dos participantes; cualquier otro caso es <c>unauthorized</c> sin distinguir «no existe» de «es ajena» (spec 030, R-15 y CA-03).</summary>
+    public async Task<ChatResult> UnirseAConversacion(string conversacionId)
+    {
+        if (!await conversaciones.PuedeUnirseAsync(State().Subject, conversacionId, Context.ConnectionAborted))
+        {
+            return ChatResult.Fail(ChatErrorCodes.UnauthorizedCode);
+        }
+
+        await Groups.AddToGroupAsync(Context.ConnectionId, NotificadorEnVivo.ConversationGroup(conversacionId), Context.ConnectionAborted);
+        return ChatResult.Success;
+    }
+
+    public async Task<ChatResult> SalirDeConversacion(string conversacionId)
+    {
+        if (!string.IsNullOrEmpty(conversacionId) && conversacionId.Length <= 64)
+        {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, NotificadorEnVivo.ConversationGroup(conversacionId), Context.ConnectionAborted);
+        }
+
+        return ChatResult.Success;
     }
 
     private ChatConnectionState State() => (ChatConnectionState)Context.Items[_stateKey]!;
