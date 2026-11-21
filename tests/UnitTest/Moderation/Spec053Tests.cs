@@ -5,7 +5,9 @@ using Knock.Identity.Api.Modules.Moderation.Domain;
 using Knock.Identity.Api.Modules.Moderation.Dtos;
 using Knock.Identity.Api.Modules.Moderation.Services;
 using Knock.Identity.Api.Modules.Moderation.Validators;
+using Knock.Identity.Api.Modules.Panel;
 using Knock.Identity.Api.Modules.Panel.Data;
+using Knock.Identity.Api.Modules.Trust;
 using Knock.Identity.Api.Modules.Panel.Services;
 using Knock.UnitTest.Identity;
 using Knock.UnitTest.Panel;
@@ -154,7 +156,7 @@ public class Spec053Tests
         var audit = new FakeAudit();
         var world = new PanelClock(new DateTimeOffset(2026, 11, 21, 12, 0, 0, TimeSpan.Zero));
         var auditService = new AuditoriaPanel(audit, new PanelIpHasher(PhoneProtectionTestKeys.Keys()), new NoHttpContext(), world, NullLogger<AuditoriaPanel>.Instance);
-        var service = new VerificationReviewService(store, new NoAccessRecoveryReviews(), links, blobs, auditService, world, NullLogger<VerificationReviewService>.Instance);
+        var service = new VerificationReviewService(store, new NoAccessRecoveryReviews(), links, blobs, new PanelApi(auditService), new TrustApi(), world, NullLogger<VerificationReviewService>.Instance);
         return (service, store, links, blobs, audit);
     }
 
@@ -326,7 +328,7 @@ public class Spec053Tests
         var effects = new RecordingEffects();
         var audit = new FakeAudit();
         var clock = new PanelClock(new DateTimeOffset(2026, 11, 21, 12, 0, 0, TimeSpan.Zero));
-        var service = new ReportReviewService(store, effects, new AuditoriaPanel(audit, new PanelIpHasher(PhoneProtectionTestKeys.Keys()), new NoHttpContext(), clock, NullLogger<AuditoriaPanel>.Instance), clock);
+        var service = new ReportReviewService(store, effects, new PanelApi(new AuditoriaPanel(audit, new PanelIpHasher(PhoneProtectionTestKeys.Keys()), new NoHttpContext(), clock, NullLogger<AuditoriaPanel>.Instance)), clock);
 
         var result = await service.DecideAsync(_verifier, _id, new ReportDecisionBody { Gravedad = severity, Motivo = "motivo suficiente" }, CancellationToken.None);
 
@@ -341,7 +343,7 @@ public class Spec053Tests
         var store = new FakeReports { Parties = new DecidedReportParties("reporter", "moderator-sub", "acoso") };
         var clock = new PanelClock(new DateTimeOffset(2026, 11, 21, 12, 0, 0, TimeSpan.Zero));
         var audit = new FakeAudit();
-        var service = new ReportReviewService(store, new RecordingEffects(), new AuditoriaPanel(audit, new PanelIpHasher(PhoneProtectionTestKeys.Keys()), new NoHttpContext(), clock, NullLogger<AuditoriaPanel>.Instance), clock);
+        var service = new ReportReviewService(store, new RecordingEffects(), new PanelApi(new AuditoriaPanel(audit, new PanelIpHasher(PhoneProtectionTestKeys.Keys()), new NoHttpContext(), clock, NullLogger<AuditoriaPanel>.Instance)), clock);
 
         var act = () => service.DecideAsync(new ReviewActor("moderator-sub", "s"), _id, new ReportDecisionBody { Gravedad = "critica", Motivo = "motivo suficiente" }, CancellationToken.None);
 
@@ -355,7 +357,7 @@ public class Spec053Tests
         var store = new FakeReports { Parties = null };
         var clock = new PanelClock(new DateTimeOffset(2026, 11, 21, 12, 0, 0, TimeSpan.Zero));
         var audit = new FakeAudit();
-        var service = new ReportReviewService(store, new RecordingEffects(), new AuditoriaPanel(audit, new PanelIpHasher(PhoneProtectionTestKeys.Keys()), new NoHttpContext(), clock, NullLogger<AuditoriaPanel>.Instance), clock);
+        var service = new ReportReviewService(store, new RecordingEffects(), new PanelApi(new AuditoriaPanel(audit, new PanelIpHasher(PhoneProtectionTestKeys.Keys()), new NoHttpContext(), clock, NullLogger<AuditoriaPanel>.Instance)), clock);
         var body = new ReportDecisionBody { Gravedad = "baja", Motivo = "motivo suficiente" };
 
         var missing = () => service.DecideAsync(_verifier, _id, body, CancellationToken.None);

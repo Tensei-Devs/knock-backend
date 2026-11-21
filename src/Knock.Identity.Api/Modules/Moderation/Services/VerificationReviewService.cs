@@ -2,10 +2,8 @@ using Knock.Identity.Api.Common.Errors;
 using Knock.Identity.Api.Modules.Moderation.Data;
 using Knock.Identity.Api.Modules.Moderation.Domain;
 using Knock.Identity.Api.Modules.Moderation.Dtos;
-using Knock.Identity.Api.Modules.Panel.Data;
-using Knock.Identity.Api.Modules.Panel.Domain;
-using Knock.Identity.Api.Modules.Panel.Services;
-using Knock.Identity.Api.Modules.Trust.Domain;
+using Knock.Identity.Api.Modules.Panel;
+using Knock.Identity.Api.Modules.Trust;
 using MongoDB.Bson;
 
 namespace Knock.Identity.Api.Modules.Moderation.Services;
@@ -23,7 +21,8 @@ internal sealed partial class VerificationReviewService(
     IAccessRecoveryReviews recoveries,
     IVerificationPhotoLinks links,
     IVerificationBlobPurger blobs,
-    AuditoriaPanel audit,
+    IPanelApi panel,
+    ITrustApi trust,
     TimeProvider clock,
     ILogger<VerificationReviewService> logger)
 {
@@ -59,7 +58,7 @@ internal sealed partial class VerificationReviewService(
         }
 
         // La auditoría va antes que los enlaces: si no se puede registrar quién los abrió, nadie los recibe (R-17 y R-22).
-        await audit.WriteAsync(PanelAuditValues.TipoAccion, ModerationAuditEvents.VerificationOpened, PanelAuditValues.ResultadoPermitido, actor.Sub, actor.Sid, PanelPermisos.VerificationReview, null, id, cancellationToken);
+        await panel.RecordActionAsync(ModerationAuditEvents.VerificationOpened, PanelApiAuditValues.ResultAllowed, actor.Sub, actor.Sid, PanelApiPermissions.VerificationReview, id, cancellationToken);
         var issued = await links.IssueAsync(id, verification.PhotoTypes, PhotoLinkLifetime, cancellationToken);
         return new VerificationDetail(id, ReviewKinds.Identity, verification.Level, verification.State, verification.SentAt, issued);
     }
@@ -84,10 +83,10 @@ internal sealed partial class VerificationReviewService(
 
         EnsureNotSelf(actor, verification);
         var note = (body.Motivo ?? string.Empty).Trim();
-        var catalogReason = !approved && VerificationReasons.TipsFor(note).Count > 0 ? note : null;
+        var catalogReason = !approved && trust.IsCatalogReason(note) ? note : null;
         var outcome = await store.DecideAsync(
             new VerificationDecisionRecord(objectId, approved, actor.Sub, note, catalogReason, now),
-            session => audit.WriteInTransactionAsync(session, PanelAuditValues.TipoAccion, ModerationAuditEvents.VerificationDecided, result, actor.Sub, id, cancellationToken),
+            session => panel.RecordActionInTransactionAsync(session, ModerationAuditEvents.VerificationDecided, result, actor.Sub, id, cancellationToken),
             cancellationToken);
         switch (outcome)
         {
@@ -109,7 +108,7 @@ internal sealed partial class VerificationReviewService(
             id,
             approved,
             actor.Sub,
-            session => audit.WriteInTransactionAsync(session, PanelAuditValues.TipoAccion, ModerationAuditEvents.RecoveryDecided, result, actor.Sub, id.ToString(), cancellationToken),
+            session => panel.RecordActionInTransactionAsync(session, ModerationAuditEvents.RecoveryDecided, result, actor.Sub, id.ToString(), cancellationToken),
             cancellationToken);
         return outcome switch
         {
