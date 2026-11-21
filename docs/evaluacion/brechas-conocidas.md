@@ -28,7 +28,7 @@ Lista honesta de lo que **no** está o **no actúa** hoy, para que nadie (person
 | CDN | El módulo de Terraform de Front Door está preparado (KNOCK-296) y **sin aplicar**; hoy las imágenes públicas salen del Blob con `Cache-Control` largo (ADR-007, opción D). El punto 15c sigue parcial. |
 
 ## D. Evidencia que falta o que hay que verificar en vivo
-- No se verificó en vivo el estado de los Container Apps ni las réplicas desplegadas: `deploy/apps/envs/evaluacion.tfvars` pide 2 por servicio, pero no hay captura de `az containerapp replica list` ni de `terraform output`.
+- No se verificó en vivo el estado de los Container Apps ni las réplicas desplegadas: `deploy/apps/envs/evaluacion.tfvars` pide 2 por servicio (solo si se aplica para la evaluación del lunes, durante pocos días; hoy se usa `dev.tfvars`), pero no hay captura de `az containerapp replica list` ni de `terraform output`.
 - Los números de pruebas de una corrida real salen de `ci-pr`; el recuento de `generado/cifras.md` es **estático** y no sustituye a esa corrida.
 - Endpoints sin cita en alguna suite de pruebas (por ruta literal): ver `docs/endpoints.md` y la tabla de la autoevaluación; la heurística puede fallar si la ruta se arma por partes.
 - Un porcentaje de «seguridad según DevSecOps» o una comparación con banca o fintech **no se responde**: el repositorio no define un criterio verificable (la alternativa es la lista de controles de `docs/QA_DEVSECOPS.md`).

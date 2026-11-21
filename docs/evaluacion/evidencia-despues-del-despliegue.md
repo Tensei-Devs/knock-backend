@@ -25,7 +25,7 @@ az containerapp revision list -g <RG> -n knock-market --query "[].{revision:name
 (cd deploy/apps && terraform output)
 (cd deploy/infra && terraform output)
 ```
-Esto contesta «instancias del backend en la nube» con el estado real y no con `evaluacion.tfvars`.
+Esto contesta «instancias del backend en la nube» con el estado real y no con `evaluacion.tfvars` (que solo cuenta si se aplicó para la evaluación del lunes; si no, el despliegue usa `dev.tfvars` con 1 réplica por servicio).
 
 ## 4. Pruebas de humo y TLS
 ```
