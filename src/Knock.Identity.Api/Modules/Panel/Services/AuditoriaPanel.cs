@@ -6,6 +6,7 @@ using Knock.Identity.Api.Modules.Panel.Data;
 using Knock.Identity.Api.Modules.Panel.Domain;
 using Knock.Identity.Api.Modules.Sesiones.Services;
 
+
 namespace Knock.Identity.Api.Modules.Panel.Services;
 
 /// <summary>HMAC-SHA256 de la dirección IP con la llave de búsqueda de la spec 009 (la del celular): la auditoría nunca guarda la IP en claro (R-23).</summary>
@@ -47,8 +48,32 @@ internal sealed partial class AuditoriaPanel(
         string? resourceId = null,
         CancellationToken cancellationToken = default)
     {
+        var entry = BuildEntry(type, eventName, result, sub, sid, permission, route, resourceId);
+        await InsertAsync(eventName, () => store.InsertAsync(entry, cancellationToken));
+    }
+
+    /// <summary>
+    /// Igual que <see cref="WriteAsync"/> pero dentro de la transacción de MongoDB de quien llama (spec 053, R-22): el registro y el cambio se confirman juntos o ninguno.
+    /// </summary>
+    /// <exception cref="DomainException">503 <c>audit_unavailable</c> si la escritura falla.</exception>
+    public async Task WriteInTransactionAsync(
+        StoreTransaction transaction,
+        string type,
+        string eventName,
+        string result,
+        string? sub,
+        string? resourceId,
+        CancellationToken cancellationToken)
+    {
+        var entry = BuildEntry(type, eventName, result, sub, null, null, null, resourceId);
+        var transactional = store as IPanelAuditoriaEnTransaccion ?? throw new InvalidOperationException("The audit store does not support transactions.");
+        await InsertAsync(eventName, () => transactional.InsertAsync(entry, transaction, cancellationToken));
+    }
+
+    private PanelAuditEntry BuildEntry(string type, string eventName, string result, string? sub, string? sid, string? permission, string? route, string? resourceId)
+    {
         var (ipHmac, correlationId) = RequestOrigin();
-        var entry = new PanelAuditEntry(
+        return new PanelAuditEntry(
             timeProvider.GetUtcNow().UtcDateTime,
             type,
             eventName,
@@ -60,9 +85,13 @@ internal sealed partial class AuditoriaPanel(
             permission,
             route,
             IsSafeResourceId(resourceId) ? resourceId : null);
+    }
+
+    private async Task InsertAsync(string eventName, Func<Task> insert)
+    {
         try
         {
-            await store.InsertAsync(entry, cancellationToken);
+            await insert();
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {

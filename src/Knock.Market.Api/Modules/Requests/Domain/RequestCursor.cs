@@ -42,4 +42,37 @@ internal static class RequestCursor
 
         throw new DomainException(DomainErrorKind.BadRequest, "The cursor is not valid.", RequestErrorCodes.InvalidCursorCode);
     }
+
+    /// <summary>
+    /// Cursor del listado propio con grupos (spec 020, R-09 enmendada): grupo de la última fila (<c>0</c> activas, <c>1</c> terminadas), su <c>creadoEn</c> en milisegundos UTC y su
+    /// <c>_id</c>. Un cursor del formato anterior (dos datos) no se acepta.
+    /// </summary>
+    public static string EncodeGrouped(int group, DateTime createdAtUtc, ObjectId id) =>
+        WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(
+            string.Create(CultureInfo.InvariantCulture, $"{group}{_separator}{new DateTimeOffset(createdAtUtc, TimeSpan.Zero).ToUnixTimeMilliseconds()}{_separator}{id}")));
+
+    public static (int Group, DateTime CreatedAtUtc, ObjectId Id) DecodeGrouped(string cursor)
+    {
+        try
+        {
+            var parts = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(cursor)).Split(_separator);
+            if (parts.Length == 3
+                && (parts[0] == "0" || parts[0] == "1")
+                && long.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out var milliseconds)
+                && ObjectId.TryParse(parts[2], out var id))
+            {
+                return (parts[0] == "0" ? 0 : 1, DateTimeOffset.FromUnixTimeMilliseconds(milliseconds).UtcDateTime, id);
+            }
+        }
+        catch (FormatException)
+        {
+            // Se responde igual que con cualquier otro cursor ilegible.
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            // Milisegundos fuera del rango de fechas.
+        }
+
+        throw new DomainException(DomainErrorKind.BadRequest, "The cursor is not valid.", RequestErrorCodes.InvalidCursorCode);
+    }
 }

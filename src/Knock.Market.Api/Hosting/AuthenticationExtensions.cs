@@ -3,6 +3,7 @@ using Knock.Market.Api.Common.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Knock.Market.Api.Hosting;
@@ -18,7 +19,7 @@ internal static class AuthenticationExtensions
             sp.GetRequiredService<IConfiguration>(),
             sp.GetRequiredService<IHostEnvironment>()));
 
-        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer().AddInternalServiceScheme();
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer().AddInternalServiceScheme().AddPanelScheme();
         services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
             .Configure<JwtSettings>((options, settings) =>
             {
@@ -51,6 +52,9 @@ internal static class AuthenticationExtensions
             });
         services.AddAuthorization();
         services.AddKnockInternalServiceAuthentication();
+        services.AddKnockPanelAuthentication();
+        services.AddHttpContextAccessor();
+        services.TryAddSingleton<IPanelPermissionGate, DenyAllPanelPermissionGate>();
         services.AddHostedService<AuthenticationStartupCheck>();
         return services;
     }
