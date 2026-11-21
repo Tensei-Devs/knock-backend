@@ -24,6 +24,10 @@ public static class RequestsModuleExtensions
             .BindConfiguration(OleadasOptions.SectionName)
             .Validate(options => options.IsValid(), "Oleadas values must be positive and MejorOrdenados + 2 must not exceed TamanoOleada.")
             .ValidateOnStart();
+        services.AddOptions<SolicitudesOptions>()
+            .BindConfiguration(SolicitudesOptions.SectionName)
+            .Validate(options => options.IsValid(), "Solicitudes:HorasVencimiento must be 1 to 168 and Solicitudes:MinutosBarrido 1 to 1440.")
+            .ValidateOnStart();
         services.AddOptions<QuotePricingOptions>().BindConfiguration(QuotePricingOptions.SectionName);
         services.AddKnockMongoDatabase(ModuleKey);
         services.AddScoped<ITareasProgramadasStore>(provider => new TareasProgramadasStore(provider.GetRequiredKeyedService<IMongoDatabase>(ModuleKey)));

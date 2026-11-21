@@ -40,7 +40,8 @@ internal sealed class SolicitudService(
     IQuoteRequestReader quoteRequests,
     TimeProvider clock,
     EnviosStore? sends = null,
-    IOptions<OleadasOptions>? waves = null)
+    IOptions<OleadasOptions>? waves = null,
+    IOptions<SolicitudesOptions>? deadlines = null)
 {
     private const string _domicile = "domicilio";
     private const string _workshop = "taller";
@@ -102,7 +103,7 @@ internal sealed class SolicitudService(
             colonia.Value.Cp,
             hasAddress ? cipher.Encrypt(body.Direccion!.Trim(), AddressContext(id)) : null,
             RequestState.Enviada,
-            RequestRules.ExpiresAt(now).UtcDateTime,
+            RequestRules.ExpiresAt(now, deadlines?.Value.HorasVencimiento ?? RequestRules.LifetimeHours).UtcDateTime,
             now.UtcDateTime,
             body.ElementoId is null ? null : ObjectId.Parse(body.ElementoId).ToString());
         var message = OutboxMessage.Create(
