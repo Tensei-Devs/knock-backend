@@ -3038,6 +3038,232 @@
         }
       }
     },
+    "/api/v{version}/imagenes/subidas": {
+      "post": {
+        "tags": [
+          "Imagenes"
+        ],
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PedirSubidaImagenRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PedirSubidaImagenRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PedirSubidaImagenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubidaImagenResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubidaImagenResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubidaImagenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v{version}/imagenes/subidas/{id}/confirmar": {
+      "post": {
+        "tags": [
+          "Imagenes"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImagenConfirmadaResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImagenConfirmadaResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImagenConfirmadaResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v{version}/admin/oficios-pedidos": {
       "get": {
         "tags": [
@@ -4456,6 +4682,45 @@
         },
         "description": "Un trabajo terminado del historial (spec 041, R-17): día de la visita (`YYYY-MM-DD`), oficio y nombre del técnico. Sin precios ni direcciones."
       },
+      "ImagenConfirmadaResponse": {
+        "required": [
+          "url",
+          "ancho",
+          "alto",
+          "bytes"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "ancho": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "alto": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "bytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        },
+        "description": "Respuesta 200 de la confirmación (R-12)."
+      },
       "InboxItem": {
         "required": [
           "solicitudId",
@@ -4731,6 +4996,38 @@
           }
         },
         "description": "Oficio activo del catálogo tal como lo ve la app: solo clave, nombre y modalidad (nunca id ni activo)."
+      },
+      "PedirSubidaImagenRequest": {
+        "required": [
+          "proposito",
+          "tipoContenido",
+          "tamanoBytes"
+        ],
+        "type": "object",
+        "properties": {
+          "proposito": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tipoContenido": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tamanoBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        },
+        "description": "Cuerpo de `POST /api/v1/imagenes/subidas` (spec 032, R-04). Los campos son opcionales para que la validación responda 422 con `errors` por campo."
       },
       "PermisoConversacion": {
         "required": [
@@ -5502,6 +5799,43 @@
           }
         },
         "description": "Cuerpo de `PUT /tecnicos/me/horarios` y respuesta de `GET` (TEC-10 y TEC-11): los siete días, cada uno una vez."
+      },
+      "SubidaImagenResponse": {
+        "required": [
+          "id",
+          "urlSubida",
+          "metodo",
+          "encabezados",
+          "venceEn",
+          "confirmarAntesDe"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "urlSubida": {
+            "type": "string"
+          },
+          "metodo": {
+            "type": "string"
+          },
+          "encabezados": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "venceEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "confirmarAntesDe": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "description": "Respuesta 201 de la subida (R-05): `urlSubida` es una SAS de escritura de un solo blob y no debe registrarse ni cachearse."
       },
       "Suggestion": {
         "required": [
@@ -6729,6 +7063,9 @@
     },
     {
       "name": "Descarte"
+    },
+    {
+      "name": "Imagenes"
     },
     {
       "name": "InternalHistory"
