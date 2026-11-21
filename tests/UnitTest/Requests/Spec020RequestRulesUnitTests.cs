@@ -91,6 +91,44 @@ public sealed class Spec020RequestRulesUnitTests
     }
 
     [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    public void GroupedCursor_RoundTrips_CA_020_24(int group)
+    {
+        var id = ObjectId.GenerateNewId();
+        var when = new DateTime(2026, 11, 13, 18, 30, 0, 123, DateTimeKind.Utc);
+
+        var decoded = RequestCursor.DecodeGrouped(RequestCursor.EncodeGrouped(group, when, id));
+
+        decoded.Should().Be((group, when, id));
+    }
+
+    [Fact]
+    public void GroupedCursor_RejectsTheOldTwoValueFormatAndUnknownGroups_CA_020_24()
+    {
+        var id = ObjectId.GenerateNewId();
+        var oldFormat = RequestCursor.Encode(DateTime.UtcNow, id);
+        var unknownGroup = Microsoft.AspNetCore.WebUtilities.WebEncoders.Base64UrlEncode(System.Text.Encoding.UTF8.GetBytes($"2:1700000000000:{id}"));
+
+        foreach (var cursor in new[] { oldFormat, unknownGroup, "abc" })
+        {
+            var act = () => RequestCursor.DecodeGrouped(cursor);
+
+            act.Should().Throw<DomainException>().Which.Code.Should().Be("invalid_cursor");
+        }
+    }
+
+    [Theory]
+    [InlineData("Enviada", 0)]
+    [InlineData("Cotizando", 0)]
+    [InlineData("CitaConfirmada", 0)]
+    [InlineData("Terminada", 1)]
+    [InlineData("Calificada", 1)]
+    [InlineData("Cancelada", 1)]
+    [InlineData("Vencida", 1)]
+    public void Group_Of_State_CA_020_24(string state, int group) => RequestStates.GroupOf(Enum.Parse<RequestState>(state)).Should().Be(group);
+
+    [Theory]
     [InlineData("")]
     [InlineData("abc")]
     [InlineData("!!!")]

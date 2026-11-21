@@ -78,6 +78,7 @@ public sealed class Spec020RequestsScriptTests
             (await MongoIndexes.DescribeAsync(market, "solicitudes")).Should().Equal(
                 "_id_ _id:1 - ttl:-",
                 "clienteId_1_creadoEn_-1 clienteId:1,creadoEn:-1 - ttl:-",
+                "clienteId_1_estado_1_creadoEn_-1 clienteId:1,estado:1,creadoEn:-1 - ttl:-",
                 "estado_1_venceEn_1 estado:1,venceEn:1 - ttl:-",
                 "oficioClave_1_estado_1 oficioClave:1,estado:1 - ttl:-");
             (await MongoIndexes.DescribeAsync(market, "cotizaciones")).Should().Equal(
