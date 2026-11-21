@@ -490,7 +490,10 @@ jobs:
 
   gate:
     name: gate
-    if: always()
+    # `!cancelled()` en lugar de `always()`: una corrida cancelada por `concurrency` (otro push al mismo PR) no debe
+    # dejar un `gate` rojo; con `always()` el gate corría igual y fallaba porque sus needs quedaban «cancelled».
+    # Si algún job falla, el gate sigue corriendo y falla, como antes.
+    if: ${{ !cancelled() }}
     needs: [detect, pr-meta, pr-points, governance, build-test, sast, sca, secrets, openapi-diff, iac, container, dast]
     runs-on: ubuntu-latest
     timeout-minutes: 5
