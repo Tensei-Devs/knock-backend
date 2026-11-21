@@ -1,6 +1,6 @@
 # ADR-007 — CDN de las imágenes públicas
 
-> **Estado:** Aprobada
+> **Estado:** Aprobada (la actualización de 2026-11-21 está pendiente de firma)
 > **Complementa:** la sección 10 de `docs/DECISION_TECNICA.md`, el [ADR-006](ADR-006-costos-y-ventana-de-evaluacion.md) y la spec 013.
 > **Tarea:** TT-GES-10 (KNOCK-182) · Impacto de implementación: TT-API-10, TT-AZ-02, TT-CD-02.
 
@@ -14,6 +14,17 @@ Hechos de la documentación (consulta del 2026-11-06):
 - La salida de datos a internet de Azure incluye **100 GB gratis al mes**; después, 0.087 USD por GB en el primer tramo ([precios de ancho de banda](https://azure.microsoft.com/en-us/pricing/details/bandwidth/)).
 - El almacenamiento Blob (Hot, LRS, West US) cuesta 0.0208 USD por GB al mes según la API de precios de Azure, consultada en `docs/evidencia/KNOCK-145-costo-cero.md`.
 - Como referencia, Cloudflare publica un plan **Free de 0 USD al mes que incluye CDN**, pensado para proyectos personales o que no son críticos para el negocio y sin SLA de disponibilidad ([planes de Cloudflare](https://www.cloudflare.com/plans/network-cdn/)); y, por omisión, guarda en caché los archivos por extensión, entre ellas JPG, PNG, GIF, WEBP y SVG ([comportamiento de caché](https://developers.cloudflare.com/cache/concepts/default-cache-behavior/)).
+
+## Actualización de 2026-11-21: sí habrá CDN (módulo preparado, **sin aplicar**)
+
+> **Estado de esta actualización:** propuesta del Tech Lead pendiente de firma en la sección «Aprobación». **El recurso NO está desplegado.** Hasta que el Tech Lead confirme el `terraform apply`, ninguna otra documentación debe decir que la CDN está implementada.
+
+- **Decisión revisada.** El equipo sí tendrá una CDN: **Azure Front Door Standard** (opción B), delante del gateway (`/api/*`) y para el contenido estático del panel y de la landing; las imágenes públicas pueden entrar por una ruta opcional. Esto sustituye al punto 1 de la sección «Decisión» (no crear ningún perfil de pago) y, cuando se aplique, deja cerrada la fila «Existe una red de distribución de contenido» de la tabla del punto 15c. La opción D sigue siendo el origen de las imágenes públicas.
+- **Qué quedó hecho.** El módulo `deploy/modules/edge` y el directorio `deploy/edge/` (estado propio `edge.tfstate`), con `terraform validate` y `terraform test` (proveedor simulado, 3 pruebas) en verde. No se corrió un `plan` contra Azure: necesita la sesión de quien despliega.
+- **Costo.** Con las tarifas citadas arriba: 35 USD al mes de cuota base (unos 12.8 USD en la ventana de evaluación del 25 de noviembre al 5 de diciembre), más solicitudes y salida. Verificar las tarifas antes del `apply`. Sale del crédito de Azure for Students (ADR-006).
+- **Cómo se destruye.** `terraform destroy` en `deploy/edge` (estado propio): borra solo el perfil y sus rutas y la cuota base deja de cobrarse. Sin cambios de código para volver, porque la dirección base es configurable.
+- **Pendiente antes de mandar tráfico real:** confiar en la IP del cliente detrás del borde (los límites por IP del gateway), exigir `X-Azure-FDID` para que el gateway solo atienda por el borde, permitir el dominio nuevo en CORS del panel y en los hosts de foto, y registrar el proveedor `Microsoft.Cdn`. Detalle en `deploy/edge/README.md`.
+- **Lo que no cambia:** las fotos de verificación y todo contenido privado nunca pasan por la CDN (punto 4); `docs/CUMPLIMIENTO_LINEAMIENTOS.md` (fila 15c) sigue como parcial hasta confirmar el `apply`.
 
 ## Opciones comparadas
 | Opción | Se puede crear hoy | Costo | Cumple «CDN» | Riesgo para lo privado |
@@ -58,4 +69,5 @@ Hechos de la documentación (consulta del 2026-11-06):
 
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
+- [ ] Revisor 1 — actualización de 2026-11-21 (sí hay CDN): pendiente de firma del Tech Lead
 - [x] Sin conflicto con la constitución

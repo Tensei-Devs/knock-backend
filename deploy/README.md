@@ -8,6 +8,7 @@ una parte no toque las demás:
 | `database/` | Clúster gratuito de Azure DocumentDB (solo se importa) | **Nunca** (`prevent_destroy`, CA-03) |
 | `infra/` | Red, entorno de Container Apps, Key Vault, Blob Storage, ACR, logs (CA-01) | Paso 4 |
 | `apps/` | Gateway, Identity, Messaging, Market y Redis | Paso 3 |
+| `edge/` | Front Door Standard delante del gateway (ADR-007, **preparado, sin aplicar**; ver `edge/README.md`) | `terraform destroy` en `edge/` |
 
 `modules/shared` es el módulo compartido; `modules/service` es un solo módulo de servicio que se instancia una vez
 por servicio, cada una con su identidad administrada y acceso solo a sus secretos (R-05).
