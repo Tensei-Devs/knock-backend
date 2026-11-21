@@ -1,3 +1,4 @@
+using Knock.Market.Api.Common.Moderation;
 using Knock.Market.Api.Common.TareasProgramadas;
 using Knock.Market.Api.Modules.Catalog;
 using Knock.Market.Api.Modules.Media;
@@ -11,6 +12,7 @@ internal static class ModulesExtensions
 {
     public static IServiceCollection AddKnockModules(this IServiceCollection services, IConfiguration configuration, bool isDevelopment)
     {
+        services.AddKnockModeration(configuration);
         services.AddCatalogModule(configuration).AddMediaModule(isDevelopment).AddRequestsModule().AddTrustModule().AddTecnicosModule();
         services.AddOptions<TareasProgramadasOptions>().BindConfiguration("TareasProgramadas")
             .Validate(x => x.IntervaloSegundos > 0, "TareasProgramadas:IntervaloSegundos must be positive.").ValidateOnStart();

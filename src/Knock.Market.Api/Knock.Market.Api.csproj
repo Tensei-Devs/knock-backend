@@ -23,6 +23,9 @@
     <PackageReference Include="StackExchange.Redis" Version="2.13.23" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Common\Moderation\lista-local.es-MX.txt" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="Knock.UnitTest" />
     <InternalsVisibleTo Include="Knock.IntegrationTest" />
     <InternalsVisibleTo Include="Knock.SecurityTest" />
