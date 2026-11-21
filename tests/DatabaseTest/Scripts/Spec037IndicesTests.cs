@@ -92,16 +92,14 @@ public sealed class Spec037IndicesTests
         }
     }
 
-    [Theory]
-    [InlineData("nombre con espacios")]
-    [InlineData("a;b")]
-    public async Task Script_RejectsAnInvalidDatabaseName_R_01(string name)
+    [Fact]
+    public async Task Script_RejectsInvalidDatabaseNames_R_01()
     {
         var documentDb = await DocumentDbFixture.SharedAsync();
-        await using var tools = await MongoToolsContainer.StartAsync(documentDb, new Dictionary<string, string> { ["KNOCK_DB_MESSAGING"] = name });
-
-        var result = await tools.RunAsync("mongosh", "--nodb", "--quiet", "--file", $"{MongoToolsContainer.DbDirectory}/{_scriptName}");
-
-        result.ExitCode.Should().NotBe(0);
+        foreach (var name in new[] { "nombre con espacios", "a;b" })
+        {
+            await using var tools = await MongoToolsContainer.StartAsync(documentDb, new Dictionary<string, string> { ["KNOCK_DB_MESSAGING"] = name });
+            (await tools.RunAsync("mongosh", "--nodb", "--quiet", "--file", $"{MongoToolsContainer.DbDirectory}/{_scriptName}")).ExitCode.Should().NotBe(0, name);
+        }
     }
 }
