@@ -1,5 +1,6 @@
 using Knock.Identity.Api.Hosting;
 using Knock.Identity.Api.Modules.Moderation.Domain;
+using Knock.Identity.Api.Modules.Panel.Data;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -35,8 +36,8 @@ internal interface IReportReviewStore
     /// </summary>
     Task<ReportDecisionStoreResult> DecideAsync(
         ReportDecisionRecord decision,
-        Func<IClientSessionHandle, DecidedReportParties, Task> applyEffects,
-        Func<IClientSessionHandle, Task> writeAudit,
+        Func<StoreTransaction, DecidedReportParties, Task> applyEffects,
+        Func<StoreTransaction, Task> writeAudit,
         CancellationToken cancellationToken);
 }
 
@@ -120,8 +121,8 @@ internal sealed class ReportReviewStore(
 
     public async Task<ReportDecisionStoreResult> DecideAsync(
         ReportDecisionRecord decision,
-        Func<IClientSessionHandle, DecidedReportParties, Task> applyEffects,
-        Func<IClientSessionHandle, Task> writeAudit,
+        Func<StoreTransaction, DecidedReportParties, Task> applyEffects,
+        Func<StoreTransaction, Task> writeAudit,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(decision);
@@ -156,8 +157,8 @@ internal sealed class ReportReviewStore(
                 }
 
                 var parties = new DecidedReportParties(matched["reportaId"].AsString, matched["reportadoId"].AsString, matched["motivo"].AsString);
-                await applyEffects(transaction, parties);
-                await writeAudit(transaction);
+                await applyEffects(new StoreTransaction(transaction), parties);
+                await writeAudit(new StoreTransaction(transaction));
                 return new ReportDecisionStoreResult(DecisionStoreOutcome.Decided, parties);
             },
             cancellationToken: cancellationToken);

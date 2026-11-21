@@ -1,5 +1,6 @@
 using Knock.Identity.Api.Hosting;
 using Knock.Identity.Api.Modules.Moderation.Domain;
+using Knock.Identity.Api.Modules.Panel.Data;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -36,7 +37,7 @@ internal interface IVerificationReviewStore
     /// En una sola transacción: pasa la verificación de <c>en_revision</c> a su estado final, destruye la llave envuelta y deja las fotos como <c>borrada</c> (la purga irreversible de la spec 057,
     /// D-02) y ejecuta <paramref name="writeAudit"/>; si la auditoría falla no queda nada (R-22).
     /// </summary>
-    Task<DecisionStoreOutcome> DecideAsync(VerificationDecisionRecord decision, Func<IClientSessionHandle, Task> writeAudit, CancellationToken cancellationToken);
+    Task<DecisionStoreOutcome> DecideAsync(VerificationDecisionRecord decision, Func<StoreTransaction, Task> writeAudit, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -60,10 +61,11 @@ internal sealed class VerificationReviewStore(
     private FindOptions FindOptions => new() { MaxTime = mongoOptions.Value.QueryMaxTime };
 
     /// <summary>Índice de la cola (§6): estado y antigüedad. Idempotente; coincide con <c>db/053-panel-de-revision.js</c>.</summary>
-    public Task EnsureIndexesAsync(CancellationToken cancellationToken) =>
-        Verifications.Indexes.CreateOneAsync(
-            new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending(_stateField).Ascending(_sentField), new CreateIndexOptions { Name = "estado_1_enviadoEn_1" }),
-            cancellationToken: cancellationToken);
+    public async Task EnsureIndexesAsync(CancellationToken cancellationToken)
+    {
+        var queue = Builders<BsonDocument>.IndexKeys.Ascending(_stateField).Ascending(_sentField);
+        await Verifications.Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(queue, new CreateIndexOptions { Name = "estado_1_enviadoEn_1" }), cancellationToken: cancellationToken);
+    }
 
     public async Task<IReadOnlyList<QueuedVerification>> ListAsync(string state, DateTime from, DateTime to, ReviewCursor? after, int take, CancellationToken cancellationToken)
     {
@@ -102,7 +104,7 @@ internal sealed class VerificationReviewStore(
             destroyed);
     }
 
-    public async Task<DecisionStoreOutcome> DecideAsync(VerificationDecisionRecord decision, Func<IClientSessionHandle, Task> writeAudit, CancellationToken cancellationToken)
+    public async Task<DecisionStoreOutcome> DecideAsync(VerificationDecisionRecord decision, Func<StoreTransaction, Task> writeAudit, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(decision);
         ArgumentNullException.ThrowIfNull(writeAudit);
@@ -142,7 +144,7 @@ internal sealed class VerificationReviewStore(
                         ? Builders<BsonDocument>.Update.Set("nivelOtorgado", Text(matched, "nivel") ?? "basica").Set("curpVigente", matched.TryGetValue("curpHmac", out var hmac) && !hmac.IsBsonNull)
                         : Builders<BsonDocument>.Update.Set("curpVigente", false);
                     await Verifications.UpdateOneAsync(transaction, _filter.Eq(_idField, decision.Id), grant, cancellationToken: token);
-                    await writeAudit(transaction);
+                    await writeAudit(new StoreTransaction(transaction));
                     return DecisionStoreOutcome.Decided;
                 },
                 cancellationToken: cancellationToken);

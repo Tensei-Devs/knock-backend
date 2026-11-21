@@ -1,4 +1,3 @@
-using System.Reflection;
 using AwesomeAssertions;
 using Knock.Identity.Api.Common.Errors;
 using Knock.Identity.Api.Modules.Moderation.Data;
@@ -12,7 +11,6 @@ using Knock.UnitTest.Identity;
 using Knock.UnitTest.Panel;
 using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
-using MongoDB.Driver;
 using Xunit;
 
 namespace Knock.UnitTest.Moderation;
@@ -24,19 +22,7 @@ public class Spec053Tests
     private static readonly string _id = ObjectId.GenerateNewId().ToString();
     private static readonly ReviewActor _verifier = new("verifier-sub", "sid-1");
 
-    /// <summary>Sesión de MongoDB de mentira: los dobles de los almacenes no la usan, solo la reciben.</summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1812:Avoid uninstantiated internal classes", Justification = "Lo crea DispatchProxy")]
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1852:Seal internal types", Justification = "DispatchProxy exige un tipo no sellado")]
-    private class SessionProxy : DispatchProxy
-    {
-        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) => null;
-    }
-
-    private static readonly IClientSessionHandle _session = Create<IClientSessionHandle, SessionProxy>();
-
-    private static IClientSessionHandle Session() => _session;
-
-    private static T Create<T, TProxy>() where TProxy : DispatchProxy => DispatchProxy.Create<T, TProxy>();
+    private static StoreTransaction Session() => new(new object());
 
     private sealed class FakeAudit : IPanelAuditoriaStore, IPanelAuditoriaEnTransaccion
     {
@@ -46,7 +32,7 @@ public class Spec053Tests
 
         public Task InsertAsync(PanelAuditEntry entry, CancellationToken cancellationToken) => Add(entry);
 
-        public Task InsertAsync(PanelAuditEntry entry, IClientSessionHandle session, CancellationToken cancellationToken) => Add(entry);
+        public Task InsertAsync(PanelAuditEntry entry, StoreTransaction transaction, CancellationToken cancellationToken) => Add(entry);
 
         private Task Add(PanelAuditEntry entry)
         {
@@ -76,7 +62,7 @@ public class Spec053Tests
 
         public Task<ReviewedVerification?> FindAsync(ObjectId id, CancellationToken cancellationToken) => Task.FromResult(Stored);
 
-        public async Task<DecisionStoreOutcome> DecideAsync(VerificationDecisionRecord decision, Func<IClientSessionHandle, Task> writeAudit, CancellationToken cancellationToken)
+        public async Task<DecisionStoreOutcome> DecideAsync(VerificationDecisionRecord decision, Func<StoreTransaction, Task> writeAudit, CancellationToken cancellationToken)
         {
             if (Outcome == DecisionStoreOutcome.Decided)
             {
@@ -132,7 +118,7 @@ public class Spec053Tests
 
         public Task<DecidedReportParties?> FindPartiesAsync(ObjectId id, CancellationToken cancellationToken) => Task.FromResult(Parties);
 
-        public async Task<ReportDecisionStoreResult> DecideAsync(ReportDecisionRecord decision, Func<IClientSessionHandle, DecidedReportParties, Task> applyEffects, Func<IClientSessionHandle, Task> writeAudit, CancellationToken cancellationToken)
+        public async Task<ReportDecisionStoreResult> DecideAsync(ReportDecisionRecord decision, Func<StoreTransaction, DecidedReportParties, Task> applyEffects, Func<StoreTransaction, Task> writeAudit, CancellationToken cancellationToken)
         {
             if (Outcome != DecisionStoreOutcome.Decided)
             {
@@ -150,7 +136,7 @@ public class Spec053Tests
     {
         public ReportDecisionApplied? Applied { get; private set; }
 
-        public Task ApplyAsync(IClientSessionHandle session, ReportDecisionApplied decision, CancellationToken cancellationToken)
+        public Task ApplyAsync(StoreTransaction transaction, ReportDecisionApplied decision, CancellationToken cancellationToken)
         {
             Applied = decision;
             return Task.CompletedTask;

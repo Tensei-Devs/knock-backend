@@ -121,10 +121,11 @@ internal static class ReviewRules
     /// <summary>Por omisión las colas miran los últimos 30 días (R-16, D-08).</summary>
     public static readonly TimeSpan DefaultWindow = TimeSpan.FromDays(30);
 
-    public static bool IsValidReason(string? reason) =>
-        reason?.Trim() is { } trimmed
-        && trimmed.Length is >= MinReasonLength and <= MaxReasonLength
-        && !trimmed.Any(c => char.IsControl(c) && c != '\n');
+    public static bool IsValidReason(string? reason)
+    {
+        var trimmed = reason?.Trim() ?? string.Empty;
+        return trimmed.Length >= MinReasonLength && trimmed.Length <= MaxReasonLength && trimmed.All(c => c == (char)10 || !char.IsControl(c));
+    }
 
     /// <summary>El rango efectivo de una cola: <c>desde</c> por omisión es hace 30 días y <c>hasta</c> es ahora (sin tope: la paginación acota el costo, D-08).</summary>
     public static (DateTime From, DateTime To) Range(DateTime? from, DateTime? to, DateTime now) => (from ?? now - DefaultWindow, to ?? now);

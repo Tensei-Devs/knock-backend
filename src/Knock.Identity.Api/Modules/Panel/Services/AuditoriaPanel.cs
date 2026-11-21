@@ -5,7 +5,7 @@ using Knock.Identity.Api.Hosting;
 using Knock.Identity.Api.Modules.Panel.Data;
 using Knock.Identity.Api.Modules.Panel.Domain;
 using Knock.Identity.Api.Modules.Sesiones.Services;
-using MongoDB.Driver;
+
 
 namespace Knock.Identity.Api.Modules.Panel.Services;
 
@@ -57,7 +57,7 @@ internal sealed partial class AuditoriaPanel(
     /// </summary>
     /// <exception cref="DomainException">503 <c>audit_unavailable</c> si la escritura falla.</exception>
     public async Task WriteInTransactionAsync(
-        IClientSessionHandle session,
+        StoreTransaction transaction,
         string type,
         string eventName,
         string result,
@@ -65,10 +65,9 @@ internal sealed partial class AuditoriaPanel(
         string? resourceId,
         CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(session);
         var entry = BuildEntry(type, eventName, result, sub, null, null, null, resourceId);
         var transactional = store as IPanelAuditoriaEnTransaccion ?? throw new InvalidOperationException("The audit store does not support transactions.");
-        await InsertAsync(eventName, () => transactional.InsertAsync(entry, session, cancellationToken));
+        await InsertAsync(eventName, () => transactional.InsertAsync(entry, transaction, cancellationToken));
     }
 
     private PanelAuditEntry BuildEntry(string type, string eventName, string result, string? sub, string? sid, string? permission, string? route, string? resourceId)
