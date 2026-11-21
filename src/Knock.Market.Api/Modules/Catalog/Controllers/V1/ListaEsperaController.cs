@@ -12,7 +12,7 @@ namespace Knock.Market.Api.Modules.Catalog.Controllers.V1;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/zonas/lista-espera")]
 [Authorize]
-[EnableRateLimiting(RateLimitingExtensions.WaitlistPolicy)]
+[EnableRateLimiting(MarketRateLimits.WaitlistPolicy)]
 internal sealed class ListaEsperaController(WaitlistService service) : ControllerBase
 {
     [HttpPost]

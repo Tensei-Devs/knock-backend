@@ -1,4 +1,5 @@
 using System.Globalization;
+using Knock.Hosting.RateLimiting;
 using Knock.Identity.Api.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
@@ -17,7 +18,7 @@ internal static class PanelHttp
     private const string _cookieAttributes = "; Path=" + CookiePath + "; Secure; HttpOnly; SameSite=None; Partitioned";
 
     /// <summary>IP de la conexión normalizada igual que el limitador (IPv6 por /64): es la que cuenta para los fallos por IP.</summary>
-    public static string ClientIp(HttpContext context) => RateLimitingExtensions.ClientKey(context);
+    public static string ClientIp(HttpContext context) => RequestKeys.ClientKey(context);
 
     /// <summary>Escribe el error con su <c>code</c> y, si aplica, <c>Retry-After</c>; devuelve un resultado vacío porque la respuesta ya está escrita.</summary>
     public static async Task<IActionResult> ProblemAsync(HttpContext context, int status, string code, TimeSpan? retryAfter = null)
