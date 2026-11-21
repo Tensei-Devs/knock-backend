@@ -1,6 +1,6 @@
 # Borde de distribución: Azure Front Door Standard (REQUIERE AUTORIZACIÓN)
 
-> **Estado: preparado, NO aplicado.** Nada de esto existe en Azure hasta que una persona con permisos corra `terraform apply`, **después del primer despliegue exitoso y de la evidencia**. Hasta confirmarlo, ningún documento debe decir que la CDN está implementada. **El tráfico real no se enruta por Front Door: el gateway sigue siendo la entrada principal.**
+> **Estado: Módulo preparado y validado (terraform validate, 3 de 3 pruebas con proveedor simulado, plan real con 8 recursos a crear y 0 a destruir); no desplegado porque la suscripción Azure for Students prohíbe Front Door (error 400, 2026-11-21).** Mensaje de Azure: `400 BadRequest: Free Trial and Student account is forbidden for Azure Frontdoor resources`, al crear `module.edge.azurerm_cdn_frontdoor_profile.this` con `terraform apply` el 2026-11-21 (suscripción Azure for Students). Después del fallo, `terraform state list` en `deploy/edge` salió vacío y `az resource list -g rg-knock-dev` no mostró ningún recurso `afd`: no quedó nada creado.
 
 Este directorio tiene su propio estado remoto (`edge.tfstate`), igual que `infra/`, `database/` y `apps/`: se puede destruir sin tocar lo demás. El módulo reutilizable está en `deploy/modules/edge`. Ninguna parte del CI lo despliega.
 
