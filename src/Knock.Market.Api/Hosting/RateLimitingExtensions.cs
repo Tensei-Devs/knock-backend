@@ -44,6 +44,12 @@ internal static class RateLimitingExtensions
     public const string ArrivalPolicy = "visitas-llegada";
     public const string TrustPolicy = "tecnicos-confianza";
 
+    /// <summary>Cotización final y ajustes de precio (spec 049, §5).</summary>
+    public const string FinalQuotePolicy = "visitas-cotizacion-final";
+    public const string FinalQuoteDecisionPolicy = "visitas-cotizacion-final-decision";
+    public const string PriceAdjustmentPolicy = "cotizaciones-ajuste-precio";
+    public const string AdjustmentDecisionPolicy = "ajustes-decision";
+
     /// <summary>Registro como técnico: 5 por hora por persona (spec 046, R-52).</summary>
     public const string RegisterTechnicianPolicy = "tecnicos-registro";
     private const string _healthPath = "/health";
@@ -76,6 +82,10 @@ internal static class RateLimitingExtensions
             options.AddPolicy(ChooseQuotePolicy, SubjectPolicy(ChooseQuotePolicy, 10, TimeSpan.FromMinutes(1), services));
             options.AddPolicy(ArrivalPolicy, SubjectPolicy(ArrivalPolicy, 5, TimeSpan.FromMinutes(1), services));
             options.AddPolicy(TrustPolicy, SubjectPolicy(TrustPolicy, 30, TimeSpan.FromMinutes(1), services));
+            options.AddPolicy(FinalQuotePolicy, SubjectPolicy(FinalQuotePolicy, 10, TimeSpan.FromMinutes(1), services));
+            options.AddPolicy(FinalQuoteDecisionPolicy, SubjectPolicy(FinalQuoteDecisionPolicy, 20, TimeSpan.FromMinutes(1), services));
+            options.AddPolicy(PriceAdjustmentPolicy, SubjectPolicy(PriceAdjustmentPolicy, 10, TimeSpan.FromMinutes(1), services));
+            options.AddPolicy(AdjustmentDecisionPolicy, SubjectPolicy(AdjustmentDecisionPolicy, 20, TimeSpan.FromMinutes(1), services));
             options.AddPolicy(RegisterTechnicianPolicy, SubjectPolicy(RegisterTechnicianPolicy, 5, TimeSpan.FromHours(1), services));
             options.GlobalLimiter = PartitionedRateLimiter.CreateChained(
                 PartitionedRateLimiter.Create<HttpContext, string>(context => GlobalPartition(context, global, ready, services)),
