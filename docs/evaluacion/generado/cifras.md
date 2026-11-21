@@ -1,6 +1,6 @@
 # Cifras de evidencia del backend
 
-Generado el 2026-11-21 sobre el commit `18de73ad` (rama `docs/SIN-TARJETA-evaluacion-fase-0`). **No edites este archivo a mano:** corre `python docs/evaluacion/generar_evidencia.py`.
+Generado el 2026-11-21 sobre el commit `7326cb02` (rama `docs/KNOCK-298-evaluacion-fase-0`). **No edites este archivo a mano:** corre `python docs/evaluacion/generar_evidencia.py`.
 
 ## Endpoints
 _estático: operaciones de los openapi*.json (ruta × método)_
@@ -43,7 +43,7 @@ _estático: archivos por carpeta. La canónica es .agents/ (las demás son refle
 _estático: Memoria.md (historial hasta 2026-11-20) y docs/memoria/ (un archivo por PR desde 2026-11-21)_
 
 - `Memoria.md`: 1304 líneas y 227 secciones.
-- `docs/memoria/`: 2 entradas por tarea.
+- `docs/memoria/`: 3 entradas por tarea.
 
 ## Specs
 _estático: filas de tabla de specs/*/task.md por la palabra con que empieza el estado (task.md puede estar desactualizado)_

@@ -1,7 +1,7 @@
 {
   "fecha": "2026-11-21",
-  "sha": "18de73ad",
-  "rama": "docs/SIN-TARJETA-evaluacion-fase-0",
+  "sha": "7326cb02",
+  "rama": "docs/KNOCK-298-evaluacion-fase-0",
   "endpoints": {
     "metodo": "estático: operaciones de los openapi*.json (ruta × método)",
     "por_contrato": {
@@ -61,7 +61,7 @@
     "metodo": "estático: Memoria.md (historial hasta 2026-11-20) y docs/memoria/ (un archivo por PR desde 2026-11-21)",
     "memoria_md_lineas": 1304,
     "memoria_md_secciones": 227,
-    "entradas_por_tarea": 2
+    "entradas_por_tarea": 3
   },
   "specs": {
     "metodo": "estático: filas de tabla de specs/*/task.md por la palabra con que empieza el estado (task.md puede estar desactualizado)",
