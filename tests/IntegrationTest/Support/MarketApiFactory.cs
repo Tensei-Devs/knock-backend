@@ -24,6 +24,7 @@ internal sealed class MarketApiFactory(IReadOnlyDictionary<string, string?> sett
 
     // Clave de firma sintética: 32 bytes aleatorios por proceso, nunca se escriben en disco.
     private static readonly byte[] _signingKey = RandomNumberGenerator.GetBytes(32);
+    private static readonly byte[] _cursorKey = RandomNumberGenerator.GetBytes(32);
 
     /// <summary>Servicios que la prueba sustituye en el host (por ejemplo, un reloj fijo).</summary>
     public Action<IServiceCollection>? ExtraServices { get; private init; }
@@ -51,6 +52,8 @@ internal sealed class MarketApiFactory(IReadOnlyDictionary<string, string?> sett
             ["ConnectionStrings:KnockRedis"] = redis.ConnectionString,
             ["Mongo:Databases:Catalog"] = database,
             ["Mongo:Databases:Requests"] = database,
+            ["Mongo:Databases:Trust"] = database,
+            ["Mongo:Databases:Tecnicos"] = database,
         };
         var factory = new MarketApiFactory(Merge(values, overrides)) { ExtraServices = configureServices };
         await EnsureRequestsIndexesAsync(factory.Database);
@@ -70,6 +73,8 @@ internal sealed class MarketApiFactory(IReadOnlyDictionary<string, string?> sett
             ["ConnectionStrings:KnockRedis"] = GatewayTestSupport.DummyRedisConnectionString,
             ["Mongo:Databases:Catalog"] = "market_offline",
             ["Mongo:Databases:Requests"] = "market_offline",
+            ["Mongo:Databases:Trust"] = "market_offline",
+            ["Mongo:Databases:Tecnicos"] = "market_offline",
         };
         return new MarketApiFactory(Merge(values, overrides)) { ExtraServices = configureServices };
     }
@@ -95,6 +100,7 @@ internal sealed class MarketApiFactory(IReadOnlyDictionary<string, string?> sett
                 ["Jwt:Issuer"] = "knock-api",
                 ["Jwt:Audience"] = "knock-app",
                 ["Jwt:SigningKey"] = SigningKeyBase64,
+                ["Busqueda:Cursor:Key"] = Convert.ToBase64String(_cursorKey),
                 ["RateLimiting:Global:PermitLimit"] = _highLimit,
                 ["RateLimiting:Auth:PermitLimit"] = _highLimit,
             };
@@ -118,12 +124,25 @@ internal sealed class MarketApiFactory(IReadOnlyDictionary<string, string?> sett
             Index("estado_1_venceEn_1", new BsonDocument { ["estado"] = 1, ["venceEn"] = 1 }),
             Index("oficioClave_1_estado_1", new BsonDocument { ["oficioClave"] = 1, ["estado"] = 1 }),
         ]);
+        // Spec 041 (db/041-solicitudes-elemento-id.js): índice parcial del historial de «Mi casa y mi auto», solo donde existe elementoId.
+        await requests.CreateOneAsync(new CreateIndexModel<BsonDocument>(
+            new BsonDocument { ["clienteId"] = 1, ["elementoId"] = 1, ["estado"] = 1 },
+            new CreateIndexOptions<BsonDocument>
+            {
+                Name = "clienteId_1_elementoId_1_estado_1",
+                PartialFilterExpression = new BsonDocument("elementoId", new BsonDocument("$exists", true)),
+            }));
         var quotes = database.GetCollection<BsonDocument>("cotizaciones").Indexes;
         await quotes.CreateManyAsync(
         [
             Index("solicitudId_1_tecnicoId_1", new BsonDocument { ["solicitudId"] = 1, ["tecnicoId"] = 1 }, unique: true),
             Index("solicitudId_1_estado_1_creadoEn_1", new BsonDocument { ["solicitudId"] = 1, ["estado"] = 1, ["creadoEn"] = 1 }),
             Index("tecnicoUsuarioId_1_creadoEn_-1", new BsonDocument { ["tecnicoUsuarioId"] = 1, ["creadoEn"] = -1 }),
+        ]);
+        // Spec 042 (db/042-tecnicos-de-confianza.js): un técnico guardado una sola vez por persona.
+        await database.GetCollection<BsonDocument>("tecnicos_confianza").Indexes.CreateManyAsync(
+        [
+            Index("clienteId_1_tecnicoId_1", new BsonDocument { ["clienteId"] = 1, ["tecnicoId"] = 1 }, unique: true),
         ]);
         // Spec 021 (db/022-visitas.js): una cita por solicitud.
         await database.GetCollection<BsonDocument>("visitas").Indexes.CreateManyAsync(

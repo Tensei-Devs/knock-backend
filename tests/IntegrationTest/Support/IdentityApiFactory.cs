@@ -2,6 +2,7 @@ extern alias IdentityApi;
 
 using System.Net;
 using System.Security.Cryptography;
+using IdentityApi::Knock.Identity.Api.Modules.Panel.Data;
 using IdentityApi::Knock.Identity.Api.Modules.Sesiones.Data;
 using IdentityApi::Knock.Identity.Api.Modules.Sesiones.Services;
 using Microsoft.AspNetCore.Builder;
@@ -32,6 +33,7 @@ internal sealed class IdentityApiFactory(IReadOnlyDictionary<string, string?> se
     private static readonly byte[] _signingKey = RandomNumberGenerator.GetBytes(32);
     private static readonly byte[] _phoneEncryptionKey = RandomNumberGenerator.GetBytes(32);
     private static readonly byte[] _phoneHmacKey = RandomNumberGenerator.GetBytes(32);
+    private static readonly byte[] _fieldEncryptionKey = RandomNumberGenerator.GetBytes(32);
 
     /// <summary>Servicios que la prueba sustituye en el host (por ejemplo, el catálogo de colonias de Mercado).</summary>
     public Action<IServiceCollection>? ExtraServices { get; private init; }
@@ -69,6 +71,10 @@ internal sealed class IdentityApiFactory(IReadOnlyDictionary<string, string?> se
 
         var factory = new IdentityApiFactory(values) { ExtraServices = configureServices };
         await factory.Services.GetRequiredService<SesionesStore>().EnsureIndexesAsync(CancellationToken.None);
+        await factory.Services.GetRequiredService<PanelCuentasStore>().EnsureIndexesAsync(CancellationToken.None);
+        await factory.Services.GetRequiredService<PanelSesionesStore>().EnsureIndexesAsync(CancellationToken.None);
+        await factory.Services.GetRequiredService<PanelActivacionesStore>().EnsureIndexesAsync(CancellationToken.None);
+        await factory.Services.GetRequiredService<PanelAuditoriaStore>().EnsureIndexesAsync(CancellationToken.None);
         return factory;
     }
 
@@ -90,6 +96,9 @@ internal sealed class IdentityApiFactory(IReadOnlyDictionary<string, string?> se
                 ["Identity:PhoneProtection:HmacKeys:1"] = Convert.ToBase64String(_phoneHmacKey),
                 ["Identity:PhoneProtection:EncryptionKeyVersion"] = "1",
                 ["Identity:PhoneProtection:HmacKeyVersion"] = "1",
+                // Cifrado de campo de la dirección (spec 040): llave sintética por proceso; en producción llega de Key Vault.
+                ["Security:FieldEncryption:ActiveVersion"] = "1",
+                ["Security:FieldEncryption:Keys:1"] = Convert.ToBase64String(_fieldEncryptionKey),
             };
             foreach (var (key, value) in settings)
             {
