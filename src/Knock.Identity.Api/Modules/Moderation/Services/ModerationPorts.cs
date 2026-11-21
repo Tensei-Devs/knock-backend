@@ -1,8 +1,8 @@
 using Knock.Identity.Api.Common.Errors;
-using Knock.Identity.Api.Modules.Panel;
 using Knock.Identity.Api.Modules.Moderation.Data;
 using Knock.Identity.Api.Modules.Moderation.Domain;
 using Knock.Identity.Api.Modules.Moderation.Dtos;
+using Knock.Identity.Api.Modules.Panel;
 using MongoDB.Bson;
 
 namespace Knock.Identity.Api.Modules.Moderation.Services;
