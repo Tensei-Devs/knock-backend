@@ -120,7 +120,7 @@ public class Spec040EditarTests
 
         foreign.StatusCode.Should().Be(HttpStatusCode.NotFound);
         missing.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await foreign.Content.ReadAsStringAsync()).Should().NotContain("Falsa").And.NotContain(id.ToString());
+        ProblemBody.Reasons(await foreign.Content.ReadAsStringAsync()).Should().NotContain("Falsa").And.NotContain(id.ToString());
         (await StoredAsync(host, id)).ToJson().Should().Be(before.ToJson());
     }
 
@@ -229,5 +229,24 @@ public class Spec040EditarTests
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         host.Colonias.Calls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task OwnerEditsTheAddress_AConfirmedAppointmentKeepsItsPreviousCopy_HU_049_03()
+    {
+        await using var host = await AddressesHost.StartAsync();
+        var ana = await host.NewPersonAsync();
+        var id = await host.SeedAsync(ana, "Calle Falsa 123", "Centro", null, principal: true);
+        var appointment = new BsonDocument { ["estado"] = "confirmada", ["lugar"] = new BsonDocument { ["calleNumero"] = "Calle Falsa 123", ["colonia"] = "Centro" } };
+        var visits = host.Factory.Database.GetCollection<BsonDocument>("visitas");
+        await visits.InsertOneAsync(appointment);
+
+        using var response = await host.SendAsync(HttpMethod.Put, Uri(id), ana.Token, new { calleNumero = "Avenida Nueva 456", colonia = "Tultengo" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var stored = await StoredAsync(host, id);
+        stored["colonia"].AsString.Should().Be("Tultengo");
+        stored["calleNumero"].AsString.Should().NotContain("Avenida", "la calle nueva se guarda cifrada");
+        (await visits.Find(Builders<BsonDocument>.Filter.Empty).SingleAsync()).ToJson().Should().Be(appointment.ToJson());
     }
 }
