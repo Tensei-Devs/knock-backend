@@ -1,0 +1,125 @@
+// REQUIERE AUTORIZACIÓN. PARCHE NO COMPILADO NI EJECUTADO (sin restore en línea ni recursos de Azure esta noche).
+// SEGURIDAD Y CRIPTOGRAFÍA: revisión humana cuidadosa. Copiar a src/Knock.Identity.Api/Modules/Trust/Storage/AzureVerificationInfrastructure.cs
+// (quitando la extensión .txt) y aplicar los cambios de «procedimiento» al final.
+// Paquetes: Azure.Storage.Blobs 12.30.1 (el mismo de Market), Azure.Security.KeyVault.Keys y Azure.Identity (NUEVOS en Identity: pasar OSV y licencia antes de añadirlos).
+
+using Azure;
+using Azure.Identity;
+using Azure.Security.KeyVault.Keys.Cryptography;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
+using Azure.Storage.Blobs.Specialized;
+using Azure.Storage.Sas;
+using Microsoft.Extensions.Options;
+
+namespace Knock.Identity.Api.Modules.Trust.Storage;
+
+/// <summary>Sección <c>Verificacion:Almacen</c>: sin secretos. La identidad administrada da el acceso.</summary>
+internal sealed class VerificationStorageOptions
+{
+    public const string SectionName = "Verificacion:Almacen";
+
+    public Uri? BlobServiceUri { get; set; }
+
+    public string QuarantineContainer { get; set; } = "verificaciones-cuarentena";
+
+    public string FinalContainer { get; set; } = "verificaciones";
+
+    /// <summary>URI de la llave maestra de envoltura en Key Vault (con versión), por ejemplo https://{vault}.vault.azure.net/keys/{nombre}/{version}.</summary>
+    public Uri? MasterKeyId { get; set; }
+}
+
+/// <summary>Cuenta privada de verificación (ADR-007): SAS de delegación de usuario, un solo blob, solo HTTPS, 5 minutos.</summary>
+internal sealed class AzureVerificationBlobStore(BlobServiceClient service, IOptions<VerificationStorageOptions> options, TimeProvider clock) : IVerificationBlobStore
+{
+    private readonly BlobContainerClient _quarantine = service.GetBlobContainerClient(options.Value.QuarantineContainer);
+    private readonly BlobContainerClient _final = service.GetBlobContainerClient(options.Value.FinalContainer);
+
+    public Task<Uri> IssueQuarantineUploadLinkAsync(string blobName, TimeSpan lifetime, CancellationToken cancellationToken) =>
+        SasAsync(_quarantine, blobName, BlobSasPermissions.Create | BlobSasPermissions.Write, lifetime, cancellationToken);
+
+    public Task<Uri> IssueFinalReadLinkAsync(string blobName, TimeSpan lifetime, CancellationToken cancellationToken) =>
+        SasAsync(_final, blobName, BlobSasPermissions.Read, lifetime, cancellationToken);
+
+    public async Task<byte[]?> ReadQuarantineAsync(string blobName, int maxBytes, CancellationToken cancellationToken) =>
+        await ReadAsync(_quarantine, blobName, maxBytes + 1, cancellationToken);
+
+    public async Task<byte[]?> ReadFinalAsync(string blobName, CancellationToken cancellationToken) => await ReadAsync(_final, blobName, int.MaxValue, cancellationToken);
+
+    public async Task<bool> WriteFinalAsync(string blobName, byte[] content, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _final.GetBlobClient(blobName).UploadAsync(
+                new BinaryData(content),
+                new BlobUploadOptions { Conditions = new BlobRequestConditions { IfNoneMatch = ETag.All } },
+                cancellationToken);
+            return true;
+        }
+        catch (RequestFailedException ex) when (ex.Status is 409 or 412)
+        {
+            return false;
+        }
+    }
+
+    public async Task DeleteQuarantineAsync(string blobName, CancellationToken cancellationToken) =>
+        await _quarantine.GetBlobClient(blobName).DeleteIfExistsAsync(cancellationToken: cancellationToken);
+
+    public async Task DeleteFinalAsync(string blobName, CancellationToken cancellationToken) =>
+        await _final.GetBlobClient(blobName).DeleteIfExistsAsync(cancellationToken: cancellationToken);
+
+    private static async Task<byte[]?> ReadAsync(BlobContainerClient container, string blobName, int limit, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var range = limit == int.MaxValue ? default : new HttpRange(0, limit);
+            var result = await container.GetBlobClient(blobName).DownloadContentAsync(new BlobDownloadOptions { Range = range }, cancellationToken);
+            return result.Value.Content.ToArray();
+        }
+        catch (RequestFailedException ex) when (ex.Status == 404)
+        {
+            return null;
+        }
+    }
+
+    private async Task<Uri> SasAsync(BlobContainerClient container, string blobName, BlobSasPermissions permissions, TimeSpan lifetime, CancellationToken cancellationToken)
+    {
+        var now = clock.GetUtcNow();
+        var expires = now + lifetime;
+        var key = await service.GetUserDelegationKeyAsync(now.AddMinutes(-1), expires, cancellationToken);
+        var builder = new BlobSasBuilder(permissions, expires)
+        {
+            BlobContainerName = container.Name,
+            BlobName = blobName,
+            Resource = "b",
+            StartsOn = now.AddMinutes(-1),
+            Protocol = SasProtocol.Https,
+        };
+        return new BlobUriBuilder(container.GetBlobClient(blobName).Uri) { Sas = builder.ToSasQueryParameters(key.Value, service.AccountName) }.ToUri();
+    }
+}
+
+/// <summary>Llave maestra en Key Vault: <c>WrapKey</c>/<c>UnwrapKey</c> con RSA-OAEP-256; la llave maestra nunca sale de Key Vault.</summary>
+internal sealed class KeyVaultVerificationKeyWrapper(IOptions<VerificationStorageOptions> options) : IVerificationKeyWrapper
+{
+    private readonly CryptographyClient _client = new(options.Value.MasterKeyId ?? throw new InvalidOperationException("Verificacion:Almacen:MasterKeyId is required."), new DefaultAzureCredential());
+
+    public async Task<WrappedVerificationKey> WrapAsync(byte[] dataKey, CancellationToken cancellationToken)
+    {
+        var result = await _client.WrapKeyAsync(KeyWrapAlgorithm.RsaOaep256, dataKey, cancellationToken);
+        return new WrappedVerificationKey(Convert.ToBase64String(result.EncryptedKey), result.KeyId);
+    }
+
+    public async Task<byte[]> UnwrapAsync(WrappedVerificationKey wrapped, CancellationToken cancellationToken)
+    {
+        var result = await _client.UnwrapKeyAsync(KeyWrapAlgorithm.RsaOaep256, Convert.FromBase64String(wrapped.Value), cancellationToken);
+        return result.Key;
+    }
+}
+
+// PROCEDIMIENTO (lo ejecuta quien tenga acceso; esta noche no se ejecutó nada):
+// 1. Terraform (rama aparte): cuenta de almacenamiento PRIVADA de verificación con contenedores `verificaciones-cuarentena` (regla de ciclo de vida de 1 día) y `verificaciones`; llave RSA
+//    en Key Vault con rol «Key Vault Crypto User» (wrap/unwrap, sin get/export) y «Storage Blob Data Contributor» + delegación de usuario para la identidad de Identity.
+// 2. appsettings: Verificacion:Almacen:BlobServiceUri y MasterKeyId (sin secretos).
+// 3. En AddTrustModule (antes de los TryAdd): registrar BlobServiceClient(uri, DefaultAzureCredential), AzureVerificationBlobStore y KeyVaultVerificationKeyWrapper cuando BlobServiceUri y MasterKeyId existan.
+// 4. `dotnet restore Knock.slnx` (sin --locked-mode) para actualizar packages.lock.json; revisar OSV/licencias.
