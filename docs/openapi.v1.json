@@ -3775,6 +3775,88 @@
         }
       }
     },
+    "/api/v{version}/interno/bloqueos": {
+      "post": {
+        "tags": [
+          "InternalBlocks"
+        ],
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlockEventBody"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlockEventBody"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlockEventBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v{version}/interno/historial": {
       "get": {
         "tags": [
@@ -7121,6 +7203,50 @@
           }
         },
         "description": "Estado del interruptor: `disponibleHoy` es derivado de `disponibleHasta` (UTC), que con el interruptor encendido es hoy a las 23:59:59 de la ciudad."
+      },
+      "BlockEventBody": {
+        "required": [
+          "eventoId",
+          "tipo",
+          "bloqueaId",
+          "bloqueadoId",
+          "ocurridoEn"
+        ],
+        "type": "object",
+        "properties": {
+          "eventoId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tipo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bloqueaId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bloqueadoId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ocurridoEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        },
+        "description": "Cuerpo de `POST /api/v1/interno/bloqueos` (spec 043, R-23): `BloqueoCreado` o `BloqueoEliminado` que Identidad entrega por su bandeja de salida. Solo identificadores y fecha;\ncualquier otro campo queda en Dictionary&lt;string, JsonElement&gt;? BlockEventBody.Extra y el validador lo rechaza con 422."
       },
       "BusquedaInterpretacion": {
         "required": [
@@ -10519,6 +10645,9 @@
     },
     {
       "name": "Imagenes"
+    },
+    {
+      "name": "InternalBlocks"
     },
     {
       "name": "InternalHistory"
