@@ -1,6 +1,7 @@
 using Azure.Storage.Blobs;
 using Knock.Contracts.Moderation;
 using Knock.Market.Api.Modules.Media.Data;
+using Knock.Market.Api.Modules.Media.Options;
 using Knock.Market.Api.Modules.Media.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -34,6 +35,7 @@ public static class MediaModuleExtensions
         services.AddSingleton<ImageProcessor>();
         services.AddSingleton<MediaService>();
         services.AddSingleton<IMediaApi, MediaApi>();
+        services.AddImagenesPublicas();
         return services;
     }
 
