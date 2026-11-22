@@ -63,6 +63,21 @@ public sealed class Spec058MongoMediaFileStoreTests
         stored.File.ExpiresAt.Should().Be(MediaRules.NeverExpires);
     }
 
+    [Fact]
+    public async Task AddPendingWithinLimit_TwentyFiveConcurrentFromTwoReplicas_NeverLeaveMoreThanTheCap_CA_058_08()
+    {
+        await using var harness = await Harness.StartAsync();
+        var replica = new MongoMediaFileStore(harness.Collection.Database, Options.Create(new KnockMongoOptions()));
+
+        var results = await Task.WhenAll(Enumerable.Range(0, 25).Select(i => Task.Run(() =>
+            (i % 2 == 0 ? harness.Store : replica).AddPendingWithinLimitAsync(
+                MediaFile.CreatePending("owner-a", MediaUsage.Request, "image/jpeg", 100, _now), 10, _now, CancellationToken.None))));
+
+        var stored = await harness.Collection.CountDocumentsAsync(Builders<BsonDocument>.Filter.Eq("estado", "pendiente"));
+        stored.Should().BeLessThanOrEqualTo(10, "the insert-and-verify count never leaves more pending files than the cap");
+        results.Count(result => result.Added).Should().Be((int)stored, "every accepted request kept its document and every rejected one removed its own");
+    }
+
     private sealed class Harness : IAsyncDisposable
     {
         private readonly MongoClient _client;
