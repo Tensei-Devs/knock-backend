@@ -88,14 +88,14 @@ internal interface IVerificationStore
     /// <summary>
     /// Pasa a <c>en_revision</c> (R-13) en una sola escritura: estado, <c>enviadoEn</c>, <c>expiraEn</c> y <c>curpVigente</c>. Solo si sigue <c>en_captura</c> y ninguna foto está <c>pendiente</c>.
     /// Si otra cuenta ganó la carrera por la misma CURP, el índice único parcial lo rechaza y devuelve <see cref="SubmitOutcome.DuplicateCurp"/> (CA-20).
-    /// <paramref name="scheduleInTransaction"/> programa las tareas de purga de la spec 057 en la MISMA transacción que el cambio de estado: o quedan las dos cosas o ninguna.
+    /// <paramref name="purgeScheduler"/> programa las tareas de purga de la spec 057 en la MISMA transacción que el cambio de estado: o quedan las dos cosas o ninguna.
     /// </summary>
     Task<SubmitOutcome> SubmitAsync(
         string sub,
         ObjectId id,
         DateTime sentAt,
         DateTime expiresAt,
-        Func<IClientSessionHandle, Task> scheduleInTransaction,
+        VerificationPurgeScheduler purgeScheduler,
         CancellationToken cancellationToken);
 }
 
@@ -246,10 +246,10 @@ internal sealed class VerificationStore(
         ObjectId id,
         DateTime sentAt,
         DateTime expiresAt,
-        Func<IClientSessionHandle, Task> scheduleInTransaction,
+        VerificationPurgeScheduler purgeScheduler,
         CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(scheduleInTransaction);
+        ArgumentNullException.ThrowIfNull(purgeScheduler);
         var filter = _filter.Eq(_idField, id) & _filter.Eq(_userIdField, sub) & _filter.Eq(_stateField, VerificationStates.Capturing)
             & _filter.Not(_filter.ElemMatch<BsonDocument>("fotos", new BsonDocument { [_stateField] = PhotoStates.Pending }));
         var update = Builders<BsonDocument>.Update
@@ -268,7 +268,7 @@ internal sealed class VerificationStore(
                         return SubmitOutcome.NotSubmittable;
                     }
 
-                    await scheduleInTransaction(transaction);
+                    await purgeScheduler.ScheduleAsync(transaction, id, sentAt, cancellationToken);
                     return SubmitOutcome.Submitted;
                 },
                 cancellationToken: cancellationToken);

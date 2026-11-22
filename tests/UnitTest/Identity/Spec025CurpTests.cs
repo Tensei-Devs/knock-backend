@@ -70,7 +70,7 @@ public sealed class Spec025CurpTests
         rotated.Matches(_curp, "sin-version").Should().BeFalse();
     }
 
-    private sealed class FakeWrapper : IVerificationKeyWrapper
+    internal sealed class FakeWrapper : IVerificationKeyWrapper
     {
         private readonly byte[] _kek = RandomNumberGenerator.GetBytes(32);
 
