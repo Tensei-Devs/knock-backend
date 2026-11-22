@@ -21,6 +21,9 @@ locals {
   infra = data.terraform_remote_state.infra.outputs
   tags  = { proyecto = "knock", entorno = var.environment }
 
+  # Datos de demostración (`Seed:Demo`): apagado salvo que se pida en el tfvars (ver deploy/README.md).
+  seed_demo = var.seed_demo ? { Seed__Demo = "true" } : {}
+
   image = { for s in ["gateway", "identity", "messaging", "market"] :
     s => "${local.infra.registry_login_server}/knock-${s}:${var.image_tag}"
   }
@@ -44,10 +47,16 @@ locals {
   # Vacío = ningún origen permitido (el panel no abre desde un navegador), así que no se declara la variable de entorno.
   panel_origin = var.panel_origin == "" ? {} : { Cors__Panel__Origen = var.panel_origin }
 
+  # Entorno de ASP.NET y diagnóstico (decisión de José: dev corre como Development; evaluación y producción como Production). El detalle de excepciones nunca sale en una respuesta.
+  runtime = {
+    ASPNETCORE_ENVIRONMENT  = var.aspnetcore_environment
+    Errores__ExponerDetalle = "false"
+  }
+
   services = {
     gateway = {
       external = true
-      env = merge(local.forwarded, local.panel_origin, {
+      env = merge(local.runtime, local.forwarded, local.panel_origin, {
         ReverseProxy__Clusters__identidad__Destinations__principal__Address  = local.cluster_address.identity
         ReverseProxy__Clusters__mercado__Destinations__principal__Address    = local.cluster_address.market
         ReverseProxy__Clusters__mensajeria__Destinations__principal__Address = local.cluster_address.messaging
@@ -62,7 +71,7 @@ locals {
       external = false
       # Identity lee la sección Identity:PhoneProtection (PhoneProtectionOptions): llaves numeradas y su versión vigente.
       # Firebase:ProjectId ya trae su valor en appsettings.json (knock-0).
-      env = merge(local.forwarded, local.panel_origin, {
+      env = merge(local.runtime, local.forwarded, local.panel_origin, local.seed_demo, {
         Identity__PhoneProtection__EncryptionKeyVersion = "1"
         # Cifrado del secreto TOTP del panel (spec 033, R-26): la versión vigente no es secreta y la llave sí.
         PanelTotp__KeyVersion                     = "1"
@@ -75,6 +84,8 @@ locals {
         Perfil__HostsFoto__0 = local.images_host
         # HMAC de la CURP (spec 025, R-05): la versión vigente no es secreta y la llave sí.
         Verificacion__CurpHmac__ActiveVersion = "1"
+        # Entrega de la bandeja de salida a Mensajería (spec 037 R-11 y spec 043 R-23): dirección interna del servicio; la clave va en `secret_env`.
+        Services__Messaging__BaseUrl = local.cluster_address.messaging
       })
       secret_env = merge(local.redis_secret, {
         ConnectionStrings__KnockMongo                = "mongo-identity"
@@ -87,6 +98,8 @@ locals {
         Security__FieldEncryption__Keys__1 = "identity-field-encryption-key"
         # Token de servicio de Identidad hacia Mercado (historial de «Mi casa y mi auto», spec 041): Identidad lo firma y Mercado lo valida.
         Services__Market__InternalKey = "interno-key-identity"
+        # Token de servicio de Identidad hacia Mensajería (avisos y bloqueos): Identidad lo firma con `avisos-key-identity` y Mensajería lo valida con la misma.
+        Services__Messaging__InternalKey = "avisos-key-identity"
         # Panel interno (spec 033): llave de firma del token del panel (la misma que lee el gateway) y llave AES-256 versionada del secreto TOTP; ninguna es la de la app.
         PanelJwt__SigningKey = "panel-jwt-signing-key"
         PanelTotp__Keys__1   = "panel-totp-key"
@@ -97,24 +110,30 @@ locals {
       external = false
       # Chat de visita (spec 026): `Chat:Habilitado` no tiene valor por omisión y sin él Mensajería no arranca (KNOCK-291).
       # `Services:Market:BaseUrl` es la dirección interna de Mercado (solo host) para consultar si una conversación está permitida.
-      env = merge(local.forwarded, {
+      env = merge(local.runtime, local.forwarded, {
         Chat__Habilitado          = "true"
         Services__Market__BaseUrl = local.cluster_address.market
       })
       secret_env = merge(local.redis_secret, {
         ConnectionStrings__KnockMongo = "mongo-messaging"
         Jwt__SigningKey               = "jwt-signing-key"
+        # Validan los tokens de servicio de Mercado y de Identidad en `/api/v1/interno/*` (spec 037 R-11): una clave por emisor, nunca `jwt-signing-key`.
+        Security__InternalTokens__MarketKey   = "avisos-key-market"
+        Security__InternalTokens__IdentityKey = "avisos-key-identity"
       })
     }
     market = {
       external = false
       # Cifrado de campos (specs 020 y 022; FieldCipher, sección Security:FieldEncryption): la versión vigente no es secreta y la llave sí.
-      env = merge(local.forwarded, {
+      env = merge(local.runtime, local.forwarded, local.seed_demo, {
         Security__FieldEncryption__ActiveVersion = "1"
+        # Reparto por oleadas (spec 028): sin este interruptor no corre.
+        Oleadas__Habilitado = tostring(var.enable_oleadas)
         # Dirección base pública de las imágenes (spec 032, R-03); el módulo de imágenes la exige al arrancar.
         Imagenes__BaseUrlPublica = local.images_base_url
-        # Cuenta de Blob de las imágenes públicas (spec 032, R-02): la misma de la dirección base. La cuenta privada (Imagenes__CuentaPrivadaUrl) queda en CHECKLIST_FUSION: falta su salida en infra.
+        # Cuentas de Blob de las imágenes (spec 032, R-02): la pública es la de la dirección base; la privada (cuarentena y archivos) sale de la infraestructura. Entran con la identidad administrada (Azure.Identity), sin llaves.
         Imagenes__CuentaPublicaUrl = "https://${local.images_host}"
+        Imagenes__CuentaPrivadaUrl = trimsuffix(local.infra.storage_account_blob_endpoint, "/")
         # Host permitido de la foto del técnico (spec 046): la misma fuente que Perfil__HostsFoto__0 (una sola lista de hosts de foto).
         Tecnicos__HostsFoto__0 = local.images_host
       })
@@ -128,6 +147,8 @@ locals {
         Busqueda__Cursor__Key = "search-cursor-key"
         # Valida los tokens de servicio de Identidad (ruta interna de historial, spec 041); mismo secreto que lee Identidad.
         Security__InternalTokens__IdentityKey = "interno-key-identity"
+        # Llave Base64 de la huella HMAC del `sub` en los enlaces privados de imágenes (spec 032): sin ella, emitir un enlace privado da 500.
+        Imagenes__LlaveBusqueda = "imagenes-llave-busqueda"
         # Llave del token del panel (esquema PanelBearer de Mercado, spec 045 R-20): el mismo secreto que ya leen el gateway e Identity; sin ella las rutas /admin de Mercado no validan el token.
         PanelJwt__SigningKey = "panel-jwt-signing-key"
       })
@@ -177,6 +198,8 @@ module "service" {
   secret_env                     = each.value.secret_env
   min_replicas                   = var.replicas[each.key].min
   max_replicas                   = var.replicas[each.key].max
+  cpu                            = var.resources[each.key].cpu
+  memory                         = var.resources[each.key].memory
   enable_app_insights            = true
   app_insights_connection_string = local.infra.application_insights_connection_string
   tags                           = local.tags

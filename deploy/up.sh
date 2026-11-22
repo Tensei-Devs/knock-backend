@@ -24,7 +24,7 @@ SECRET_ADMIN_IDS="${SECRET_ADMIN_IDS:-}"
 APPS_ENV="${APPS_ENV:-dev}"
 
 # Nombres fijos de los secretos en Key Vault (deploy/README.md, «Secretos»).
-REQUIRED_SECRETS=(jwt-signing-key redis-password redis-connection-string pii-encryption-key pii-hmac-key
+REQUIRED_SECRETS=(jwt-signing-key redis-password redis-connection-string pii-encryption-key pii-hmac-key avisos-key-identity avisos-key-market imagenes-llave-busqueda
   mongo-identity mongo-market mongo-messaging field-encryption-key identity-field-encryption-key curp-hmac-key search-cursor-key interno-key-identity panel-jwt-signing-key panel-totp-key)
 
 usage() {
