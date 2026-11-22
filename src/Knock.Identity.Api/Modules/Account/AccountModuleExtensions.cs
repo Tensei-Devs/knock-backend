@@ -2,8 +2,10 @@ using Knock.Identity.Api.Hosting.Procesos.TareasProgramadas;
 using Knock.Identity.Api.Modules.Account.Data;
 using Knock.Identity.Api.Modules.Account.Domain;
 using Knock.Identity.Api.Modules.Account.Services;
+using Knock.Identity.Api.Modules.HomeAndCar.Services;
 using Knock.Identity.Api.Modules.Usuarios.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Knock.Identity.Api.Modules.Account;
 
@@ -18,6 +20,7 @@ public static class AccountModuleExtensions
         services.AddSingleton<ISessionCanceller, RedisSessionCanceller>();
         services.AddSingleton<ProfileCacheInvalidator>();
         services.AddSingleton<IAccountStore>(provider => provider.GetRequiredService<AccountStore>());
+        services.AddSingleton<IAccountExportSource>(provider => provider.GetRequiredService<AccountStore>());
         services.AddSingleton<IAccountOutbox, AccountOutbox>();
         services.AddSingleton<PhoneChangeService>();
         services.AddSingleton<IRecoveryAttemptLimiter, RecoveryAttemptLimiter>();
@@ -25,10 +28,27 @@ public static class AccountModuleExtensions
         services.AddSingleton<DataExportService>();
         services.AddOptions<OptionalConsentOptions>().BindConfiguration(OptionalConsentOptions.SectionName);
         services.AddSingleton<ConsentService>();
-        services.TryAddSingleton<IMarketAccountClient, UnavailableMarketAccountClient>();
+        // Rutas internas de Mercado (spec 039, §8): comparten dirección y clave con el historial (Services:Market). Sin ellas fallan cerrado con 503.
+        services.AddOptions<MarketHistoryOptions>().BindConfiguration(MarketHistoryOptions.SectionName).ValidateDataAnnotations();
+        services.AddHttpClient<MarketAccountClient>((provider, client) =>
+        {
+            var options = provider.GetRequiredService<IOptions<MarketHistoryOptions>>().Value;
+            if (Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out var baseAddress) && baseAddress.Scheme is "http" or "https")
+            {
+                client.BaseAddress = baseAddress;
+            }
+
+            client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+        });
+        services.TryAddSingleton<IMarketAccountClient>(provider => provider.GetRequiredService<MarketAccountClient>());
+        services.TryAddSingleton<IMarketExport>(provider => provider.GetRequiredService<MarketAccountClient>());
+        services.TryAddSingleton<IExportStorage, UnavailableExportStorage>();
+        services.TryAddSingleton<IExportNotice, UnavailableExportNotice>();
+        services.AddSingleton<IManejadorDeTarea, PrepararExportacionHandler>();
         services.AddSingleton<PendingService>();
         services.AddSingleton<AccountDeletionService>();
         services.AddSingleton<IManejadorDeTarea, EliminarCuentaHandler>();
+        services.AddSingleton<IManejadorDeTarea, VencerRecuperacionHandler>();
         return services;
     }
 }
