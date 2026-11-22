@@ -1,11 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Security.Cryptography;
 using Knock.Contracts.Safety;
+using Knock.Identity.Api.Common.Security;
 using Knock.Identity.Api.Modules.HomeAndCar.Services;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.JsonWebTokens;
-using Microsoft.IdentityModel.Tokens;
 using MongoDB.Bson;
 
 namespace Knock.Identity.Api.Hosting.Procesos.Outbox;
@@ -104,18 +102,5 @@ internal sealed class EntregaInternaHttp(IHttpClientFactory clients, IOptions<En
         return true;
     }
 
-    private string IssueToken(byte[] key, string audience, string[] permission)
-    {
-        var now = clock.GetUtcNow().UtcDateTime;
-        return new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
-        {
-            Issuer = Issuer,
-            Audience = audience,
-            Claims = new Dictionary<string, object> { ["jti"] = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16)), ["permisos"] = permission },
-            IssuedAt = now,
-            NotBefore = now,
-            Expires = now + TokenLifetime,
-            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256),
-        });
-    }
+    private string IssueToken(byte[] key, string audience, string[] permission) => ServiceTokens.Issue(key, audience, permission, clock.GetUtcNow().UtcDateTime, TokenLifetime);
 }

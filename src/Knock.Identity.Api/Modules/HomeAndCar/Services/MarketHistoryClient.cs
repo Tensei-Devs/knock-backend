@@ -1,12 +1,10 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Security.Cryptography;
 using System.Text.Json;
+using Knock.Identity.Api.Common.Security;
 using Knock.Identity.Api.Hosting;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.JsonWebTokens;
-using Microsoft.IdentityModel.Tokens;
 
 namespace Knock.Identity.Api.Modules.HomeAndCar.Services;
 
@@ -123,26 +121,8 @@ internal sealed class MarketHistoryClient(HttpClient http, IOptions<MarketHistor
         }
     }
 
-    private string IssueToken(byte[] key, string clientId, string elementId)
-    {
-        var now = clock.GetUtcNow().UtcDateTime;
-        return new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
-        {
-            Issuer = Issuer,
-            Audience = Audience,
-            Claims = new Dictionary<string, object>
-            {
-                ["jti"] = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16)),
-                ["permisos"] = new[] { HistoryPermission },
-                ["usuarioId"] = clientId,
-                ["elementoId"] = elementId,
-            },
-            IssuedAt = now,
-            NotBefore = now,
-            Expires = now + TokenLifetime,
-            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256),
-        });
-    }
+    private string IssueToken(byte[] key, string clientId, string elementId) =>
+        ServiceTokens.Issue(key, Audience, [HistoryPermission], clock.GetUtcNow().UtcDateTime, TokenLifetime, new Dictionary<string, string> { ["usuarioId"] = clientId, ["elementoId"] = elementId });
 
     private static async Task<bool> IsInvalidCursorAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
