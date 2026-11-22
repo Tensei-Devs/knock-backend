@@ -124,8 +124,8 @@ internal sealed class FinalQuoteStore([FromKeyedServices(RequestsModuleExtension
     }
 
     /// <summary>
-    /// Crea el ajuste pendiente (R-15): la visita debe estar <c>en_curso</c>, la cotización <c>aceptada</c>, del técnico, con el mismo tope que vio y sin otro ajuste pendiente;
-    /// todo en una transacción con su evento y su vencimiento a las 24 horas. <see langword="null"/> si algo de eso ya no se cumple.
+    /// Crea el ajuste pendiente (R-15): la visita debe estar <c>en_curso</c>, la cotización <c>aceptada</c>, del técnico, con el mismo tope que vio y sin otro ajuste pendiente,
+    /// en una sola transacción con su evento y su vencimiento a las 24 horas. <see langword="null"/> si algo de eso ya no se cumple.
     /// </summary>
     public async Task<(ObjectId Id, DateTime ExpiresAtUtc)?> CreateAdjustmentAsync(QuoteForAdjustment quote, VisitRecord visit, int newAmount, string reason, DateTime nowUtc, CancellationToken cancellationToken)
     {
