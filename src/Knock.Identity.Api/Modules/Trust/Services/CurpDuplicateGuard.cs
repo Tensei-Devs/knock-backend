@@ -16,7 +16,7 @@ internal sealed class CurpDuplicateGuard(CurpHmac curpHmac, IVerificationStore s
     {
         if (await store.ExistsLiveCurpAsync(curpHmac.ComputeAll(curp), sub, cancellationToken))
         {
-            throw new DomainException(DomainErrorKind.Conflict, "This CURP cannot be used. Contact support.", VerificationErrors.CurpDuplicateCode);
+            throw new DomainException(DomainErrorKind.Conflict, "This CURP cannot be used. Contact support.", CommonErrorCodes.CurpDuplicate);
         }
     }
 }
