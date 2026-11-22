@@ -9,6 +9,7 @@ namespace Knock.Market.Api.Modules.Media.Data;
 internal sealed class InMemoryMediaFileStore : IMediaFileStore
 {
     private readonly ConcurrentDictionary<Guid, StoredMediaFile> _files = new();
+    private readonly Lock _limitGate = new();
 
     public Task AddAsync(MediaFile file, CancellationToken cancellationToken)
     {
@@ -19,6 +20,29 @@ internal sealed class InMemoryMediaFileStore : IMediaFileStore
         }
 
         return Task.CompletedTask;
+    }
+
+    public Task<PendingAddResult> AddPendingWithinLimitAsync(MediaFile file, int limit, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+        lock (_limitGate)
+        {
+            var valid = _files.Values
+                .Select(stored => stored.File)
+                .Where(other => other.State == MediaFileState.Pending && other.ConfirmBefore > now && string.Equals(other.OwnerId, file.OwnerId, StringComparison.Ordinal))
+                .ToList();
+            if (valid.Count >= limit)
+            {
+                return Task.FromResult(new PendingAddResult(false, valid.Min(other => other.ConfirmBefore)));
+            }
+
+            if (!_files.TryAdd(file.Id, new StoredMediaFile(file, "1")))
+            {
+                throw new InvalidOperationException("A media file with the same id already exists.");
+            }
+
+            return Task.FromResult(new PendingAddResult(true, null));
+        }
     }
 
     public Task<StoredMediaFile?> FindAsync(Guid id, CancellationToken cancellationToken) =>
