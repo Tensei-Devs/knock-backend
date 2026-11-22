@@ -253,7 +253,7 @@ internal sealed class ChoiceStore(
             request.TryGetValue("direccionCifrada", out var address) && address.IsString ? address.AsString : null);
     }
 
-    /// <summary>Un evento por cotización aceptada, uno por cada rechazada y uno de cita confirmada; solo identificadores y datos no personales (R-18).</summary>
+    /// <summary>Un evento por cotización aceptada, uno de cotización elegida para Mensajería (spec 048, CA-21), uno por cada rechazada y uno de cita confirmada; solo identificadores y datos no personales (R-18).</summary>
     private async Task WriteEventsAsync(IClientSessionHandle transaction, BsonDocument request, BsonDocument chosen, List<BsonDocument> rejected, ObjectId visitId, DateTime nowUtc, CancellationToken token)
     {
         var requestId = request["_id"].AsObjectId.ToString();
@@ -261,6 +261,10 @@ internal sealed class ChoiceStore(
         await outbox.AddAsync(
             transaction,
             OutboxMessage.Create("CotizacionAceptada", quoteId, new BsonDocument { { "cotizacionId", quoteId }, { "solicitudId", requestId }, { "tecnicoUsuarioId", chosen["tecnicoUsuarioId"].AsString } }, nowUtc),
+            token);
+        await outbox.AddAsync(
+            transaction,
+            OutboxMessage.Create("CotizacionElegida", requestId, new BsonDocument { { "solicitudId", requestId }, { "cotizacionId", quoteId }, { "tecnicoUsuarioId", chosen["tecnicoUsuarioId"].AsString } }, nowUtc),
             token);
         foreach (var other in rejected)
         {
