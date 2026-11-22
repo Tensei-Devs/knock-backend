@@ -24,6 +24,9 @@ internal static class MarketRateLimits
     /// <summary>Rutas de administración del panel (spec 045): 60 por minuto por IP; el token del panel no pasa por el esquema de la app, así que el sub aún no está disponible en el limitador.</summary>
     public const string AdminPolicy = "admin-catalogo";
 
+    /// <summary>Opiniones y reputación: 30 por minuto por persona (spec 051, R-20).</summary>
+    public const string ReviewsPolicy = "opiniones";
+
     /// <summary>Agenda del técnico: 60 por minuto por persona (spec 050, VIS-02).</summary>
     public const string AgendaPolicy = "agenda-tecnico";
 
@@ -38,6 +41,10 @@ internal static class MarketRateLimits
 
     /// <summary>Registro como técnico: 5 por hora por persona (spec 046, R-52).</summary>
     public const string RegisterTechnicianPolicy = "tecnicos-registro";
+
+    /// <summary>Mapa y Explorar: 60 por minuto por IP (spec 046, R-52); son públicos.</summary>
+    public const string MapPolicy = "tecnicos-mapa";
+    public const string ExplorePolicy = "tecnicos-explorar";
 
     /// <summary>Límite por IP: política global, estricta para <c>/api/v{n}/auth/*</c> y propia para <c>/health/ready</c>.</summary>
     public static IServiceCollection AddKnockRateLimiting(this IServiceCollection services) =>
@@ -56,6 +63,7 @@ internal static class MarketRateLimits
                 .PerSubject(ArrivalPolicy, 5, TimeSpan.FromMinutes(1))
                 .PerSubject(TrustPolicy, 30, TimeSpan.FromMinutes(1))
                 .PerSubject(ServicesPolicy, 30, TimeSpan.FromMinutes(1))
+                .PerSubject(ReviewsPolicy, 30, TimeSpan.FromMinutes(1))
                 .PerClient(AdminPolicy, AdminPolicy, 60, TimeSpan.FromMinutes(1))
                 .PerSubject(AgendaPolicy, 60, TimeSpan.FromMinutes(1))
                 .PerSubject(VisitChangePolicy, 20, TimeSpan.FromMinutes(1))
@@ -63,6 +71,8 @@ internal static class MarketRateLimits
                 .PerSubject(FinalQuoteDecisionPolicy, 20, TimeSpan.FromMinutes(1))
                 .PerSubject(PriceAdjustmentPolicy, 10, TimeSpan.FromMinutes(1))
                 .PerSubject(AdjustmentDecisionPolicy, 20, TimeSpan.FromMinutes(1))
-                .PerSubject(RegisterTechnicianPolicy, 5, TimeSpan.FromHours(1)),
+                .PerSubject(RegisterTechnicianPolicy, 5, TimeSpan.FromHours(1))
+                .PerClient(MapPolicy, MapPolicy, 60, TimeSpan.FromMinutes(1))
+                .PerClient(ExplorePolicy, ExplorePolicy, 60, TimeSpan.FromMinutes(1)),
         });
 }

@@ -108,6 +108,13 @@ internal sealed class TechnicianProfileStore(
 
     private const int _backoffMilliseconds = 50;
 
+    /// <summary>Técnicos visibles para clientes: <c>activo</c>, no ocultos y sin un ocultamiento vigente de la moderación (R-40).</summary>
+    internal static FilterDefinition<BsonDocument> VisibleFilter(DateTime nowUtc)
+    {
+        var filters = Builders<BsonDocument>.Filter;
+        return filters.Eq("estado", TechnicianRules.ActiveState) & filters.Eq("oculto", false) & (filters.Exists("ocultoHasta", false) | filters.Lte("ocultoHasta", nowUtc));
+    }
+
     /// <summary>Campos del perfil público: nunca se proyectan <c>tallerDireccion</c>, <c>contactoPublico</c>, <c>ubicacionBase</c> ni <c>usuarioId</c>.</summary>
     internal static readonly string[] ProfileFields =
     [
