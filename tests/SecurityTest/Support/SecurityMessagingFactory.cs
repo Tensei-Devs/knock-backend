@@ -2,6 +2,7 @@ extern alias MessagingApi;
 using System.Reflection;
 using Asp.Versioning;
 using FluentValidation;
+using Knock.Contracts.Conversations;
 using Knock.IntegrationTest.Support;
 using MessagingApi::Knock.Messaging.Api.Hosting;
 using MessagingApi::Knock.Messaging.Api.Modules.Conversaciones.Domain;
@@ -14,6 +15,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using StackExchange.Redis;
 
 namespace Knock.SecurityTest.Support;
@@ -70,6 +72,14 @@ internal sealed class InfraProbeController : ControllerBase
     [HttpPost("crear")]
     [EnableRateLimiting(MessagingRateLimits.CreateConversationPolicy)]
     public IActionResult Create() => StatusCode(StatusCodes.Status201Created);
+}
+
+/// <summary>Mercado de mentira para las pruebas de seguridad de Conversaciones (spec 030): nunca concede ningún permiso. Estas pruebas no llegan a MongoDB ni a Mercado.</summary>
+internal sealed class DenyingPermisoDeConversacion : IPermisoDeConversacion
+{
+    public Task<ResultadoPermisoConversacion> ConsultarAsync(
+        string solicitudId, string? tecnicoId, string? conversacionId, string subject, string bearerToken, CancellationToken cancellationToken) =>
+        Task.FromResult(new ResultadoPermisoConversacion(EstadoPermisoConversacion.NoEncontrado));
 }
 
 /// <summary>MVC solo descubre controllers públicos; el de prueba es interno, así que se agrega al descubrimiento a mano.</summary>
@@ -141,6 +151,8 @@ internal sealed class SecurityMessagingFactory(IReadOnlyDictionary<string, strin
         {
             services.AddSingleton<IStartupFilter>(new RemoteIpStartupFilter());
             services.AddSingleton<IValidator<ProbeBody>>(new ProbeBodyValidator());
+            services.RemoveAll<IPermisoDeConversacion>();
+            services.AddSingleton<IPermisoDeConversacion>(new DenyingPermisoDeConversacion());
             services.AddControllers().ConfigureApplicationPartManager(manager => manager.FeatureProviders.Add(new ProtectedProbeFeatureProvider()));
         });
     }

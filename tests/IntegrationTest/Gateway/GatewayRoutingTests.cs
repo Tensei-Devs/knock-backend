@@ -98,6 +98,10 @@ public sealed class GatewayRoutingTests : IAsyncLifetime, IDisposable
     [InlineData("/api/v1/solicitudes/507f1f77bcf86cd799439011/elegir")]
     [InlineData("/api/v1/visitas/507f1f77bcf86cd799439011/llegada")]
     [InlineData("/api/v1/visitas/507f1f77bcf86cd799439011/aviso")]
+    [InlineData("/api/v1/conversaciones")]
+    [InlineData("/api/v1/conversaciones/507f1f77bcf86cd799439011/mensajes")]
+    [InlineData("/api/v1/conversaciones/507f1f77bcf86cd799439011/leido")]
+    [InlineData("/api/v1/dispositivos")]
     public async Task ProtectedPost_WithoutToken_IsNotForwarded_CA_020_16(string path)
     {
         _client!.DefaultRequestHeaders.Authorization = null;
@@ -174,6 +178,10 @@ public sealed class GatewayRoutingTests : IAsyncLifetime, IDisposable
     [InlineData("/api/v1/zonas/cp/42800", "mercado")]
     [InlineData("/api/v1/mensajes/1", "mensajeria")]
     [InlineData("/api/v1/notificaciones", "mensajeria")]
+    [InlineData("/api/v1/conversaciones", "mensajeria")]
+    [InlineData("/api/v1/conversaciones/no-leidas", "mensajeria")]
+    [InlineData("/api/v1/conversaciones/507f1f77bcf86cd799439011/mensajes", "mensajeria")]
+    [InlineData("/api/v1/dispositivos", "mensajeria")]
     public async Task Request_IsRoutedToTheRightService_CA_02(string path, string expectedService)
     {
         var response = await _client!.GetAsync(new Uri(path, UriKind.Relative));

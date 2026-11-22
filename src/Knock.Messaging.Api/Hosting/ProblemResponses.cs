@@ -42,7 +42,7 @@ internal static class ProblemResponses
         return services;
     }
 
-    public static async Task WriteAsync(HttpContext context, int statusCode, string title, string? code = null)
+    public static async Task WriteAsync(HttpContext context, int statusCode, string title, string? code = null, IReadOnlyDictionary<string, string>? extensions = null)
     {
         ArgumentNullException.ThrowIfNull(context);
         context.Response.StatusCode = statusCode;
@@ -56,6 +56,11 @@ internal static class ProblemResponses
         if (code is not null)
         {
             details.Extensions["code"] = code;
+        }
+
+        foreach (var (key, value) in extensions ?? new Dictionary<string, string>())
+        {
+            details.Extensions[key] = value;
         }
 
         await problems.WriteAsync(new ProblemDetailsContext { HttpContext = context, ProblemDetails = details });

@@ -43,3 +43,13 @@ Buzón de Identidad, `_id` determinista `{tipo}:{verificacionId}:1`, carga solo 
 |---|---|---|---|
 | `VerificacionSinRevisarAlertada` | identity | `verificacionId`, `enviadoEn` | tarea `AvisarAlVerificador` (24 h) |
 | `FotosDeVerificacionBorradas` | messaging | `verificacionId`, `usuarioId`, `razon` (`decidida`, `vencida`, `baja_de_cuenta`) | `PurgaDeVerificacion` |
+
+## Evento de Mensajería en el buzón de salida (spec 030)
+
+Mensajería inserta `MensajeNuevo` en `outbox` dentro de la misma transacción que guarda el mensaje y actualiza los contadores (`_id` determinista `MensajeNuevo:{mensajeId}`, `estado = pendiente`, `intentos = 0`). `agregadoId` es el `conversacionId`. Nunca lleva el texto del mensaje, nombres, teléfonos ni direcciones.
+
+| Evento | Spec | Cuándo | `datos` |
+|---|---|---|---|
+| `MensajeNuevo` | 030 | Al guardar un mensaje enviado en una conversación | `conversacionId`, `destinatarioUsuarioId` |
+
+El despachador de avisos (spec 037) es el único consumidor previsto: deduplica por evento, recurso y persona, y agrupa los `mensaje_nuevo` en una ventana de 5 minutos. Mientras no esté activo (`Notificaciones:PushHabilitado = false`), el documento queda pendiente y no demuestra entrega.
