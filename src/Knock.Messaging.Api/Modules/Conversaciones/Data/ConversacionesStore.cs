@@ -76,6 +76,10 @@ internal sealed class ConversacionesStore(
     private const string _readUntilClientField = "leidoHastaCliente";
     private const string _readUntilTechnicianField = "leidoHastaTecnico";
     private const int _duplicateKey = 11000;
+    private const int _writeConflict = 112;
+    private const int _lockError = 24;
+    private const int _maxInsertAttempts = 6;
+    private const int _insertBackoffMilliseconds = 50;
 
     private readonly FindOptions _findOptions = new() { MaxTime = mongoOptions.Value.QueryMaxTime };
 
@@ -111,23 +115,57 @@ internal sealed class ConversacionesStore(
         return document is null ? null : Read(document);
     }
 
-    /// <summary>Inserta la conversación; falso si el par ya existía (el índice único decide también una carrera entre dos creaciones iguales).</summary>
+    /// <summary>
+    /// Inserta la conversación; falso si el par ya existía. Causa raíz de CA-030-15 intermitente: varios <c>insert</c> a la vez sobre el mismo índice único del par se bloquean entre sí en
+    /// documentdb-local («Could not acquire lock ... due to deadlock», código 24) y el error llegaba como 500. Dentro de la instancia, las creaciones de un mismo par se turnan (candado por
+    /// franja del par) y quien entra después relee: si ya existe responde «ya existía» sin escribir. Entre instancias valen el índice único, la relectura y el reintento ante conflicto.
+    /// </summary>
     public async Task<bool> InsertAsync(StoredConversation conversation, CancellationToken cancellationToken)
     {
+        var gate = _gates[(uint)StringComparer.Ordinal.GetHashCode(conversation.SolicitudId + "|" + conversation.TecnicoId) % _gates.Length];
+        await gate.WaitAsync(cancellationToken);
         try
         {
-            await Conversations.InsertOneAsync(Write(conversation), cancellationToken: cancellationToken);
-            return true;
+            var attempt = 0;
+            while (true)
+            {
+                attempt++;
+                if (await FindByPairAsync(conversation.SolicitudId, conversation.TecnicoId, cancellationToken) is not null)
+                {
+                    return false;
+                }
+
+                try
+                {
+                    await Conversations.InsertOneAsync(Write(conversation), cancellationToken: cancellationToken);
+                    return true;
+                }
+                catch (MongoException exception) when (IsDuplicate(exception))
+                {
+                    return false;
+                }
+                catch (MongoException exception) when (IsRetriable(exception) && attempt < _maxInsertAttempts)
+                {
+                    await Task.Delay(_insertBackoffMilliseconds * attempt, cancellationToken);
+                }
+            }
         }
-        catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        finally
         {
-            return false;
-        }
-        catch (MongoCommandException exception) when (exception.Code == _duplicateKey)
-        {
-            return false;
+            gate.Release();
         }
     }
+
+    private static bool IsDuplicate(MongoException exception) =>
+        exception is MongoWriteException { WriteError.Category: ServerErrorCategory.DuplicateKey } or MongoCommandException { Code: _duplicateKey };
+
+    /// <summary>Conflicto de escritura (112) o interbloqueo de documentdb-local (24, solo si el mensaje dice «deadlock»): la escritura no se aplicó y se puede repetir.</summary>
+    private static bool IsRetriable(MongoException exception) =>
+        exception is MongoWriteException { WriteError.Code: _writeConflict }
+        or MongoCommandException { Code: _writeConflict }
+        or MongoCommandException { Code: _lockError } && exception.Message.Contains("deadlock", StringComparison.OrdinalIgnoreCase);
+
+    private static readonly SemaphoreSlim[] _gates = [.. Enumerable.Range(0, 64).Select(_ => new SemaphoreSlim(1, 1))];
 
     /// <summary>Guarda lo que Mercado dijo del permiso (R-09): estado, motivo de cierre, si es el elegido y la visita.</summary>
     public async Task RefreshPermissionAsync(ObjectId id, PermisoConversacion permission, DateTime nowUtc, CancellationToken cancellationToken)
