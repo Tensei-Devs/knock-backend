@@ -46,14 +46,14 @@ internal sealed class FakeModerator : IContentModerator
 }
 
 /// <summary>Una copia de <c>Knock.Messaging.Api</c> con MongoDB (documentdb-local) y Redis reales, Mercado de mentira y moderación sustituible. Dos copias sobre el mismo Redis son «dos réplicas».</summary>
-internal sealed class EnvioFactory(IReadOnlyDictionary<string, string?> settings, IContentModerator? moderator) : WebApplicationFactory<MessagingApi::Program>
+internal sealed class EnvioFactory(IReadOnlyDictionary<string, string?> settings, IContentModerator? moderator, string environment = "Production") : WebApplicationFactory<MessagingApi::Program>
 {
     public HubConnection Connect(string token) => ChatHubClient.Connect(Server, token);
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
-        builder.UseEnvironment("Production");
+        builder.UseEnvironment(environment);
         builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(settings));
         builder.ConfigureServices(services =>
         {
@@ -122,7 +122,7 @@ internal sealed class ConversacionesScenario : IAsyncDisposable
 
     private static string? VisitFor(bool chosen) => chosen ? "visita-1" : null;
 
-    public async Task<EnvioFactory> CopyAsync(IReadOnlyDictionary<string, string?>? overrides = null, bool defaultModerator = false)
+    public async Task<EnvioFactory> CopyAsync(IReadOnlyDictionary<string, string?>? overrides = null, bool defaultModerator = false, string environment = "Production")
     {
         var redis = await RedisTestFixture.SharedAsync();
         var values = new Dictionary<string, string?>
@@ -143,7 +143,7 @@ internal sealed class ConversacionesScenario : IAsyncDisposable
             values[key] = value;
         }
 
-        var copy = new EnvioFactory(values, defaultModerator ? null : Moderator);
+        var copy = new EnvioFactory(values, defaultModerator ? null : Moderator, environment);
         _copies.Add(copy);
         return copy;
     }
