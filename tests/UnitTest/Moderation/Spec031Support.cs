@@ -1,8 +1,8 @@
 using System.Net;
 using System.Text;
 using Knock.Contracts.Moderation;
-using Knock.Market.Api.Modules.Moderation.Services;
 using Knock.Market.Api.Modules.Moderation.Data;
+using Knock.Market.Api.Modules.Moderation.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Knock.UnitTest.Moderation;
@@ -114,17 +114,17 @@ internal sealed class FakeUsage : IUsoModeracionStore
 
 internal sealed class ModerationHarness
 {
+    private HttpClient Http { get; }
+
     public ModerationHarness(Action<ModerationOptions>? configure = null)
     {
         Options = new ModerationOptions { Habilitado = true };
         Options.ContentSafety.Endpoint = "https://contentsafety.ejemplo.test";
         Options.ContentSafety.Clave = "clave-sintetica-no-real";
         configure?.Invoke(Options);
-#pragma warning disable CA2000 // el cliente vive lo que la prueba
-        var http = new HttpClient(Azure) { BaseAddress = new Uri(Options.ContentSafety.Endpoint) };
-#pragma warning restore CA2000
+        Http = new HttpClient(Azure) { BaseAddress = new Uri(Options.ContentSafety.Endpoint) };
         var wrapped = Microsoft.Extensions.Options.Options.Create(Options);
-        var client = new ContentSafetyClient(http, wrapped, Clock);
+        var client = new ContentSafetyClient(Http, wrapped, Clock);
         Moderator = new ContentSafetyModerator(client, Consumption, Usage, ListaLocal.LoadEmbedded(), wrapped, Clock, NullLogger<ContentSafetyModerator>.Instance);
     }
 

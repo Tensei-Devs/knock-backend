@@ -1,8 +1,8 @@
-using Knock.Market.Api.Modules.Moderation.Data;
 using System.Diagnostics.Metrics;
 using System.Security.Cryptography;
 using Knock.Contracts.Moderation;
 using Knock.Market.Api.Modules.Assistant.Services;
+using Knock.Market.Api.Modules.Moderation.Data;
 using Microsoft.Extensions.Options;
 
 namespace Knock.Market.Api.Modules.Moderation.Services;

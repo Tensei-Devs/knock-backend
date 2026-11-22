@@ -1,5 +1,5 @@
-using Knock.Market.Api.Modules.Moderation.Data;
 using Knock.Contracts.Moderation;
+using Knock.Market.Api.Modules.Moderation.Data;
 using Microsoft.Extensions.Options;
 
 namespace Knock.Market.Api.Modules.Moderation.Services;

@@ -1,8 +1,8 @@
 using System.Net;
 using AwesomeAssertions;
 using Knock.Contracts.Moderation;
-using Knock.Market.Api.Modules.Moderation.Services;
 using Knock.Market.Api.Modules.Moderation.Data;
+using Knock.Market.Api.Modules.Moderation.Services;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;

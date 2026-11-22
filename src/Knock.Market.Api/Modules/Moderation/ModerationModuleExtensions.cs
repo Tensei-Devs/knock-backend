@@ -1,7 +1,7 @@
-using Knock.Market.Api.Modules.Moderation.Data;
-using Knock.Market.Api.Modules.Moderation.Services;
 using Knock.Contracts.Moderation;
 using Knock.Market.Api.Hosting;
+using Knock.Market.Api.Modules.Moderation.Data;
+using Knock.Market.Api.Modules.Moderation.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
