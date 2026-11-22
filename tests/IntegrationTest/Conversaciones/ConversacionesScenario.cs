@@ -248,6 +248,7 @@ internal sealed class ConversacionesScenario : IAsyncDisposable
             { "tecnicoUsuarioId", Technician },
             { "servicio", "Plomería" },
             { "coloniaNombre", "Centro" },
+            { "tecnicoPublico", new BsonDocument { { "nombre", "Técnico de prueba" }, { "fotoUrl", BsonNull.Value } } },
             { "estado", "abierta" },
             { "elegido", false },
             { "ultimoMensajeEn", now },
