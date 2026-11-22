@@ -10,6 +10,7 @@ public static class BloqueosModuleExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
         services.AddSingleton<IBloqueosProyeccion, BloqueosProyeccion>();
+        services.AddSingleton<IBloqueosApi>(provider => provider.GetRequiredService<IBloqueosProyeccion>());
         services.AddSingleton<BloqueosService>();
         return services;
     }
