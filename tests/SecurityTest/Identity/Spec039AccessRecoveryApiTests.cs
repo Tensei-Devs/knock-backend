@@ -45,6 +45,26 @@ public class Spec039AccessRecoveryApiTests
     }
 
     [Fact]
+    public async Task ANewCase_SchedulesItsSevenDayExpiryTaskWithIdentifiersOnly_CA_039_13()
+    {
+        var hosts = await SecurityHosts.SharedAsync();
+        var person = await hosts.Identity.SignInAsync(hosts.IdentityClient);
+        var userId = (await hosts.Identity.Users.Find(new BsonDocument("sub", person.Sub)).SingleAsync())["_id"].AsObjectId;
+        var newPhone = SecurityIdentityFactory.NewPhone();
+        var token = hosts.Identity.Firebase.Issue("uid-nuevo-" + Guid.NewGuid().ToString("N"), newPhone);
+
+        using var response = await RecoverAsync(hosts, token, person.Phone);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        var recoveryCase = await Recoveries(hosts).Find(new BsonDocument("usuarioId", userId)).SingleAsync();
+        var created = new DateTimeOffset(recoveryCase["creadoEn"].ToUniversalTime(), TimeSpan.Zero).ToUnixTimeSeconds();
+        var tasks = hosts.Identity.Database.GetCollection<BsonDocument>("tareas_programadas");
+        var task = await tasks.Find(new BsonDocument { { "tipo", "VencerRecuperacion" }, { "claveNegocio", $"{userId}:{created}" } }).SingleAsync();
+        task["programadaPara"].ToUniversalTime().Should().BeCloseTo(recoveryCase["creadoEn"].ToUniversalTime().AddDays(7), TimeSpan.FromSeconds(1));
+        task.ToJson().Should().NotContain(newPhone).And.NotContain(person.Phone);
+    }
+
+    [Fact]
     public async Task ExistingAndUnknownAccounts_GetTheSameAnswer_AndTheFourthRequestInAnHourIsLimited_CA_039_34()
     {
         var hosts = await SecurityHosts.SharedAsync();

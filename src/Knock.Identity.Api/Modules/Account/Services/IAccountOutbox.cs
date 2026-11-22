@@ -12,6 +12,9 @@ internal interface IAccountOutbox
     /// <summary>Programa la tarea <c>PrepararExportacion</c> (spec 054) de la persona: reúne sus datos, arma el ZIP y la avisa con un enlace de 24 horas.</summary>
     Task EnqueueExportAsync(string userId, CancellationToken cancellationToken);
 
+    /// <summary>Programa la tarea <c>VencerRecuperacion</c> (spec 054) del caso de recuperación abierto de la persona en <paramref name="createdAt"/>: a los 7 días sin decidir vence (spec 039, R-21).</summary>
+    Task EnqueueRecoveryExpiryAsync(string userId, DateTime createdAt, CancellationToken cancellationToken);
+
     /// <summary>Programa la tarea <c>EliminarCuenta</c> (spec 054) del <paramref name="accountSub"/> para cuando venza la gracia (<paramref name="deleteAt"/>). Cancelar y volver a programar crea otra tarea.</summary>
     Task EnqueueDeletionAsync(string accountSub, DateTime deleteAt, CancellationToken cancellationToken);
 

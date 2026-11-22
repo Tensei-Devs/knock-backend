@@ -14,6 +14,7 @@ internal sealed class AccountOutbox(IOutboxStore outbox, ITareasProgramadasStore
 {
     public const string DeletionTask = "EliminarCuenta";
     public const string ExportTask = "PrepararExportacion";
+    public const string RecoveryExpiryTask = "VencerRecuperacion";
     private const string _sessionRevoked = "sesion_revocada";
     private const string _accountDeleted = "CuentaEliminada";
 
@@ -36,6 +37,16 @@ internal sealed class AccountOutbox(IOutboxStore outbox, ITareasProgramadasStore
         // Una exportación en curso por persona (R-22) lo impide la marca de la cuenta; la clave lleva el instante para que una exportación posterior no choque con la ya hecha.
         await tasks.ScheduleAsync(null, ExportTask, $"{userId}:{new DateTimeOffset(now, TimeSpan.Zero).ToUnixTimeSeconds()}", CatalogoDeTareas.ProgramadaPara(ExportTask, now), now, cancellationToken);
     }
+
+    public async Task EnqueueRecoveryExpiryAsync(string userId, DateTime createdAt, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+        var now = clock.GetUtcNow().UtcDateTime;
+        await tasks.ScheduleAsync(null, RecoveryExpiryTask, RecoveryExpiryKey(userId, createdAt), CatalogoDeTareas.ProgramadaPara(RecoveryExpiryTask, createdAt), now, cancellationToken);
+    }
+
+    /// <summary>Clave de negocio de la tarea: <c>{usuarioId}:{creado en segundos Unix}</c>. Solo identificadores; un caso nuevo tras vencer el anterior tiene otra clave.</summary>
+    public static string RecoveryExpiryKey(string userId, DateTime createdAt) => $"{userId}:{new DateTimeOffset(createdAt, TimeSpan.Zero).ToUnixTimeSeconds()}";
 
     public async Task EnqueueDeletionAsync(string accountSub, DateTime deleteAt, CancellationToken cancellationToken)
     {

@@ -40,7 +40,7 @@ public class Spec039AccessRecoveryTests
         var verifier = new Spec039Verifier(rejectedToken ? null : new FirebaseIdentity("uid-nuevo-0001", _newPhone));
         var limiter = new FakeLimiter();
         var service = new AccessRecoveryService(
-            store, verifier, phones, limiter, new Spec039Clock(new DateTimeOffset(2026, 11, 17, 12, 0, 0, TimeSpan.Zero)), NullLogger<AccessRecoveryService>.Instance);
+            store, new Spec039Outbox(), verifier, phones, limiter, new Spec039Clock(new DateTimeOffset(2026, 11, 17, 12, 0, 0, TimeSpan.Zero)), NullLogger<AccessRecoveryService>.Instance);
         return new Rig(service, store, phones, verifier, limiter);
     }
 

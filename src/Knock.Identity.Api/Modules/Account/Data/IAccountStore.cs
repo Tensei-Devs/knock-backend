@@ -32,6 +32,12 @@ internal interface IAccountStore
     Task<bool> CreateRecoveryCaseIfNoneOpenAsync(RecoveryCase recoveryCase, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Pasa a <c>vencida</c> el caso <c>pendiente</c> de la persona creado en el segundo Unix <paramref name="createdAtSeconds"/> (spec 039, R-21; tarea <c>VencerRecuperacion</c>). Falso si ya se decidió
+    /// o no existe: la tarea es idempotente.
+    /// </summary>
+    Task<bool> ExpireRecoveryAsync(string userId, long createdAtSeconds, DateTime now, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Marca la exportación en curso con una sola operación condicionada a que no haya otra (una por persona, spec 039 R-22): si ya hay una, no escribe
     /// nada. La marca la quita la tarea <c>PrepararExportacion</c> (spec 054) al terminar.
     /// </summary>
