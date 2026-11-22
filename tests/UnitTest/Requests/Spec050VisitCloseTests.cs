@@ -10,7 +10,7 @@ namespace Knock.UnitTest.Requests;
 public sealed class Spec050VisitCloseTests
 {
     private static readonly DateTime _now = new(2026, 11, 21, 12, 0, 0, DateTimeKind.Utc);
-    private static readonly string[] _photo = ["64b7f0c2a1b2c3d4e5f60718"];
+    private static readonly string[] _photo = ["018f3c2e7a4b7c3d9e1f2a3b4c5d6e7f"];
 
     [Theory]
     [InlineData(-1, false)]
@@ -45,7 +45,7 @@ public sealed class Spec050VisitCloseTests
         validator.Validate(new FinishVisitBody("Cambio de llave", null, null)).IsValid.Should().BeFalse();
         validator.Validate(new FinishVisitBody("Cambio de llave", null, ["no-es-id"])).IsValid.Should().BeFalse();
         validator.Validate(new FinishVisitBody("Cambio de llave", null, [_photo[0], _photo[0].ToUpperInvariant()])).IsValid.Should().BeFalse();
-        validator.Validate(new FinishVisitBody("Cambio de llave", null, [.. Enumerable.Range(0, 6).Select(i => $"64b7f0c2a1b2c3d4e5f6071{i}")])).IsValid.Should().BeFalse();
+        validator.Validate(new FinishVisitBody("Cambio de llave", null, [.. Enumerable.Range(0, 6).Select(i => $"018f3c2e7a4b7c3d9e1f2a3b4c5d6e7{i}")])).IsValid.Should().BeFalse();
         var short_ = validator.Validate(new FinishVisitBody("corto", null, _photo));
         short_.Errors.Should().OnlyContain(e => e.ErrorMessage == FinishVisitBodyValidator.FormatReason);
     }
