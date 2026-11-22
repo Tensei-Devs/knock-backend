@@ -293,6 +293,182 @@
         }
       }
     },
+    "/api/v{version}/explorar": {
+      "get": {
+        "tags": [
+          "Explorar"
+        ],
+        "summary": "Bloques de Explorar (máximo 10 elementos cada uno). Sin sesión, solo los públicos; con sesión suma trabajos reales y cerca de ti.",
+        "parameters": [
+          {
+            "name": "filtro",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "colonia",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExploreResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExploreResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExploreResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v{version}/mapa/tecnicos": {
+      "get": {
+        "tags": [
+          "Mapa"
+        ],
+        "summary": "Técnicos de la zona visible, agrupados por celda según el zoom (hasta 200 grupos). Ninguna coordenada de la petición se guarda ni se registra.",
+        "parameters": [
+          {
+            "name": "norte",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sur",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "este",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "oeste",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "oficio",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "zoom",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v{version}/tecnicos/{id}/servicios": {
       "get": {
         "tags": [
@@ -1966,6 +2142,392 @@
                 }
               },
               "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v{version}/tecnicos/{id}/opiniones": {
+      "get": {
+        "tags": [
+          "Opiniones"
+        ],
+        "summary": "OPI-01: opiniones publicadas de un técnico visible con su distribución por estrellas, de la más nueva a la más vieja, por cursor.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewPage"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewPage"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v{version}/visitas/{id}/opinion": {
+      "post": {
+        "tags": [
+          "Opiniones"
+        ],
+        "summary": "OPI-02: el cliente de una visita terminada la califica una sola vez, hasta 30 días después.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReviewBody"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReviewBody"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReviewBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedReview"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedReview"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedReview"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v{version}/opiniones/{id}/respuesta": {
+      "post": {
+        "tags": [
+          "Opiniones"
+        ],
+        "summary": "OPI-03: el técnico calificado responde una sola vez a una opinión suya.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerReviewBody"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerReviewBody"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerReviewBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
                 }
@@ -7618,6 +8180,21 @@
           }
         }
       },
+      "AnswerReviewBody": {
+        "required": [
+          "texto"
+        ],
+        "type": "object",
+        "properties": {
+          "texto": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Cuerpo de `POST /opiniones/{id}/respuesta` (OPI-03, R-10)."
+      },
       "Appointment": {
         "required": [
           "visitaId",
@@ -8081,6 +8658,36 @@
         },
         "description": "Respuesta de TEC-06 (R-43)."
       },
+      "CreatedReview": {
+        "required": [
+          "id",
+          "calificacion",
+          "moderacion",
+          "creadoEn"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "calificacion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "moderacion": {
+            "type": "string"
+          },
+          "creadoEn": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "description": "Respuesta de `POST /visitas/{id}/opinion`: la opinión creada y el estado de su comentario (`publicada`, `pendiente` o `rechazada`)."
+      },
       "CreateRequestBody": {
         "required": [
           "oficioClave",
@@ -8154,6 +8761,59 @@
           }
         },
         "description": "Cuerpo de `POST /solicitudes` (spec 020, R-01). El 422 lo da `CreateRequestBodyValidator`; nunca repite el valor recibido."
+      },
+      "CreateReviewBody": {
+        "required": [
+          "calificacion",
+          "partes",
+          "comentario",
+          "fotos",
+          "guardarTecnicoConfianza"
+        ],
+        "type": "object",
+        "properties": {
+          "calificacion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "partes": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReviewParts"
+              }
+            ]
+          },
+          "comentario": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fotos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "guardarTecnicoConfianza": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        },
+        "description": "Cuerpo de `POST /visitas/{id}/opinion` (OPI-02, R-07): ningún identificador de persona se acepta (R-18)."
       },
       "CreateServiceBody": {
         "required": [
@@ -8350,6 +9010,100 @@
           }
         },
         "description": "Cuerpo de las decisiones del cliente (`aprueba` o `rechaza`)."
+      },
+      "ExploreIdea": {
+        "required": [
+          "clave",
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "clave": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          }
+        },
+        "description": "Oficio sugerido que aún no está entre los populares."
+      },
+      "ExploreResponse": {
+        "required": [
+          "filtro",
+          "serviciosPopulares",
+          "mejorCalificados",
+          "ideas",
+          "trabajosReales",
+          "cercaDeTi"
+        ],
+        "type": "object",
+        "properties": {
+          "filtro": {
+            "type": "string"
+          },
+          "serviciosPopulares": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExploreService"
+            }
+          },
+          "mejorCalificados": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TechnicianProfileResponse"
+            }
+          },
+          "ideas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExploreIdea"
+            }
+          },
+          "trabajosReales": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/WorkPhotoResponse"
+            }
+          },
+          "cercaDeTi": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/TechnicianProfileResponse"
+            }
+          }
+        },
+        "description": "Respuesta de TEC-14 (R-49): cada bloque trae como máximo 10 elementos. Sin sesión solo se llenan los bloques públicos (populares, mejor calificados e ideas);\n`trabajosReales` y `cercaDeTi` llegan nulos."
+      },
+      "ExploreService": {
+        "required": [
+          "clave",
+          "nombre",
+          "tecnicos"
+        ],
+        "type": "object",
+        "properties": {
+          "clave": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "tecnicos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        },
+        "description": "Oficio con cuántos técnicos visibles lo ofrecen."
       },
       "FinalQuoteBody": {
         "required": [
@@ -8641,6 +9395,63 @@
             ]
           }
         }
+      },
+      "MapGroup": {
+        "required": [
+          "latitud",
+          "longitud",
+          "cantidad",
+          "tecnicoId"
+        ],
+        "type": "object",
+        "properties": {
+          "latitud": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "longitud": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "cantidad": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tecnicoId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Un grupo del mapa: el centro de su celda (nunca la posición de un técnico), cuántos técnicos hay y, si es uno solo, su identificador."
+      },
+      "MapResponse": {
+        "required": [
+          "grupos"
+        ],
+        "type": "object",
+        "properties": {
+          "grupos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MapGroup"
+            }
+          }
+        },
+        "description": "Respuesta de TEC-04: hasta 200 grupos, los más poblados primero."
       },
       "MyQuote": {
         "required": [
@@ -9799,6 +10610,206 @@
           }
         },
         "description": "Resultado de responder la propuesta: la cita vigente tras la respuesta."
+      },
+      "ReviewAnswer": {
+        "required": [
+          "texto",
+          "fecha"
+        ],
+        "type": "object",
+        "properties": {
+          "texto": {
+            "type": "string"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "description": "Respuesta del técnico a una opinión (R-15)."
+      },
+      "ReviewItem": {
+        "required": [
+          "id",
+          "calificacion",
+          "partes",
+          "comentario",
+          "fotos",
+          "respuesta",
+          "anonimizada",
+          "servicioVerificado",
+          "creadoEn"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "calificacion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "partes": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReviewParts"
+              }
+            ]
+          },
+          "comentario": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fotos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "respuesta": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReviewAnswer"
+              }
+            ]
+          },
+          "anonimizada": {
+            "type": "boolean"
+          },
+          "servicioVerificado": {
+            "type": "boolean"
+          },
+          "creadoEn": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "description": "Una opinión publicada. `Anonimizada` es verdadero si la cuenta del cliente se eliminó: no lleva nombre ni foto (R-16). Siempre sale como servicio verificado (R-12)."
+      },
+      "ReviewPage": {
+        "required": [
+          "items",
+          "resumen",
+          "nextCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReviewItem"
+            }
+          },
+          "resumen": {
+            "$ref": "#/components/schemas/ReviewSummary"
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Página de opiniones de un técnico, de la más nueva a la más vieja (OPI-01, R-16)."
+      },
+      "ReviewParts": {
+        "required": [
+          "puntualidad",
+          "calidad",
+          "precioJusto",
+          "trato"
+        ],
+        "type": "object",
+        "properties": {
+          "puntualidad": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "calidad": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "precioJusto": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "trato": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        },
+        "description": "Partes de la calificación (R-13): cada una de 1 a 5 y todas opcionales."
+      },
+      "ReviewSummary": {
+        "required": [
+          "promedio",
+          "total",
+          "distribucion"
+        ],
+        "type": "object",
+        "properties": {
+          "promedio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "distribucion": {
+            "type": "object",
+            "additionalProperties": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        },
+        "description": "Distribución por estrellas (`\"1\"` a `\"5\"`) con el promedio de las opiniones que cuentan (R-14)."
       },
       "ScheduleBody": {
         "required": [
@@ -11399,6 +12410,9 @@
       "name": "Descarte"
     },
     {
+      "name": "Explorar"
+    },
+    {
       "name": "FinalQuote"
     },
     {
@@ -11411,10 +12425,16 @@
       "name": "ListaEspera"
     },
     {
+      "name": "Mapa"
+    },
+    {
       "name": "MyQuotes"
     },
     {
       "name": "Oficios"
+    },
+    {
+      "name": "Opiniones"
     },
     {
       "name": "QuoteComparison"
