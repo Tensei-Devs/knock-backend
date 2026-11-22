@@ -97,13 +97,14 @@ public class MediaConfirmationBlobTests
         await container.GetBlobClient(key).UploadAsync(BinaryData.FromBytes(content));
     }
 
+    private static MongoClient? _sharedClient;
+
     private static async Task<(MediaService Service, MediaOptions Options, IMediaFileStore Store)> CreateServiceAsync(
         AzuriteFixture azurite, ImageProcessor processor, ModerationOutcome outcome)
     {
         var documentDb = await DocumentDbFixture.SharedAsync();
-#pragma warning disable CA2000 // el cliente vive lo que la prueba: el contenedor compartido se desecha al final de la ejecución
-        var database = new MongoClient(documentDb.ConnectionString).GetDatabase("s058_conf_" + Guid.NewGuid().ToString("N"));
-#pragma warning restore CA2000
+        _sharedClient ??= new MongoClient(documentDb.ConnectionString);
+        var database = _sharedClient.GetDatabase("s058_conf_" + Guid.NewGuid().ToString("N"));
         var options = new MediaOptions { ReducedMaxSide = 512, MaxConcurrentProcessing = 2 };
         var configured = Options.Create(options);
         var blobs = new BlobServiceClient(azurite.ConnectionString);

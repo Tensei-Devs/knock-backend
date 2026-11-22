@@ -145,7 +145,8 @@ internal sealed class DespachadorDeAvisos(
 
             if (attempt < MaxAttempts)
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(200 * attempt), clock, cancellationToken);
+                var backoff = TimeSpan.FromMilliseconds(200 * attempt);
+                await Task.Delay(backoff, clock, cancellationToken);
             }
         }
 
