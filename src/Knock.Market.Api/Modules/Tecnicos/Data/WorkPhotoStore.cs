@@ -30,9 +30,11 @@ internal sealed class WorkPhotoStore(
         var documents = await database.GetCollection<BsonDocument>(CollectionName).Find(filter, new FindOptions { MaxTime = options.Value.QueryMaxTime })
             .Project(Builders<BsonDocument>.Projection.Include("url").Include("creadoEn")).Sort(Builders<BsonDocument>.Sort.Descending("_id"))
             .Limit(limit + 1).ToListAsync(cancellationToken);
-        return [.. documents.Where(d => d.GetValue("url", BsonNull.Value).IsString).Select(d => new WorkPhotoResponse(
-            d["_id"].AsObjectId.ToString(),
-            d["url"].AsString,
-            d.GetValue("creadoEn", BsonNull.Value) is { IsValidDateTime: true } created ? created.ToUniversalTime() : d["_id"].AsObjectId.CreationTime))];
+        return [.. documents.Where(d => d.GetValue("url", BsonNull.Value).IsString).Select(ToPhoto)];
     }
+
+    internal static WorkPhotoResponse ToPhoto(BsonDocument d) => new(
+        d["_id"].AsObjectId.ToString(),
+        d["url"].AsString,
+        d.GetValue("creadoEn", BsonNull.Value) is { IsValidDateTime: true } created ? created.ToUniversalTime() : d["_id"].AsObjectId.CreationTime);
 }

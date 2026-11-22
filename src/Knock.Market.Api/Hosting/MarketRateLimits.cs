@@ -39,6 +39,10 @@ internal static class MarketRateLimits
     /// <summary>Registro como técnico: 5 por hora por persona (spec 046, R-52).</summary>
     public const string RegisterTechnicianPolicy = "tecnicos-registro";
 
+    /// <summary>Mapa y Explorar: 60 por minuto por IP (spec 046, R-52); son públicos.</summary>
+    public const string MapPolicy = "tecnicos-mapa";
+    public const string ExplorePolicy = "tecnicos-explorar";
+
     /// <summary>Límite por IP: política global, estricta para <c>/api/v{n}/auth/*</c> y propia para <c>/health/ready</c>.</summary>
     public static IServiceCollection AddKnockRateLimiting(this IServiceCollection services) =>
         services.AddKnockRateLimiting(new KnockRateLimitingOptions
@@ -63,6 +67,8 @@ internal static class MarketRateLimits
                 .PerSubject(FinalQuoteDecisionPolicy, 20, TimeSpan.FromMinutes(1))
                 .PerSubject(PriceAdjustmentPolicy, 10, TimeSpan.FromMinutes(1))
                 .PerSubject(AdjustmentDecisionPolicy, 20, TimeSpan.FromMinutes(1))
-                .PerSubject(RegisterTechnicianPolicy, 5, TimeSpan.FromHours(1)),
+                .PerSubject(RegisterTechnicianPolicy, 5, TimeSpan.FromHours(1))
+                .PerClient(MapPolicy, MapPolicy, 60, TimeSpan.FromMinutes(1))
+                .PerClient(ExplorePolicy, ExplorePolicy, 60, TimeSpan.FromMinutes(1)),
         });
 }
