@@ -8,10 +8,10 @@ using Xunit;
 
 namespace Knock.DatabaseTest.Scripts;
 
-/// <summary>Spec 058, T-01 (R-01, R-03, R-07): <c>db/049-market-archivos.js</c> crea <c>archivos</c> con sus índices, es idempotente y el índice compuesto sirve al conteo de pendientes.</summary>
+/// <summary>Spec 058, T-01 (R-01, R-03, R-07): <c>db/058-market-archivos.js</c> crea <c>archivos</c> con sus índices, es idempotente y el índice compuesto sirve al conteo de pendientes.</summary>
 public sealed class Spec058ArchivosScriptTests
 {
-    private const string _script = "049-market-archivos.js";
+    private const string _script = "058-market-archivos.js";
 
     [Fact]
     public async Task Script_Crea_Indices_De_Forma_Idempotente_CA_058_01()
