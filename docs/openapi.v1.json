@@ -3775,6 +3775,201 @@
         }
       }
     },
+    "/api/v{version}/interno/cuentas/{usuarioId}/pendientes": {
+      "get": {
+        "tags": [
+          "InternalAccount"
+        ],
+        "summary": "Citas y cotizaciones abiertas de la persona, con conteos e identificadores propios (máximo 50 por grupo).",
+        "parameters": [
+          {
+            "name": "usuarioId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountPendingResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountPendingResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountPendingResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v{version}/interno/cuentas/{usuarioId}/cancelaciones": {
+      "post": {
+        "tags": [
+          "InternalAccount"
+        ],
+        "summary": "Cancela las solicitudes abiertas y retira las cotizaciones pendientes de la persona, avisando a la otra parte.",
+        "parameters": [
+          {
+            "name": "usuarioId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v{version}/interno/cuentas/{usuarioId}/exportacion": {
+      "get": {
+        "tags": [
+          "InternalAccount"
+        ],
+        "summary": "Datos de la persona en Mercado para su exportación (un JSON).",
+        "parameters": [
+          {
+            "name": "usuarioId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {}
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/api/v{version}/interno/cuentas/{usuarioId}/eliminada": {
+      "post": {
+        "tags": [
+          "InternalAccount"
+        ],
+        "summary": "Consume `CuentaEliminada`: responde 202 cuando Mercado ya cerró y anonimizó lo de la persona (repetirlo no cambia nada).",
+        "parameters": [
+          {
+            "name": "usuarioId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v{version}/interno/bloqueos": {
       "post": {
         "tags": [
@@ -3846,6 +4041,98 @@
           },
           "429": {
             "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v{version}/interno/eventos": {
+      "post": {
+        "tags": [
+          "InternalEvents"
+        ],
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountEventBody"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountEventBody"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountEventBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6907,6 +7194,86 @@
   },
   "components": {
     "schemas": {
+      "AccountEventBody": {
+        "type": "object",
+        "properties": {
+          "eventoId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tipo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "usuarioId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reporteId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "desde": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Cuerpo de `POST /api/v1/interno/eventos` (spec 054, R-15; spec 059, §5): `CuentaSuspendida` o `CuentaReactivada` de Identidad. Solo identificadores; los campos que\nMercado no usa (`reporteId`, `desde`) se aceptan y se ignoran."
+      },
+      "AccountPendingResponse": {
+        "required": [
+          "appointmentTotal",
+          "appointmentIds",
+          "quoteTotal",
+          "quoteIds",
+          "visitInProgress"
+        ],
+        "type": "object",
+        "properties": {
+          "appointmentTotal": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "appointmentIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "quoteTotal": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "quoteIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "visitInProgress": {
+            "type": "boolean"
+          }
+        },
+        "description": "Lo que Mercado reporta como abierto de una persona (spec 039, R-24; ruta interna de Identidad): solo conteos e identificadores propios, hasta 50 por grupo."
+      },
       "AdjustmentBody": {
         "required": [
           "montoNuevo",
@@ -10647,7 +11014,13 @@
       "name": "Imagenes"
     },
     {
+      "name": "InternalAccount"
+    },
+    {
       "name": "InternalBlocks"
+    },
+    {
+      "name": "InternalEvents"
     },
     {
       "name": "InternalHistory"
