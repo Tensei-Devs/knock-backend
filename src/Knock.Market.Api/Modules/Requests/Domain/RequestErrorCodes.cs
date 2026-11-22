@@ -20,4 +20,7 @@ internal static class RequestErrorCodes
     public const string QuoteUnavailableCode = "quote_unavailable";
     public const string RequestWithAppointmentCode = "request_with_appointment";
     public const string ServiceUnavailableCode = "service_unavailable";
+
+    // Ampliar la búsqueda (spec 048, §5).
+    public const string RequestNotExtendableCode = "request_not_extendable";
 }
