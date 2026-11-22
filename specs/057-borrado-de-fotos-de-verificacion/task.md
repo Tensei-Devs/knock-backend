@@ -1,6 +1,6 @@
 # 057 — tareas
 
-> Estado: pendientes. No se ejecutan hasta que la spec esté Aprobada y una persona lo indique.
+> Estado: en curso (KNOCK-87). T1 a T3 y el cableado de T4 y T5 hechos: `Enviar` programa las tareas en la misma transacción, el purgador de blobs real (`TrustVerificationBlobPurger`) reemplaza a `NoVerificationBlobs` y la baja de cuenta llama a `PurgeAccountAsync` (spec 039). Sin cuenta de almacenamiento privado configurada el borrado de blobs no hace nada (no hay fotos); el cliente real de Azure Blob y de Key Vault queda con bloqueo: costo.
 
 ## T1 — Campos y script de la purga [BD]
 - **Crear:** `db/057-identity-verificaciones-purga.js` (idempotente); `Spec057InvariantesTests`.
