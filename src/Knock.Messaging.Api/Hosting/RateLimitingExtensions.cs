@@ -38,6 +38,10 @@ internal static class RateLimitingExtensions
     /// <summary>Enviar mensajes: 30 por minuto por persona (spec 030, R-11 y CA-05), con contador compartido en Redis entre copias.</summary>
     public const string SendMessagePolicy = "conversaciones-mensajes";
 
+    /// <summary>Registrar y borrar dispositivos: 30 por hora por persona (spec 037, T-03), con contador compartido en Redis.</summary>
+    public const string DevicesPolicy = "dispositivos";
+
+    private const int _devicesPerHour = 30;
     private const int _messagesPerMinute = 30;
     private const string _messageLimitCode = "message_limit";
     private const string _healthPath = "/health";
@@ -66,6 +70,7 @@ internal static class RateLimitingExtensions
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
             options.AddPolicy(CreateConversationPolicy, SubjectPolicy(CreateConversationPolicy, 20, TimeSpan.FromHours(1), provider));
             options.AddPolicy(SendMessagePolicy, SubjectPolicy(SendMessagePolicy, _messagesPerMinute, TimeSpan.FromMinutes(1), provider));
+            options.AddPolicy(DevicesPolicy, SubjectPolicy(DevicesPolicy, _devicesPerHour, TimeSpan.FromHours(1), provider));
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context => Partition(context, global, ready));
             options.OnRejected = async (context, _) =>
             {

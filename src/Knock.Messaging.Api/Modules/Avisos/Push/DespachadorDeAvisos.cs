@@ -12,6 +12,7 @@ internal enum DispatchOutcome
     NoDevices,
     Sent,
     Failed,
+    Limited,
 }
 
 /// <summary>Registro de envíos (<c>notifications.enviados</c>): índice único de deduplicación y resultado sin identificadores de recurso (R-06).</summary>
@@ -22,6 +23,15 @@ internal interface IEnviadosStore
     Task RecordResultAsync(string deduplicationKey, string result, CancellationToken cancellationToken);
 
     Task<DateTime?> GetWindowStartAsync(string conversation, string person, CancellationToken cancellationToken);
+
+    /// <summary>Abre la ventana de 5 minutos de <c>mensaje_nuevo</c> de la conversación y la persona (R-07); la conversación se guarda solo como huella.</summary>
+    Task OpenWindowAsync(string conversation, string person, DateTime nowUtc, CancellationToken cancellationToken);
+
+    /// <summary>Cuenta un mensaje agrupado dentro de la ventana abierta, para el aviso único al cerrarla (R-07).</summary>
+    Task CountSuppressedAsync(string conversation, string person, CancellationToken cancellationToken);
+
+    /// <summary>Envíos de la persona desde <paramref name="sinceUtc"/> (límite por persona y hora, R-12).</summary>
+    Task<int> CountRecentAsync(string person, DateTime sinceUtc, CancellationToken cancellationToken);
 }
 
 /// <summary>Presencia en vivo <c>chat:presencia:{sub}</c> (R-08).</summary>
@@ -36,6 +46,9 @@ internal interface IDeviceTokens
     Task<IReadOnlyList<string>> ListAsync(string person, CancellationToken cancellationToken);
 
     Task DeleteAsync(string person, string deviceToken, CancellationToken cancellationToken);
+
+    /// <summary>Borra los dispositivos ligados a la sesión que terminó (<c>sesion_revocada</c>, R-13).</summary>
+    Task DeleteBySessionAsync(string session, CancellationToken cancellationToken);
 }
 
 internal sealed record AvisoEvent(string EventoId, string Evento, string Destinatario, string? Recurso, string? Conversacion);
@@ -75,6 +88,7 @@ internal sealed class DespachadorDeAvisos(
             var start = await sent.GetWindowStartAsync(evento.Conversacion!, evento.Destinatario, cancellationToken);
             if (AvisoRules.DecideWindow(start, clock.GetUtcNow().UtcDateTime) == WindowDecision.Suppress)
             {
+                await sent.CountSuppressedAsync(evento.Conversacion!, evento.Destinatario, cancellationToken);
                 return DispatchOutcome.Grouped;
             }
         }
@@ -83,6 +97,17 @@ internal sealed class DespachadorDeAvisos(
         if (!await sent.TryReserveAsync(key, evento.Evento, payload["tipo"], cancellationToken))
         {
             return DispatchOutcome.Duplicate;
+        }
+
+        if (await sent.CountRecentAsync(evento.Destinatario, clock.GetUtcNow().UtcDateTime.AddHours(-1), cancellationToken) > options.HourlyLimit)
+        {
+            await sent.RecordResultAsync(key, "limitado", cancellationToken);
+            return DispatchOutcome.Limited;
+        }
+
+        if (evento.Evento == AvisoRules.NewMessageEvent)
+        {
+            await sent.OpenWindowAsync(evento.Conversacion!, evento.Destinatario, clock.GetUtcNow().UtcDateTime, cancellationToken);
         }
 
         var tokens = await devices.ListAsync(evento.Destinatario, cancellationToken);
