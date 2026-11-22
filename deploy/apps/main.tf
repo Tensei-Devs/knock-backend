@@ -109,6 +109,10 @@ locals {
         Security__FieldEncryption__ActiveVersion = "1"
         # Dirección base pública de las imágenes (spec 032, R-03); el módulo de imágenes la exige al arrancar.
         Imagenes__BaseUrlPublica = local.images_base_url
+        # Cuenta de Blob de las imágenes públicas (spec 032, R-02): la misma de la dirección base. La cuenta privada (Imagenes__CuentaPrivadaUrl) queda en CHECKLIST_FUSION: falta su salida en infra.
+        Imagenes__CuentaPublicaUrl = "https://${local.images_host}"
+        # Host permitido de la foto del técnico (spec 046): la misma fuente que Perfil__HostsFoto__0 (una sola lista de hosts de foto).
+        Tecnicos__HostsFoto__0 = local.images_host
       })
       # Market usa Redis para la caché del catálogo (spec 010, R-01/R-02): el módulo Catalog registra el cliente al arrancar.
       # `field-encryption-key` solo la lee Market (un rol por secreto y por servicio) y es distinta de `pii-encryption-key`, que es de Identity.
