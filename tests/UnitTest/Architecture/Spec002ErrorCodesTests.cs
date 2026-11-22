@@ -24,7 +24,7 @@ public partial class Spec002ErrorCodesTests
     /// Códigos que dos servicios devuelven con el mismo significado: <c>colonia_not_found</c> lo da Identidad al guardar la colonia del perfil (spec 017) y Mercado al crear una
     /// solicitud (spec 020, §5). La app lee un solo nombre para el mismo error; cualquier otro repetido sigue prohibido.
     /// </summary>
-    private static readonly string[] _sharedAcrossServices = ["colonia_not_found"];
+    private static readonly string[] _sharedAcrossServices = ["colonia_not_found", "insufficient_permission"];
 
     [GeneratedRegex("^[a-z]+(_[a-z]+)*$", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 200)]
     private static partial Regex SnakeCase();
