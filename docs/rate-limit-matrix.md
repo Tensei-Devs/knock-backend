@@ -120,3 +120,5 @@ Políticas por `sub` del JWT (ventana fija, por proceso; con dos réplicas el l�
 ## Exploración sin cuenta (HU-005, KNOCK-53)
 
 Las lecturas públicas de exploración son `GET /api/v1/oficios`, `GET /api/v1/tecnicos/autocompletar` y `GET /api/v1/tecnicos/{id}`; no tienen política propia: las frena el límite global por IP del gateway y de Mercado (100 por minuto), no uno de 60. El criterio CA4 de la HU-005 pide 429 tras 60 peticiones por minuto por IP; bajar el valor es una decisión pendiente del equipo, porque la matriz parte de TT-API-03 con 100 y afectaría a toda la API. `/api/v1/busqueda` y `/api/v1/zonas/cp/{cp}` piden sesión por decisión de las specs 027 y 023 (la apertura de zonas a la exploración sigue como pregunta abierta en la 023). TC-HU-005-04 comprueba en el gateway que las tres rutas públicas responden sin token y dan 429 con `Retry-After` al pasar el límite configurado.
+
+`POST /api/v1/solicitudes/{id}/cancelar` tiene una política por `sub` del JWT de **10 cancelaciones por hora** (`RateLimitingExtensions.CancelRequestPolicy`, spec 029, R-14), ventana fija y por proceso; la respuesta 429 incluye `Retry-After`. El cuerpo se limita a 8 KB (413).
