@@ -32,9 +32,10 @@ internal sealed class EntregaInternaOptions
 }
 
 /// <summary>
-/// Entrega de la bandeja de salida por HTTP privado con token firmado (spec 037, R-11 y R-15). Por ahora entrega los eventos de bloqueo (spec 043, R-23) a <c>POST /api/v1/interno/bloqueos</c> de Mercado y de
-/// Mensajería; cualquier otro tipo, destino sin dirección o sin clave queda para reintento, igual que antes de existir esta entrega. 202 es entregado; 401 y 403, rechazado; red, 5xx y 429, reintentable.
-/// Nunca registra la carga ni el token.
+/// Entrega de la bandeja de salida por HTTP privado con token firmado (spec 037, R-11 y R-15). Entrega los eventos de bloqueo (spec 043, R-23) a <c>POST /api/v1/interno/bloqueos</c> de Mercado y de Mensajería,
+/// la suspensión y reactivación (spec 059) a <c>POST /api/v1/interno/eventos</c> de Mercado, <c>CuentaEliminada</c> (spec 039) a <c>POST /api/v1/interno/cuentas/{usuarioId}/eliminada</c> de Mercado y
+/// <c>sesion_revocada</c> (spec 054) a <c>POST /api/v1/interno/avisos</c> de Mensajería; cualquier otro tipo, destino sin dirección o sin clave queda para reintento, igual que antes de existir esta entrega.
+/// 202 es entregado; 401 y 403, rechazado; red, 5xx y 429, reintentable. Nunca registra la carga ni el token.
 /// </summary>
 internal sealed class EntregaInternaHttp(IHttpClientFactory clients, IOptions<EntregaInternaOptions> options, TimeProvider clock) : IEntregaInterna
 {
@@ -43,19 +44,23 @@ internal sealed class EntregaInternaHttp(IHttpClientFactory clients, IOptions<En
     public const string MarketAudience = "knock-market";
     public const string MessagingAudience = "knock-notifications";
     public const string MarketBlocksPermission = "bloqueos";
+    public const string MarketEventsPermission = "eventos";
+    public const string MarketAccountPermission = "cuenta";
     public const string BlocksPath = "api/v1/interno/bloqueos";
+    public const string EventsPath = "api/v1/interno/eventos";
+    public const string NoticesPath = "api/v1/interno/avisos";
     public static readonly TimeSpan TokenLifetime = TimeSpan.FromMinutes(1);
 
     public async Task<ResultadoDeEntrega> DeliverAsync(OutboxReservado evento, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(evento);
-        if (evento.Tipo is not (BlockCreated.EventType or BlockRemoved.EventType) || !TryAim(evento, out var target, out var audience, out var permission))
+        if (Plan(evento) is not { } plan || !TryAim(evento.Destino, out var target))
         {
             return ResultadoDeEntrega.Reintentable;
         }
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(target.BaseUri, BlocksPath)) { Content = JsonContent.Create(ToBody(evento)) };
-        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", IssueToken(target.Key, audience, permission));
+        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(target.BaseUri, plan.Path)) { Content = JsonContent.Create(plan.Body) };
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", IssueToken(target.Key, plan));
         try
         {
             using var http = clients.CreateClient(ClientName);
@@ -75,7 +80,30 @@ internal sealed class EntregaInternaHttp(IHttpClientFactory clients, IOptions<En
         }
     }
 
-    private static object ToBody(OutboxReservado evento) => new
+    /// <summary>Lo que se envía de un evento: ruta, cuerpo, audiencia, permisos del token y claims que lo atan a la persona. <see langword="null"/> si el tipo o el destino no tienen entrega o falta un dato (se reintenta).</summary>
+    private static EntregaPlan? Plan(OutboxReservado evento) => (evento.Tipo, evento.Destino) switch
+    {
+        (BlockCreated.EventType or BlockRemoved.EventType, "market") => new EntregaPlan(BlocksPath, BlockBody(evento), MarketAudience, [MarketBlocksPermission], null),
+        (BlockCreated.EventType or BlockRemoved.EventType, "messaging") => new EntregaPlan(BlocksPath, BlockBody(evento), MessagingAudience, [evento.Tipo], null),
+        ("CuentaSuspendida" or "CuentaReactivada", "market") when Text(evento, "usuarioId") is { } user => new EntregaPlan(
+            EventsPath,
+            new { eventoId = Text(evento, "eventoId") ?? evento.Id, tipo = evento.Tipo, usuarioId = user, reporteId = Text(evento, "reporteId"), desde = Text(evento, "desde") },
+            MarketAudience,
+            [MarketEventsPermission],
+            null),
+        ("CuentaEliminada", "market") when Text(evento, "sub") is { } sub => new EntregaPlan(
+            $"api/v1/interno/cuentas/{Uri.EscapeDataString(sub)}/eliminada",
+            new { },
+            MarketAudience,
+            [MarketAccountPermission],
+            new Dictionary<string, object> { ["usuarioId"] = sub }),
+        ("sesion_revocada", "messaging") when Text(evento, "sid") is { } sid => new EntregaPlan(NoticesPath, new { eventoId = evento.Id, tipo = evento.Tipo, sid }, MessagingAudience, [evento.Tipo], null),
+        _ => null,
+    };
+
+    private static string? Text(OutboxReservado evento, string field) => evento.Carga.TryGetValue(field, out var value) && value.IsString && value.AsString.Length > 0 ? value.AsString : null;
+
+    private static object BlockBody(OutboxReservado evento) => new
     {
         eventoId = evento.Carga.GetValue("eventoId", evento.Id).ToString(),
         tipo = evento.Tipo,
@@ -84,18 +112,12 @@ internal sealed class EntregaInternaHttp(IHttpClientFactory clients, IOptions<En
         ocurridoEn = evento.Carga.GetValue("ocurridoEn", string.Empty).ToString(),
     };
 
-    /// <summary>El destino del evento con dirección absoluta y clave válida; si falta algo, falso (el evento se reintenta y nada se inventa).</summary>
-    private bool TryAim(OutboxReservado evento, out (Uri BaseUri, byte[] Key) target, out string audience, out string[] permission)
+    /// <summary>El destino con dirección absoluta y clave válida; si falta algo, falso (el evento se reintenta y nada se inventa).</summary>
+    private bool TryAim(string destination, out (Uri BaseUri, byte[] Key) target)
     {
         target = default;
-        (audience, permission) = evento.Destino switch
-        {
-            "market" => (MarketAudience, new[] { MarketBlocksPermission }),
-            "messaging" => (MessagingAudience, new[] { evento.Tipo }),
-            _ => (string.Empty, Array.Empty<string>()),
-        };
-        var destination = evento.Destino switch { "market" => options.Value.Market, "messaging" => options.Value.Messaging, _ => null };
-        if (destination is null || !Uri.TryCreate(destination.BaseUrl, UriKind.Absolute, out var baseUri) || baseUri.Scheme is not ("http" or "https") || MarketHistoryClient.ReadKey(destination.InternalKey) is not { } key)
+        var configured = destination switch { "market" => options.Value.Market, "messaging" => options.Value.Messaging, _ => null };
+        if (configured is null || !Uri.TryCreate(configured.BaseUrl, UriKind.Absolute, out var baseUri) || baseUri.Scheme is not ("http" or "https") || MarketHistoryClient.ReadKey(configured.InternalKey) is not { } key)
         {
             return false;
         }
@@ -104,18 +126,21 @@ internal sealed class EntregaInternaHttp(IHttpClientFactory clients, IOptions<En
         return true;
     }
 
-    private string IssueToken(byte[] key, string audience, string[] permission)
+    private string IssueToken(byte[] key, EntregaPlan plan)
     {
         var now = clock.GetUtcNow().UtcDateTime;
+        var claims = new Dictionary<string, object>(plan.Claims ?? new Dictionary<string, object>()) { ["jti"] = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16)), ["permisos"] = plan.Permission };
         return new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
         {
             Issuer = Issuer,
-            Audience = audience,
-            Claims = new Dictionary<string, object> { ["jti"] = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16)), ["permisos"] = permission },
+            Audience = plan.Audience,
+            Claims = claims,
             IssuedAt = now,
             NotBefore = now,
             Expires = now + TokenLifetime,
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256),
         });
     }
+
+    private sealed record EntregaPlan(string Path, object Body, string Audience, string[] Permission, IReadOnlyDictionary<string, object>? Claims);
 }
