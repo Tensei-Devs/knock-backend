@@ -1,6 +1,6 @@
 // Spec 058 (T-01): colección `archivos` del módulo Media (registro de archivos privados) en la base de Mercado y sus índices.
 // Uso (igual que 044-market-subidas-imagen.js):
-//   KNOCK_DB_URI=... mongosh --nodb --quiet --file db/049-market-archivos.js
+//   KNOCK_DB_URI=... mongosh --nodb --quiet --file db/058-market-archivos.js
 // Con `mongosh "<cadena>" --file …` (sin KNOCK_DB_URI) usa la conexión abierta.
 // La base se toma de KNOCK_DB_MARKET (por defecto «market»). Es idempotente: crea lo que falta y nunca borra ni cambia colecciones, índices ni documentos existentes.
 // archivoId_1 es único (identificador de negocio, UUID v7); propietarioId_1_estado_1_confirmarAntesDe_1 cubre los archivos de una persona y el conteo de pendientes vigentes;
