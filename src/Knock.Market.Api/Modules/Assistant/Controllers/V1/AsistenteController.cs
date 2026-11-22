@@ -24,7 +24,7 @@ internal sealed class AsistenteController(AsistenteService assistant, RangoPreci
     /// <summary>ASI-01: un turno con el asistente Knock (cliente o técnico).</summary>
     [HttpPost("conversaciones")]
     [RequestSizeLimit(TurnoBody.MaxBodyBytes)]
-    [EnableRateLimiting(RateLimitingExtensions.AssistantAiPolicy)]
+    [EnableRateLimiting(MarketRateLimits.AssistantAiPolicy)]
     [ProducesResponseType<TurnoResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, _problemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]
@@ -38,7 +38,7 @@ internal sealed class AsistenteController(AsistenteService assistant, RangoPreci
     /// <summary>ASI-02: resumen de una conversación en la que el técnico participa.</summary>
     [HttpPost("resumen-chat")]
     [RequestSizeLimit(ConversacionBody.MaxBodyBytes)]
-    [EnableRateLimiting(RateLimitingExtensions.AssistantAiPolicy)]
+    [EnableRateLimiting(MarketRateLimits.AssistantAiPolicy)]
     [ProducesResponseType<ResumenChatResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, _problemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, _problemJson)]
@@ -48,7 +48,7 @@ internal sealed class AsistenteController(AsistenteService assistant, RangoPreci
     /// <summary>ASI-03: borrador editable de cotización; nunca se envía ni se guarda como cotización.</summary>
     [HttpPost("borrador-cotizacion")]
     [RequestSizeLimit(ConversacionBody.MaxBodyBytes)]
-    [EnableRateLimiting(RateLimitingExtensions.AssistantAiPolicy)]
+    [EnableRateLimiting(MarketRateLimits.AssistantAiPolicy)]
     [ProducesResponseType<BorradorCotizacionResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, _problemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, _problemJson)]
@@ -57,7 +57,7 @@ internal sealed class AsistenteController(AsistenteService assistant, RangoPreci
 
     /// <summary>ASI-04: rango de precio de la referencia de mercado (spec 048), en caché de 1 hora.</summary>
     [HttpGet("rango-precio")]
-    [EnableRateLimiting(RateLimitingExtensions.AssistantReadPolicy)]
+    [EnableRateLimiting(MarketRateLimits.AssistantReadPolicy)]
     [ProducesResponseType<RangoPrecioResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, _problemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity, _problemJson)]
@@ -67,7 +67,7 @@ internal sealed class AsistenteController(AsistenteService assistant, RangoPreci
     /// <summary>ASI-05: guarda o reemplaza la bitácora del técnico (201 al crear, 200 al reemplazar).</summary>
     [HttpPut("bitacora/{solicitudId}")]
     [RequestSizeLimit(BitacoraBody.MaxBodyBytes)]
-    [EnableRateLimiting(RateLimitingExtensions.AssistantReadPolicy)]
+    [EnableRateLimiting(MarketRateLimits.AssistantReadPolicy)]
     [ProducesResponseType<BitacoraResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<BitacoraResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, _problemJson)]
@@ -79,7 +79,7 @@ internal sealed class AsistenteController(AsistenteService assistant, RangoPreci
 
     /// <summary>ASI-06: lee la bitácora propia; la de otro técnico responde 404 <c>log_not_found</c>.</summary>
     [HttpGet("bitacora/{solicitudId}")]
-    [EnableRateLimiting(RateLimitingExtensions.AssistantReadPolicy)]
+    [EnableRateLimiting(MarketRateLimits.AssistantReadPolicy)]
     [ProducesResponseType<BitacoraResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, _problemJson)]
     public async Task<IActionResult> GetLog([FromRoute] SolicitudRoute route, CancellationToken cancellationToken) =>

@@ -27,9 +27,9 @@ public static class AssistantModuleExtensions
         services.AddSingleton<IAiClient, AiClient>();
         services.AddKnockMongoDatabase(MongoModule);
         services.AddMemoryCache();
-        services.TryAddSingleton<IAsistenteCuentas, UnavailableAsistenteCuentas>();
+        services.TryAddSingleton<IAsistenteCuentas, AsistenteCuentasReal>();
         services.TryAddSingleton<IConversacionesAsistente, UnavailableConversaciones>();
-        services.TryAddSingleton<ISolicitudesAsistente, UnavailableSolicitudes>();
+        services.TryAddSingleton<ISolicitudesAsistente, AsistenteSolicitudesReal>();
         services.TryAddSingleton<IReferenciaMercado, UnavailableReferenciaMercado>();
         services.AddSingleton<IBitacoraStore>(provider => new BitacoraStore(provider.GetRequiredKeyedService<IMongoDatabase>(MongoModule)));
         services.AddSingleton<AsistenteService>();

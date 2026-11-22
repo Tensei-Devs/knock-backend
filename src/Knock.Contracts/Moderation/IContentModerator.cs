@@ -6,10 +6,12 @@ public enum ModerationOutcome
     Unavailable = 0,
     Allowed = 1,
     Rejected = 2,
+    /// <summary>La persona llegó a su tope diario de moderación (spec 031, R-13): el llamador responde 429 <c>moderation_limit</c> con <c>Retry-After</c>. Nada se publica.</summary>
+    LimitReached = 3,
 }
 
-/// <summary>Resultado de moderación con categoría opcional.</summary>
-public sealed record ModerationResult(ModerationOutcome Outcome, string? Category = null);
+/// <summary>Resultado de moderación con categoría opcional y, cuando no se publica por falla o tope, los segundos que el llamador devuelve en <c>Retry-After</c>.</summary>
+public sealed record ModerationResult(ModerationOutcome Outcome, string? Category = null, int? RetryAfterSeconds = null);
 
 /// <summary>
 /// Contrato único de moderación (spec 013, R-05/R-06): cliente compartido para texto e imágenes.

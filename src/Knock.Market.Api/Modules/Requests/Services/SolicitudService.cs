@@ -21,9 +21,11 @@ internal enum CreateRequestStatus
     PhotoInvalid,
     ContentRejected,
     ModerationUnavailable,
+    ModerationLimit,
 }
 
-internal sealed record CreateRequestOutcome(CreateRequestStatus Status, RequestResponse? Request = null);
+/// <summary><paramref name="RetryAfterSeconds"/> acompaña a 429 y 503 de moderación (spec 031, R-13).</summary>
+internal sealed record CreateRequestOutcome(CreateRequestStatus Status, RequestResponse? Request = null, int? RetryAfterSeconds = null);
 
 /// <summary>
 /// Crear, listar y ver solicitudes (spec 020, HU-024). Aplica las reglas del catálogo, las fotos, la moderación, el cifrado de la dirección y el buzón de salida, y arma
@@ -83,7 +85,13 @@ internal sealed class SolicitudService(
         var review = await moderator.ReviewTextAsync(body.Descripcion!.Trim(), cancellationToken);
         if (review.Outcome != ModerationOutcome.Allowed)
         {
-            return new CreateRequestOutcome(review.Outcome == ModerationOutcome.Rejected ? CreateRequestStatus.ContentRejected : CreateRequestStatus.ModerationUnavailable);
+            var status = review.Outcome switch
+            {
+                ModerationOutcome.Rejected => CreateRequestStatus.ContentRejected,
+                ModerationOutcome.LimitReached => CreateRequestStatus.ModerationLimit,
+                _ => CreateRequestStatus.ModerationUnavailable,
+            };
+            return new CreateRequestOutcome(status, RetryAfterSeconds: review.RetryAfterSeconds);
         }
 
         var now = clock.GetUtcNow();
