@@ -142,6 +142,21 @@ internal sealed class ConversacionesStore(
     }
 
     /// <summary>
+    /// Cierra las conversaciones abiertas de la solicitud cuyo técnico no es el elegido, con <c>other_quote_chosen</c> (spec 048, CA-21). No borra mensajes ni toca las ya cerradas, así que repetir el
+    /// evento no cambia nada.
+    /// </summary>
+    public Task CloseOthersAsync(string requestId, string chosenTechnicianUserId, DateTime nowUtc, CancellationToken cancellationToken)
+    {
+        var filters = Builders<BsonDocument>.Filter;
+        var filter = filters.Eq(_requestField, requestId) & filters.Ne(_technicianUserField, chosenTechnicianUserId) & filters.Eq("estado", ConversacionEstados.Abierta);
+        var update = Builders<BsonDocument>.Update
+            .Set("estado", ConversacionEstados.Cerrada)
+            .Set("motivoCierre", EventosInternos.OtherQuoteChosenReason)
+            .Set("actualizadoEn", nowUtc);
+        return Conversations.UpdateManyAsync(filter, update, cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
     /// Las conversaciones de <paramref name="subject"/> (como cliente o como técnico) de la más reciente a la más antigua. Cada rol usa su propio índice y se mezclan en memoria: un solo
     /// <c>$or</c> ordenado no puede usar los dos índices a la vez. Pide <paramref name="take"/> de cada lado y devuelve los primeros <paramref name="take"/> del conjunto.
     /// </summary>

@@ -1,6 +1,6 @@
 # Tareas 048 — Solicitudes y cotizaciones: ampliar, archivos, referencia de mercado y cotizaciones del técnico
 
-> **Estado:** T-00, T-01, T-02, T-03, T-04, T-05, T-06 y T-08 implementadas; T-07 parcial (OpenAPI regenerado; `docs/endpoints.md` y `docs/rate-limit-matrix.md` quedan para el cierre del backend). Falta CA-21 (evento `CotizacionElegida` a Mensajería, R-14).
+> **Estado:** T-01, T-04 y la parte de CA-21 (evento `CotizacionElegida` y su consumidor en Mensajería) implementadas; las demás tareas siguen pendientes.
 > «Depende de» = tareas que deben estar fusionadas antes; «Paralelo con» = tareas que se pueden trabajar a la vez.
 
 | Tarea | Qué se hace | Cubre | Depende de | Paralelo con | Responsable sugerido | Estado |

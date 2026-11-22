@@ -39,6 +39,7 @@ public static class ConversacionesModuleExtensions
         services.AddSingleton<INotificadorEnVivo, NotificadorEnVivo>();
         services.AddScoped<ConversacionService>();
         services.AddScoped<LecturaService>();
+        services.AddScoped<CierrePorEleccionService>();
         return services;
     }
 }
