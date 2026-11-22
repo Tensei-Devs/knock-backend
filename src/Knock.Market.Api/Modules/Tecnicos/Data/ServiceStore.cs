@@ -13,13 +13,29 @@ internal enum ServiceCreateStatus
     LimitReached,
 }
 
+/// <summary>Puerto de la colección de servicios del técnico (spec 047); permite probar la caché sin base.</summary>
+internal interface IServiceStore
+{
+    Task<(ObjectId Id, IReadOnlyList<string> Trades)?> FindOwnAsync(string sub, CancellationToken cancellationToken);
+
+    Task<bool> IsVisibleAsync(ObjectId technicianId, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<TechnicianService>> ListAsync(ObjectId technicianId, CancellationToken cancellationToken);
+
+    Task<(ServiceCreateStatus Status, TechnicianService? Service)> CreateAsync(ObjectId technicianId, string name, string? detail, int price, string trade, CancellationToken cancellationToken);
+
+    Task<TechnicianService?> UpdateAsync(ObjectId technicianId, ObjectId id, string? name, string? detail, int? price, string? trade, CancellationToken cancellationToken);
+
+    Task<bool> DeleteAsync(ObjectId technicianId, ObjectId id, CancellationToken cancellationToken);
+}
+
 /// <summary>
 /// Colección <c>servicios_tecnico</c> (spec 047, §6) y lectura del técnico dueño y del visible en <c>tecnicos</c>. Toda escritura filtra por el <c>tecnicoId</c> resuelto desde el <c>sub</c> del
 /// token, así un servicio ajeno no existe para quien lo pide (R-15).
 /// </summary>
 internal sealed class ServiceStore(
     [FromKeyedServices(TecnicosModuleExtensions.ModuleKey)] IMongoDatabase database,
-    IOptions<KnockMongoOptions> options)
+    IOptions<KnockMongoOptions> options) : IServiceStore
 {
     public const string CollectionName = "servicios_tecnico";
     public const int MaxPerTechnician = 50;
