@@ -1,3 +1,4 @@
+using Knock.Hosting.Procesos;
 using Microsoft.Extensions.Options;
 
 namespace Knock.Identity.Api.Hosting.Procesos.Outbox;

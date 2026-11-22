@@ -1,3 +1,4 @@
+using Knock.Hosting.Procesos;
 using Microsoft.Extensions.Options;
 
 namespace Knock.Market.Api.Common.TareasProgramadas;
@@ -7,33 +8,14 @@ internal sealed class TareasProgramadasOptions
     public int IntervaloSegundos { get; set; } = 15;
 }
 
-internal sealed partial class TareasProgramadasHostedService(
+internal sealed class TareasProgramadasHostedService(
     IServiceScopeFactory scopes,
     IOptions<TareasProgramadasOptions> options,
     TimeProvider clock,
-    ILogger<TareasProgramadasHostedService> logger) : BackgroundService
+    ILogger<TareasProgramadasHostedService> logger) : ProcesoPeriodico(scopes, clock, logger, "scheduled-tasks")
 {
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(options.Value.IntervaloSegundos), clock);
-        while (await timer.WaitForNextTickAsync(stoppingToken))
-        {
-            try
-            {
-                using var scope = scopes.CreateScope();
-                await scope.ServiceProvider.GetRequiredService<EjecutorDeTareasProgramadas>().ExecuteOneAsync(stoppingToken);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception error) when (error is not OperationCanceledException || !stoppingToken.IsCancellationRequested)
-            {
-                ExecutorUnavailable(logger, error.GetType().Name);
-            }
-        }
-    }
+    protected override int IntervaloSegundos => options.Value.IntervaloSegundos;
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Scheduled task executor unavailable: {ErrorType}")]
-    private static partial void ExecutorUnavailable(ILogger logger, string errorType);
+    protected override Task RunStepAsync(IServiceProvider services, CancellationToken cancellationToken) =>
+        services.GetRequiredService<EjecutorDeTareasProgramadas>().ExecuteOneAsync(cancellationToken);
 }
