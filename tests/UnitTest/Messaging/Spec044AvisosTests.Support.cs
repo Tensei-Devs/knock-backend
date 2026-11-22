@@ -57,6 +57,20 @@ public sealed partial class Spec044AvisosTests
             Notices[index] = Notices[index] with { Read = true };
             return Task.FromResult(true);
         }
+
+        public Task MarkAllReadAsync(string userId, CancellationToken cancellationToken)
+        {
+            LastUser = userId;
+            for (var i = 0; i < Notices.Count; i++)
+            {
+                if (Notices[i].User == userId)
+                {
+                    Notices[i] = Notices[i] with { Read = true };
+                }
+            }
+
+            return Task.CompletedTask;
+        }
     }
 
     private static string Id(int n) => n.ToString("x24", System.Globalization.CultureInfo.InvariantCulture);

@@ -32,6 +32,8 @@ internal sealed class NoticesService(INoticesStore store)
     public Task<bool> MarkReadAsync(string sub, string noticeId, CancellationToken cancellationToken) =>
         store.MarkReadAsync(sub, noticeId, cancellationToken);
 
+    public Task MarkAllReadAsync(string sub, CancellationToken cancellationToken) => store.MarkAllReadAsync(sub, cancellationToken);
+
     private static NoticeResponse ToResponse(StoredNotice notice) => new(
         notice.Id, notice.Type, notice.Role, notice.Title, notice.Text, notice.Target is null ? null : BsonTypeMapper.MapToDotNetValue(notice.Target), notice.Read, notice.CreatedAt);
 }
