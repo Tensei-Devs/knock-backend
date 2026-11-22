@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Azure.Storage.Blobs;
 using Knock.Market.Api.Modules.Media.Domain;
+using Knock.Market.Api.Modules.Media.Services;
 
 namespace Knock.Market.Api.Modules.Media.Data;
 
@@ -13,7 +15,7 @@ internal sealed record ArchivosMigrationReport(int Read, int Inserted, int Alrea
 /// <c>archivoId</c> hace que un registro ya migrado cuente como «ya presente». Los pendientes cuya ventana de confirmación venció se descartan y su blob de cuarentena se borra.
 /// Los fallidos solo se cuentan; el informe no contiene datos personales.
 /// </summary>
-internal sealed class ArchivosMigrator(IMediaFileStore store)
+internal sealed class ArchivosMigrator(IMediaFileStore store, MediaMetrics? metrics = null)
 {
     private static readonly JsonSerializerOptions _json = new(JsonSerializerDefaults.Web)
     {
@@ -44,6 +46,7 @@ internal sealed class ArchivosMigrator(IMediaFileStore store)
     {
         ArgumentNullException.ThrowIfNull(legacyRecords);
         ArgumentNullException.ThrowIfNull(discardQuarantineBlob);
+        var started = Stopwatch.GetTimestamp();
         int read = 0, inserted = 0, present = 0, discarded = 0, failed = 0;
         await foreach (var raw in legacyRecords.WithCancellation(cancellationToken))
         {
@@ -75,6 +78,15 @@ internal sealed class ArchivosMigrator(IMediaFileStore store)
             {
                 present++;
             }
+        }
+
+        if (metrics is not null)
+        {
+            metrics.MigrationMigrated.Add(inserted);
+            metrics.MigrationAlreadyPresent.Add(present);
+            metrics.MigrationExpiredDiscarded.Add(discarded);
+            metrics.MigrationFailed.Add(failed);
+            metrics.MigrationDuration.Record(Stopwatch.GetElapsedTime(started).TotalSeconds);
         }
 
         return new ArchivosMigrationReport(read, inserted, present, discarded, failed);
