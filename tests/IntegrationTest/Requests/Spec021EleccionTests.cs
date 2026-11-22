@@ -47,6 +47,7 @@ public sealed class Spec021EleccionTests
         var events = await host.Database.GetCollection<BsonDocument>("outbox").Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
         events.Count(e => e["tipo"].AsString == "CotizacionAceptada").Should().Be(1);
         events.Count(e => e["tipo"].AsString == "CotizacionRechazada").Should().Be(2);
+        events.Count(e => e["tipo"].AsString == "CotizacionElegida").Should().Be(1, "Mensajería cierra las demás conversaciones (spec 048, CA-21)");
         events.Count(e => e["tipo"].AsString == "VisitaConfirmada").Should().Be(1);
     }
 
@@ -117,7 +118,7 @@ public sealed class Spec021EleccionTests
         (await Spec020Host.ReadAsync(response)).GetProperty("code").GetString().Should().Be(code);
         (await host.OneAsync("cotizaciones", quotes[0]))["estado"].AsString.Should().Be("enviada");
         (await host.CountAsync("visitas")).Should().Be(0);
-        (await host.CountAsync("outbox", Builders<BsonDocument>.Filter.Regex("tipo", "^(Cotizacion(Aceptada|Rechazada)|VisitaConfirmada)$"))).Should().Be(0);
+        (await host.CountAsync("outbox", Builders<BsonDocument>.Filter.Regex("tipo", "^(Cotizacion(Aceptada|Elegida|Rechazada)|VisitaConfirmada)$"))).Should().Be(0);
     }
 
     [Fact]
@@ -138,7 +139,7 @@ public sealed class Spec021EleccionTests
         }
 
         (await host.CountAsync("visitas")).Should().Be(0);
-        (await host.CountAsync("outbox", Builders<BsonDocument>.Filter.Regex("tipo", "^(Cotizacion(Aceptada|Rechazada)|VisitaConfirmada)$"))).Should().Be(0);
+        (await host.CountAsync("outbox", Builders<BsonDocument>.Filter.Regex("tipo", "^(Cotizacion(Aceptada|Elegida|Rechazada)|VisitaConfirmada)$"))).Should().Be(0);
 
         host.OutboxFailure.Fail = false;
         using var retried = await host.ChooseAsync(requestId, quotes[0]);

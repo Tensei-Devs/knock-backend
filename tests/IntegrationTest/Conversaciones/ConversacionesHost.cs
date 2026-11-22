@@ -229,13 +229,26 @@ internal sealed class ConversacionesHost : IAsyncDisposable
         return await _client.SendAsync(request);
     }
 
+    /// <summary>Llama a una ruta interna con un token de servicio (no el de una persona).</summary>
+    public async Task<HttpResponseMessage> SendServiceAsync(string path, string? serviceToken, object body)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(path, UriKind.Relative));
+        if (serviceToken is not null)
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", serviceToken);
+        }
+
+        request.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
+        return await _client.SendAsync(request);
+    }
+
     /// <summary>Pide crear la conversación como <paramref name="sub"/>; el cliente manda el <c>tecnicoId</c> y el técnico lo omite.</summary>
     public Task<HttpResponseMessage> CreateAsync(string sub, string? technicianId = null) =>
         SendAsync(HttpMethod.Post, "/api/v1/conversaciones", sub, new { solicitudId = RequestId, tecnicoId = technicianId });
 
     /// <summary>Siembra una conversación entre el cliente y el técnico del escenario con lo que se indique, y devuelve su <c>conversacionId</c>.</summary>
     public async Task<string> SeedConversationAsync(
-        DateTime? lastAt = null, int unreadClient = 0, int unreadTechnician = 0, string? client = null, string? technician = null, bool open = true, ObjectId? id = null, string? request = null)
+        DateTime? lastAt = null, int unreadClient = 0, int unreadTechnician = 0, string? client = null, string? technician = null, bool open = true, ObjectId? id = null, string? request = null, string? technicianId = null)
     {
         var conversationId = id ?? ObjectId.GenerateNewId();
         var at = lastAt ?? DateTime.UtcNow.AddMinutes(-5);
@@ -243,7 +256,7 @@ internal sealed class ConversacionesHost : IAsyncDisposable
         {
             { "_id", conversationId },
             { "solicitudId", request ?? ObjectId.GenerateNewId().ToString() },
-            { "tecnicoId", TechnicianId },
+            { "tecnicoId", technicianId ?? TechnicianId },
             { "clienteId", client ?? Client },
             { "tecnicoUsuarioId", technician ?? Technician },
             { "visitaId", BsonNull.Value },
