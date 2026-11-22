@@ -1,4 +1,5 @@
 using Knock.Contracts.Conversations;
+using Knock.Hosting.Concurrency;
 using Knock.Messaging.Api.Hosting;
 using Knock.Messaging.Api.Modules.Conversaciones.Domain;
 using Microsoft.Extensions.Options;
@@ -117,42 +118,36 @@ internal sealed class ConversacionesStore(
 
     /// <summary>
     /// Inserta la conversación; falso si el par ya existía. Causa raíz de CA-030-15 intermitente: varios <c>insert</c> a la vez sobre el mismo índice único del par se bloquean entre sí en
-    /// documentdb-local («Could not acquire lock ... due to deadlock», código 24) y el error llegaba como 500. Dentro de la instancia, las creaciones de un mismo par se turnan (candado por
-    /// franja del par) y quien entra después relee: si ya existe responde «ya existía» sin escribir. Entre instancias valen el índice único, la relectura y el reintento ante conflicto.
+    /// documentdb-local («Could not acquire lock ... due to deadlock», código 24) y el error llegaba como 500. Dentro de la instancia, las creaciones de un mismo par se turnan (turno por
+    /// par con <see cref="KeyedGate"/>) y quien entra después relee: si ya existe responde «ya existía» sin escribir. Entre instancias valen el índice único, la relectura y el reintento ante conflicto.
     /// </summary>
-    public async Task<bool> InsertAsync(StoredConversation conversation, CancellationToken cancellationToken)
-    {
-        var gate = _gates[(uint)StringComparer.Ordinal.GetHashCode(conversation.SolicitudId + "|" + conversation.TecnicoId) % _gates.Length];
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            var attempt = 0;
-            while (true)
-            {
-                attempt++;
-                if (await FindByPairAsync(conversation.SolicitudId, conversation.TecnicoId, cancellationToken) is not null)
-                {
-                    return false;
-                }
+    public Task<bool> InsertAsync(StoredConversation conversation, CancellationToken cancellationToken) =>
+        KeyedGate.RunAsync(conversation.SolicitudId + "|" + conversation.TecnicoId, () => InsertSerializedAsync(conversation, cancellationToken), cancellationToken);
 
-                try
-                {
-                    await Conversations.InsertOneAsync(Write(conversation), cancellationToken: cancellationToken);
-                    return true;
-                }
-                catch (MongoException exception) when (IsDuplicate(exception))
-                {
-                    return false;
-                }
-                catch (MongoException exception) when (IsRetriable(exception) && attempt < _maxInsertAttempts)
-                {
-                    await Task.Delay(_insertBackoffMilliseconds * attempt, cancellationToken);
-                }
-            }
-        }
-        finally
+    private async Task<bool> InsertSerializedAsync(StoredConversation conversation, CancellationToken cancellationToken)
+    {
+        var attempt = 0;
+        while (true)
         {
-            gate.Release();
+            attempt++;
+            if (await FindByPairAsync(conversation.SolicitudId, conversation.TecnicoId, cancellationToken) is not null)
+            {
+                return false;
+            }
+
+            try
+            {
+                await Conversations.InsertOneAsync(Write(conversation), cancellationToken: cancellationToken);
+                return true;
+            }
+            catch (MongoException exception) when (IsDuplicate(exception))
+            {
+                return false;
+            }
+            catch (MongoException exception) when (IsRetriable(exception) && attempt < _maxInsertAttempts)
+            {
+                await Task.Delay(_insertBackoffMilliseconds * attempt, cancellationToken);
+            }
         }
     }
 
@@ -164,8 +159,6 @@ internal sealed class ConversacionesStore(
         exception is MongoWriteException { WriteError.Code: _writeConflict }
         or MongoCommandException { Code: _writeConflict }
         or MongoCommandException { Code: _lockError } && exception.Message.Contains("deadlock", StringComparison.OrdinalIgnoreCase);
-
-    private static readonly SemaphoreSlim[] _gates = [.. Enumerable.Range(0, 64).Select(_ => new SemaphoreSlim(1, 1))];
 
     /// <summary>Guarda lo que Mercado dijo del permiso (R-09): estado, motivo de cierre, si es el elegido y la visita.</summary>
     public async Task RefreshPermissionAsync(ObjectId id, PermisoConversacion permission, DateTime nowUtc, CancellationToken cancellationToken)
