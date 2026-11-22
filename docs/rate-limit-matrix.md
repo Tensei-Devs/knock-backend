@@ -86,6 +86,7 @@
 
 `GET`, `PUT` y `DELETE /api/v1/me/tecnicos-confianza` comparten la política `tecnicos-confianza`: **30 peticiones por minuto por `sub`**, por proceso (ventana fija del limitador de Mercado), además de los límites generales. La 31.ª responde 429 con `Retry-After`. `PUT` y `DELETE` no llevan cuerpo: más de 1 KiB responde 413. Con dos réplicas pueden pasar hasta 60 por minuto; el límite compartido queda para KNOCK-247.
 
+Las rutas de servicios del técnico (`GET /api/v1/tecnicos/{id}/servicios` y `POST`, `PUT`, `DELETE /api/v1/tecnicos/me/servicios`) comparten la política `tecnicos-servicios`: **30 peticiones por minuto por `sub`**, por proceso, además de los límites generales. La 31.ª responde 429 con `Retry-After`. Cuerpos de más de 2 KiB (1 KiB en `DELETE`) responden 413 (spec 047, KNOCK-57).
 `GET /api/v1/admin/oficios-pedidos` y `GET /api/v1/admin/lista-espera` comparten la política `admin-catalogo`: **60 peticiones por minuto por IP** (el token del panel no pasa por el esquema de la app, así que aún no hay `sub` en el limitador), por proceso, además de los límites generales. La 61.ª responde 429 con `Retry-After`. Decisión provisional (spec 045, KNOCK-111).
 ## Chat de visita en Mensajería (spec 026, KNOCK-62)
 
