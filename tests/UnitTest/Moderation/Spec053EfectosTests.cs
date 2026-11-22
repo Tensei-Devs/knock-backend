@@ -3,9 +3,11 @@ using Knock.Identity.Api.Hosting.Procesos.Outbox;
 using Knock.Identity.Api.Modules.Moderation.Services;
 using Knock.Identity.Api.Modules.Panel;
 using Knock.Identity.Api.Modules.Safety.Data;
+using Knock.Identity.Api.Modules.Safety.Domain;
 using Knock.Identity.Api.Modules.Safety.Services;
 using Knock.Identity.Api.Modules.Sesiones;
 using Knock.UnitTest.Safety;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Knock.UnitTest.Moderation;
@@ -21,7 +23,7 @@ public sealed class Spec053EfectosTests
     private static (ReportDecisionEffects Effects, Spec059SuspensionTests.World World) Build()
     {
         var world = new Spec059SuspensionTests.World();
-        return (new ReportDecisionEffects(new SafetyApi(world.Service, world.Store, new Spec059SuspensionTests.FakeClock())), world);
+        return (new ReportDecisionEffects(new SafetyApi(world.Service, world.Store, new Spec059GradualTests.FakeWarnings(0), Options.Create(new SuspensionOptions()), new Spec059SuspensionTests.FakeClock())), world);
     }
 
     private static ReportDecisionApplied Decision(string severity, string response) => new(_report, severity, response, _reporter, _reported, _moderator);

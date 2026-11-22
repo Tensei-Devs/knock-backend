@@ -14,6 +14,7 @@ internal sealed class ReportDecisionEffects(ISafetyApi safety) : IReportDecision
         {
             ReportResponses.PreventiveSuspension => ReportAction.Suspend,
             ReportResponses.Hide => ReportAction.Hide,
+            ReportResponses.Warning => ReportAction.Warn,
             _ => ReportAction.NotifyOnly,
         };
         return safety.ApplyReportDecisionAsync(transaction, action, decision.ReportId, decision.ReporterId, decision.ReportedId, decision.DeciderSub, cancellationToken);
