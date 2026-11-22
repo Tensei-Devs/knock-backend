@@ -17,7 +17,18 @@ namespace Knock.Messaging.Api.Modules.Avisos.Controllers;
 [Route("api/v{version:apiVersion}/dispositivos")]
 internal sealed class DispositivosController(DispositivosService service) : ControllerBase
 {
+    private const string _problemJson = "application/problem+json";
+
+    /// <summary>Registra el token de notificaciones del dispositivo (spec 037, R-01): 201 la primera vez, 200 si ya estaba. 409 si otra persona lo registró a la vez; 503 con el envío de avisos apagado; 20 por hora por persona.</summary>
     [HttpPost]
+    [ProducesResponseType<IdDispositivo>(StatusCodes.Status201Created)]
+    [ProducesResponseType<IdDispositivo>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable, _problemJson)]
     public async Task<IActionResult> Post(RegistroDispositivo body, CancellationToken cancellationToken)
     {
         if (!service.Available)
@@ -28,13 +39,18 @@ internal sealed class DispositivosController(DispositivosService service) : Cont
         var result = await service.RegisterAsync(User.FindFirst("sub")!.Value, User.FindFirst("sid")!.Value, body.Plataforma!, body.Identificador!, cancellationToken);
         return result.Status switch
         {
-            DeviceRegistrationStatus.Created => Created(new Uri($"{Request.Path}/{result.Id}", UriKind.Relative), new { id = result.Id }),
-            DeviceRegistrationStatus.Existing => Ok(new { id = result.Id }),
+            DeviceRegistrationStatus.Created => Created(new Uri($"{Request.Path}/{result.Id}", UriKind.Relative), new IdDispositivo(result.Id!)),
+            DeviceRegistrationStatus.Existing => Ok(new IdDispositivo(result.Id!)),
             _ => Conflict(),
         };
     }
 
+    /// <summary>Borra el dispositivo de la persona (spec 037, R-02): 204 también si ya no existe o es de otra persona.</summary>
     [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable, _problemJson)]
     public async Task<IActionResult> Delete(string id, CancellationToken cancellationToken)
     {
         if (!service.Available)

@@ -15,7 +15,15 @@ namespace Knock.Messaging.Api.Modules.Avisos.Controllers;
 [Route("api/v{version:apiVersion}/interno/avisos")]
 internal sealed class InternoAvisosController(DespachadorDeAvisos dispatcher, IDeviceTokens devices) : ControllerBase
 {
+    private const string _problemJson = "application/problem+json";
+
+    /// <summary>Recibe el evento de un servicio emisor y responde 202, también si ya lo recibió. 401 con token inválido o vencido; 403 <c>service_not_allowed</c> si el emisor no tiene el tipo en <c>permisos</c>; 422 con un tipo o cuerpo fuera del catálogo.</summary>
     [HttpPost]
+    [ProducesResponseType(StatusCodes.Status202Accepted)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, _problemJson)]
     public async Task<IActionResult> Post(AvisoInterno body, CancellationToken cancellationToken)
     {
         if (!InternalNoticeAuthentication.PermissionsOf(User).Contains(body.Tipo!))
