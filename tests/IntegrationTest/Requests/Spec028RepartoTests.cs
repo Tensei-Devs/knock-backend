@@ -87,7 +87,7 @@ public sealed class Spec028RepartoTests
         var clock = new TestClock();
         await using var host = await StartAsync(clock, false);
         await CreateAsync(host);
-        (await Tasks(host).CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(0);
+        (await Tasks(host).CountDocumentsAsync(new BsonDocument("tipo", new BsonDocument("$ne", "VencerSolicitud")))).Should().Be(0, "solo queda la tarea de vencimiento de la spec 029");
     }
 
     [Fact]
