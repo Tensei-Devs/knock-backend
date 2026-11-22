@@ -18,6 +18,9 @@ internal interface INoticesStore
 
     /// <summary>Cantidad de avisos sin leer de la persona, contada hasta <paramref name="cap"/>.</summary>
     Task<int> CountUnreadAsync(string userId, int cap, CancellationToken cancellationToken);
+
+    /// <summary><see langword="false"/> si el aviso no existe o no es de la persona (no se distingue).</summary>
+    Task<bool> MarkReadAsync(string userId, string noticeId, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -80,6 +83,15 @@ internal sealed class NoticesStore(
             _filter.And(_filter.Eq(_userField, userId), _filter.Eq(_readField, false)),
             new CountOptions { Limit = cap, MaxTime = mongoOptions.Value.QueryMaxTime },
             cancellationToken);
+
+    public async Task<bool> MarkReadAsync(string userId, string noticeId, CancellationToken cancellationToken)
+    {
+        var filter = _filter.And(_filter.Eq(_idField, ObjectId.Parse(noticeId)), _filter.Eq(_userField, userId));
+        var result = await Notices.UpdateOneAsync(filter, Builders<BsonDocument>.Update.Set(_readField, true), cancellationToken: cancellationToken);
+
+        // Ya leído (idempotente, R-12): existe aunque no haya cambiado nada. Con el mismo filtro, ajeno e inexistente no se distinguen.
+        return result.MatchedCount > 0;
+    }
 
     /// <summary>Índices de la spec 044 (§6). Idempotente; el script <c>db/044-avisos-dentro-de-la-app.js</c> hace lo mismo.</summary>
     public async Task EnsureIndexesAsync(CancellationToken cancellationToken)

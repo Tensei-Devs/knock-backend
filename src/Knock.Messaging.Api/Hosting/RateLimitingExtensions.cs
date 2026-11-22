@@ -38,6 +38,9 @@ internal static class RateLimitingExtensions
     /// <summary>Leer avisos y preferencias: 120 por minuto por persona (spec 044, R-17).</summary>
     public const string NoticesReadPolicy = "avisos-leer";
 
+    /// <summary>Marcar avisos como leídos: 60 por minuto por persona (spec 044, R-17).</summary>
+    public const string NoticesWritePolicy = "avisos-marcar";
+
     private const string _healthPath = "/health";
     private const string _readyPath = "/health/ready";
     private const string _unknownClient = "unknown";
@@ -64,6 +67,7 @@ internal static class RateLimitingExtensions
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
             options.AddPolicy(CreateConversationPolicy, SubjectPolicy(CreateConversationPolicy, 20, TimeSpan.FromHours(1), provider));
             options.AddPolicy(NoticesReadPolicy, SubjectPolicy(NoticesReadPolicy, 120, TimeSpan.FromMinutes(1), provider));
+            options.AddPolicy(NoticesWritePolicy, SubjectPolicy(NoticesWritePolicy, 60, TimeSpan.FromMinutes(1), provider));
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context => Partition(context, global, ready));
             options.OnRejected = async (context, _) =>
             {

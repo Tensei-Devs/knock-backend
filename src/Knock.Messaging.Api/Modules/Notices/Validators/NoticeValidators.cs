@@ -15,3 +15,10 @@ internal sealed class ListNoticesQueryValidator : AbstractValidator<ListNoticesQ
         RuleFor(q => q.Cursor).Must(raw => string.IsNullOrEmpty(raw) || NoticeCursor.TryDecode(raw, out _)).WithMessage("The cursor is not valid.");
     }
 }
+
+/// <summary>Valida el identificador de la ruta de marcar como leído (R-06): un <c>ObjectId</c> de 24 hexadecimales.</summary>
+internal sealed class MarkNoticeReadRequestValidator : AbstractValidator<MarkNoticeReadRequest>
+{
+    public MarkNoticeReadRequestValidator() =>
+        RuleFor(r => r.Id).Must(NoticeCursor.IsObjectId).WithMessage("The identifier is not valid.");
+}

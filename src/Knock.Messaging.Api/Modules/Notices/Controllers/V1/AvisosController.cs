@@ -19,6 +19,11 @@ namespace Knock.Messaging.Api.Modules.Notices.Controllers.V1;
 [PrivateNoStore]
 internal sealed class AvisosController(NoticesService notices) : ControllerBase
 {
+    /// <summary>Límite del cuerpo de los <c>POST</c>: no reciben cuerpo, 1 KiB basta; más responde 413 (spec 009).</summary>
+    public const int MaxBodyBytes = 1024;
+
+    public const string NoticeNotFoundCode = "notice_not_found";
+
     /// <summary>Lista los avisos de quien llama, del más reciente al más antiguo, por cursor (20 por omisión, 50 como máximo).</summary>
     [HttpGet]
     [EnableRateLimiting(RateLimitingExtensions.NoticesReadPolicy)]
@@ -37,6 +42,32 @@ internal sealed class AvisosController(NoticesService notices) : ControllerBase
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests)]
     public async Task<IActionResult> CountUnread(CancellationToken cancellationToken) =>
         Sub() is { } sub ? Ok(await notices.CountUnreadAsync(sub, cancellationToken)) : Unauthorized();
+
+    /// <summary>Marca un aviso como leído; repetirlo responde 204 igual. Uno ajeno o inexistente responde 404 <c>notice_not_found</c>.</summary>
+    [HttpPost("{id}/leido")]
+    [EnableRateLimiting(RateLimitingExtensions.NoticesWritePolicy)]
+    [RequestSizeLimit(MaxBodyBytes)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status413PayloadTooLarge)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests)]
+    public async Task<IActionResult> MarkRead([FromRoute] MarkNoticeReadRequest request, CancellationToken cancellationToken)
+    {
+        if (Sub() is not { } sub)
+        {
+            return Unauthorized();
+        }
+
+        if (await notices.MarkReadAsync(sub, request.Id!, cancellationToken))
+        {
+            return NoContent();
+        }
+
+        await ProblemResponses.WriteAsync(HttpContext, StatusCodes.Status404NotFound, "Not Found", NoticeNotFoundCode);
+        return new EmptyResult();
+    }
 
     private string? Sub() => User.FindFirst("sub")?.Value is { Length: > 0 } sub ? sub : null;
 }
