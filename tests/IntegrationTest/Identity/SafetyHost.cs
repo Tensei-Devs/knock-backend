@@ -5,7 +5,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using IdentityApi::Knock.Identity.Api.Modules.Safety.Data;
+using IdentityApi::Knock.Identity.Api.Modules.Safety.Services;
 using Knock.Contracts.Moderation;
+using Knock.Contracts.Safety;
 using Knock.IntegrationTest.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -31,6 +33,24 @@ internal sealed class FakeModerator : IContentModerator
         Task.FromResult(new ModerationResult(Outcome));
 }
 
+/// <summary>Bandeja de mentira para los eventos de bloqueo (spec 043, R-23): guarda lo publicado en orden.</summary>
+internal sealed class CapturingBlockEvents : IBlockEvents
+{
+    public List<object> Published { get; } = [];
+
+    public Task PublishCreatedAsync(BlockCreated blockCreated, CancellationToken cancellationToken)
+    {
+        Published.Add(blockCreated);
+        return Task.CompletedTask;
+    }
+
+    public Task PublishRemovedAsync(BlockRemoved blockRemoved, CancellationToken cancellationToken)
+    {
+        Published.Add(blockRemoved);
+        return Task.CompletedTask;
+    }
+}
+
 /// <summary>
 /// Un host de Identidad para las pruebas de la spec 043 (bloqueos y reportes): MongoDB y Redis reales, índices listos, una persona que llama y cuentas sembradas. Sin emulador de Firebase:
 /// las cuentas se siembran y el token se arma aquí. Solo datos ficticios.
@@ -40,9 +60,10 @@ internal sealed class SafetyHost : IAsyncDisposable
     private readonly IdentityApiFactory _factory;
     private readonly HttpClient _client;
 
-    private SafetyHost(IdentityApiFactory factory, FakeModerator moderator)
+    private SafetyHost(IdentityApiFactory factory, FakeModerator moderator, CapturingBlockEvents events)
     {
         _factory = factory;
+        Events = events;
         Moderator = moderator;
         _client = factory.CreateClient();
     }
@@ -51,6 +72,8 @@ internal sealed class SafetyHost : IAsyncDisposable
 
     public FakeModerator Moderator { get; }
 
+    public CapturingBlockEvents Events { get; }
+
     public IMongoCollection<BsonDocument> Blocks => _factory.Database.GetCollection<BsonDocument>("bloqueos");
 
     public IMongoCollection<BsonDocument> Reports => _factory.Database.GetCollection<BsonDocument>("reportes");
@@ -58,14 +81,17 @@ internal sealed class SafetyHost : IAsyncDisposable
     public static async Task<SafetyHost> StartAsync()
     {
         var moderator = new FakeModerator();
+        var events = new CapturingBlockEvents();
         var factory = await IdentityApiFactory.CreateAsync(configureServices: services =>
         {
             services.RemoveAll<IContentModerator>();
             services.AddSingleton<IContentModerator>(moderator);
+            services.RemoveAll<IBlockEvents>();
+            services.AddSingleton<IBlockEvents>(events);
         });
         await factory.Services.GetRequiredService<BloqueosStore>().EnsureIndexesAsync(CancellationToken.None);
         await factory.Services.GetRequiredService<ReportesStore>().EnsureIndexesAsync(CancellationToken.None);
-        var host = new SafetyHost(factory, moderator);
+        var host = new SafetyHost(factory, moderator, events);
         await host.SeedUserAsync("Demo Quien Llama", host.Caller);
         return host;
     }
