@@ -5,6 +5,7 @@ using Knock.Identity.Api.Modules.Trust.Crypto;
 using Knock.Identity.Api.Modules.Trust.Data;
 using Knock.Identity.Api.Modules.Trust.Services;
 using MongoDB.Bson;
+using MongoDB.Driver;
 using Xunit;
 
 namespace Knock.UnitTest.Identity;
@@ -36,7 +37,7 @@ public sealed class Spec025CurpDuplicadaTests
 
         public Task<bool> MarkPhotoEncryptedAsync(ObjectId id, string type, DateTime confirmedAt, CancellationToken cancellationToken) => throw new NotSupportedException();
 
-        public Task<SubmitOutcome> SubmitAsync(string sub, ObjectId id, DateTime sentAt, DateTime expiresAt, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<SubmitOutcome> SubmitAsync(string sub, ObjectId id, DateTime sentAt, DateTime expiresAt, Func<IClientSessionHandle, Task> scheduleInTransaction, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 
     [Fact]

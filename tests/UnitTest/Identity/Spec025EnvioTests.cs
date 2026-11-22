@@ -108,6 +108,24 @@ public sealed class Spec025EnvioTests
     }
 
     [Fact]
+    public async Task Al_Enviar_Programa_El_Aviso_De_24_Horas_Y_El_Borrado_De_7_Dias_TC_068_02()
+    {
+        var (rig, id) = await OpenCaptureAsync("activa", "ine_frente", "selfie");
+        var sent = await rig.Service.SubmitAsync("sub-1", id.ToString(), CancellationToken.None);
+        rig.Tasks.Scheduled.Select(t => (t.Type, t.Key)).Should().BeEquivalentTo([("AvisarAlVerificador", id.ToString()), ("BorrarFotosDeVerificacion", id.ToString())]);
+        rig.Tasks.Scheduled.Single(t => t.Type == "AvisarAlVerificador").Due.Should().Be(sent!.EnviadoEn.AddHours(24));
+        rig.Tasks.Scheduled.Single(t => t.Type == "BorrarFotosDeVerificacion").Due.Should().Be(sent.EnviadoEn.AddDays(7));
+    }
+
+    [Fact]
+    public async Task Si_No_Se_Envia_No_Se_Programa_Ninguna_Purga_TC_068_02()
+    {
+        var (rig, id) = await OpenCaptureAsync("activa", "ine_frente");
+        await FailsAsync(() => rig.Service.SubmitAsync("sub-1", id.ToString(), CancellationToken.None));
+        rig.Tasks.Scheduled.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task Faltan_Fotos_Responde_409_Y_No_Cambia_Nada_CA_025_13()
     {
         var (rig, id) = await OpenCaptureAsync("activa", "selfie");
