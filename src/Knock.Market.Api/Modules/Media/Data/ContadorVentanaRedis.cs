@@ -1,4 +1,4 @@
-using Knock.Market.Api.Hosting;
+using Knock.Hosting.RateLimiting;
 using Knock.Market.Api.Modules.Media.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using StackExchange.Redis;

@@ -15,7 +15,7 @@ public interface IRequestCounter
 /// Contadores en Redis (<c>ratelimit:*</c>) con un script: el incremento y la expiración de la ventana van juntos, así una caída entre los dos no deja
 /// una clave sin vencimiento que bloquee a alguien para siempre.
 /// </summary>
-internal sealed class RedisRequestCounter(IConnectionMultiplexer redis) : IRequestCounter
+public sealed class RedisRequestCounter(IConnectionMultiplexer redis) : IRequestCounter
 {
     private const string _script = """
         local count = redis.call('INCR', KEYS[1])
