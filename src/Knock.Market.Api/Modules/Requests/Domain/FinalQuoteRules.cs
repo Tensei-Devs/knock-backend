@@ -36,8 +36,8 @@ internal static class FinalQuoteRules
     public const int MinDescription = 8;
     public const int MaxDescription = 500;
 
-    /// <summary>Largo mínimo del motivo: 10 caracteres (R-08 y §6) aunque R-15 dice 8; se toma el más estricto (PARA VALIDACIÓN DE JOSÉ).</summary>
-    public const int MinReason = 10;
+    /// <summary>Largo mínimo del motivo: 8 caracteres (R-15). R-08 y §6 de la spec 049 aún dicen 10.</summary>
+    public const int MinReason = 8;
     public const int MaxReason = 300;
     public const int MinRaise = 100;
 
