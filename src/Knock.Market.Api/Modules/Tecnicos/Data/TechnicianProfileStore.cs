@@ -83,7 +83,7 @@ internal sealed class TechnicianProfileStore(
     private const int _backoffMilliseconds = 50;
 
     /// <summary>Campos del perfil público: nunca se proyectan <c>tallerDireccion</c>, <c>contactoPublico</c>, <c>ubicacionBase</c> ni <c>usuarioId</c>.</summary>
-    private static readonly string[] _profileFields =
+    internal static readonly string[] ProfileFields =
     [
         "nombre", "nombreNegocio", "fotoUrl", "nivelVerificacion", "calificacion", "anios", "descripcion", "oficios", "atencion", "radioAtencionKm",
         "coloniaBaseId", "estado", "oculto", "ocultoHasta", "disponibleHasta",
@@ -91,7 +91,7 @@ internal sealed class TechnicianProfileStore(
 
     public async Task<TechnicianProfileRecord?> FindByIdAsync(ObjectId id, CancellationToken cancellationToken)
     {
-        var projection = Builders<BsonDocument>.Projection.Combine(_profileFields.Select(f => Builders<BsonDocument>.Projection.Include(f)));
+        var projection = Builders<BsonDocument>.Projection.Combine(ProfileFields.Select(f => Builders<BsonDocument>.Projection.Include(f)));
         var document = await Technicians.Find(Builders<BsonDocument>.Filter.Eq("_id", id), new FindOptions { MaxTime = options.Value.QueryMaxTime })
             .Project(projection).FirstOrDefaultAsync(cancellationToken);
         return document is null ? null : ToProfile(document);
