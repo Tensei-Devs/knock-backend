@@ -30,3 +30,21 @@ internal sealed record AdminTradeResponse(
 
 /// <summary>Todos los oficios, incluidos los inactivos (OFI-03). El catálogo es acotado, así que no se pagina (decisión D9 de la spec TT-PRU-01).</summary>
 internal sealed record AdminTradeListResponse(IReadOnlyList<AdminTradeResponse> Items);
+
+/// <summary>Límites de los cuerpos de los oficios (spec 009): 4 KiB bastan para el nombre, las frases y los parámetros; más responde 413.</summary>
+internal static class TradeBodies
+{
+    public const int MaxBodyBytes = 4096;
+}
+
+/// <summary>Cuerpo de <c>POST /api/v1/admin/oficios</c> (OFI-04): la clave y los parámetros del oficio nuevo. Todos son obligatorios salvo las frases y <c>activo</c> (verdadero por omisión, R-18).</summary>
+internal sealed record CreateTradeBody(
+    string? Clave,
+    string? Nombre,
+    string? Modalidad,
+    IReadOnlyList<string>? FrasesSugeridas,
+    decimal? TopePorcentaje,
+    decimal? TopeFijoPorcentaje,
+    int? PisoAprobacion,
+    int? VisitaMaxima,
+    bool? Activo);

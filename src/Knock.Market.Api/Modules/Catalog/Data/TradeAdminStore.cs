@@ -1,4 +1,5 @@
 using Knock.Market.Api.Hosting;
+using Knock.Market.Api.Modules.Catalog.Domain;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -17,11 +18,26 @@ internal sealed record AdminTrade(
     int? VisitaMaxima,
     bool Activo);
 
+/// <summary>Oficio nuevo ya validado (OFI-04). <c>nombreBusqueda</c> y <c>version</c> los calcula el almacén.</summary>
+internal sealed record NewTrade(
+    string Clave,
+    string Nombre,
+    string Modalidad,
+    IReadOnlyList<string> FrasesSugeridas,
+    decimal TopePorcentaje,
+    decimal TopeFijoPorcentaje,
+    int PisoAprobacion,
+    int VisitaMaxima,
+    bool Activo);
+
 /// <summary>Lo que el panel necesita de la colección <c>oficios</c>; existe para probar el servicio con dobles sin MongoDB.</summary>
 internal interface ITradeAdminStore
 {
     /// <summary>Todos los oficios, activos e inactivos, por nombre normalizado y, a igual valor, por clave.</summary>
     Task<IReadOnlyList<AdminTrade>> ListAllAsync(CancellationToken cancellationToken);
+
+    /// <summary>Crea el oficio; <see langword="false"/> si ya existe uno con esa clave (índice único), sin cambiar nada.</summary>
+    Task<bool> InsertAsync(NewTrade trade, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -54,6 +70,34 @@ internal sealed class TradeAdminStore(
             .Limit(MaxListed)
             .ToListAsync(cancellationToken);
         return [.. documents.Select(ToAdminTrade)];
+    }
+
+    public async Task<bool> InsertAsync(NewTrade trade, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(trade);
+        var document = new BsonDocument
+        {
+            { CatalogStore.ClaveField, trade.Clave },
+            { CatalogStore.NombreField, trade.Nombre },
+            { CatalogStore.NombreBusquedaField, SearchNameNormalizer.Normalize(trade.Nombre) },
+            { CatalogStore.ModalidadField, trade.Modalidad },
+            { CatalogStore.FrasesSugeridasField, new BsonArray(trade.FrasesSugeridas) },
+            { _percentageField, new BsonDecimal128(trade.TopePorcentaje) },
+            { _fixedPercentageField, new BsonDecimal128(trade.TopeFijoPorcentaje) },
+            { _approvalFloorField, trade.PisoAprobacion },
+            { _maxVisitField, trade.VisitaMaxima },
+            { CatalogStore.ActivoField, trade.Activo },
+            { CatalogStore.VersionField, 1 },
+        };
+        try
+        {
+            await Oficios.InsertOneAsync(document, cancellationToken: cancellationToken);
+            return true;
+        }
+        catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            return false;
+        }
     }
 
     internal static AdminTrade ToAdminTrade(BsonDocument document) => new(

@@ -40,9 +40,9 @@ public sealed partial class Spec045OficiosTests
         var store = new FakeTradeAdminStore();
         store.Trades.AddRange([Trade("plomeria", "Plomería"), Trade("electricidad", "Electricidad", active: false)]);
 
-        var list = await new AdminTradesController(new TradeAdminService(store)).List(CancellationToken.None);
+        var list = await Admin(AdminService(store)).List(CancellationToken.None);
 
-        var items = list.Value!.Items;
+        var items = list.Value?.Items ?? throw new InvalidOperationException("sin cuerpo");
         items.Select(i => i.Clave).Should().Equal("electricidad", "plomeria");
         items.Single(i => i.Clave == "electricidad").Activo.Should().BeFalse();
         items[0].TopePorcentaje.Should().Be(30m);
@@ -66,7 +66,7 @@ public sealed partial class Spec045OficiosTests
         var authorize = typeof(AdminTradesController).GetCustomAttribute<AuthorizeAttribute>();
 
         authorize.Should().NotBeNull();
-        authorize!.AuthenticationSchemes.Should().Be(PanelAuthentication.Scheme);
+        authorize.AuthenticationSchemes.Should().Be(PanelAuthentication.Scheme);
         authorize.Policy.Should().Be(PanelAuthentication.CatalogManagePolicy);
         typeof(AdminTradesController).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
             .Should().OnlyContain(m => !m.GetCustomAttributes<AllowAnonymousAttribute>().Any(), "ninguna ruta de administración es pública");
