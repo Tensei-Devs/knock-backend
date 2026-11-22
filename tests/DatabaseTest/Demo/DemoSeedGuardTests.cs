@@ -4,7 +4,7 @@ using Knock.IntegrationTest.Support;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Xunit;
-using DemoSeedGuard = identity::Knock.Identity.Api.Modules.Usuarios.Data.DemoSeedGuard;
+using DemoSeedGuard = identity::Knock.Identity.Api.Hosting.DemoSeedGuard;
 
 namespace Knock.DatabaseTest.Demo;
 

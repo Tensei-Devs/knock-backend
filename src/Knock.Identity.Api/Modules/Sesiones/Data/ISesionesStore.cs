@@ -1,4 +1,6 @@
+using Knock.Identity.Api.Modules.Panel;
 using Knock.Identity.Api.Modules.Sesiones.Domain;
+using MongoDB.Bson;
 
 namespace Knock.Identity.Api.Modules.Sesiones.Data;
 
@@ -39,4 +41,14 @@ internal interface ISesionesStore
     Task<StoredSession?> FindSessionByOwnerAsync(string id, string userId, CancellationToken cancellationToken);
 
     Task<bool> MarkSessionRevokedAsync(string id, string userId, CancellationToken cancellationToken);
+}
+
+/// <summary>Operaciones de <c>usuarios</c> y <c>sesiones</c> que la suspensión (spec 059) ejecuta dentro de la transacción de otro módulo.</summary>
+internal interface ISesionesSuspensionStore
+{
+    Task<AccountForSuspension?> ReadAsync(StoreTransaction transaction, string sub, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<string>?> SuspendAsync(StoreTransaction transaction, string sub, string expectedState, string type, ObjectId reportId, DateTime since, CancellationToken cancellationToken);
+
+    Task<bool> ReactivateAsync(StoreTransaction transaction, string sub, CancellationToken cancellationToken);
 }

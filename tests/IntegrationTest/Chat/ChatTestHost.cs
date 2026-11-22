@@ -19,6 +19,9 @@ namespace Knock.IntegrationTest.Chat;
 /// <summary>Lo que el Mercado de mentira contesta sobre una visita: el estado HTTP y, con 200, el rol de quien pregunta y el estado de la visita.</summary>
 internal sealed record VisitAnswer(int Status, string? Role = null, string? State = null);
 
+/// <summary>Lo que el Mercado de mentira contesta sobre el permiso de una conversación (spec 030): el estado HTTP y, con 200, el cuerpo.</summary>
+internal sealed record PermissionAnswer(int Status, object? Body = null);
+
 /// <summary>
 /// Mercado de mentira para las pruebas del chat (spec 026): contesta <c>GET /api/v1/visitas/{id}</c> con lo que dice <see cref="Answer"/> para el <c>sub</c> del token recibido.
 /// Solo datos ficticios; guarda cuántas veces lo llamaron.
@@ -27,6 +30,7 @@ internal sealed class FakeMarket : IAsyncDisposable
 {
     private readonly WebApplication _app;
     private int _calls;
+    private int _permissionCalls;
 
     private FakeMarket(WebApplication app, string baseUrl)
     {
@@ -37,6 +41,12 @@ internal sealed class FakeMarket : IAsyncDisposable
     public string BaseUrl { get; }
 
     public int Calls => Volatile.Read(ref _calls);
+
+    /// <summary>Cuántas veces llamaron a <c>GET /api/v1/solicitudes/{id}/conversacion</c> (spec 030).</summary>
+    public int PermissionCalls => Volatile.Read(ref _permissionCalls);
+
+    /// <summary>Respuesta del permiso por (sub, solicitudId, tecnicoId). Por omisión, 404.</summary>
+    public Func<string, string, string?, Task<PermissionAnswer>> Permission { get; set; } = (_, _, _) => Task.FromResult(new PermissionAnswer(StatusCodes.Status404NotFound));
 
     /// <summary>Respuesta por (sub, visitId). Por omisión, la visita no existe (404).</summary>
     public Func<string, string, Task<VisitAnswer>> Answer { get; set; } = (_, _) => Task.FromResult(new VisitAnswer(StatusCodes.Status404NotFound));
@@ -59,6 +69,14 @@ internal sealed class FakeMarket : IAsyncDisposable
             return answer.Status == StatusCodes.Status200OK
                 ? Results.Json(new { rol = answer.Role, estado = answer.State })
                 : Results.StatusCode(answer.Status);
+        });
+        app.MapGet("/api/v1/solicitudes/{id}/conversacion", async (string id, string? tecnicoId, HttpContext context) =>
+        {
+            Interlocked.Increment(ref market!._permissionCalls);
+            var token = context.Request.Headers.Authorization.ToString()["Bearer ".Length..];
+            var sub = new JsonWebTokenHandler().ReadJsonWebToken(token).GetClaim("sub").Value;
+            var answer = await market.Permission(sub, id, tecnicoId);
+            return answer.Status == StatusCodes.Status200OK ? Results.Json(answer.Body) : Results.StatusCode(answer.Status);
         });
         await app.StartAsync();
         var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First();
@@ -106,18 +124,7 @@ internal sealed class ChatFactory(IReadOnlyDictionary<string, string?> settings)
     }
 
     /// <summary>Un cliente de SignalR (eventos del servidor sobre el servidor de pruebas en memoria) contra esta copia, con el token en la consulta (<c>access_token</c>), como lo hace la app.</summary>
-    public HubConnection Connect(string token)
-    {
-        var server = Server;
-        return new HubConnectionBuilder()
-            .WithUrl(new Uri(server.BaseAddress, "hubs/chat"), options =>
-            {
-                options.AccessTokenProvider = () => Task.FromResult<string?>(token);
-                options.Transports = HttpTransportType.ServerSentEvents;
-                options.HttpMessageHandlerFactory = _ => server.CreateHandler();
-            })
-            .Build();
-    }
+    public HubConnection Connect(string token) => ChatHubClient.Connect(Server, token);
 
     /// <summary>El saludo del hub (<c>POST /hubs/chat/negotiate</c>) con el token en la consulta, para ver el código HTTP.</summary>
     public async Task<HttpStatusCode> NegotiateAsync(string? token)

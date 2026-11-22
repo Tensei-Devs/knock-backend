@@ -26,7 +26,7 @@ public sealed class Spec022AvisoTests
         json.GetProperty("incluyeDireccion").GetBoolean().Should().BeFalse();
         text.Should().Contain(Spec021Host.TechnicianName).And.Contain("con verificación completa")
             .And.Contain(document["dia"].AsString).And.Contain(document["hora"].AsString);
-        text.Should().NotContain(visit.Code!).And.NotContain("Calle Ficticia").And.NotContain("Colonia Piloto");
+        text.Should().NotContain("Calle Ficticia").And.NotContain("Colonia Piloto");
         text.Should().Be($"Contraté a {Spec021Host.TechnicianName} (con verificación completa) para una visita el {document["dia"].AsString} a las {document["hora"].AsString}. Le pediré que me diga el código en la puerta; si no lo sabe, no le abriré. Te aviso cuando llegue.");
     }
 
@@ -56,6 +56,6 @@ public sealed class Spec022AvisoTests
         (await host.VisitDocAsync(visit.VisitId))["avisosEnviados"].AsInt32.Should().Be(3);
         var events = await host.Database.GetCollection<BsonDocument>("outbox").Find(Builders<BsonDocument>.Filter.Eq("tipo", "AvisoConfianzaPreparado")).ToListAsync();
         events.Should().HaveCount(3);
-        events.Should().OnlyContain(e => !e.ToJson().Contains(Spec021Host.TechnicianName) && !e.ToJson().Contains("Contraté") && !e.ToJson().Contains(visit.Code!));
+        events.Should().OnlyContain(e => !e.ToJson().Contains(Spec021Host.TechnicianName) && !e.ToJson().Contains("Contraté") && !Spec020Host.CarriesValue(e.ToJson(), visit.Code!));
     }
 }

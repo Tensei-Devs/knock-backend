@@ -3,14 +3,16 @@ using System.Globalization;
 namespace Knock.Market.Api.Modules.Media.Domain;
 
 /// <summary>Resultado de una operación del módulo.</summary>
-internal enum MediaOutcomeStatus { Success, NotFound, Conflict, Unprocessable, Unavailable }
-internal sealed record MediaOutcome<T>(MediaOutcomeStatus Status, T? Value = default, string? Detail = null)
+internal enum MediaOutcomeStatus { Success, NotFound, Conflict, Unprocessable, Unavailable, LimitExceeded }
+internal sealed record MediaOutcome<T>(MediaOutcomeStatus Status, T? Value = default, string? Detail = null, int? RetryAfterSeconds = null)
 {
     public static MediaOutcome<T> Ok(T value) => new(MediaOutcomeStatus.Success, value);
     public static MediaOutcome<T> NotFound() => new(MediaOutcomeStatus.NotFound);
     public static MediaOutcome<T> Conflict(string detail) => new(MediaOutcomeStatus.Conflict, Detail: detail);
     public static MediaOutcome<T> Unprocessable(string detail) => new(MediaOutcomeStatus.Unprocessable, Detail: detail);
     public static MediaOutcome<T> Unavailable() => new(MediaOutcomeStatus.Unavailable);
+    /// <summary>The per-owner cap of pending uploads was reached (429 <c>limit_exceeded</c> with <c>Retry-After</c>, spec 058 R-11).</summary>
+    public static MediaOutcome<T> LimitExceeded(int retryAfterSeconds) => new(MediaOutcomeStatus.LimitExceeded, RetryAfterSeconds: retryAfterSeconds);
 }
 internal static class MediaRejection
 {

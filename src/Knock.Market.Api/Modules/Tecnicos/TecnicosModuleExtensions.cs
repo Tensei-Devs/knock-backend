@@ -31,7 +31,11 @@ public static class TecnicosModuleExtensions
         services.AddScoped<TechnicianLookupService>();
         services.AddScoped<TrabajoStore>();
         services.AddScoped<TecnicoTrabajoService>();
-        services.AddScoped<ServiceStore>();
+        services.AddScoped<IServiceStore, ServiceStore>();
+        services.AddScoped<IReputationReader, TechnicianReputationStore>();
+        services.AddScoped<TechnicianReputationService>();
+        services.AddScoped<IWorkPhotoReader, WorkPhotoStore>();
+        services.AddScoped<TechnicianWorkPhotoService>();
         services.AddScoped<ServiceService>();
         return services;
     }

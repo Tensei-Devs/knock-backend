@@ -1,3 +1,4 @@
+using Knock.Identity.Api.Hosting.Procesos.TareasProgramadas;
 using Knock.Identity.Api.Modules.Trust.Crypto;
 using Knock.Identity.Api.Modules.Trust.Data;
 using Knock.Identity.Api.Modules.Trust.Services;
@@ -23,6 +24,14 @@ public static class TrustModuleExtensions
         services.AddOptions<CurpHmacOptions>().BindConfiguration(CurpHmacOptions.SectionName);
         services.AddSingleton(provider => CurpHmacOptions.Create(provider.GetRequiredService<IOptions<CurpHmacOptions>>()));
         services.AddScoped<CurpDuplicateGuard>();
+        services.AddSingleton<IVerificationPurgeStore, VerificationPurgeStore>();
+        services.AddScoped<PurgaDeVerificacion>();
+        services.AddSingleton<VerificationPurgeScheduler>();
+        services.AddSingleton<DemoVerificationStore>();
+        services.AddSingleton<DemoVerificationSeeder>();
+        services.AddHostedService<DemoVerificationStartup>();
+        services.AddScoped<IManejadorDeTarea, AvisarAlVerificadorHandler>();
+        services.AddScoped<IManejadorDeTarea, BorrarFotosDeVerificacionHandler>();
         return services;
     }
 }

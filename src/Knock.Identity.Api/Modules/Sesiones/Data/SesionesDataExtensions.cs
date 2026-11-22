@@ -14,6 +14,7 @@ internal static class SesionesDataExtensions
         services.AddKnockMongoDatabase(ModuleKey);
         services.AddSingleton<SesionesStore>();
         services.AddSingleton<ISesionesStore>(provider => provider.GetRequiredService<SesionesStore>());
+        services.AddSingleton<ISesionesSuspensionStore>(provider => provider.GetRequiredService<SesionesStore>());
         return services;
     }
 }

@@ -46,8 +46,8 @@ public sealed class Spec022VistaTests
         var json = JsonElement.Parse(raw);
         json.GetProperty("rol").GetString().Should().Be("tecnico");
         json.GetProperty("puedeLlegar").GetBoolean().Should().BeTrue("la ventana de la cita está abierta");
-        raw.Should().NotContain(visit.Code!, "el técnico nunca ve el código")
-            .And.NotContain(host.ClientSub, "ni quién es el cliente")
+        Spec020Host.CarriesValue(raw, visit.Code!).Should().BeFalse("el técnico nunca ve el código");
+        raw.Should().NotContain(host.ClientSub, "ni quién es el cliente")
             .And.NotContain("codigo", "la vista del técnico no tiene ningún campo de código")
             .And.NotContain("telefono").And.NotContain("whatsapp");
     }

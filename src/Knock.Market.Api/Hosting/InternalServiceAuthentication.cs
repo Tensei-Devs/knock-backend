@@ -51,30 +51,32 @@ internal static class InternalServiceAuthentication
                 ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
                 ClockSkew = TimeSpan.Zero,
             };
-            options.Events = new JwtBearerEvents
-            {
-                OnTokenValidated = context =>
-                {
-                    if (!HasBoundedLifetime(context.Principal))
-                    {
-                        context.Fail("The service token lifetime is not valid.");
-                    }
-
-                    return Task.CompletedTask;
-                },
-                OnChallenge = async context =>
-                {
-                    context.HandleResponse();
-                    await ProblemResponses.WriteAsync(context.HttpContext, StatusCodes.Status401Unauthorized, "Unauthorized", ErrorCodes.UnauthorizedCode);
-                },
-                OnForbidden = context => ProblemResponses.WriteAsync(context.HttpContext, StatusCodes.Status403Forbidden, "Forbidden", ServiceNotAllowedCode),
-            };
+            options.Events = new JwtBearerEvents { OnTokenValidated = RejectUnboundedLifetime, OnChallenge = ChallengeAsync, OnForbidden = ForbidAsync };
         });
         services.AddAuthorizationBuilder().AddPolicy(
             HistoryPolicy,
             policy => policy.AddAuthenticationSchemes(Scheme).RequireAuthenticatedUser().RequireClaim(PermissionsClaim, HistoryPermission));
         return services;
     }
+
+    private static Task RejectUnboundedLifetime(TokenValidatedContext context)
+    {
+        if (!HasBoundedLifetime(context.Principal))
+        {
+            context.Fail("The service token lifetime is not valid.");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private static Task ChallengeAsync(JwtBearerChallengeContext context)
+    {
+        context.HandleResponse();
+        return ProblemResponses.WriteAsync(context.HttpContext, StatusCodes.Status401Unauthorized, "Unauthorized", ErrorCodes.UnauthorizedCode);
+    }
+
+    private static Task ForbidAsync(ForbiddenContext context) =>
+        ProblemResponses.WriteAsync(context.HttpContext, StatusCodes.Status403Forbidden, "Forbidden", ServiceNotAllowedCode);
 
     /// <summary>La clave de la configuración si es Base64 de al menos 32 bytes; si no, una clave al azar que nadie conoce, así que ningún token se valida.</summary>
     internal static byte[] ReadKey(string? configured)

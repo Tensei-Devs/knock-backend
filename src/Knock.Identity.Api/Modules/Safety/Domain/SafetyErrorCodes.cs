@@ -10,4 +10,6 @@ internal static class SafetyErrorCodes
     public const string ContentRejectedCode = "report_content_rejected";
     public const string ModerationUnavailableCode = "report_moderation_unavailable";
     public const string AppealNotAllowedCode = "appeal_not_allowed";
+    public const string CannotSuspendSelfCode = "cannot_suspend_self";
+    public const string AccountNotSuspendedCode = "account_not_suspended";
 }

@@ -13,7 +13,7 @@ RUN dotnet restore src/Knock.Identity.Api/Knock.Identity.Api.csproj --locked-mod
 COPY src/Knock.Contracts/ src/Knock.Contracts/
 COPY src/Knock.Hosting/ src/Knock.Hosting/
 COPY src/Knock.Identity.Api/ src/Knock.Identity.Api/
-COPY db/seeds/demo/identity/usuarios.json db/seeds/demo/identity/usuarios.json
+COPY db/seeds/demo/identity/usuarios.json db/seeds/demo/identity/verificaciones.json db/seeds/demo/identity/
 RUN dotnet publish src/Knock.Identity.Api/Knock.Identity.Api.csproj -c Release --no-restore -o /app/publish /p:UseAppHost=false
 
 # ---- Ejecución ----

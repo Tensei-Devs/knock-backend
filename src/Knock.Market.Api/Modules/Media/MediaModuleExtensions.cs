@@ -1,5 +1,6 @@
 using Azure.Storage.Blobs;
 using Knock.Contracts.Moderation;
+using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Media.Data;
 using Knock.Market.Api.Modules.Media.Options;
 using Knock.Market.Api.Modules.Media.Services;
@@ -30,9 +31,11 @@ public static class MediaModuleExtensions
                 ? throw new InvalidOperationException($"ConnectionStrings:{MediaOptions.ConnectionStringName} is not configured.")
                 : new BlobServiceClient(connectionString);
         });
-        services.AddSingleton<IMediaFileStore, BlobMediaFileStore>();
+        services.AddKnockMongoDatabase(ArchivosMongo.ModuleKey);
+        services.AddSingleton<IMediaFileStore, MongoMediaFileStore>();
         services.AddSingleton<IMediaBlobStore, AzureMediaBlobStore>();
         services.AddSingleton<ImageProcessor>();
+        services.AddSingleton<MediaMetrics>();
         services.AddSingleton<MediaService>();
         services.AddSingleton<IMediaApi, MediaApi>();
         services.AddImagenesPublicas();
