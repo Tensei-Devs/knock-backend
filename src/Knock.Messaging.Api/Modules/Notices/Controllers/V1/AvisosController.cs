@@ -24,6 +24,8 @@ internal sealed class AvisosController(NoticesService notices) : ControllerBase
 
     public const string NoticeNotFoundCode = "notice_not_found";
 
+    public const string PayloadTooLargeCode = "payload_too_large";
+
     /// <summary>Lista los avisos de quien llama, del más reciente al más antiguo, por cursor (20 por omisión, 50 como máximo).</summary>
     [HttpGet]
     [EnableRateLimiting(RateLimitingExtensions.NoticesReadPolicy)]
@@ -60,6 +62,11 @@ internal sealed class AvisosController(NoticesService notices) : ControllerBase
             return Unauthorized();
         }
 
+        if (await RejectOversizedBodyAsync())
+        {
+            return new EmptyResult();
+        }
+
         if (await notices.MarkReadAsync(sub, request.Id!, cancellationToken))
         {
             return NoContent();
@@ -84,8 +91,28 @@ internal sealed class AvisosController(NoticesService notices) : ControllerBase
             return Unauthorized();
         }
 
+        if (await RejectOversizedBodyAsync())
+        {
+            return new EmptyResult();
+        }
+
         await notices.MarkAllReadAsync(sub, cancellationToken);
         return NoContent();
+    }
+
+    /// <summary>
+    /// Estas rutas no leen cuerpo, así que el tope de <see cref="RequestSizeLimitAttribute"/> no se dispara solo: se responde 413 (spec 009, R-17) cuando <c>Content-Length</c> lo excede, sin
+    /// leer el cuerpo ni repetir nada de la petición.
+    /// </summary>
+    private async Task<bool> RejectOversizedBodyAsync()
+    {
+        if (Request.ContentLength is not > MaxBodyBytes)
+        {
+            return false;
+        }
+
+        await ProblemResponses.WriteAsync(HttpContext, StatusCodes.Status413PayloadTooLarge, "Payload Too Large", PayloadTooLargeCode);
+        return true;
     }
 
     private string? Sub() => User.FindFirst("sub")?.Value is { Length: > 0 } sub ? sub : null;
