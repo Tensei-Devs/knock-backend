@@ -86,6 +86,7 @@ internal sealed class ImagenesController(SubidaImagenService service) : Controll
             ResultadoSubida.ImageInvalid => (StatusCodes.Status422UnprocessableEntity, CodigosImagen.ImageInvalidCode),
             ResultadoSubida.ImageRejected => (StatusCodes.Status422UnprocessableEntity, "image_rejected"),
             ResultadoSubida.ModerationUnavailable => (StatusCodes.Status503ServiceUnavailable, "moderation_unavailable"),
+            ResultadoSubida.ModerationLimit => (StatusCodes.Status429TooManyRequests, "moderation_limit"),
             _ => (StatusCodes.Status503ServiceUnavailable, "storage_unavailable"),
         };
         return Regla(estado, codigo, respuesta.ReintentarEn);

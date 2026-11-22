@@ -18,6 +18,7 @@ internal enum ResultadoSubida
     ImageInvalid,
     ImageRejected,
     ModerationUnavailable,
+    ModerationLimit,
     StorageUnavailable,
 }
 
@@ -166,6 +167,12 @@ internal sealed class SubidaImagenService(
         if (moderacion.Outcome == ModerationOutcome.Rejected)
         {
             return await DescartarAsync(subida, ResultadoSubida.ImageRejected, cancellationToken);
+        }
+
+        if (moderacion.Outcome == ModerationOutcome.LimitReached)
+        {
+            // Tope diario por persona (spec 031, R-13): 429 con Retry-After hasta la medianoche; la subida sigue confirmable hasta confirmarAntesDe.
+            return Respuesta<ImagenConfirmada>.Falla(ResultadoSubida.ModerationLimit, TimeSpan.FromSeconds(moderacion.RetryAfterSeconds ?? 1));
         }
 
         if (moderacion.Outcome != ModerationOutcome.Allowed)

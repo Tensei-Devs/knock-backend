@@ -82,6 +82,7 @@ public static class RequestsModuleExtensions
         services.AddScoped<FinalQuoteService>();
         services.AddScoped<IManejadorDeTarea, VencerCotizacionFinal>();
         services.AddScoped<IManejadorDeTarea, VencerAjuste>();
+        services.AddScoped<TechnicianAccessStore>();
         services.AddScoped<IRequestsApi, RequestsApi>();
         services.AddScoped<DemoTechnicianStore>();
         services.AddScoped<DemoTechnicianSeeder>();

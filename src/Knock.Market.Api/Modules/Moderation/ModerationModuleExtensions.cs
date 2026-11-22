@@ -12,25 +12,30 @@ namespace Knock.Market.Api.Modules.Moderation;
 /// Adaptador del contrato de la spec 013 (<see cref="IContentModerator"/>) sobre el de la spec 031. Los llamadores existentes (solicitudes, notas, imágenes) no cambian: reciben la decisión real.
 /// La persona sale del <c>sub</c> del token de la petición; sin sesión no hay tope por persona que aplicar y se falla cerrado.
 /// </summary>
-internal sealed class LegacyContentModeratorAdapter(IContentModeration moderation, IHttpContextAccessor accessor) : IContentModerator
+internal sealed class LegacyContentModeratorAdapter(IContentModeration moderation, IHttpContextAccessor accessor, TimeProvider clock) : IContentModerator
 {
     public async Task<ModerationResult> ReviewTextAsync(string text, CancellationToken cancellationToken) =>
-        Translate(await ModerateAsync(user => moderation.ModerateTextAsync(new TextModerationRequest(text, ModerationContext.SolicitudDescripcion, user), cancellationToken)));
+        Translate(await ModerateAsync(user => moderation.ModerateTextAsync(new TextModerationRequest(text, ModerationContext.SolicitudDescripcion, user), cancellationToken)), isImage: false);
 
     public async Task<ModerationResult> ReviewImageAsync(ReadOnlyMemory<byte> image, CancellationToken cancellationToken) =>
-        Translate(await ModerateAsync(user => moderation.ModerateImageAsync(new ImageModerationRequest(image, "image/jpeg", ModerationContext.ImagenPublica, user), cancellationToken)));
+        Translate(await ModerateAsync(user => moderation.ModerateImageAsync(new ImageModerationRequest(image, "image/jpeg", ModerationContext.ImagenPublica, user), cancellationToken)), isImage: true);
 
     private async Task<ModerationVerdict> ModerateAsync(Func<string, Task<ModerationVerdict>> call) =>
         accessor.HttpContext?.User.FindFirst("sub")?.Value is { Length: > 0 } user ? await call(user) : ModerationVerdict.Failed(ModerationReasonCodes.Unavailable);
 
-    private static ModerationResult Translate(ModerationVerdict verdict) => new(
-        verdict.Decision switch
+    /// <summary>El tope por persona se distingue de la falla porque el llamador responde 429 y no 503; los segundos salen del traductor único (R-13), igual en todos los llamadores.</summary>
+    private ModerationResult Translate(ModerationVerdict verdict, bool isImage)
+    {
+        var problem = ModerationProblemMapper.Map(verdict, isImage, clock.GetUtcNow());
+        var outcome = verdict.Decision switch
         {
             ModerationDecision.Approved => ModerationOutcome.Allowed,
             ModerationDecision.Rejected => ModerationOutcome.Rejected,
+            _ when problem?.Status == StatusCodes.Status429TooManyRequests => ModerationOutcome.LimitReached,
             _ => ModerationOutcome.Unavailable,
-        },
-        verdict.Categories.Count > 0 ? verdict.Categories[0] : null);
+        };
+        return new ModerationResult(outcome, verdict.Categories.Count > 0 ? verdict.Categories[0] : null, problem?.RetryAfterSeconds);
+    }
 }
 
 public static class ModerationModuleExtensions
