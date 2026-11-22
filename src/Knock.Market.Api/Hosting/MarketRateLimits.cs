@@ -50,6 +50,10 @@ internal static class MarketRateLimits
     public const string MapPolicy = "tecnicos-mapa";
     public const string ExplorePolicy = "tecnicos-explorar";
 
+    /// <summary>Asistente de IA: 10 por minuto por persona en rutas que llaman al modelo y 60 en las de consulta (spec 052, §5).</summary>
+    public const string AssistantAiPolicy = "asistente-ia";
+    public const string AssistantReadPolicy = "asistente-consulta";
+
     /// <summary>Límite por IP: política global, estricta para <c>/api/v{n}/auth/*</c> y propia para <c>/health/ready</c>.</summary>
     public static IServiceCollection AddKnockRateLimiting(this IServiceCollection services) =>
         services.AddKnockRateLimiting(new KnockRateLimitingOptions
@@ -79,6 +83,8 @@ internal static class MarketRateLimits
                 .PerSubject(AdjustmentDecisionPolicy, 20, TimeSpan.FromMinutes(1))
                 .PerSubject(RegisterTechnicianPolicy, 5, TimeSpan.FromHours(1))
                 .PerClient(MapPolicy, MapPolicy, 60, TimeSpan.FromMinutes(1))
-                .PerClient(ExplorePolicy, ExplorePolicy, 60, TimeSpan.FromMinutes(1)),
+                .PerClient(ExplorePolicy, ExplorePolicy, 60, TimeSpan.FromMinutes(1))
+                .PerSubject(AssistantAiPolicy, 10, TimeSpan.FromMinutes(1))
+                .PerSubject(AssistantReadPolicy, 60, TimeSpan.FromMinutes(1)),
         });
 }

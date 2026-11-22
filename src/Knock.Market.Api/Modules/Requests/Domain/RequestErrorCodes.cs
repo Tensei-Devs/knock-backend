@@ -10,6 +10,7 @@ internal static class RequestErrorCodes
     public const string PhotoInvalidCode = "photo_invalid";
     public const string ContentRejectedCode = "content_rejected";
     public const string ModerationUnavailableCode = "moderation_unavailable";
+    public const string ModerationLimitCode = "moderation_limit";
     public const string InvalidCursorCode = "invalid_cursor";
 
     // Comparar y elegir cotización (spec 021, §5).

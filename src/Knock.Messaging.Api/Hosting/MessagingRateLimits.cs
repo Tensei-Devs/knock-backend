@@ -22,6 +22,9 @@ internal static class MessagingRateLimits
     /// <summary>Marcar avisos como leídos: 60 por minuto por persona (spec 044, R-17).</summary>
     public const string NoticesWritePolicy = "avisos-marcar";
 
+    /// <summary>Cambiar las preferencias de avisos: 20 por minuto por persona (spec 044, PRE-02), con contador compartido en Redis.</summary>
+    public const string NoticePreferencesPolicy = "avisos-preferencias";
+
     private const int _devicesPerHour = 30;
     private const int _messagesPerMinute = 30;
     private const string _messageLimitCode = "message_limit";
@@ -40,7 +43,8 @@ internal static class MessagingRateLimits
                 .PerSubject(SendMessagePolicy, _messagesPerMinute, TimeSpan.FromMinutes(1))
                 .PerSubject(DevicesPolicy, _devicesPerHour, TimeSpan.FromHours(1))
                 .PerSubject(NoticesReadPolicy, 120, TimeSpan.FromMinutes(1))
-                .PerSubject(NoticesWritePolicy, 60, TimeSpan.FromMinutes(1)),
+                .PerSubject(NoticesWritePolicy, 60, TimeSpan.FromMinutes(1))
+                .PerSubject(NoticePreferencesPolicy, 20, TimeSpan.FromMinutes(1)),
         });
 
     /// <summary>El límite de enviar mensajes tiene su propio <c>code</c> (<c>message_limit</c>, spec 030, R-11); los demás, el genérico.</summary>

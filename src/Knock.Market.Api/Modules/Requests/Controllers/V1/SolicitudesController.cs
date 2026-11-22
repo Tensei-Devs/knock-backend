@@ -47,7 +47,8 @@ internal sealed class SolicitudesController(SolicitudService service) : Controll
             CreateRequestStatus.AddressNotApplicable => Rule(StatusCodes.Status422UnprocessableEntity, RequestErrorCodes.AddressNotApplicableCode, "direccion"),
             CreateRequestStatus.PhotoInvalid => Rule(StatusCodes.Status422UnprocessableEntity, RequestErrorCodes.PhotoInvalidCode),
             CreateRequestStatus.ContentRejected => Rule(StatusCodes.Status422UnprocessableEntity, RequestErrorCodes.ContentRejectedCode),
-            _ => Rule(StatusCodes.Status503ServiceUnavailable, RequestErrorCodes.ModerationUnavailableCode),
+            CreateRequestStatus.ModerationLimit => Rule(StatusCodes.Status429TooManyRequests, RequestErrorCodes.ModerationLimitCode, retryAfterSeconds: outcome.RetryAfterSeconds),
+            _ => Rule(StatusCodes.Status503ServiceUnavailable, RequestErrorCodes.ModerationUnavailableCode, retryAfterSeconds: outcome.RetryAfterSeconds),
         };
     }
 
@@ -77,8 +78,13 @@ internal sealed class SolicitudesController(SolicitudService service) : Controll
     /// Regla de negocio con ProblemDetails (mismo formato que el resto de errores: <c>traceId</c> y <c>correlationId</c>), con <c>code</c> cuando la spec lo define y, si se
     /// nombra un campo, <c>errors</c> con un motivo genérico que nunca repite el valor recibido.
     /// </summary>
-    private ObjectResult Rule(int status, string? code, string? field = null)
+    private ObjectResult Rule(int status, string? code, string? field = null, int? retryAfterSeconds = null)
     {
+        if (retryAfterSeconds is { } seconds)
+        {
+            Response.Headers.RetryAfter = Math.Max(1, seconds).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+
         var problem = ProblemDetailsFactory.CreateProblemDetails(HttpContext, status, ReasonPhrases.GetReasonPhrase(status));
         if (code is not null)
         {

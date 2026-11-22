@@ -20,6 +20,7 @@ public static class TecnicosModuleExtensions
         services.TryAddSingleton<FieldCipher>();
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<ITechnicianProfileStore, TechnicianProfileStore>();
+        services.AddScoped<ITecnicosApi, TecnicosApi>();
         services.AddScoped<TechnicianRegistrationService>();
         services.AddMemoryCache();
         services.AddScoped<ITechnicianProfileReader, TechnicianProfileStore>();
