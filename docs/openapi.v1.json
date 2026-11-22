@@ -7457,6 +7457,514 @@
           }
         }
       }
+    },
+    "/api/v{version}/asistente/conversaciones": {
+      "post": {
+        "tags": [
+          "Asistente"
+        ],
+        "summary": "ASI-01: un turno con el asistente Knock (cliente o técnico).",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TurnoBody"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TurnoBody"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TurnoBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TurnoResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TurnoResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TurnoResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v{version}/asistente/resumen-chat": {
+      "post": {
+        "tags": [
+          "Asistente"
+        ],
+        "summary": "ASI-02: resumen de una conversación en la que el técnico participa.",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversacionBody"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversacionBody"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversacionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumenChatResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumenChatResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumenChatResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v{version}/asistente/borrador-cotizacion": {
+      "post": {
+        "tags": [
+          "Asistente"
+        ],
+        "summary": "ASI-03: borrador editable de cotización; nunca se envía ni se guarda como cotización.",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversacionBody"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversacionBody"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversacionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BorradorCotizacionResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BorradorCotizacionResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BorradorCotizacionResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v{version}/asistente/rango-precio": {
+      "get": {
+        "tags": [
+          "Asistente"
+        ],
+        "summary": "ASI-04: rango de precio de la referencia de mercado (spec 048), en caché de 1 hora.",
+        "parameters": [
+          {
+            "name": "oficio",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tipoTrabajo",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/RangoPrecioResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RangoPrecioResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RangoPrecioResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v{version}/asistente/bitacora/{solicitudId}": {
+      "put": {
+        "tags": [
+          "Asistente"
+        ],
+        "summary": "ASI-05: guarda o reemplaza la bitácora del técnico (201 al crear, 200 al reemplazar).",
+        "parameters": [
+          {
+            "name": "solicitudId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BitacoraBody"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BitacoraBody"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BitacoraBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BitacoraResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BitacoraResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BitacoraResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BitacoraResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BitacoraResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BitacoraResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Asistente"
+        ],
+        "summary": "ASI-06: lee la bitácora propia; la de otro técnico responde 404 `log_not_found`.",
+        "parameters": [
+          {
+            "name": "solicitudId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BitacoraResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BitacoraResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BitacoraResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -7844,6 +8352,81 @@
         },
         "description": "Estado del interruptor: `disponibleHoy` es derivado de `disponibleHasta` (UTC), que con el interruptor encendido es hoy a las 23:59:59 de la ciudad."
       },
+      "BitacoraBody": {
+        "required": [
+          "sabe",
+          "porConfirmar",
+          "queLlevar"
+        ],
+        "type": "object",
+        "properties": {
+          "sabe": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "porConfirmar": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "queLlevar": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "description": "Cuerpo de `PUT /asistente/bitacora/{solicitudId}` (ASI-05): listas de hasta 10 elementos de hasta 200 caracteres."
+      },
+      "BitacoraResponse": {
+        "required": [
+          "solicitudId",
+          "sabe",
+          "porConfirmar",
+          "queLlevar",
+          "actualizadaEn"
+        ],
+        "type": "object",
+        "properties": {
+          "solicitudId": {
+            "type": "string"
+          },
+          "sabe": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "porConfirmar": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "queLlevar": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "actualizadaEn": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "BlockEventBody": {
         "required": [
           "eventoId",
@@ -7887,6 +8470,46 @@
           }
         },
         "description": "Cuerpo de `POST /api/v1/interno/bloqueos` (spec 043, R-23): `BloqueoCreado` o `BloqueoEliminado` que Identidad entrega por su bandeja de salida. Solo identificadores y fecha;\ncualquier otro campo queda en Dictionary&lt;string, JsonElement&gt;? BlockEventBody.Extra y el validador lo rechaza con 422."
+      },
+      "BorradorCotizacionResponse": {
+        "required": [
+          "precioSugerido",
+          "tiempoEstimado",
+          "dia",
+          "nota",
+          "explicacion",
+          "origen",
+          "generadoPorIa"
+        ],
+        "type": "object",
+        "properties": {
+          "precioSugerido": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "tiempoEstimado": {
+            "type": "string"
+          },
+          "dia": {
+            "type": "string"
+          },
+          "nota": {
+            "type": "string"
+          },
+          "explicacion": {
+            "type": "string"
+          },
+          "origen": {
+            "type": "string"
+          },
+          "generadoPorIa": {
+            "type": "boolean"
+          }
+        }
       },
       "BusquedaInterpretacion": {
         "required": [
@@ -8194,6 +8817,21 @@
           }
         },
         "description": "Ausencia del cliente registrada (200): la visita queda `no_presentado` y no hay penalización."
+      },
+      "ConversacionBody": {
+        "required": [
+          "conversacionId"
+        ],
+        "type": "object",
+        "properties": {
+          "conversacionId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Cuerpo de `POST /asistente/resumen-chat` y `/borrador-cotizacion` (ASI-02 y ASI-03). El identificador de la persona nunca viene en el cuerpo: sale del `sub`."
       },
       "CoverageResponse": {
         "required": [
@@ -9481,6 +10119,45 @@
         },
         "description": "Técnico que cotizó, tal como lo ve el cliente al comparar (spec 021). Sin teléfono: el contacto solo llega con la visita."
       },
+      "RangoPrecioResponse": {
+        "required": [
+          "minimo",
+          "maximo",
+          "muestras",
+          "fuente"
+        ],
+        "type": "object",
+        "properties": {
+          "minimo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "maximo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "muestras": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "fuente": {
+            "type": "string"
+          }
+        },
+        "description": "Rango sugerido por la referencia de mercado de la spec 048 (percentiles 25 a 75 de cotizaciones aceptadas, con el rango de la categoría como respaldo)."
+      },
       "RegisterTechnicianBody": {
         "required": [
           "nombre",
@@ -9925,6 +10602,42 @@
           }
         },
         "description": "Resultado de responder la propuesta: la cita vigente tras la respuesta."
+      },
+      "ResumenChatResponse": {
+        "required": [
+          "sabe",
+          "porConfirmar",
+          "queLlevar",
+          "origen",
+          "generadoPorIa"
+        ],
+        "type": "object",
+        "properties": {
+          "sabe": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "porConfirmar": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "queLlevar": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "origen": {
+            "type": "string"
+          },
+          "generadoPorIa": {
+            "type": "boolean"
+          }
+        }
       },
       "ScheduleBody": {
         "required": [
@@ -10839,6 +11552,70 @@
         },
         "description": "Texto de confianza que prepara `POST /visitas/{id}/aviso` (no envía nada ni guarda contactos). `IncluyeCodigo` e `IncluyeDireccion` son\nsiempre falsos: ni el código ni la dirección viajan en el aviso."
       },
+      "TurnoBody": {
+        "required": [
+          "mensaje",
+          "foto",
+          "contexto"
+        ],
+        "type": "object",
+        "properties": {
+          "mensaje": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "foto": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "contexto": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Cuerpo de `POST /asistente/conversaciones` (spec 052, ASI-01): un turno con el asistente Knock."
+      },
+      "TurnoResponse": {
+        "required": [
+          "categoria",
+          "mensaje",
+          "pideFoto",
+          "seguridad",
+          "origen",
+          "generadoPorIa"
+        ],
+        "type": "object",
+        "properties": {
+          "categoria": {
+            "type": "string"
+          },
+          "mensaje": {
+            "type": "string"
+          },
+          "pideFoto": {
+            "type": "boolean"
+          },
+          "seguridad": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "origen": {
+            "type": "string"
+          },
+          "generadoPorIa": {
+            "type": "boolean"
+          }
+        },
+        "description": "Toda respuesta generada es una sugerencia que la persona revisa (spec 052, R-22): `generadoPorIa` siempre es verdadero y `origen` dice si salió del modelo o de la plantilla."
+      },
       "UpdateServiceBody": {
         "required": [
           "nombre",
@@ -11496,6 +12273,9 @@
     },
     {
       "name": "Arrival"
+    },
+    {
+      "name": "Asistente"
     },
     {
       "name": "Bandeja"
