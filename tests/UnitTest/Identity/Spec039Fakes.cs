@@ -61,6 +61,14 @@ internal sealed class Spec039Outbox : IAccountOutbox
         return Task.CompletedTask;
     }
 
+    public List<(string UserId, DateTime CreatedAt)> RecoveryExpiryTasks { get; } = [];
+
+    public Task EnqueueRecoveryExpiryAsync(string userId, DateTime createdAt, CancellationToken cancellationToken)
+    {
+        RecoveryExpiryTasks.Add((userId, createdAt));
+        return Task.CompletedTask;
+    }
+
     public Task EnqueueDeletionAsync(string accountSub, DateTime deleteAt, CancellationToken cancellationToken)
     {
         DeletionTasks.Add((accountSub, deleteAt));

@@ -38,7 +38,7 @@ public class Spec039LoggingTests
         var recoveryLog = new Capture<AccessRecoveryService>();
         var change = new PhoneChangeService(store, verifier, phones, new Spec039Cancelled(), new Spec039Outbox(), clock, changeLog);
         using var limiter = new RecoveryAttemptLimiter();
-        var recovery = new AccessRecoveryService(store, verifier, phones, limiter, clock, recoveryLog);
+        var recovery = new AccessRecoveryService(store, new Spec039Outbox(), verifier, phones, limiter, clock, recoveryLog);
 
         var taken = () => change.EnsureAvailableAsync(_old, CancellationToken.None);
         await taken.Should().ThrowAsync<DomainException>();
