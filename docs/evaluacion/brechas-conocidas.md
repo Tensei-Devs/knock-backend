@@ -20,7 +20,7 @@ Lista honesta de lo que **no** está o **no actúa** hoy, para que nadie (person
 ## C. Funciones que las specs describen y no tienen código completo
 | Función | Estado |
 |---|---|
-| Mensajería (push, bandeja, chat) | Solo `/health`; sin controladores. Specs 030 y 037 aprobadas. |
+| Mensajería (push, bandeja, chat) | Bandeja de avisos (spec 044, KNOCK-105): solo rutas de lectura y marcado; el despachador de la spec 037 (T-00 de la 044) no existe, así que nada crea avisos. Chat y push: sin controladores. Specs 030 y 037 aprobadas. |
 | Asistente de IA (`Knock.Assistant.Api`) | No existe el servicio; el cliente de Azure OpenAI está en una rama sin verificar. |
 | Moderación de contenido (Azure Content Safety) | En una rama sin verificar; no está en `sprint-05`. |
 | Envío por Firebase Cloud Messaging | Sin código de envío. No debe listarse como servicio externo activo. |
