@@ -229,15 +229,15 @@ public sealed class Spec032SubidaServiceTests : IDisposable
 
     private sealed class AlmacenCaido : IAlmacenBlob
     {
-        public Task<EnlaceSubida> CrearEnlaceSubidaAsync(string nombreBlob, string tipoContenido, CancellationToken cancellationToken) => throw new AlmacenNoDisponibleException();
+        public Task<EnlaceSubida> CrearEnlaceSubidaAsync(string nombreBlob, string tipoContenido, CancellationToken cancellationToken) => throw new IOException("Blob storage is unavailable.");
 
-        public Task<PropiedadesBlob?> ObtenerPropiedadesAsync(string nombreBlob, CancellationToken cancellationToken) => throw new AlmacenNoDisponibleException();
+        public Task<PropiedadesBlob?> ObtenerPropiedadesAsync(string nombreBlob, CancellationToken cancellationToken) => throw new IOException("Blob storage is unavailable.");
 
-        public Task<byte[]?> DescargarAsync(string nombreBlob, PropiedadesBlob esperado, int maximoBytes, CancellationToken cancellationToken) => throw new AlmacenNoDisponibleException();
+        public Task<byte[]?> DescargarAsync(string nombreBlob, PropiedadesBlob esperado, int maximoBytes, CancellationToken cancellationToken) => throw new IOException("Blob storage is unavailable.");
 
-        public Task<bool> PublicarAsync(string ruta, byte[] bytes, CancellationToken cancellationToken) => throw new AlmacenNoDisponibleException();
+        public Task<bool> PublicarAsync(string ruta, byte[] bytes, CancellationToken cancellationToken) => throw new IOException("Blob storage is unavailable.");
 
-        public Task BorrarCuarentenaAsync(string nombreBlob, CancellationToken cancellationToken) => throw new AlmacenNoDisponibleException();
+        public Task BorrarCuarentenaAsync(string nombreBlob, CancellationToken cancellationToken) => throw new IOException("Blob storage is unavailable.");
     }
 
     private sealed class AlmacenFalso : IAlmacenBlob
