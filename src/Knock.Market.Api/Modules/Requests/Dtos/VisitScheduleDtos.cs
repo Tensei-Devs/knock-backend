@@ -48,3 +48,21 @@ internal sealed record CancelVisitResponse(string VisitaId, string Estado, bool 
 
 /// <summary>Ausencia del cliente registrada (200): la visita queda <c>no_presentado</c> y no hay penalización.</summary>
 internal sealed record ClientAbsentResponse(string VisitaId, string Estado, string QuienFalto);
+
+/// <summary>Cuerpo de <c>POST /visitas/{id}/terminar</c> (spec 050, R-28): qué hizo, recomendación opcional y de 1 a 5 fotos privadas del técnico.</summary>
+internal sealed record FinishVisitBody(string? Descripcion, string? Recomendacion, IReadOnlyList<string>? Fotos);
+
+/// <summary>Visita terminada (200). No hay confirmación del cliente.</summary>
+internal sealed record FinishVisitResponse(string VisitaId, string Estado, DateTimeOffset TerminadaEn);
+
+/// <summary>Cuerpo de <c>POST /visitas/{id}/no-terminado</c> (spec 050, R-29): texto de 8 a 500 caracteres.</summary>
+internal sealed record NotFinishedBody(string? Texto);
+
+/// <summary>Reporte de no terminado creado (201): queda en revisión.</summary>
+internal sealed record NotFinishedResponse(string VisitaId, string Estado);
+
+/// <summary>Cuerpo de <c>PUT /visitas/{id}/permiso-fotos</c> (spec 050, R-30): ausente se toma como que no.</summary>
+internal sealed record PhotoPermissionBody(bool? Permiso);
+
+/// <summary>Permiso de publicar las fotos del trabajo tras el cambio (200).</summary>
+internal sealed record PhotoPermissionResponse(string VisitaId, bool Permiso);

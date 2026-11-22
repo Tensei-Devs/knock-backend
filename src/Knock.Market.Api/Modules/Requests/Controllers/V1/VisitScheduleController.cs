@@ -27,7 +27,7 @@ namespace Knock.Market.Api.Modules.Requests.Controllers.V1;
 [ProducesResponseType<ProblemDetails>(StatusCodes.Status413PayloadTooLarge, ProblemJson)]
 [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity, ProblemJson)]
 [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, ProblemJson)]
-internal sealed class VisitScheduleController(VisitScheduleService service) : BusinessRuleController
+internal sealed class VisitScheduleController(VisitScheduleService service, VisitCloseService closing) : BusinessRuleController
 {
     /// <summary>VIS-02: agenda del técnico entre <c>desde</c> y <c>hasta</c> (por omisión hoy y 14 días), por fecha y hora, con cursor.</summary>
     [HttpGet("agenda")]
@@ -67,6 +67,35 @@ internal sealed class VisitScheduleController(VisitScheduleService service) : Bu
     public async Task<IActionResult> ClientAbsent(string id, CancellationToken cancellationToken) =>
         Reply(await service.ClientAbsentAsync(Subject(), id, cancellationToken), VisitScheduleErrorCodes.OutsideArrivalWindowCode, "id");
 
+    /// <summary>VIS-09: el técnico termina la visita en curso con descripción y fotos; no hay confirmación del cliente.</summary>
+    [HttpPost("visitas/{id}/terminar")]
+    [RequestSizeLimit(RescheduleBody.MaxBodyBytes)]
+    [EnableRateLimiting(RateLimitingExtensions.VisitChangePolicy)]
+    [ProducesResponseType<FinishVisitResponse>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Finish(string id, [FromBody] FinishVisitBody body, CancellationToken cancellationToken) =>
+        Reply(await closing.FinishAsync(Subject(), id, body, cancellationToken), VisitScheduleErrorCodes.VisitNotInProgressCode, "fotos");
+
+    /// <summary>VIS-10: el cliente reporta que no se terminó, una sola vez y hasta 7 días después.</summary>
+    [HttpPost("visitas/{id}/no-terminado")]
+    [RequestSizeLimit(RescheduleBody.MaxBodyBytes)]
+    [EnableRateLimiting(RateLimitingExtensions.VisitChangePolicy)]
+    [ProducesResponseType<NotFinishedResponse>(StatusCodes.Status201Created)]
+    public async Task<IActionResult> ReportNotFinished(string id, [FromBody] NotFinishedBody body, CancellationToken cancellationToken)
+    {
+        var outcome = await closing.ReportNotFinishedAsync(Subject(), id, body.Texto!, cancellationToken);
+        return outcome.Status == VisitScheduleStatus.Done
+            ? StatusCode(StatusCodes.Status201Created, outcome.Value)
+            : Reply(outcome, VisitScheduleErrorCodes.ReportWindowClosedCode, "texto");
+    }
+
+    /// <summary>VIS-11: el cliente autoriza o no publicar las fotos del trabajo.</summary>
+    [HttpPut("visitas/{id}/permiso-fotos")]
+    [RequestSizeLimit(RescheduleBody.MaxBodyBytes)]
+    [EnableRateLimiting(RateLimitingExtensions.VisitChangePolicy)]
+    [ProducesResponseType<PhotoPermissionResponse>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> SetPhotoPermission(string id, [FromBody] PhotoPermissionBody body, CancellationToken cancellationToken) =>
+        Reply(await closing.SetPhotoPermissionAsync(Subject(), id, body.Permiso, cancellationToken), VisitScheduleErrorCodes.VisitNotInProgressCode, "permiso");
+
     private IActionResult Reply<T>(VisitScheduleOutcome<T> outcome, string conflictCode, string invalidField)
         where T : class => outcome.Status switch
         {
@@ -77,6 +106,8 @@ internal sealed class VisitScheduleController(VisitScheduleService service) : Bu
             VisitScheduleStatus.NotReschedulable => Rule(StatusCodes.Status409Conflict, VisitScheduleErrorCodes.VisitNotReschedulableCode),
             VisitScheduleStatus.NoPendingProposal => Rule(StatusCodes.Status409Conflict, VisitScheduleErrorCodes.NoPendingProposalCode),
             VisitScheduleStatus.AlreadyClosed => Rule(StatusCodes.Status409Conflict, VisitScheduleErrorCodes.VisitAlreadyClosedCode),
+            VisitScheduleStatus.NotInProgress => Rule(StatusCodes.Status409Conflict, VisitScheduleErrorCodes.VisitNotInProgressCode),
+            VisitScheduleStatus.ReportWindowClosed => Rule(StatusCodes.Status409Conflict, VisitScheduleErrorCodes.ReportWindowClosedCode),
             _ => Rule(StatusCodes.Status409Conflict, conflictCode),
         };
 

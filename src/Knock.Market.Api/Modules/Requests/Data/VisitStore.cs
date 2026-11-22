@@ -27,7 +27,9 @@ internal sealed record VisitRecord(
     bool Locked,
     DateTime? ArrivedAtUtc,
     int Reschedules = 0,
-    RescheduleProposal? Proposal = null)
+    RescheduleProposal? Proposal = null,
+    DateTime? FinishedAtUtc = null,
+    bool NotFinishedReported = false)
 {
     public VisitState State => new(Estado, Modality, Day, Locked, CodeUsed, CodeExpiresAtUtc);
 }
@@ -238,7 +240,9 @@ internal sealed class VisitStore(
         d.GetValue("bloqueada", false).AsBoolean,
         d.TryGetValue("llegadaEn", out var arrived) && arrived.IsBsonDateTime ? arrived.ToUniversalTime() : null,
         d.GetValue("reprogramaciones", 0).ToInt32(),
-        d.TryGetValue("propuestaReprogramacion", out var proposal) && proposal.IsBsonDocument ? ToProposal(proposal.AsBsonDocument) : null);
+        d.TryGetValue("propuestaReprogramacion", out var proposal) && proposal.IsBsonDocument ? ToProposal(proposal.AsBsonDocument) : null,
+        d.TryGetValue("terminadaEn", out var finished) && finished.IsBsonDateTime ? finished.ToUniversalTime() : null,
+        d.Contains("reporteNoTerminado"));
 
     private static RescheduleProposal ToProposal(BsonDocument d) => new(d["fechaHora"].ToUniversalTime(), d["propuestaPor"].AsString, d["venceEn"].ToUniversalTime());
 }

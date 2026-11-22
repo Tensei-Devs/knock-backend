@@ -17,6 +17,8 @@ internal enum VisitScheduleStatus
     NoPendingProposal,
     AlreadyClosed,
     OutsideArrivalWindow,
+    NotInProgress,
+    ReportWindowClosed,
 }
 
 internal sealed record VisitScheduleOutcome<T>(VisitScheduleStatus Status, T? Value = default)

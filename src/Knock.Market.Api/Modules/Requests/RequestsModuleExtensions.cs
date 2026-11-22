@@ -71,6 +71,9 @@ public static class RequestsModuleExtensions
         services.AddScoped<TrustNoticeService>();
         services.AddScoped<VisitScheduleStore>();
         services.AddScoped<VisitScheduleService>();
+        services.AddScoped<VisitCloseStore>();
+        services.AddScoped<VisitCloseService>();
+        services.TryAddScoped<IVisitPhotos, UnavailableVisitPhotos>();
         services.AddScoped<IManejadorDeTarea, VencerPropuestaDeReprogramacion>();
         services.AddScoped<FinalQuoteStore>();
         services.AddScoped<FinalQuoteService>();

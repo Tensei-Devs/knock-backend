@@ -53,3 +53,38 @@ internal sealed class CancelVisitBodyValidator : AbstractValidator<CancelVisitBo
             .NotEmpty().WithMessage(RequiredReason)
             .Must(VisitScheduleRules.IsValidReason).WithMessage(FormatReason);
 }
+
+/// <summary>
+/// Formato de <c>POST /visitas/{id}/terminar</c> (spec 050, R-28): descripción de 8 a 500 caracteres, recomendación opcional de hasta 300 y de 1 a 5 identificadores de foto
+/// distintos. Que las fotos existan y sean del técnico lo decide el servicio. Nunca repite el valor.
+/// </summary>
+internal sealed class FinishVisitBodyValidator : AbstractValidator<FinishVisitBody>
+{
+    public const string RequiredReason = "Required.";
+    public const string FormatReason = "The value is not valid.";
+
+    public FinishVisitBodyValidator()
+    {
+        RuleFor(x => x.Descripcion).Cascade(CascadeMode.Stop)
+            .NotEmpty().WithMessage(RequiredReason)
+            .Must(VisitCloseRules.IsValidDescription).WithMessage(FormatReason);
+        RuleFor(x => x.Recomendacion).Must(VisitCloseRules.IsValidRecommendation).WithMessage(FormatReason);
+        RuleFor(x => x.Fotos).Cascade(CascadeMode.Stop)
+            .NotNull().WithMessage(RequiredReason)
+            .Must(photos => photos!.Count is >= VisitCloseRules.MinPhotos and <= VisitCloseRules.MaxPhotos).WithMessage(FormatReason)
+            .Must(photos => photos!.All(id => MongoDB.Bson.ObjectId.TryParse(id, out _))).WithMessage(FormatReason)
+            .Must(photos => photos!.Select(id => id.ToUpperInvariant()).Distinct(StringComparer.Ordinal).Count() == photos!.Count).WithMessage(FormatReason);
+    }
+}
+
+/// <summary>Formato de <c>POST /visitas/{id}/no-terminado</c> (spec 050, R-29): <c>texto</c> de 8 a 500 caracteres. Nunca repite el valor.</summary>
+internal sealed class NotFinishedBodyValidator : AbstractValidator<NotFinishedBody>
+{
+    public const string RequiredReason = "Required.";
+    public const string FormatReason = "The value is not valid.";
+
+    public NotFinishedBodyValidator() =>
+        RuleFor(x => x.Texto).Cascade(CascadeMode.Stop)
+            .NotEmpty().WithMessage(RequiredReason)
+            .Must(VisitCloseRules.IsValidReport).WithMessage(FormatReason);
+}

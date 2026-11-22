@@ -9,6 +9,8 @@ internal static class VisitScheduleErrorCodes
     public const string NoPendingProposalCode = "no_pending_proposal";
     public const string VisitAlreadyClosedCode = "visit_already_closed";
     public const string OutsideArrivalWindowCode = "outside_arrival_window";
+    public const string VisitNotInProgressCode = "visit_not_in_progress";
+    public const string ReportWindowClosedCode = "report_window_closed";
 }
 
 /// <summary>Reglas puras de agenda, reprogramación, cancelación y cliente ausente (spec 050, R-24 a R-27). La cita se guarda como día y hora de <c>America/Mexico_City</c>.</summary>
