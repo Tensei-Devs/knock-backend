@@ -33,6 +33,7 @@
     <Compile Include="..\IntegrationTest\Support\ConsoleCapture.cs" Link="Support\ConsoleCapture.cs" />
     <Compile Include="..\IntegrationTest\Support\ProblemBody.cs" Link="Support\ProblemBody.cs" />
     <Compile Include="..\IntegrationTest\Support\QueryLeakDetector.cs" Link="Support\QueryLeakDetector.cs" />
+    <Compile Include="..\IntegrationTest\Support\PanelReportKit.cs" Link="Support\PanelReportKit.cs" />
   </ItemGroup>
 
   <ItemGroup>

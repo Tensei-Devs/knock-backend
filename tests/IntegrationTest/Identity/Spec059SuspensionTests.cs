@@ -16,21 +16,12 @@ namespace Knock.IntegrationTest.Identity;
 /// Spec 059, T-06: la suspensión preventiva y la reactivación con MongoDB y Redis reales. La decisión del panel (spec 053) se ejercita en pruebas unitarias; aquí se prueba la transacción
 /// de <see cref="AccountSuspension"/>, sus eventos de bandeja, la auditoría y la cancelación de sesiones. Solo datos ficticios; los valores al azar se comparan por campo.
 /// </summary>
-public sealed class Spec059SuspensionTests
+public sealed partial class Spec059SuspensionTests
 {
     private static readonly string _moderator = Guid.NewGuid().ToString("D");
 
-    private static async Task<(ObjectId Id, string Sub)> SeedAccountAsync(IdentityApiFactory factory, bool technician, string state = "activa")
-    {
-        var id = ObjectId.GenerateNewId();
-        var sub = Guid.NewGuid().ToString("D");
-        await factory.Users.InsertOneAsync(new BsonDocument
-        {
-            { "_id", id }, { "sub", sub }, { "nombre", "Demo Reportado" }, { "esTecnico", technician }, { "estado", state }, { "perfilCompleto", true },
-            { "creadoEn", new BsonDateTime(DateTime.UtcNow) }, { "version", 1 }, { "celularHash", new BsonBinaryData(RandomNumberGenerator.GetBytes(32)) },
-        });
-        return (id, sub);
-    }
+    private static Task<(ObjectId Id, string Sub)> SeedAccountAsync(IdentityApiFactory factory, bool technician, string state = "activa") =>
+        PanelReportKit.SeedAccountAsync(factory.Users, technician, state);
 
     private static async Task<List<ObjectId>> SeedSessionsAsync(IdentityApiFactory factory, ObjectId user, int count)
     {
