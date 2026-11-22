@@ -222,6 +222,17 @@ public sealed class GatewayRoutingTests : IAsyncLifetime, IDisposable
     }
 
     [Fact]
+    public async Task TheConversationPermissionRoute_IsNotPublishedInTheGateway_CA_030_17()
+    {
+        var path = "/api/v1/solicitudes/507f1f77bcf86cd799439011/conversacion?tecnicoId=507f1f77bcf86cd799439012";
+
+        var response = await _client!.GetAsync(new Uri(path, UriKind.Relative));
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        _requestsSeen.Should().BeEmpty("la ruta de permiso solo se llama por la red interna");
+    }
+
+    [Fact]
     public async Task Health_AnswersWithoutCallingAnyService_CA_01()
     {
         var response = await _client!.GetAsync(new Uri("/health", UriKind.Relative));

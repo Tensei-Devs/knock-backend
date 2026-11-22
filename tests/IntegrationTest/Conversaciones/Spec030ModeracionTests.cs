@@ -65,4 +65,33 @@ public sealed class Spec030ModeracionTests
         (await CodeAsync(response)).Should().Be("moderation_unavailable");
         (await scenario.MessagesAsync()).Should().BeEmpty();
     }
+
+    [Fact]
+    public async Task Interruptor_Encendido_En_Development_Deja_Pasar_El_Mensaje()
+    {
+        await using var scenario = await ConversacionesScenario.StartAsync();
+        var copy = await scenario.CopyAsync(
+            new Dictionary<string, string?> { ["Moderacion:PermitirSinModeracion"] = "true" },
+            defaultModerator: true,
+            environment: "Development");
+
+        using var response = await scenario.SendAsync(copy, scenario.Client, "hola");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created, "el modo sin moderación explícito permite el chat en desarrollo");
+        (await scenario.MessagesAsync()).Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task Interruptor_Encendido_Fuera_De_Development_Impide_Arrancar()
+    {
+        await using var scenario = await ConversacionesScenario.StartAsync();
+        var copy = await scenario.CopyAsync(new Dictionary<string, string?> { ["Moderacion:PermitirSinModeracion"] = "true" }, defaultModerator: true);
+
+        var act = async () =>
+        {
+            using var response = await scenario.SendAsync(copy, scenario.Client, "hola");
+        };
+
+        (await act.Should().ThrowAsync<Exception>()).Which.ToString().Should().Contain("Moderacion:PermitirSinModeracion");
+    }
 }
