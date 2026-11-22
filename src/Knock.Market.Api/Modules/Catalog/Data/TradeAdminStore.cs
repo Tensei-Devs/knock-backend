@@ -30,6 +30,17 @@ internal sealed record NewTrade(
     int VisitaMaxima,
     bool Activo);
 
+/// <summary>Cambios de una edición (OFI-05): solo los campos con valor se escriben.</summary>
+internal sealed record TradeChanges(
+    string? Nombre,
+    string? Modalidad,
+    IReadOnlyList<string>? FrasesSugeridas,
+    decimal? TopePorcentaje,
+    decimal? TopeFijoPorcentaje,
+    int? PisoAprobacion,
+    int? VisitaMaxima,
+    bool? Activo);
+
 /// <summary>Lo que el panel necesita de la colección <c>oficios</c>; existe para probar el servicio con dobles sin MongoDB.</summary>
 internal interface ITradeAdminStore
 {
@@ -38,6 +49,9 @@ internal interface ITradeAdminStore
 
     /// <summary>Crea el oficio; <see langword="false"/> si ya existe uno con esa clave (índice único), sin cambiar nada.</summary>
     Task<bool> InsertAsync(NewTrade trade, CancellationToken cancellationToken);
+
+    /// <summary>Aplica los cambios al oficio con esa clave y devuelve cómo quedó, o <see langword="null"/> si no existe. Nunca cambia la clave.</summary>
+    Task<AdminTrade?> UpdateAsync(string clave, TradeChanges changes, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -98,6 +112,31 @@ internal sealed class TradeAdminStore(
         {
             return false;
         }
+    }
+
+    public async Task<AdminTrade?> UpdateAsync(string clave, TradeChanges changes, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(changes);
+        var update = Builders<BsonDocument>.Update.Inc(CatalogStore.VersionField, 1);
+        if (changes.Nombre is not null)
+        {
+            update = update.Set(CatalogStore.NombreField, changes.Nombre).Set(CatalogStore.NombreBusquedaField, SearchNameNormalizer.Normalize(changes.Nombre));
+        }
+
+        if (changes.Modalidad is not null) { update = update.Set(CatalogStore.ModalidadField, changes.Modalidad); }
+        if (changes.FrasesSugeridas is not null) { update = update.Set(CatalogStore.FrasesSugeridasField, new BsonArray(changes.FrasesSugeridas)); }
+        if (changes.TopePorcentaje is { } percentage) { update = update.Set(_percentageField, new BsonDecimal128(percentage)); }
+        if (changes.TopeFijoPorcentaje is { } fixedPercentage) { update = update.Set(_fixedPercentageField, new BsonDecimal128(fixedPercentage)); }
+        if (changes.PisoAprobacion is { } floor) { update = update.Set(_approvalFloorField, floor); }
+        if (changes.VisitaMaxima is { } maxVisit) { update = update.Set(_maxVisitField, maxVisit); }
+        if (changes.Activo is { } active) { update = update.Set(CatalogStore.ActivoField, active); }
+
+        var updated = await Oficios.FindOneAndUpdateAsync(
+            Builders<BsonDocument>.Filter.Eq(CatalogStore.ClaveField, clave),
+            update,
+            new FindOneAndUpdateOptions<BsonDocument> { ReturnDocument = ReturnDocument.After, Projection = _projection },
+            cancellationToken);
+        return updated is null ? null : ToAdminTrade(updated);
     }
 
     internal static AdminTrade ToAdminTrade(BsonDocument document) => new(
