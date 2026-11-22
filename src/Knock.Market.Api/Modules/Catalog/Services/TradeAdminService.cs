@@ -17,7 +17,7 @@ internal sealed class TradeAdminService(ITradeAdminStore store, IActiveOficios c
         new([.. (await store.ListAllAsync(cancellationToken)).Select(ToResponse)]);
 
     /// <summary>
-    /// Alta de un oficio (OFI-04). Primero la auditoría (quién, cuándo y qué): sin ella no se escribe nada (<see cref="PanelAuditUnavailableException"/>). La clave repetida lanza 409 <c>trade_key_taken</c>.
+    /// Alta de un oficio (OFI-04). Primero la auditoría (quién, cuándo y qué): sin ella no se escribe nada (<c>panel_audit_unavailable</c>). La clave repetida lanza 409 <c>trade_key_taken</c>.
     /// Después de escribir invalida la caché de oficios activos para que la lista y el detalle lo vean enseguida.
     /// </summary>
     public async Task<AdminTradeResponse> CreateAsync(string panelSubject, CreateTradeBody body, CancellationToken cancellationToken)
@@ -29,7 +29,7 @@ internal sealed class TradeAdminService(ITradeAdminStore store, IActiveOficios c
             body.TopePorcentaje!.Value, body.TopeFijoPorcentaje!.Value, body.PisoAprobacion!.Value, body.VisitaMaxima!.Value, body.Activo ?? true);
         if (!await audit.RecordAsync(new PanelAuditEntry(panelSubject, "trade.create", trade.Clave, clock.GetUtcNow(), Describe(trade)), cancellationToken))
         {
-            throw new PanelAuditUnavailableException();
+            throw new DomainException(DomainErrorKind.Conflict, "The panel audit trail is not available.", TradeErrorCodes.AuditUnavailableCode);
         }
 
         if (!await store.InsertAsync(trade, cancellationToken))
@@ -57,7 +57,7 @@ internal sealed class TradeAdminService(ITradeAdminStore store, IActiveOficios c
         var entry = new PanelAuditEntry(panelSubject, "trade.update", clave, clock.GetUtcNow(), DescribeChanges(changes));
         if (!await audit.RecordAsync(entry, cancellationToken))
         {
-            throw new PanelAuditUnavailableException();
+            throw new DomainException(DomainErrorKind.Conflict, "The panel audit trail is not available.", TradeErrorCodes.AuditUnavailableCode);
         }
 
         var updated = await store.UpdateAsync(clave, changes, cancellationToken)

@@ -86,8 +86,14 @@ public sealed class Spec045OficiosHttpTests
 
     private static object NewTrade(string key = "gas") => new
     {
-        clave = key, nombre = "Instalaciones de gas", modalidad = "ambos", frasesSugeridas = new[] { "Huele a gas" },
-        topePorcentaje = 25, topeFijoPorcentaje = 10, pisoAprobacion = 200, visitaMaxima = 500,
+        clave = key,
+        nombre = "Instalaciones de gas",
+        modalidad = "ambos",
+        frasesSugeridas = new[] { "Huele a gas" },
+        topePorcentaje = 25,
+        topeFijoPorcentaje = 10,
+        pisoAprobacion = 200,
+        visitaMaxima = 500,
     };
 
     [Fact]

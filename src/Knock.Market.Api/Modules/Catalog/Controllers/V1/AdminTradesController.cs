@@ -19,7 +19,7 @@ namespace Knock.Market.Api.Modules.Catalog.Controllers.V1;
 [Route("api/v{version:apiVersion}/admin/oficios")]
 [Authorize(AuthenticationSchemes = PanelAuthentication.Scheme, Policy = PanelAuthentication.CatalogManagePolicy)]
 [PrivateNoStore]
-[EnableRateLimiting(RateLimitingExtensions.AdminPolicy)]
+[EnableRateLimiting(MarketRateLimits.AdminPolicy)]
 internal sealed class AdminTradesController(TradeAdminService service) : ControllerBase
 {
     private const string _problemJson = "application/problem+json";
@@ -60,7 +60,7 @@ internal sealed class AdminTradesController(TradeAdminService service) : Control
             var created = await service.CreateAsync(subject, body, cancellationToken);
             return Created(new Uri($"/api/v1/oficios/{created.Clave}", UriKind.Relative), created);
         }
-        catch (PanelAuditUnavailableException)
+        catch (DomainException exception) when (exception.Code == TradeErrorCodes.AuditUnavailableCode)
         {
             return AuditUnavailable();
         }
@@ -97,7 +97,7 @@ internal sealed class AdminTradesController(TradeAdminService service) : Control
         {
             return Ok(await service.UpdateAsync(subject, route.Clave!, body, cancellationToken));
         }
-        catch (PanelAuditUnavailableException)
+        catch (DomainException exception) when (exception.Code == TradeErrorCodes.AuditUnavailableCode)
         {
             return AuditUnavailable();
         }

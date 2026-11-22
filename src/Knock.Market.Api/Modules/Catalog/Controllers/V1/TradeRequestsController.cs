@@ -10,14 +10,14 @@ namespace Knock.Market.Api.Modules.Catalog.Controllers.V1;
 
 /// <summary>
 /// Oficios pedidos en «Otro oficio» (spec 045, OFP-01). Con sesión de la app; la persona es la del <c>sub</c> del token y ningún cuerpo acepta identificadores. Comparte el límite de
-/// <see cref="RateLimitingExtensions.RegisterTechnicianPolicy"/> (5 por hora por persona) porque es parte del flujo de registro como técnico.
+/// <see cref="MarketRateLimits.RegisterTechnicianPolicy"/> (5 por hora por persona) porque es parte del flujo de registro como técnico.
 /// </summary>
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/oficios-pedidos")]
 [Authorize]
 [PrivateNoStore]
-[EnableRateLimiting(RateLimitingExtensions.RegisterTechnicianPolicy)]
+[EnableRateLimiting(MarketRateLimits.RegisterTechnicianPolicy)]
 internal sealed class TradeRequestsController(TradeRequestService service) : ControllerBase
 {
     private const string _problemJson = "application/problem+json";

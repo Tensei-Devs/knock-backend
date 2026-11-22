@@ -73,8 +73,8 @@ public sealed partial class Spec045OficiosTests
     [Fact]
     public void EveryRouteOfTheSpecDeclaresItsRateLimitOrRidesTheGlobalOne_AndEveryWriteHasABodyLimit_CA_045_40()
     {
-        typeof(AdminTradesController).GetCustomAttribute<EnableRateLimitingAttribute>()!.PolicyName.Should().Be(RateLimitingExtensions.AdminPolicy);
-        typeof(TradeRequestsController).GetCustomAttribute<EnableRateLimitingAttribute>()!.PolicyName.Should().Be(RateLimitingExtensions.RegisterTechnicianPolicy);
+        typeof(AdminTradesController).GetCustomAttribute<EnableRateLimitingAttribute>()!.PolicyName.Should().Be(MarketRateLimits.AdminPolicy);
+        typeof(TradeRequestsController).GetCustomAttribute<EnableRateLimitingAttribute>()!.PolicyName.Should().Be(MarketRateLimits.RegisterTechnicianPolicy);
         typeof(OficiosController).GetCustomAttribute<EnableRateLimitingAttribute>().Should().BeNull("OFI-02 es pública y rige el límite global por IP");
         foreach (var write in new[] { typeof(AdminTradesController).GetMethod("Create")!, typeof(AdminTradesController).GetMethod("Update")!, typeof(TradeRequestsController).GetMethod("Create")! })
         {
