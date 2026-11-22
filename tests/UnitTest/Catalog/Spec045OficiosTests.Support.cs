@@ -42,6 +42,29 @@ public sealed partial class Spec045OficiosTests
 
         public int Inserts { get; private set; }
 
+        public Task<AdminTrade?> UpdateAsync(string clave, TradeChanges changes, CancellationToken cancellationToken)
+        {
+            var index = Trades.FindIndex(t => t.Clave == clave);
+            if (index < 0)
+            {
+                return Task.FromResult<AdminTrade?>(null);
+            }
+
+            var current = Trades[index];
+            Trades[index] = current with
+            {
+                Nombre = changes.Nombre ?? current.Nombre,
+                Modalidad = changes.Modalidad ?? current.Modalidad,
+                FrasesSugeridas = changes.FrasesSugeridas ?? current.FrasesSugeridas,
+                TopePorcentaje = changes.TopePorcentaje ?? current.TopePorcentaje,
+                TopeFijoPorcentaje = changes.TopeFijoPorcentaje ?? current.TopeFijoPorcentaje,
+                PisoAprobacion = changes.PisoAprobacion ?? current.PisoAprobacion,
+                VisitaMaxima = changes.VisitaMaxima ?? current.VisitaMaxima,
+                Activo = changes.Activo ?? current.Activo,
+            };
+            return Task.FromResult<AdminTrade?>(Trades[index]);
+        }
+
         public Task<bool> InsertAsync(NewTrade trade, CancellationToken cancellationToken)
         {
             if (Trades.Any(t => t.Clave == trade.Clave))

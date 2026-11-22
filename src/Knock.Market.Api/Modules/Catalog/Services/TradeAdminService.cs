@@ -42,6 +42,62 @@ internal sealed class TradeAdminService(ITradeAdminStore store, IActiveOficios c
             trade.Clave, trade.Nombre, trade.Modalidad, trade.FrasesSugeridas, trade.TopePorcentaje, trade.TopeFijoPorcentaje, trade.PisoAprobacion, trade.VisitaMaxima, trade.Activo);
     }
 
+    /// <summary>
+    /// Edición parcial de un oficio (OFI-05). La auditoría va antes de escribir; un oficio que no existe lanza 404 <c>trade_not_found</c>. La clave no cambia nunca. Después de escribir invalida la caché de
+    /// oficios activos: la siguiente consulta pública ya ve el cambio (R-19).
+    /// </summary>
+    public async Task<AdminTradeResponse> UpdateAsync(string panelSubject, string clave, UpdateTradeBody body, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(panelSubject);
+        ArgumentException.ThrowIfNullOrEmpty(clave);
+        ArgumentNullException.ThrowIfNull(body);
+        var changes = new TradeChanges(
+            body.Nombre?.Trim(), body.Modalidad, body.FrasesSugeridas is null ? null : [.. body.FrasesSugeridas.Select(phrase => phrase.Trim())],
+            body.TopePorcentaje, body.TopeFijoPorcentaje, body.PisoAprobacion, body.VisitaMaxima, body.Activo);
+        var entry = new PanelAuditEntry(panelSubject, "trade.update", clave, clock.GetUtcNow(), DescribeChanges(changes));
+        if (!await audit.RecordAsync(entry, cancellationToken))
+        {
+            throw new PanelAuditUnavailableException();
+        }
+
+        var updated = await store.UpdateAsync(clave, changes, cancellationToken)
+            ?? throw new DomainException(DomainErrorKind.NotFound, "The trade does not exist.", TradeErrorCodes.TradeNotFoundCode);
+        await catalog.InvalidateActiveOficiosAsync(cancellationToken);
+        return ToResponse(updated);
+    }
+
+    private static Dictionary<string, string> DescribeChanges(TradeChanges changes)
+    {
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        AddText(result, "nombre", changes.Nombre);
+        AddText(result, "modalidad", changes.Modalidad);
+        AddText(result, "frasesSugeridas", changes.FrasesSugeridas is null ? null : string.Join(" | ", changes.FrasesSugeridas));
+        AddText(result, "topePorcentaje", changes.TopePorcentaje?.ToString(CultureInfo.InvariantCulture));
+        AddText(result, "topeFijoPorcentaje", changes.TopeFijoPorcentaje?.ToString(CultureInfo.InvariantCulture));
+        AddText(result, "pisoAprobacion", changes.PisoAprobacion?.ToString(CultureInfo.InvariantCulture));
+        AddText(result, "visitaMaxima", changes.VisitaMaxima?.ToString(CultureInfo.InvariantCulture));
+        AddText(result, "activo", Flag(changes.Activo));
+        return result;
+    }
+
+    private static string? Flag(bool? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        return value.Value ? "true" : "false";
+    }
+
+    private static void AddText(Dictionary<string, string> target, string name, string? value)
+    {
+        if (value is not null)
+        {
+            target[name] = value;
+        }
+    }
+
     private static Dictionary<string, string> Describe(NewTrade trade) => new(StringComparer.Ordinal)
     {
         ["nombre"] = trade.Nombre,

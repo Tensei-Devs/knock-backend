@@ -48,3 +48,34 @@ internal sealed record CreateTradeBody(
     int? PisoAprobacion,
     int? VisitaMaxima,
     bool? Activo);
+
+/// <summary>
+/// Cuerpo de <c>PUT /api/v1/admin/oficios/{clave}</c> (OFI-05): edición parcial, solo cambian los campos enviados. <c>Clave</c> existe para rechazarla: la clave no se puede cambiar (D-04), así que
+/// solo se acepta si es igual a la de la ruta.
+/// </summary>
+internal sealed record UpdateTradeBody(
+    string? Clave,
+    string? Nombre,
+    string? Modalidad,
+    IReadOnlyList<string>? FrasesSugeridas,
+    decimal? TopePorcentaje,
+    decimal? TopeFijoPorcentaje,
+    int? PisoAprobacion,
+    int? VisitaMaxima,
+    bool? Activo)
+{
+    /// <summary>Nombres (camelCase) de los campos que la edición cambia.</summary>
+    public IReadOnlyList<string> ChangedFields => [.. ChangedFieldNames()];
+
+    private IEnumerable<string> ChangedFieldNames()
+    {
+        if (Nombre is not null) { yield return "nombre"; }
+        if (Modalidad is not null) { yield return "modalidad"; }
+        if (FrasesSugeridas is not null) { yield return "frasesSugeridas"; }
+        if (TopePorcentaje is not null) { yield return "topePorcentaje"; }
+        if (TopeFijoPorcentaje is not null) { yield return "topeFijoPorcentaje"; }
+        if (PisoAprobacion is not null) { yield return "pisoAprobacion"; }
+        if (VisitaMaxima is not null) { yield return "visitaMaxima"; }
+        if (Activo is not null) { yield return "activo"; }
+    }
+}

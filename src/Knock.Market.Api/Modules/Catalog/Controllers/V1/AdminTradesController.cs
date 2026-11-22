@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Knock.Market.Api.Common.Errors;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Catalog.Domain;
 using Knock.Market.Api.Modules.Catalog.Dtos;
@@ -63,6 +64,51 @@ internal sealed class AdminTradesController(TradeAdminService service) : Control
         {
             return AuditUnavailable();
         }
+    }
+
+    /// <summary>
+    /// Edición parcial de un oficio y sus parámetros de precio (OFI-05): 200 con el oficio como quedó. La clave no se puede cambiar: una <c>clave</c> distinta de la de la ruta responde 422 <c>errors.clave</c>.
+    /// Un oficio que no existe responde 404 <c>trade_not_found</c>; la caché de oficios activos se invalida al escribir.
+    /// </summary>
+    [HttpPut("{clave}")]
+    [RequestSizeLimit(TradeBodies.MaxBodyBytes)]
+    [ProducesResponseType<AdminTradeResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status413PayloadTooLarge, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable, _problemJson)]
+    public async Task<IActionResult> Update([FromRoute] TradeKeyRoute route, [FromBody] UpdateTradeBody body, CancellationToken cancellationToken)
+    {
+        if (User.FindFirst("sub")?.Value is not { Length: > 0 } subject)
+        {
+            return Unauthorized();
+        }
+
+        if (body.Clave is not null && !string.Equals(body.Clave, route.Clave, StringComparison.Ordinal))
+        {
+            return KeyCannotChange();
+        }
+
+        try
+        {
+            return Ok(await service.UpdateAsync(subject, route.Clave!, body, cancellationToken));
+        }
+        catch (PanelAuditUnavailableException)
+        {
+            return AuditUnavailable();
+        }
+    }
+
+    private ObjectResult KeyCannotChange()
+    {
+        var problem = ProblemDetailsFactory.CreateProblemDetails(HttpContext, StatusCodes.Status422UnprocessableEntity, "One or more validation errors occurred.");
+        problem.Extensions["code"] = ErrorCodes.ValidationFailedCode;
+        problem.Extensions["errors"] = new Dictionary<string, string[]> { ["clave"] = [ValidationFilter.GenericReason] };
+        return new ObjectResult(problem) { StatusCode = StatusCodes.Status422UnprocessableEntity, ContentTypes = { _problemJson } };
     }
 
     private ObjectResult AuditUnavailable()
