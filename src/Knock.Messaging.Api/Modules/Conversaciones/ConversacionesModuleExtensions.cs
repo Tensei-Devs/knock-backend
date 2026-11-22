@@ -33,7 +33,12 @@ public static class ConversacionesModuleExtensions
         services.AddSingleton<ConversacionesStore>();
         services.AddSingleton<MensajesStore>();
         services.AddSingleton<IMensajesStore>(provider => provider.GetRequiredService<MensajesStore>());
-        services.TryAddSingleton<IContentModerator, ModeradorNoDisponible>();
+        services.AddOptions<ModeracionMensajeriaOptions>().BindConfiguration(ModeracionMensajeriaOptions.SectionName).ValidateOnStart();
+        services.AddSingleton<IValidateOptions<ModeracionMensajeriaOptions>, ModeracionMensajeriaOptionsValidator>();
+        // Falla cerrado por omisión; el modo sin moderación solo existe con el interruptor encendido (y solo en Development).
+        services.TryAddSingleton<IContentModerator>(provider => provider.GetRequiredService<IOptions<ModeracionMensajeriaOptions>>().Value.PermitirSinModeracion
+            ? new ModeradorSinRevision()
+            : new ModeradorNoDisponible());
         services.AddScoped<EnvioDeMensajeService>();
         services.AddScoped<AccesoAConversacionService>();
         services.AddSingleton<INotificadorEnVivo, NotificadorEnVivo>();
