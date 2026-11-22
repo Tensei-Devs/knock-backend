@@ -24,6 +24,7 @@ public static class SafetyModuleExtensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<SuspensionOptions>, SuspensionOptionsValidator>());
         services.AddSingleton<ISuspensionStore, SuspensionStore>();
         services.AddSingleton<AccountSuspension>();
+        services.AddSingleton<ISafetyApi, SafetyApi>();
         return services;
     }
 }
