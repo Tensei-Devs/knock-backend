@@ -1,4 +1,5 @@
 using Knock.Market.Api.Modules.Media;
+using Knock.Market.Api.Modules.Requests.Domain;
 using Microsoft.Extensions.Logging;
 
 namespace Knock.Market.Api.Modules.Requests.Services;
@@ -23,5 +24,5 @@ internal sealed class UnavailableVisitPhotos : IVisitPhotos
 internal sealed class MediaVisitPhotos(IMediaApi media, ILogger<MediaVisitPhotos> logger) : IVisitPhotos
 {
     public Task<bool> AreReadyForAsync(string ownerId, IReadOnlyList<string> photoIds, CancellationToken cancellationToken) =>
-        MediaPhotoCheck.AreReadyAsync(media, logger, ownerId, photoIds, cancellationToken);
+        MediaPhotoCheck.AreReadyAsync(media, logger, PhotoUses.Job, ownerId, photoIds, cancellationToken);
 }

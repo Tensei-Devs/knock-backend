@@ -119,6 +119,21 @@ internal sealed class MediaService(
         return stored is not null && stored.File.IsReadyFor(ownerId);
     }
 
+    /// <summary>True only for a Ready file owned by <paramref name="ownerId"/> whose <c>uso</c> is <paramref name="usage"/> (spec 020 CA-18).</summary>
+    public async Task<bool> IsReadyOwnedAndUsedForAsync(Guid id, string ownerId, MediaUsage usage, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(ownerId);
+        var stored = await store.FindAsync(id, cancellationToken);
+        return stored is not null && stored.File.Usage == usage && stored.File.IsReadyFor(ownerId);
+    }
+
+    /// <summary>The file when it is Ready, has <paramref name="usage"/> and has a reduced blob to link; otherwise <see langword="null"/>. Ownership is the caller's decision (it already authorized the reader).</summary>
+    public async Task<MediaFile?> FindReadableAsync(Guid id, MediaUsage usage, CancellationToken cancellationToken)
+    {
+        var stored = await store.FindAsync(id, cancellationToken);
+        return stored is { File: { State: MediaFileState.Ready, ReducedBlob: not null } file } && file.Usage == usage ? file : null;
+    }
+
     /// <summary>
     /// Real size is checked before downloading, and the download only returns the consulted version (ETag) and at
     /// most 5 MB + 1 byte. Client bytes are never stored as-is.

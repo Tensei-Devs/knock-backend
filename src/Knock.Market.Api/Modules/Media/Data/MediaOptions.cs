@@ -9,7 +9,7 @@ internal sealed class MediaOptions
     public const string ConnectionStringName = "KnockBlob";
 
     [Required] public string QuarantineContainer { get; set; } = "cuarentena";
-    [Required] public string FilesContainer { get; set; } = "archivos";
+    [Required] public string FilesContainer { get; set; } = Domain.BlobPrivado.ContenedorArchivos;
     [Range(1, int.MaxValue)] public int ReducedMaxSide { get; set; } = 1600;
     [Range(1, int.MaxValue)] public int ProfileReducedMaxSide { get; set; } = 512;
     /// <summary>Tope de subidas pendientes vigentes por persona (spec 058, R-09). Se valida al arrancar.</summary>
