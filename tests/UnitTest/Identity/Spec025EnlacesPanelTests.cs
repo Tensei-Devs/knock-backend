@@ -15,7 +15,7 @@ public sealed class Spec025EnlacesPanelTests
     private static (FotoVerificacionStore Store, Spec025FotosTests.MemoryBlobs Blobs) Create()
     {
         var blobs = new Spec025FotosTests.MemoryBlobs();
-        return (new FotoVerificacionStore(blobs, new CifradoDeVerificacion(new Spec025FotosTests.MemoryWrapper()), new Spec025ServicioTests.FixedClock(_now)), blobs);
+        return (new FotoVerificacionStore(blobs, new CifradoDeVerificacion(new Spec025CurpTests.FakeWrapper()), new Spec025ServicioTests.FixedClock(_now)), blobs);
     }
 
     [Fact]
@@ -46,7 +46,7 @@ public sealed class Spec025EnlacesPanelTests
     [Fact]
     public async Task Sin_Almacenamiento_Configurado_El_Purgador_No_Falla_Y_Los_Enlaces_Si_TC_068_11()
     {
-        var store = new FotoVerificacionStore(new UnavailableVerificationBlobStore(), new CifradoDeVerificacion(new Spec025FotosTests.MemoryWrapper()), new Spec025ServicioTests.FixedClock(_now));
+        var store = new FotoVerificacionStore(new UnavailableVerificationBlobStore(), new CifradoDeVerificacion(new Spec025CurpTests.FakeWrapper()), new Spec025ServicioTests.FixedClock(_now));
         var id = ObjectId.GenerateNewId();
         await new TrustVerificationBlobPurger(store).PurgeBlobsAsync(id.ToString(), CancellationToken.None);
         var issue = () => new TrustVerificationPhotoLinks(store).IssueAsync(id.ToString(), ["selfie"], TimeSpan.FromMinutes(5), CancellationToken.None);

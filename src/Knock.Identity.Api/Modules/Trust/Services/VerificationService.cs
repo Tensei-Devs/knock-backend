@@ -162,7 +162,7 @@ internal sealed class VerificationService(
         }
 
         var expires = now + ReviewLifetime;
-        switch (await store.SubmitAsync(sub, id, now, expires, session => purgeScheduler.ScheduleAsync(session, id, now, cancellationToken), cancellationToken))
+        switch (await store.SubmitAsync(sub, id, now, expires, purgeScheduler, cancellationToken))
         {
             case SubmitOutcome.DuplicateCurp:
                 await events.PublishAsync("CurpDuplicada", sub, null, cancellationToken);

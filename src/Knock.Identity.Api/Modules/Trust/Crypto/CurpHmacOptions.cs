@@ -36,5 +36,5 @@ internal sealed class CurpHmacOptions
         return new CurpHmacKeys(decoded, options.ActiveVersion);
     }
 
-    internal static CurpHmac Create(IOptions<CurpHmacOptions> options) => new(ToKeys(options.Value));
+    internal static CurpHmac Create(IOptions<CurpHmacOptions> options) => new(() => ToKeys(options.Value));
 }
