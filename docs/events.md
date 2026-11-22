@@ -35,3 +35,13 @@ Estas tareas viven en `tareas_programadas` de Mercado; no son eventos ni entrega
 Cada tarea usa `claveNegocio = {solicitudId}:{oleada}`, `programadaPara` en UTC, `estado`, `intentos`, `creadoEn` y `actualizadoEn`. La reserva agrega `reservadaHasta` y `reservaId`; su confirmación transaccional incrementa `confirmacionesReserva`. Los estados son `pendiente`, `en_proceso`, `hecha` y `fallida`. El índice único por `tipo` y `claveNegocio`, la confirmación de la reserva y el avance condicionado protegen los efectos frente a reintentos y retomas; una reserva vencida no garantiza que solo haya un manejador físicamente en ejecución.
 
 La spec 028 menciona `VencerSolicitud` como tarea de la spec 029, no como tarea implementada por el reparto. Los identificadores de eventos y tareas deben tratarse como datos sensibles al correlacionarlos: no incluir descripción, dirección, nombres, teléfonos ni `sub` en sus ejemplos o registros de reparto.
+
+## Evento de Mensajería en el buzón de salida (spec 030)
+
+Mensajería inserta `MensajeNuevo` en `outbox` dentro de la misma transacción que guarda el mensaje y actualiza los contadores (`_id` determinista `MensajeNuevo:{mensajeId}`, `estado = pendiente`, `intentos = 0`). `agregadoId` es el `conversacionId`. Nunca lleva el texto del mensaje, nombres, teléfonos ni direcciones.
+
+| Evento | Spec | Cuándo | `datos` |
+|---|---|---|---|
+| `MensajeNuevo` | 030 | Al guardar un mensaje enviado en una conversación | `conversacionId`, `destinatarioUsuarioId` |
+
+El despachador de avisos (spec 037) es el único consumidor previsto: deduplica por evento, recurso y persona, y agrupa los `mensaje_nuevo` en una ventana de 5 minutos. Mientras no esté activo (`Notificaciones:PushHabilitado = false`), el documento queda pendiente y no demuestra entrega.
