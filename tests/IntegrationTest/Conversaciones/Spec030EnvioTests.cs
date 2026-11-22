@@ -240,7 +240,7 @@ public sealed class Spec030EnvioTests
         var value = (string?)await connection.GetDatabase().StringGetAsync(key);
 
         ttl.Should().NotBeNull();
-        ttl!.Value.Should().BeGreaterThan(TimeSpan.FromSeconds(50)).And.BeLessThanOrEqualTo(TimeSpan.FromSeconds(60));
+        ttl.Value.Should().BeGreaterThan(TimeSpan.FromSeconds(50)).And.BeLessThanOrEqualTo(TimeSpan.FromSeconds(60));
         value.Should().NotContain("hola", "el permiso en Redis no lleva texto de mensajes");
     }
 

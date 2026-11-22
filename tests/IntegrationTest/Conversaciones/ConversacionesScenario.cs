@@ -79,7 +79,7 @@ internal sealed class ConversacionesFactory(IReadOnlyDictionary<string, string?>
 
 /// <summary>
 /// Una conversación ficticia entre un cliente y un técnico (colección <c>conversaciones</c> con la forma de la spec 030, §6) sobre una base propia en documentdb-local, con Mercado de
-/// mentira y una o dos copias del servicio. Todo se borra al terminar. Solo datos ficticios.
+/// mentira y una o dos copias del servicio. Al terminar se borra la base. Solo datos ficticios.
 /// </summary>
 internal sealed class ConversacionesScenario : IAsyncDisposable
 {
@@ -122,12 +122,21 @@ internal sealed class ConversacionesScenario : IAsyncDisposable
 
     /// <summary>Cambia lo que Mercado contesta a quien sea participante del par; un ajeno sigue recibiendo 404.</summary>
     public void Permit(bool open, bool chosen, string? closure = null) =>
-        Market.Permission = (sub, solicitudId, _) => Task.FromResult(
-            sub == Client || sub == Technician
-                ? new PermissionAnswer(
-                    200,
-                    new PermisoConversacion(solicitudId, "tec-1", Client, Technician, sub == Client ? "cliente" : "tecnico", open, closure, chosen, chosen ? "visita-1" : null, "Plomería", "Centro", new TecnicoPublicoConversacion("Técnico de prueba", null)))
-                : new PermissionAnswer(404));
+        Market.Permission = (sub, solicitudId, _) => Task.FromResult(AnswerFor(sub, solicitudId, open, chosen, closure));
+
+    private PermissionAnswer AnswerFor(string sub, string solicitudId, bool open, bool chosen, string? closure)
+    {
+        if (sub != Client && sub != Technician)
+        {
+            return new PermissionAnswer(404);
+        }
+
+        var role = sub == Client ? "cliente" : "tecnico";
+        var visit = chosen ? "visita-1" : null;
+        return new PermissionAnswer(
+            200,
+            new PermisoConversacion(solicitudId, "tec-1", Client, Technician, role, open, closure, chosen, visit, "Plomería", "Centro", new TecnicoPublicoConversacion("Técnico de prueba", null)));
+    }
 
     public async Task<ConversacionesFactory> CopyAsync(IReadOnlyDictionary<string, string?>? overrides = null, bool defaultModerator = false)
     {
