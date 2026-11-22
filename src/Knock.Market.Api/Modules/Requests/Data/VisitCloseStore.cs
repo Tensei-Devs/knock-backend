@@ -6,6 +6,9 @@ using MongoDB.Driver;
 
 namespace Knock.Market.Api.Modules.Requests.Data;
 
+/// <summary>El reporte de «no terminado» tal como lo entrega la ruta interna a Identidad (spec 053): identificadores, texto y fecha.</summary>
+internal sealed record NotFinishedReportRecord(string VisitId, string ClientId, string TechnicianUserId, string Text, DateTime CreatedAtUtc);
+
 /// <summary>
 /// Cierre de la visita (spec 050, VIS-09 a VIS-11): terminar con fotos, reporte de «no terminado» y permiso de fotos. Cada cambio es una actualización condicionada por el estado
 /// y se escribe junto con su evento del buzón (y las tareas de cierre, si corresponde) en la misma transacción; los eventos solo llevan identificadores (R-32). Dos peticiones
@@ -79,6 +82,26 @@ internal sealed class VisitCloseStore(
             await outbox.AddAsync(transaction, OutboxMessage.Create(VisitCloseRules.NotFinishedEvent, visit.Id.ToString(), VisitStore.Identifiers(visit), nowUtc), token);
             return true;
         }, false, cancellationToken);
+    }
+
+    /// <summary>
+    /// El reporte de «no terminado» de la visita con lo que Identidad necesita para abrirlo en la cola del panel (spec 053): los identificadores de las dos personas y el texto. Solo lo lee la ruta
+    /// interna; <see langword="null"/> si la visita no existe o no tiene reporte.
+    /// </summary>
+    public async Task<NotFinishedReportRecord?> FindNotFinishedReportAsync(ObjectId visitId, CancellationToken cancellationToken)
+    {
+        var found = await Visits
+            .Find(Builders<BsonDocument>.Filter.Eq("_id", visitId) & Builders<BsonDocument>.Filter.Exists("reporteNoTerminado"))
+            .Project(Builders<BsonDocument>.Projection.Include("clienteId").Include("tecnicoUsuarioId").Include("reporteNoTerminado"))
+            .Limit(1)
+            .ToListAsync(cancellationToken);
+        if (found.Count == 0)
+        {
+            return null;
+        }
+
+        var report = found[0]["reporteNoTerminado"].AsBsonDocument;
+        return new NotFinishedReportRecord(visitId.ToString(), found[0]["clienteId"].AsString, found[0]["tecnicoUsuarioId"].AsString, report["texto"].AsString, report["en"].ToUniversalTime());
     }
 
     /// <summary>

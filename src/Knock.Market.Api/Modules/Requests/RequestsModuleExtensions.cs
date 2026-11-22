@@ -76,6 +76,7 @@ public static class RequestsModuleExtensions
         services.AddScoped<VisitScheduleService>();
         services.AddScoped<VisitCloseStore>();
         services.AddScoped<VisitCloseService>();
+        services.AddScoped<NotFinishedReportReadService>();
         services.TryAddScoped<IVisitPhotos, UnavailableVisitPhotos>();
         services.AddScoped<IManejadorDeTarea, VencerPropuestaDeReprogramacion>();
         services.AddScoped<FinalQuoteStore>();
