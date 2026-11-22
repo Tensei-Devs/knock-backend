@@ -1,6 +1,7 @@
 using Knock.Contracts.Correlation;
 using Knock.Hosting.ForwardedHeaders;
 using Knock.Messaging.Api.Hosting;
+using Knock.Messaging.Api.Modules.Avisos.Push;
 using Knock.Messaging.Api.Modules.Avisos.Services;
 using Knock.Messaging.Api.Modules.Chat;
 using Knock.Messaging.Api.Modules.Conversaciones;
@@ -33,6 +34,9 @@ builder.Services.AddConversacionesModule();
 builder.Services.AddSingleton(provider => DeviceKeyConfiguration.Read(provider.GetRequiredService<IConfiguration>()));
 builder.Services.AddScoped<Knock.Messaging.Api.Modules.Avisos.Data.DeviceStoreFactory>();
 builder.Services.AddScoped<DispositivosService>();
+// Spec 037: FCM detrás de IPushSender; Notificaciones:PushHabilitado apagado por omisión y envío no-op hasta tener credenciales (R-10).
+builder.Services.AddSingleton(provider => PushOptions.Read(provider.GetRequiredService<IConfiguration>()));
+builder.Services.AddSingleton<IPushSender, NoOpPushSender>();
 
 var app = builder.Build();
 
