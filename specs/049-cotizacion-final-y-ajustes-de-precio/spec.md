@@ -33,7 +33,7 @@ Definir y especificar los endpoints COT-06, COT-07, AJU-01, AJU-02 del Excel de 
 - **R-05:** Entrada de `POST /api/v1/visitas/{id}/cotizacion-final/decision`: Ruta: id. Cuerpo: decision. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400.
 - **R-06:** Estados de `POST /api/v1/visitas/{id}/cotizacion-final/decision`: 409 `final_quote_already_decided`. Los códigos de negocio van en inglés y en snake_case.
 - **R-07:** `POST /api/v1/cotizaciones/{id}/ajuste-precio` (crear): El técnico propone un cambio sobre el tope, con motivo. Lo puede llamar: cuenta con perfil de técnico. Responde 201 cuando sale bien.
-- **R-08:** Entrada de `POST /api/v1/cotizaciones/{id}/ajuste-precio`: Ruta: id. Cuerpo: montoNuevo, motivo. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400. Reglas: `montoNuevo`: Mayor que el tope en al menos 100 pesos; `motivo`: Mínimo 10 caracteres. Moderado.
+- **R-08:** Entrada de `POST /api/v1/cotizaciones/{id}/ajuste-precio`: Ruta: id. Cuerpo: montoNuevo, motivo. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400. Reglas: `montoNuevo`: Mayor que el tope en al menos 100 pesos; `motivo`: De 8 a 300 caracteres. Moderado.
 - **R-09:** Estados de `POST /api/v1/cotizaciones/{id}/ajuste-precio`: 409 `adjustment_not_allowed`. Los códigos de negocio van en inglés y en snake_case.
 - **R-10:** `POST /api/v1/ajustes/{id}/decision` (actualizar (acción)): El cliente aprueba o rechaza. Lo puede llamar: persona con sesión que sea dueña del recurso. Responde 200 cuando sale bien.
 - **R-11:** Entrada de `POST /api/v1/ajustes/{id}/decision`: Ruta: id. Cuerpo: decision. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400.
@@ -189,7 +189,7 @@ Definir y especificar los endpoints COT-06, COT-07, AJU-01, AJU-02 del Excel de 
 | visitaId | ObjectId | Sí | Debe existir y estar en curso | Compuesto |
 | cotizacionId | ObjectId | Sí | Debe existir | No |
 | montoNuevo | Entero | Sí | Mayor que el tope en al menos 100 pesos | No |
-| motivo | Texto | Sí | Mínimo 10 caracteres. Moderado | No |
+| motivo | Texto | Sí | De 8 a 300 caracteres. Moderado | No |
 | estado | Texto | Sí | Solo esos valores | Compuesto |
 | creadoEn | Fecha y hora UTC | Sí | Lo asigna el servidor | No |
 | decididoEn | Fecha y hora UTC | No |  | No |
