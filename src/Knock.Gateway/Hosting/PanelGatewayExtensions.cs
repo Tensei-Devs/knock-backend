@@ -133,7 +133,7 @@ internal sealed class PanelTokenMiddleware(RequestDelegate next, GatewayPanelSet
     public async Task InvokeAsync(HttpContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
-        var isPanelPath = RateLimitingExtensions.IsApiPath(context.Request.Path, "panel");
+        var isPanelPath = RateLimitingExtensions.IsPanelApiPath(context.Request.Path);
         var jwt = ReadBearer(context);
         if (jwt is not null && jwt.Audiences.Contains(panel.Audience, StringComparer.Ordinal) != isPanelPath)
         {
