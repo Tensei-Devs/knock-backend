@@ -41,6 +41,21 @@ internal sealed class NoticesService(INoticesStore store)
             new NoticePreferenceResponse(type, NoticeRules.Effective(type, stored), NoticeRules.CanBeTurnedOff(type)))]);
     }
 
+    /// <summary>Guarda los cambios y devuelve las preferencias vigentes. Los avisos de seguridad no se guardan: siempre están activos (D-06); el validador ya rechazó apagarlos.</summary>
+    public async Task<NoticePreferencesResponse> UpdatePreferencesAsync(string sub, UpdateNoticePreferencesRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var changes = (request.Tipos ?? [])
+            .Where(c => c is { Tipo: not null, Activo: not null } && NoticeRules.CanBeTurnedOff(c.Tipo))
+            .ToDictionary(c => c.Tipo!, c => c.Activo!.Value, StringComparer.Ordinal);
+        if (changes.Count > 0)
+        {
+            await store.SetPreferencesAsync(sub, changes, cancellationToken);
+        }
+
+        return await GetPreferencesAsync(sub, cancellationToken);
+    }
+
     private static NoticeResponse ToResponse(StoredNotice notice) => new(
         notice.Id, notice.Type, notice.Role, notice.Title, notice.Text, notice.Target is null ? null : BsonTypeMapper.MapToDotNetValue(notice.Target), notice.Read, notice.CreatedAt);
 }

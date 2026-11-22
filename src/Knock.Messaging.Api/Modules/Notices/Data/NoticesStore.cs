@@ -26,6 +26,9 @@ internal interface INoticesStore
 
     /// <summary>Lo que la persona guardó por tipo, o <see langword="null"/> si nunca cambió nada.</summary>
     Task<IReadOnlyDictionary<string, bool>?> GetPreferencesAsync(string userId, CancellationToken cancellationToken);
+
+    /// <summary>Guarda los interruptores indicados (uno por tipo) sin tocar los demás; crea el documento de la persona si no existe.</summary>
+    Task SetPreferencesAsync(string userId, IReadOnlyDictionary<string, bool> changes, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -113,6 +116,27 @@ internal sealed class NoticesStore(
         }
 
         return types.AsBsonDocument.Where(e => e.Value.IsBoolean).ToDictionary(e => e.Name, e => e.Value.AsBoolean, StringComparer.Ordinal);
+    }
+
+    public async Task SetPreferencesAsync(string userId, IReadOnlyDictionary<string, bool> changes, CancellationToken cancellationToken)
+    {
+        var update = Builders<BsonDocument>.Update.CurrentDate("actualizadoEn");
+        foreach (var (type, enabled) in changes)
+        {
+            update = update.Set($"tipos.{type}", enabled);
+        }
+
+        var filter = _filter.Eq(_userField, userId);
+        var options = new UpdateOptions { IsUpsert = true };
+        try
+        {
+            await Preferences.UpdateOneAsync(filter, update, options, cancellationToken);
+        }
+        catch (MongoWriteException ex) when (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            // El índice único por persona impide duplicar el documento; si dos peticiones lo crean a la vez, la perdedora repite como actualización.
+            await Preferences.UpdateOneAsync(filter, update, options, cancellationToken);
+        }
     }
 
     /// <summary>Índices de la spec 044 (§6). Idempotente; el script <c>db/044-avisos-dentro-de-la-app.js</c> hace lo mismo.</summary>

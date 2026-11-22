@@ -20,6 +20,7 @@ public sealed class Spec044AvisosSeguridadTests
     [InlineData("POST", _notices + "/" + _anyNotice + "/leido", "CA_044_08")]
     [InlineData("POST", _notices + "/leidos", "CA_044_13")]
     [InlineData("GET", "/api/v1/me/preferencias-avisos", "CA_044_15")]
+    [InlineData("PUT", "/api/v1/me/preferencias-avisos", "CA_044_15")]
     public async Task WithoutAToken_Returns401AndRunsNothing_CA_044_02_06_08_13_15(string method, string path, string criterion)
     {
         await using var host = await SecurityMessagingFactory.CreateAsync();
@@ -108,6 +109,74 @@ public sealed class Spec044AvisosSeguridadTests
         limited.Content.Headers.ContentType?.MediaType.Should().Be("application/problem+json");
         using var otherPerson = await SecureHttp.SendAsync(client, HttpMethod.Get, $"{_notices}?limite=999", bearer: other);
         otherPerson.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity, "el límite es por persona");
+        limited.Dispose();
+    }
+
+    [Theory]
+    [InlineData("{\"tipos\":[{\"tipo\":\"seguridad\",\"activo\":false}]}")]
+    [InlineData("{\"tipos\":[{\"tipo\":\"llamame-al-7711234567\",\"activo\":true}]}")]
+    [InlineData("{\"tipos\":[]}")]
+    [InlineData("{}")]
+    public async Task AnInvalidPreferencesBody_Returns422AndNeverEchoesTheValue_PRE_02(string json)
+    {
+        await using var host = await SecurityMessagingFactory.CreateAsync();
+        using var client = host.CreateClient();
+
+        using var response = await SecureHttp.SendRawJsonAsync(client, HttpMethod.Put, "/api/v1/me/preferencias-avisos", json, TokenForge.Valid());
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        var problem = System.Text.Json.Nodes.JsonNode.Parse(await response.Content.ReadAsStringAsync())!.AsObject();
+        problem["errors"]!.ToJsonString().Should().NotContain("7711234567");
+    }
+
+    [Fact]
+    public async Task AMalformedPreferencesBody_Returns400_PRE_02()
+    {
+        await using var host = await SecurityMessagingFactory.CreateAsync();
+        using var client = host.CreateClient();
+
+        using var response = await SecureHttp.SendRawJsonAsync(client, HttpMethod.Put, "/api/v1/me/preferencias-avisos", "{\"tipos\": [", TokenForge.Valid());
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task APreferencesPutWithAnOversizedBody_Returns413_CA_044_23()
+    {
+        await using var host = await SecurityMessagingFactory.CreateAsync();
+        using var client = host.CreateClient();
+        var json = "{\"tipos\":[{\"tipo\":\"visitas\",\"activo\":true}],\"relleno\":\"" + new string('x', 4096) + "\"}";
+
+        using var response = await SecureHttp.SendRawJsonAsync(client, HttpMethod.Put, "/api/v1/me/preferencias-avisos", json, TokenForge.Valid());
+
+        response.StatusCode.Should().Be(HttpStatusCode.RequestEntityTooLarge);
+        (await response.Content.ReadAsStringAsync()).Should().NotContain("xxxx");
+    }
+
+    [Fact]
+    public async Task APreferencesPutOverThePerPersonLimit_Returns429WithRetryAfter_CA_044_23()
+    {
+        await using var host = await SecurityMessagingFactory.CreateAsync();
+        using var client = host.CreateClient();
+        var token = TokenForge.Valid();
+        HttpResponseMessage? limited = null;
+
+        // El límite es de 20 por minuto por persona; el cuerpo inválido se rechaza (422) antes de tocar MongoDB y aun así cuenta.
+        for (var i = 0; i < 25 && limited is null; i++)
+        {
+            var response = await SecureHttp.SendRawJsonAsync(client, HttpMethod.Put, "/api/v1/me/preferencias-avisos", "{}", token);
+            if (response.StatusCode == HttpStatusCode.TooManyRequests)
+            {
+                limited = response;
+            }
+            else
+            {
+                response.Dispose();
+            }
+        }
+
+        limited.Should().NotBeNull("la petición 21 de la misma persona debe recibir 429");
+        limited.Headers.GetValues("Retry-After").Should().ContainSingle().Which.Should().MatchRegex("^[1-9][0-9]*$");
         limited.Dispose();
     }
 }
