@@ -34,6 +34,12 @@ internal sealed class RepartoService(
         return store.ReviewAsync(task, id, wave, options.Value, clock.GetUtcNow().UtcDateTime, token);
     }
 
+    /// <summary>Adelanta la oleada siguiente de la solicitud de la persona (spec 048, SOL-05). Un identificador que no es <c>ObjectId</c> responde como inexistente.</summary>
+    public Task<ExtendStatus> ExtendAsync(string id, string clientId, CancellationToken token) =>
+        ObjectId.TryParse(id, out var requestId)
+            ? store.ExtendAsync(requestId, clientId, options.Value.MaximoOleadas, clock.GetUtcNow().UtcDateTime, token)
+            : Task.FromResult(ExtendStatus.NotFound);
+
     private static (ObjectId Id, int Wave) Parse(string key)
     {
         var parts = key.Split(':');
@@ -54,3 +60,6 @@ internal sealed class RevisarOleada(RepartoService service) : IManejadorDeTarea
     public string Tipo => "RevisarOleada";
     public Task HandleAsync(TareaReservada task, CancellationToken cancellationToken) => service.ReviewAsync(task, cancellationToken);
 }
+
+/// <summary>Resultado de «Pedir también a otros» (spec 048, SOL-05).</summary>
+internal enum ExtendStatus { Extended, NotFound, NotExtendable }
