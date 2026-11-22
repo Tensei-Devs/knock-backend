@@ -191,6 +191,18 @@ internal sealed class Spec020Host : IAsyncDisposable
 
     public static async Task<JsonElement> ReadAsync(HttpResponseMessage response) => JsonElement.Parse(await response.Content.ReadAsStringAsync());
 
+    /// <summary>True si algún valor escalar (texto o número) del JSON es exactamente <paramref name="value"/>. Robusto ante ids aleatorios y fechas, a diferencia de buscar la subcadena en el cuerpo crudo.</summary>
+    public static bool CarriesValue(string json, string value) => CarriesValue(JsonElement.Parse(json), value);
+
+    private static bool CarriesValue(JsonElement element, string value) => element.ValueKind switch
+    {
+        JsonValueKind.Object => element.EnumerateObject().Any(p => CarriesValue(p.Value, value)),
+        JsonValueKind.Array => element.EnumerateArray().Any(item => CarriesValue(item, value)),
+        JsonValueKind.String => element.GetString() == value,
+        JsonValueKind.Number => element.GetRawText() == value,
+        _ => false,
+    };
+
     public async ValueTask DisposeAsync()
     {
         Client.Dispose();
