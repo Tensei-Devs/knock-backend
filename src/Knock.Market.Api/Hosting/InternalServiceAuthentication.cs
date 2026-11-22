@@ -21,6 +21,8 @@ internal static class InternalServiceAuthentication
     public const string Audience = "knock-market";
     public const string PermissionsClaim = "permisos";
     public const string HistoryPermission = "historial";
+    public const string TechnicianHiddenPolicy = "InternalTechnicianHidden";
+    public const string TechnicianHiddenPermission = "tecnico-ocultado";
     public const string ServiceNotAllowedCode = "service_not_allowed";
 
     /// <summary>Un token de servicio dura 5 minutos como máximo (spec 037, R-11).</summary>
@@ -56,6 +58,9 @@ internal static class InternalServiceAuthentication
         services.AddAuthorizationBuilder().AddPolicy(
             HistoryPolicy,
             policy => policy.AddAuthenticationSchemes(Scheme).RequireAuthenticatedUser().RequireClaim(PermissionsClaim, HistoryPermission));
+        services.AddAuthorizationBuilder().AddPolicy(
+            TechnicianHiddenPolicy,
+            policy => policy.AddAuthenticationSchemes(Scheme).RequireAuthenticatedUser().RequireClaim(PermissionsClaim, TechnicianHiddenPermission));
         return services;
     }
 
