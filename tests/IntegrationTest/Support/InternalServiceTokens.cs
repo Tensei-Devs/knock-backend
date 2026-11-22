@@ -20,7 +20,8 @@ internal static class InternalServiceTokens
         byte[]? key = null,
         TimeSpan? lifetime = null,
         DateTime? issuedAt = null,
-        bool withJti = true)
+        bool withJti = true,
+        IReadOnlyDictionary<string, string>? extra = null)
     {
         var now = issuedAt ?? DateTime.UtcNow;
         var claims = new Dictionary<string, object>
@@ -29,6 +30,11 @@ internal static class InternalServiceTokens
             ["elementoId"] = elementoId,
             ["permisos"] = permisos ?? ["historial"],
         };
+        foreach (var (name, value) in extra ?? new Dictionary<string, string>())
+        {
+            claims[name] = value;
+        }
+
         if (withJti)
         {
             claims["jti"] = Guid.NewGuid().ToString("N");

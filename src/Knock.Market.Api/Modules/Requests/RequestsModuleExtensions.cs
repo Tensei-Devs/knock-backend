@@ -88,6 +88,7 @@ public static class RequestsModuleExtensions
         services.AddScoped<VisitCloseService>();
         // Fotos del trabajo terminado: adaptador sobre IMediaApi (spec 032); falla cerrado si el módulo de archivos no responde.
         services.TryAddScoped<IVisitPhotos, MediaVisitPhotos>();
+        services.AddScoped<NotFinishedReportReadService>();
         services.AddScoped<IManejadorDeTarea, VencerPropuestaDeReprogramacion>();
         services.AddScoped<FinalQuoteStore>();
         services.AddScoped<FinalQuoteService>();
