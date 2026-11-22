@@ -1,6 +1,7 @@
 using Knock.Contracts.Moderation;
 using Knock.Market.Api.Modules.Media.Data;
 using Knock.Market.Api.Modules.Media.Domain;
+using Microsoft.Extensions.Options;
 
 namespace Knock.Market.Api.Modules.Media.Services;
 
@@ -20,8 +21,12 @@ internal sealed class MediaService(
     IMediaBlobStore blobs,
     ImageProcessor processor,
     IContentModerator moderator,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    IOptions<MediaOptions>? options = null,
+    MediaMetrics? metrics = null)
 {
+    private readonly int _maxPendingUploads = options?.Value.MaxPendingUploads ?? MediaRules.DefaultMaxPendingUploads;
+
     public async Task<MediaOutcome<UploadTicket>> CreateUploadAsync(
         string ownerId, string usage, string contentType, long sizeBytes, CancellationToken cancellationToken)
     {
@@ -33,9 +38,24 @@ internal sealed class MediaService(
         }
 
         await blobs.EnsureContainersAsync(cancellationToken);
-        var file = MediaFile.CreatePending(ownerId, parsedUsage.Value, contentType, sizeBytes, timeProvider.GetUtcNow());
-        await store.AddAsync(file, cancellationToken);
+        var now = timeProvider.GetUtcNow();
+        var file = MediaFile.CreatePending(ownerId, parsedUsage.Value, contentType, sizeBytes, now);
+        var added = await store.AddPendingWithinLimitAsync(file, _maxPendingUploads, now, cancellationToken);
+        if (!added.Added)
+        {
+            metrics?.UploadsRejectedByLimit.Add(1);
+            return MediaOutcome<UploadTicket>.LimitExceeded(RetryAfterSeconds(added.RetryAt, now));
+        }
+
+        metrics?.FilesCreated.Add(1);
         return MediaOutcome<UploadTicket>.Ok(new UploadTicket(file.Id));
+    }
+
+    /// <summary>Seconds until the oldest valid pending file stops counting, between 1 and the confirmation window (1 800 s) (spec 058, R-11).</summary>
+    private static int RetryAfterSeconds(DateTimeOffset? retryAt, DateTimeOffset now)
+    {
+        var window = (int)MediaRules.ConfirmationWindow.TotalSeconds;
+        return retryAt is null ? window : Math.Clamp((int)Math.Ceiling((retryAt.Value - now).TotalSeconds), 1, window);
     }
 
     public async Task<MediaOutcome<ConfirmedFile>> ConfirmAsync(string ownerId, Guid id, CancellationToken cancellationToken)
