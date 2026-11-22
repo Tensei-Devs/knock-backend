@@ -69,6 +69,8 @@ public static class RequestsModuleExtensions
         services.AddScoped<ConversationPermissionService>();
         services.AddScoped<ChooseQuoteService>();
         services.AddScoped<VisitStore>();
+        services.AddScoped<AccountEventStore>();
+        services.AddScoped<AccountEventService>();
         services.AddScoped<VisitService>();
         services.AddScoped<ArrivalService>();
         services.AddScoped<TrustNoticeService>();

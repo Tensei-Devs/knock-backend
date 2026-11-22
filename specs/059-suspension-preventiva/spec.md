@@ -127,7 +127,7 @@ La columna «Caso HU» de §4.1 vincula cada criterio con el caso TC de la ficha
 | Evento `CuentaSuspendida` | `{ eventoId, usuarioId, reporteId, desde }`, solo identificadores. Productor: Identidad. Consumidor: Mercado (`POST /api/v1/interno/eventos`, firma con `interno-key-identity`, spec 054 R-15) | esta spec; el catálogo de `tipo` de `outbox` de la 054 debe ampliarse (§8) |
 | Evento `CuentaReactivada` | `{ eventoId, usuarioId, desde }`. Mismo canal | igual |
 | `sesion_revocada { sid }` | Una por sesión de la app revocada (sin cambio de forma) | spec 037 R-13 |
-| Aviso a clientes con cita | `{ eventoId, tipo, destinatarioId, rol: "cliente", recurso: visitaId }` de Mercado a Mensajería (spec 037 R-11). **El `tipo` queda por definir (duda 5)** | spec 037 (su catálogo se amplía) |
+| Aviso a clientes con cita | `{ eventoId, tipo, destinatarioId, rol: "cliente", recurso: visitaId }` de Mercado a Mensajería (spec 037 R-11). **El `tipo` es `visita_afectada` (enmienda a la spec 037)** | spec 037 (su catálogo se amplía) |
 | Auditoría | `panel_auditoria`: `cuenta_suspendida`, `cuenta_reactivada` | spec 033 R-23 |
 
 **Códigos de error de negocio nuevos** (se fijan al implementar, en inglés y snake_case, y entran al catálogo): rechazo de suspender la propia cuenta (R-07) y rechazo de reactivar una cuenta que no está suspendida (R-15). `docs/events.md` documenta los dos eventos con productor y consumidor.
