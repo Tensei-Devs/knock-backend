@@ -166,36 +166,37 @@ internal sealed class FinalQuoteService(
     }
 }
 
-/// <summary>Tarea <c>VencerCotizacionFinal</c> (spec 054): la cotización final sin respuesta a las 48 horas queda vencida y la visita termina como <c>solo_visita</c>.</summary>
-internal sealed class VencerCotizacionFinal(FinalQuoteStore store, TimeProvider clock) : IManejadorDeTarea
+/// <summary>Base de las tareas de vencimiento de la spec 049: lee la clave de la tarea y vence la entidad con la hora del reloj.</summary>
+internal abstract class FinalQuoteExpiryTask(TimeProvider clock) : IManejadorDeTarea
 {
-    public string Tipo => FinalQuoteRules.FinalQuoteExpiryTask;
+    public abstract string Tipo { get; }
 
     public async Task HandleAsync(TareaReservada task, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(task);
-        if (!ObjectId.TryParse(task.ClaveNegocio, out var visitId))
+        if (!ObjectId.TryParse(task.ClaveNegocio, out var id))
         {
-            throw new FormatException("Invalid final quote task key.");
+            throw new FormatException("Invalid expiry task key.");
         }
 
-        await store.ExpireFinalQuoteAsync(visitId, clock.GetUtcNow().UtcDateTime, cancellationToken);
+        await ExpireAsync(id, clock.GetUtcNow().UtcDateTime, cancellationToken);
     }
+
+    protected abstract Task ExpireAsync(ObjectId id, DateTime nowUtc, CancellationToken cancellationToken);
+}
+
+/// <summary>Tarea <c>VencerCotizacionFinal</c> (spec 054): la cotización final sin respuesta a las 48 horas queda vencida y la visita termina como <c>solo_visita</c>.</summary>
+internal sealed class VencerCotizacionFinal(FinalQuoteStore store, TimeProvider clock) : FinalQuoteExpiryTask(clock)
+{
+    public override string Tipo => FinalQuoteRules.FinalQuoteExpiryTask;
+
+    protected override Task ExpireAsync(ObjectId id, DateTime nowUtc, CancellationToken cancellationToken) => store.ExpireFinalQuoteAsync(id, nowUtc, cancellationToken);
 }
 
 /// <summary>Tarea <c>VencerAjuste</c> (spec 054): el ajuste sin respuesta a las 24 horas queda vencido y el precio sigue siendo el tope aprobado.</summary>
-internal sealed class VencerAjuste(FinalQuoteStore store, TimeProvider clock) : IManejadorDeTarea
+internal sealed class VencerAjuste(FinalQuoteStore store, TimeProvider clock) : FinalQuoteExpiryTask(clock)
 {
-    public string Tipo => FinalQuoteRules.AdjustmentExpiryTask;
+    public override string Tipo => FinalQuoteRules.AdjustmentExpiryTask;
 
-    public async Task HandleAsync(TareaReservada task, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(task);
-        if (!ObjectId.TryParse(task.ClaveNegocio, out var adjustmentId))
-        {
-            throw new FormatException("Invalid adjustment task key.");
-        }
-
-        await store.ExpireAdjustmentAsync(adjustmentId, clock.GetUtcNow().UtcDateTime, cancellationToken);
-    }
+    protected override Task ExpireAsync(ObjectId id, DateTime nowUtc, CancellationToken cancellationToken) => store.ExpireAdjustmentAsync(id, nowUtc, cancellationToken);
 }

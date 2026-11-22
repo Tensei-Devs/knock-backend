@@ -58,7 +58,7 @@ internal sealed class FinalQuoteStore([FromKeyedServices(RequestsModuleExtension
                 return false;
             }
 
-            await outbox.AddAsync(transaction, OutboxMessage.Create("CotizacionFinalEnviada", visit.Id.ToString(), Identifiers(visit), nowUtc), token);
+            await outbox.AddAsync(transaction, OutboxMessage.Create("CotizacionFinalEnviada", visit.Id.ToString(), VisitStore.Identifiers(visit), nowUtc), token);
             await new TareasProgramadasStore(database).ScheduleByKeyAsync(transaction, FinalQuoteRules.FinalQuoteExpiryTask, visit.Id.ToString(), expires, nowUtc, token);
             return true;
         }, false, cancellationToken);
@@ -235,7 +235,7 @@ internal sealed class FinalQuoteStore([FromKeyedServices(RequestsModuleExtension
                 return false;
             }
 
-            await outbox.AddAsync(transaction, OutboxMessage.Create(eventType, visit.Id.ToString(), Identifiers(visit), nowUtc), token);
+            await outbox.AddAsync(transaction, OutboxMessage.Create(eventType, visit.Id.ToString(), VisitStore.Identifiers(visit), nowUtc), token);
             if (closes)
             {
                 await outbox.AddAsync(transaction, OutboxMessage.Create("VisitaCerrada", visit.Id.ToString(), new BsonDocument { { "visitaId", visit.Id.ToString() }, { "motivo", "terminada" } }, nowUtc), token);
@@ -269,15 +269,6 @@ internal sealed class FinalQuoteStore([FromKeyedServices(RequestsModuleExtension
             await outbox.AddAsync(transaction, OutboxMessage.Create(eventType, adjustment.Id.ToString(), new BsonDocument { { "ajusteId", adjustment.Id.ToString() }, { "cotizacionId", adjustment.QuoteId.ToString() }, { "visitaId", adjustment.VisitId.ToString() }, { "decision", newState } }, nowUtc), token);
             return true;
         }, false, cancellationToken);
-
-    /// <summary>Solo identificadores: nunca el precio, el texto del técnico ni datos de contacto (R-17).</summary>
-    private static BsonDocument Identifiers(VisitRecord visit) => new()
-    {
-        { "visitaId", visit.Id.ToString() },
-        { "solicitudId", visit.RequestId.ToString() },
-        { "clienteId", visit.ClientId },
-        { "tecnicoUsuarioId", visit.TechnicianUserId },
-    };
 
     private static BsonDocument AdjustmentIdentifiers(ObjectId id, ObjectId quoteId, VisitRecord visit) => new()
     {

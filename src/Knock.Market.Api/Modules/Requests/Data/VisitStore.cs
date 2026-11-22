@@ -205,7 +205,7 @@ internal sealed class VisitStore(
     };
 
     /// <summary>Solo identificadores: nunca el código, la dirección, el nombre ni el teléfono de nadie (R-13 y R-17).</summary>
-    private static BsonDocument Identifiers(VisitRecord visit) => new()
+    internal static BsonDocument Identifiers(VisitRecord visit) => new()
     {
         { "visitaId", visit.Id.ToString() },
         { "solicitudId", visit.RequestId.ToString() },
