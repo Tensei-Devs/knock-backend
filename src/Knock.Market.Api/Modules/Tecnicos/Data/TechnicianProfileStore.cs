@@ -24,10 +24,35 @@ internal sealed class TechnicianProfileStore(
             .Project(Builders<BsonDocument>.Projection.Include("_id")).FirstOrDefaultAsync(cancellationToken) is not null;
 
     public Task<bool> InsertAsync(NewTechnician technician, CancellationToken cancellationToken) =>
-        InsertOnceAsync(
-            () => Technicians.InsertOneAsync(ToDocument(technician), cancellationToken: cancellationToken),
+        InsertSerializedAsync(
+            technician.Sub,
             () => ExistsAsync(technician.Sub, cancellationToken),
-            delay => Task.Delay(delay, cancellationToken));
+            () => InsertOnceAsync(
+                () => Technicians.InsertOneAsync(ToDocument(technician), cancellationToken: cancellationToken),
+                () => ExistsAsync(technician.Sub, cancellationToken),
+                delay => Task.Delay(delay, cancellationToken)),
+            cancellationToken);
+
+    /// <summary>
+    /// Causa raíz de CA-69 intermitente: varios <c>insert</c> a la vez sobre la misma llave única pueden bloquearse entre sí en documentdb-local («Could not acquire lock ... due to deadlock»)
+    /// y agotar los reintentos mientras todos esperan el candado del otro, lo que daba 500. Dentro de la instancia, los registros de una misma cuenta se turnan (candado por franja de <c>sub</c>)
+    /// y quien entra después relee el perfil: si ya existe responde «ya existía» sin escribir. Entre instancias sigue valiendo la llave única más la relectura y el reintento de <see cref="InsertOnceAsync"/>.
+    /// </summary>
+    internal static async Task<bool> InsertSerializedAsync(string sub, Func<Task<bool>> exists, Func<Task<bool>> insert, CancellationToken cancellationToken)
+    {
+        var gate = _gates[(uint)StringComparer.Ordinal.GetHashCode(sub) % _gates.Length];
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            return !await exists() && await insert();
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    private static readonly SemaphoreSlim[] _gates = [.. Enumerable.Range(0, 64).Select(_ => new SemaphoreSlim(1, 1))];
 
     /// <summary>
     /// Dos registros simultáneos de la misma cuenta chocan en el índice único de <c>usuarioId</c>: MongoDB responde «llave duplicada» (11000) y DocumentDB puede responder «conflicto
