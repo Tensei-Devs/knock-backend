@@ -45,6 +45,8 @@ public static class TecnicosModuleExtensions
         services.AddScoped<ServiceService>();
         services.AddScoped<TechnicianAccountStore>();
         services.AddScoped<ITecnicosApi, TecnicosApi>();
+        services.AddScoped<ITechnicianModerationStore, TechnicianModerationStore>();
+        services.AddScoped<TechnicianHideService>();
         return services;
     }
 }
