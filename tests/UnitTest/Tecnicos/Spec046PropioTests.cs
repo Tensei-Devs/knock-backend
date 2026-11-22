@@ -38,7 +38,7 @@ public sealed class Spec046PropioTests : IDisposable
         }));
         var clock = new FixedClock(_now);
         var profiles = new TechnicianProfileService(new NoReader(), _cache, clock);
-        var service = new MyTechnicianService(store, new FakeCatalog(), cipher, profiles,
+        var service = new MyTechnicianService(store, new FakeTradeCatalog(), cipher, profiles,
             Options.Create(new TecnicosOptions { HostsFoto = photoHosts ?? ["files.knock.test"] }), clock);
         return (service, store);
     }
@@ -244,23 +244,5 @@ public sealed class Spec046PropioTests : IDisposable
     private sealed class FixedClock(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
-    }
-
-    private sealed class FakeCatalog : ICatalogApi
-    {
-        public string ModuleName => "Catalog";
-
-        public Task<(string Nombre, string Modalidad)?> FindActiveTradeAsync(string clave, CancellationToken cancellationToken) =>
-            Task.FromResult<(string, string)?>(clave is "plo" ? ("Plomería", "domicilio") : null);
-
-        public Task<(string Nombre, string Cp)?> FindNeighborhoodAsync(string coloniaId, CancellationToken cancellationToken) => throw new NotSupportedException();
-
-        public Task<string?> FindNeighborhoodAtAsync(double latitude, double longitude, CancellationToken cancellationToken) => throw new NotSupportedException();
-
-        public Task<IReadOnlyList<string>> FindNeighborhoodsByPostalCodeAsync(string postalCode, CancellationToken cancellationToken) => throw new NotSupportedException();
-
-        public Task<bool> NeighborhoodExistsAsync(string coloniaId, string cp, CancellationToken cancellationToken) => throw new NotSupportedException();
-
-        public Task<IReadOnlyList<(string Clave, string Nombre)>> ListActiveTradesAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 }

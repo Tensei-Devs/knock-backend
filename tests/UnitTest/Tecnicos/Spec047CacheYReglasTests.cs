@@ -18,7 +18,7 @@ public sealed class Spec047CacheYReglasTests : IDisposable
 
     public void Dispose() => _cache.Dispose();
 
-    private ServiceService Service() => new(_store, new FakeCatalog(), _cache);
+    private ServiceService Service() => new(_store, new FakeTradeCatalog(), _cache);
 
     [Fact]
     public async Task Consulta_Repetida_Sale_De_La_Cache_Y_La_Base_Recibe_Una_Sola_CA_047_05()
@@ -165,23 +165,5 @@ public sealed class Spec047CacheYReglasTests : IDisposable
 
         public Task<bool> DeleteAsync(ObjectId technicianId, ObjectId id, CancellationToken cancellationToken) =>
             Task.FromResult(_items.RemoveAll(i => i.Id == id.ToString()) > 0);
-    }
-
-    private sealed class FakeCatalog : ICatalogApi
-    {
-        public string ModuleName => "Catalog";
-
-        public Task<(string Nombre, string Modalidad)?> FindActiveTradeAsync(string clave, CancellationToken cancellationToken) =>
-            Task.FromResult<(string, string)?>(clave == "plo" ? ("Plomería", "domicilio") : null);
-
-        public Task<(string Nombre, string Cp)?> FindNeighborhoodAsync(string coloniaId, CancellationToken cancellationToken) => throw new NotSupportedException();
-
-        public Task<string?> FindNeighborhoodAtAsync(double latitude, double longitude, CancellationToken cancellationToken) => throw new NotSupportedException();
-
-        public Task<IReadOnlyList<string>> FindNeighborhoodsByPostalCodeAsync(string postalCode, CancellationToken cancellationToken) => throw new NotSupportedException();
-
-        public Task<bool> NeighborhoodExistsAsync(string coloniaId, string cp, CancellationToken cancellationToken) => throw new NotSupportedException();
-
-        public Task<IReadOnlyList<(string Clave, string Nombre)>> ListActiveTradesAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 }

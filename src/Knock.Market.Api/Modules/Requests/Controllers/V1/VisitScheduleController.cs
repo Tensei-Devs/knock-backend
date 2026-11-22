@@ -1,10 +1,8 @@
-using Asp.Versioning;
 using Knock.Market.Api.Common.Errors;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Requests.Domain;
 using Knock.Market.Api.Modules.Requests.Dtos;
 using Knock.Market.Api.Modules.Requests.Services;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
@@ -14,20 +12,8 @@ namespace Knock.Market.Api.Modules.Requests.Controllers.V1;
 /// Agenda del técnico y cambios de la visita (spec 050, VIS-02 y VIS-04 a VIS-07). Recibe, valida el formato y delega en <see cref="VisitScheduleService"/>; no toca MongoDB. La
 /// persona es siempre la del <c>sub</c> del token. Nunca se cachea (<c>Cache-Control: private, no-store</c>).
 /// </summary>
-[ApiController]
-[ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}")]
-[Authorize]
-[PrivateNoStore]
-[ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, ProblemJson)]
-[ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, ProblemJson)]
-[ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, ProblemJson)]
-[ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, ProblemJson)]
-[ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, ProblemJson)]
-[ProducesResponseType<ProblemDetails>(StatusCodes.Status413PayloadTooLarge, ProblemJson)]
-[ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity, ProblemJson)]
-[ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, ProblemJson)]
-internal sealed class VisitScheduleController(VisitScheduleService service, VisitCloseService closing) : BusinessRuleController
+internal sealed class VisitScheduleController(VisitScheduleService service, VisitCloseService closing) : DocumentedRequestsController
 {
     /// <summary>VIS-02: agenda del técnico entre <c>desde</c> y <c>hasta</c> (por omisión hoy y 14 días), por fecha y hora, con cursor.</summary>
     [HttpGet("agenda")]

@@ -48,18 +48,7 @@ internal sealed class FakeModerator : IContentModerator
 /// <summary>Una copia de <c>Knock.Messaging.Api</c> con MongoDB (documentdb-local) y Redis reales, Mercado de mentira y moderación sustituible. Dos copias sobre el mismo Redis son «dos réplicas».</summary>
 internal sealed class EnvioFactory(IReadOnlyDictionary<string, string?> settings, IContentModerator? moderator) : WebApplicationFactory<MessagingApi::Program>
 {
-    public HubConnection Connect(string token)
-    {
-        var server = Server;
-        return new HubConnectionBuilder()
-            .WithUrl(new Uri(server.BaseAddress, "hubs/chat"), options =>
-            {
-                options.AccessTokenProvider = () => Task.FromResult<string?>(token);
-                options.Transports = HttpTransportType.ServerSentEvents;
-                options.HttpMessageHandlerFactory = _ => server.CreateHandler();
-            })
-            .Build();
-    }
+    public HubConnection Connect(string token) => ChatHubClient.Connect(Server, token);
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {

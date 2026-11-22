@@ -1,10 +1,8 @@
-using Asp.Versioning;
 using Knock.Market.Api.Common.Errors;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Requests.Domain;
 using Knock.Market.Api.Modules.Requests.Dtos;
 using Knock.Market.Api.Modules.Requests.Services;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
@@ -14,20 +12,8 @@ namespace Knock.Market.Api.Modules.Requests.Controllers.V1;
 /// Cotización final tras la visita (spec 049, COT-06 y COT-07) y ajustes de precio (AJU-01 y AJU-02). Recibe, valida el formato y delega en <see cref="FinalQuoteService"/>;
 /// no toca MongoDB. La persona es siempre la del <c>sub</c> del token. Nunca se cachea (<c>Cache-Control: private, no-store</c>).
 /// </summary>
-[ApiController]
-[ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}")]
-[Authorize]
-[PrivateNoStore]
-[ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, ProblemJson)]
-[ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, ProblemJson)]
-[ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, ProblemJson)]
-[ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, ProblemJson)]
-[ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, ProblemJson)]
-[ProducesResponseType<ProblemDetails>(StatusCodes.Status413PayloadTooLarge, ProblemJson)]
-[ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity, ProblemJson)]
-[ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, ProblemJson)]
-internal sealed class FinalQuoteController(FinalQuoteService service) : BusinessRuleController
+internal sealed class FinalQuoteController(FinalQuoteService service) : DocumentedRequestsController
 {
     /// <summary>COT-06: el técnico de la visita envía la cotización final (una sola por visita, con la visita en curso).</summary>
     [HttpPost("visitas/{id}/cotizacion-final")]

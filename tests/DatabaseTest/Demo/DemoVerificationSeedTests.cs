@@ -133,19 +133,11 @@ public sealed class DemoVerificationSeedTests
             await database.GetCollection<BsonDocument>("usuarios").InsertOneAsync(new BsonDocument { ["_id"] = ObjectId.Parse("de0000000000000000000001"), ["sub"] = sub, ["demo"] = true });
             var store = new DemoVerificationStore(database, Options.Create(new KnockMongoOptions { ConnectionString = connection ?? fixture.ConnectionString }));
             var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Seed:Demo"] = enabled.ToString() }).Build();
-            await test(database, new DemoVerificationSeeder(store, configuration, new FakeEnvironment { EnvironmentName = environment }, NullLogger<DemoVerificationSeeder>.Instance), sub);
+            await test(database, new DemoVerificationSeeder(store, configuration, new DemoFakeEnvironment { EnvironmentName = environment }, NullLogger<DemoVerificationSeeder>.Instance), sub);
         }
         finally
         {
             await client.DropDatabaseAsync(name);
         }
-    }
-
-    private sealed class FakeEnvironment : IHostEnvironment
-    {
-        public string EnvironmentName { get; set; } = Environments.Development;
-        public string ApplicationName { get; set; } = string.Empty;
-        public string ContentRootPath { get; set; } = string.Empty;
-        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
     }
 }

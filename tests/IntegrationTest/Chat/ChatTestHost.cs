@@ -124,18 +124,7 @@ internal sealed class ChatFactory(IReadOnlyDictionary<string, string?> settings)
     }
 
     /// <summary>Un cliente de SignalR (eventos del servidor sobre el servidor de pruebas en memoria) contra esta copia, con el token en la consulta (<c>access_token</c>), como lo hace la app.</summary>
-    public HubConnection Connect(string token)
-    {
-        var server = Server;
-        return new HubConnectionBuilder()
-            .WithUrl(new Uri(server.BaseAddress, "hubs/chat"), options =>
-            {
-                options.AccessTokenProvider = () => Task.FromResult<string?>(token);
-                options.Transports = HttpTransportType.ServerSentEvents;
-                options.HttpMessageHandlerFactory = _ => server.CreateHandler();
-            })
-            .Build();
-    }
+    public HubConnection Connect(string token) => ChatHubClient.Connect(Server, token);
 
     /// <summary>El saludo del hub (<c>POST /hubs/chat/negotiate</c>) con el token en la consulta, para ver el código HTTP.</summary>
     public async Task<HttpStatusCode> NegotiateAsync(string? token)

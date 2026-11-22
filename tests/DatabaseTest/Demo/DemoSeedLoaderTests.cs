@@ -348,7 +348,7 @@ public sealed class DemoSeedLoaderTests
             var store = new UsuariosStore(database, Options.Create(new KnockMongoOptions { ConnectionString = connection ?? fixture.ConnectionString }));
             var cache = new FakeCache();
             var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Seed:Demo"] = enabled.ToString() }).Build();
-            await test(database, new DemoClientSeeder(store, protector, cache, cache.Logger, configuration, new FakeEnvironment { EnvironmentName = environment }), key, cache);
+            await test(database, new DemoClientSeeder(store, protector, cache, cache.Logger, configuration, new DemoFakeEnvironment { EnvironmentName = environment }), key, cache);
         }
         finally
         {
@@ -382,13 +382,5 @@ public sealed class DemoSeedLoaderTests
         {
             lock (Messages) { Messages.Add(formatter(state, exception)); }
         }
-    }
-
-    private sealed class FakeEnvironment : IHostEnvironment
-    {
-        public string EnvironmentName { get; set; } = Environments.Development;
-        public string ApplicationName { get; set; } = string.Empty;
-        public string ContentRootPath { get; set; } = string.Empty;
-        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
     }
 }
