@@ -1,4 +1,5 @@
 // jscpd:ignore-start -- EXC-015: copia de src/Knock.Market.Api/Common/TareasProgramadas (spec 028 R-09); se unifica en la biblioteca técnica (KNOCK-251).
+using Knock.Hosting.Procesos;
 using Microsoft.Extensions.Options;
 
 namespace Knock.Identity.Api.Hosting.Procesos.TareasProgramadas;

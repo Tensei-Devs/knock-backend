@@ -1,3 +1,4 @@
+using Knock.Market.Api.Common.Bandeja;
 using Knock.Market.Api.Common.TareasProgramadas;
 using Knock.Market.Api.Modules.Catalog;
 using Knock.Market.Api.Modules.Media;
@@ -18,6 +19,11 @@ internal static class ModulesExtensions
             .Validate(x => x.IntervaloSegundos > 0, "TareasProgramadas:IntervaloSegundos must be positive.").ValidateOnStart();
         services.AddScoped<EjecutorDeTareasProgramadas>();
         services.AddHostedService<TareasProgramadasHostedService>();
+        services.AddOptions<BandejaOptions>().BindConfiguration(BandejaOptions.SectionName).ValidateDataAnnotations().ValidateOnStart();
+        services.AddHttpClient(EntregaReporteNoTerminado.ClientName).RemoveAllLoggers();
+        services.AddScoped<IEntregaDeBandeja, EntregaReporteNoTerminado>();
+        services.AddScoped<DespachadorDeBandeja>();
+        services.AddHostedService<BandejaHostedService>();
         return services;
     }
 }
