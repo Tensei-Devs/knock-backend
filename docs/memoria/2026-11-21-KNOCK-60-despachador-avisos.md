@@ -5,6 +5,9 @@
 - `DespachadorDeAvisos` con puertos `IPushSender`, `IEnviadosStore`, `IPresenceReader` e `IDeviceTokens`: interruptor, validación, presencia, ventana, deduplicación, 3 reintentos y borrado de identificador inválido.
 - `Notificaciones:PushHabilitado` apagado por omisión y `NoOpPushSender` registrado; no hay credenciales de Firebase.
 
+## Por qué
+El envío de avisos debe poder probarse y apagarse sin depender de Firebase: las reglas puras y el despachador quedan detrás de puertos, con el interruptor apagado por omisión, para que el envío real se conecte después sin cambiar el flujo.
+
 ## A evitar
 Registrar un `IPushSender` real sin secretos en el almacén de despliegue (R-10); poner texto libre o identificadores personales en la carga.
 
