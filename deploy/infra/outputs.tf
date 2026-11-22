@@ -30,6 +30,10 @@ output "storage_account_id" {
   value = module.shared.storage_account_id
 }
 
+output "exports_container_id" {
+  value = module.shared.exports_container_id
+}
+
 output "quarantine_container_id" {
   value = module.shared.quarantine_container_id
 }

@@ -34,6 +34,10 @@ output "quarantine_container_id" {
   value = azurerm_storage_container.private["imagenes-cuarentena"].id
 }
 
+output "exports_container_id" {
+  value = azurerm_storage_container.private["exportaciones"].id
+}
+
 output "public_images_account_name" {
   value = azurerm_storage_account.public_images.name
 }

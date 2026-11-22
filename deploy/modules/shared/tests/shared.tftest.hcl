@@ -109,6 +109,16 @@ run "imagenes_publicas_CA_23" {
   }
 
   assert {
+    condition     = azurerm_storage_container.private["exportaciones"].container_access_type == "private"
+    error_message = "`exportaciones` (spec 039, R-22) vive en la cuenta privada y es privado."
+  }
+
+  assert {
+    condition     = contains([for r in azurerm_storage_management_policy.quarantine.rule : r.name], "borrar-exportaciones-de-datos")
+    error_message = "Las exportaciones se borran a los 7 días (spec 039, R-22)."
+  }
+
+  assert {
     condition     = length(azurerm_storage_account.public_images.blob_properties[0].cors_rule) == 0 && length(azurerm_storage_account.files.blob_properties[0].cors_rule) == 0
     error_message = "Ninguna de las dos cuentas lleva reglas de CORS."
   }
