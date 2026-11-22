@@ -6144,6 +6144,362 @@
         }
       }
     },
+    "/api/v{version}/admin/oficios": {
+      "get": {
+        "tags": [
+          "AdminTrades"
+        ],
+        "summary": "Todos los oficios, activos e inactivos, con sus parámetros de precio (OFI-03).",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTradeListResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTradeListResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTradeListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "AdminTrades"
+        ],
+        "summary": "Alta de un oficio (OFI-04): 201 con el oficio creado. La clave repetida responde 409 `trade_key_taken`; un cuerpo ilegible, 400; un valor inválido, 422. Deja la auditoría del panel antes de escribir:\nsin ella responde 503 `panel_audit_unavailable` y no cambia nada.",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTradeBody"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTradeBody"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTradeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTradeResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTradeResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTradeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v{version}/admin/oficios/{clave}": {
+      "put": {
+        "tags": [
+          "AdminTrades"
+        ],
+        "summary": "Edición parcial de un oficio y sus parámetros de precio (OFI-05): 200 con el oficio como quedó. La clave no se puede cambiar: una `clave` distinta de la de la ruta responde 422 `errors.clave`.\nUn oficio que no existe responde 404 `trade_not_found`; la caché de oficios activos se invalida al escribir.",
+        "parameters": [
+          {
+            "name": "clave",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTradeBody"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTradeBody"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTradeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTradeResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTradeResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTradeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v{version}/busqueda": {
       "get": {
         "tags": [
@@ -6705,6 +7061,204 @@
         }
       }
     },
+    "/api/v{version}/oficios/{clave}": {
+      "get": {
+        "tags": [
+          "Oficios"
+        ],
+        "summary": "Detalle de un oficio activo (OFI-02, spec 045). Público, con la misma caché de 24 horas del catálogo (la edición del panel la invalida) y con `ETag` débil para revalidar; un oficio que no existe o\nestá inactivo responde 404 `trade_not_found`, y una clave con formato inválido, 422 `errors.clave`.",
+        "parameters": [
+          {
+            "name": "clave",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradeDetailResponse"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v{version}/oficios-pedidos": {
+      "post": {
+        "tags": [
+          "TradeRequests"
+        ],
+        "summary": "Guarda el oficio escrito en «Otro oficio» (OFP-01): 201 con el registro. Repetir el mismo texto (ignorando acentos, mayúsculas y espacios) devuelve el registro existente. Quien no tiene perfil de técnico\nrecibe 404 sin más datos; un cuerpo ilegible, 400; un texto inválido, 422 `errors.texto`.",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TradeRequestBody"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TradeRequestBody"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TradeRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradeRequestResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradeRequestResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradeRequestResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v{version}/zonas/cp/{cp}": {
       "get": {
         "tags": [
@@ -6913,6 +7467,92 @@
           }
         },
         "description": "Ajuste de precio propuesto (201)."
+      },
+      "AdminTradeListResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminTradeResponse"
+            }
+          }
+        },
+        "description": "Todos los oficios, incluidos los inactivos (OFI-03). El catálogo es acotado, así que no se pagina (decisión D9 de la spec TT-PRU-01)."
+      },
+      "AdminTradeResponse": {
+        "required": [
+          "clave",
+          "nombre",
+          "modalidad",
+          "frasesSugeridas",
+          "topePorcentaje",
+          "topeFijoPorcentaje",
+          "pisoAprobacion",
+          "visitaMaxima",
+          "activo"
+        ],
+        "type": "object",
+        "properties": {
+          "clave": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "modalidad": {
+            "type": "string"
+          },
+          "frasesSugeridas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "topePorcentaje": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "topeFijoPorcentaje": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "pisoAprobacion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "visitaMaxima": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "activo": {
+            "type": "boolean"
+          }
+        },
+        "description": "Un oficio tal como lo ve el panel (spec 045, OFI-03 a OFI-05): con `activo` y los parámetros de precio. Un parámetro es `null` si el oficio se sembró antes de que existieran."
       },
       "AgendaItem": {
         "required": [
@@ -7553,6 +8193,92 @@
           }
         },
         "description": "Cuerpo de `POST /tecnicos/me/servicios` (SRV-02, R-06): ningún identificador de persona se acepta (R-18)."
+      },
+      "CreateTradeBody": {
+        "required": [
+          "clave",
+          "nombre",
+          "modalidad",
+          "frasesSugeridas",
+          "topePorcentaje",
+          "topeFijoPorcentaje",
+          "pisoAprobacion",
+          "visitaMaxima",
+          "activo"
+        ],
+        "type": "object",
+        "properties": {
+          "clave": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nombre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "modalidad": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "frasesSugeridas": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "topePorcentaje": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "topeFijoPorcentaje": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "pisoAprobacion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "visitaMaxima": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "activo": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        },
+        "description": "Cuerpo de `POST /api/v1/admin/oficios` (OFI-04): la clave y los parámetros del oficio nuevo. Todos son obligatorios salvo las frases y `activo` (verdadero por omisión, R-18)."
       },
       "CursorPageOfHistoryEntryResponse": {
         "required": [
@@ -9808,6 +10534,52 @@
           }
         }
       },
+      "TradeDetailResponse": {
+        "required": [
+          "clave",
+          "nombre",
+          "modalidad",
+          "frasesSugeridas"
+        ],
+        "type": "object",
+        "properties": {
+          "clave": {
+            "type": "string",
+            "description": "Clave estable del catálogo."
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre para mostrar."
+          },
+          "modalidad": {
+            "type": "string",
+            "description": "`domicilio`, `taller` o `ambos`: decide si la app pide dirección y código de visita."
+          },
+          "frasesSugeridas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Frases de ejemplo para describir el problema; vacía si el oficio no tiene."
+          }
+        },
+        "description": "Detalle público de un oficio activo (spec 045, OFI-02): lo que la app necesita para pedir cotización. Sin parámetros de precio, `activo` ni identificadores internos."
+      },
+      "TradeRequestBody": {
+        "required": [
+          "texto"
+        ],
+        "type": "object",
+        "properties": {
+          "texto": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Cuerpo de `POST /api/v1/oficios-pedidos` (OFP-01): el texto de «Otro oficio». La persona es siempre la del `sub` del token: el cuerpo no acepta identificadores (R-23)."
+      },
       "TradeRequestGroup": {
         "required": [
           "texto",
@@ -9850,6 +10622,22 @@
           }
         },
         "description": "Una página de oficios pedidos; `NextCursor` falta en la última."
+      },
+      "TradeRequestResponse": {
+        "required": [
+          "id",
+          "texto"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "texto": {
+            "type": "string"
+          }
+        },
+        "description": "Oficio pedido guardado (OFP-01). Repetir el mismo texto devuelve el mismo registro."
       },
       "TrustedTechnician": {
         "required": [
@@ -10050,6 +10838,99 @@
           }
         },
         "description": "Cuerpo de `PUT /tecnicos/me` (spec 046, TEC-08, R-45): solo cambian los campos enviados; un campo ausente o en `null` no cambia.\nRigen las reglas del registro más `nombreNegocio` (hasta 60), `descripcion` (hasta 300) y `anios` (0 a 60). `fotoUrl` solo se acepta\nde un host de subida del servidor (`Tecnicos:HostsFoto`)."
+      },
+      "UpdateTradeBody": {
+        "required": [
+          "clave",
+          "nombre",
+          "modalidad",
+          "frasesSugeridas",
+          "topePorcentaje",
+          "topeFijoPorcentaje",
+          "pisoAprobacion",
+          "visitaMaxima",
+          "activo"
+        ],
+        "type": "object",
+        "properties": {
+          "clave": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nombre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "modalidad": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "frasesSugeridas": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "topePorcentaje": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "topeFijoPorcentaje": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "pisoAprobacion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "visitaMaxima": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "activo": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "changedFields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Nombres (camelCase) de los campos que la edición cambia."
+          }
+        },
+        "description": "Cuerpo de `PUT /api/v1/admin/oficios/{clave}` (OFI-05): edición parcial, solo cambian los campos enviados. `Clave` existe para rechazarla: la clave no se puede cambiar (D-04), así que\nsolo se acepta si es igual a la de la ruta."
       },
       "ValidationProblemDetails": {
         "type": "object",
@@ -10485,6 +11366,9 @@
       "name": "AdminCatalog"
     },
     {
+      "name": "AdminTrades"
+    },
+    {
       "name": "Arrival"
     },
     {
@@ -10549,6 +11433,9 @@
     },
     {
       "name": "Trabajo"
+    },
+    {
+      "name": "TradeRequests"
     },
     {
       "name": "TrustNotice"
