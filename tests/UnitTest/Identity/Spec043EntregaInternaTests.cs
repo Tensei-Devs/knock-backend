@@ -70,9 +70,42 @@ public sealed class Spec043EntregaInternaTests
     {
         using var handler = new StubHandler(HttpStatusCode.Accepted);
         var delivery = Delivery(handler);
-        (await delivery.DeliverAsync(new OutboxReservado("x", "CuentaSuspendida", "market", new BsonDocument(), "r", 0), CancellationToken.None)).Should().Be(ResultadoDeEntrega.Reintentable);
+        (await delivery.DeliverAsync(new OutboxReservado("x", "TecnicoOcultado", "market", new BsonDocument(), "r", 0), CancellationToken.None)).Should().Be(ResultadoDeEntrega.Reintentable);
         (await delivery.DeliverAsync(Event("identity"), CancellationToken.None)).Should().Be(ResultadoDeEntrega.Reintentable);
         handler.Requests.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SuspensionAndReactivationGoToMarketEventsWithTheEventsPermission()
+    {
+        using var handler = new StubHandler(HttpStatusCode.Accepted);
+        var carga = new BsonDocument { ["eventoId"] = "s1", ["usuarioId"] = "u1", ["reporteId"] = "r1", ["desde"] = "2026-11-22T12:00:00.0000000Z" };
+        (await Delivery(handler).DeliverAsync(new OutboxReservado("CuentaSuspendida:u1:1", "CuentaSuspendida", "market", carga, "r", 0), CancellationToken.None)).Should().Be(ResultadoDeEntrega.Aceptado);
+
+        handler.Requests[0].Uri.AbsolutePath.Should().Be("/api/v1/interno/eventos");
+        Claims(handler.Requests[0].Token).Should().Contain(("aud", "knock-market")).And.Contain(("permisos", "eventos"));
+        handler.Requests[0].Body.Should().Contain("\"tipo\":\"CuentaSuspendida\"").And.Contain("\"usuarioId\":\"u1\"");
+    }
+
+    [Fact]
+    public async Task AccountDeletedGoesToMarketBoundToThePerson()
+    {
+        using var handler = new StubHandler(HttpStatusCode.Accepted);
+        await Delivery(handler).DeliverAsync(new OutboxReservado("CuentaEliminada:u 1:1", "CuentaEliminada", "market", new BsonDocument { ["sub"] = "u 1" }, "r", 0), CancellationToken.None);
+
+        handler.Requests[0].Uri.AbsolutePath.Should().Be("/api/v1/interno/cuentas/u%201/eliminada");
+        Claims(handler.Requests[0].Token).Should().Contain(("permisos", "cuenta")).And.Contain(("usuarioId", "u 1"));
+    }
+
+    [Fact]
+    public async Task RevokedSessionGoesToMessagingNoticesWithTheTypeAsPermission()
+    {
+        using var handler = new StubHandler(HttpStatusCode.Accepted);
+        await Delivery(handler).DeliverAsync(new OutboxReservado("sesion_revocada:s1:1", "sesion_revocada", "messaging", new BsonDocument { ["sid"] = "s1" }, "r", 0), CancellationToken.None);
+
+        handler.Requests[0].Uri.AbsolutePath.Should().Be("/api/v1/interno/avisos");
+        Claims(handler.Requests[0].Token).Should().Contain(("aud", "knock-notifications")).And.Contain(("permisos", "sesion_revocada"));
+        handler.Requests[0].Body.Should().Contain("\"sid\":\"s1\"");
     }
 
     [Fact]
