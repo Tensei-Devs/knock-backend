@@ -98,7 +98,6 @@ internal static class ModerationErrorCodes
     public const string InvalidCursorCode = "invalid_review_cursor";
     public const string SelfReviewCode = "self_review_not_allowed";
     public const string PhotosUnavailableCode = "photos_unavailable";
-    public const string CurpDuplicateCode = "curp_duplicate";
 }
 
 /// <summary>Nombres de los eventos de auditoría de esta spec (R-17 y R-22): sin celular, motivo ni datos de la persona.</summary>

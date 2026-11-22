@@ -73,12 +73,16 @@ locals {
         Services__Market__BaseUrl = local.cluster_address.market
         # Host permitido de la foto de perfil (spec 017, R-05): el mismo de las imágenes públicas (spec 032, R-03).
         Perfil__HostsFoto__0 = local.images_host
+        # HMAC de la CURP (spec 025, R-05): la versión vigente no es secreta y la llave sí.
+        Verificacion__CurpHmac__ActiveVersion = "1"
       })
       secret_env = merge(local.redis_secret, {
         ConnectionStrings__KnockMongo                = "mongo-identity"
         Jwt__SigningKey                              = "jwt-signing-key"
         Identity__PhoneProtection__EncryptionKeys__1 = "pii-encryption-key"
         Identity__PhoneProtection__HmacKeys__1       = "pii-hmac-key"
+        # HMAC de la CURP (spec 025): llave propia, distinta de `pii-hmac-key`.
+        Verificacion__CurpHmac__Keys__1 = "curp-hmac-key"
         # Llave propia de Identity, distinta de `field-encryption-key` (Market) y de `pii-encryption-key`.
         Security__FieldEncryption__Keys__1 = "identity-field-encryption-key"
         # Token de servicio de Identidad hacia Mercado (historial de «Mi casa y mi auto», spec 041): Identidad lo firma y Mercado lo valida.
