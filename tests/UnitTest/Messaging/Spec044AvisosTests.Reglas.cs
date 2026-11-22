@@ -59,8 +59,9 @@ public sealed partial class Spec044AvisosTests
         var actions = controllers.SelectMany(c => c.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)).ToList();
 
         actions.Should().NotBeEmpty();
-        actions.Where(m => m.GetCustomAttributes<HttpPutAttribute>().Any() || m.GetCustomAttributes<HttpDeleteAttribute>().Any() || m.GetCustomAttributes<HttpPatchAttribute>().Any())
-            .Should().BeEmpty("el cambio de preferencias lo define la spec 037 y los avisos solo los crea su despachador");
+        actions.Where(m => m.GetCustomAttributes<HttpDeleteAttribute>().Any() || m.GetCustomAttributes<HttpPatchAttribute>().Any())
+            .Should().BeEmpty("los avisos solo los crea su despachador y no se borran desde la bandeja");
+        actions.Where(m => m.GetCustomAttributes<HttpPutAttribute>().Any()).Select(m => m.Name).Should().Equal(["Update"], "el único PUT es el de preferencias (PRE-02) y no crea avisos");
         actions.Where(m => m.GetCustomAttributes<HttpPostAttribute>().Any()).Select(m => m.Name).Should().HaveCount(2).And.Contain("MarkRead").And.Contain("MarkAllRead");
     }
 }
