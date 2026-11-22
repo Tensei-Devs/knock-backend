@@ -112,6 +112,27 @@ public sealed class GatewayRoutingTests : IAsyncLifetime, IDisposable
     }
 
     [Fact]
+    public async Task PutNoticePreferences_IsRoutedToMessagingNotIdentity_PRE_02()
+    {
+        const string path = "/api/v1/me/preferencias-avisos";
+        using var response = await _client!.PutAsync(new Uri(path, UriKind.Relative), content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Headers.GetValues("X-Servicio").Should().ContainSingle().Which.Should().Be("mensajeria");
+        _requestsSeen.Should().ContainSingle().Which.Should().Match<(string Path, string Method, string? Authorization)>(r => r.Path == path && r.Method == "PUT");
+    }
+
+    [Fact]
+    public async Task PutNoticePreferences_WithoutToken_IsNotForwarded_PRE_02()
+    {
+        _client!.DefaultRequestHeaders.Authorization = null;
+        using var response = await _client.PutAsync(new Uri("/api/v1/me/preferencias-avisos", UriKind.Relative), content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        _requestsSeen.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task HubToken_InTheQuery_ReachesTheServiceAsABearerHeaderAndLeavesTheUrl_CA_026_18()
     {
         var token = _client!.DefaultRequestHeaders.Authorization!.Parameter!;
@@ -182,6 +203,7 @@ public sealed class GatewayRoutingTests : IAsyncLifetime, IDisposable
     [InlineData("/api/v1/conversaciones/no-leidas", "mensajeria")]
     [InlineData("/api/v1/conversaciones/507f1f77bcf86cd799439011/mensajes", "mensajeria")]
     [InlineData("/api/v1/dispositivos", "mensajeria")]
+    [InlineData("/api/v1/me/preferencias-avisos", "mensajeria")]
     public async Task Request_IsRoutedToTheRightService_CA_02(string path, string expectedService)
     {
         var response = await _client!.GetAsync(new Uri(path, UriKind.Relative));

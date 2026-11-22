@@ -36,3 +36,9 @@ internal sealed record UnreadCountResponse(int Cantidad, bool MasDe99);
 internal sealed record NoticePreferenceResponse(string Tipo, bool Activo, bool Apagable);
 
 internal sealed record NoticePreferencesResponse(IReadOnlyList<NoticePreferenceResponse> Tipos);
+
+/// <summary>Un interruptor que la persona quiere cambiar en <c>PUT /api/v1/me/preferencias-avisos</c> (PRE-02).</summary>
+internal sealed record NoticePreferenceChange(string? Tipo, bool? Activo);
+
+/// <summary>Cuerpo de <c>PUT /api/v1/me/preferencias-avisos</c> (PRE-02): solo los tipos que cambian. Cualquier otro campo (un identificador de persona, por ejemplo) se ignora (R-15).</summary>
+internal sealed record UpdateNoticePreferencesRequest(IReadOnlyList<NoticePreferenceChange>? Tipos);

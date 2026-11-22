@@ -38,6 +38,8 @@ internal static class NoticeRules
     /// <summary>Los avisos de seguridad siempre llegan y no se pueden apagar (D-06).</summary>
     public static bool CanBeTurnedOff(string type) => !string.Equals(type, SecurityType, StringComparison.Ordinal);
 
+    public static bool IsKnownType(string? type) => type is not null && Types.Contains(type, StringComparer.Ordinal);
+
     /// <summary>Si la persona nunca cambió nada, cada tipo está activo salvo las promociones (R-13, D-06).</summary>
     public static bool DefaultEnabled(string type) => !string.Equals(type, PromotionsType, StringComparison.Ordinal);
 
