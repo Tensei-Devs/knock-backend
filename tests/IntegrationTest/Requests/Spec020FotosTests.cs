@@ -15,7 +15,7 @@ public sealed class Spec020FotosTests
     {
         await using var host = await Spec020Host.StartAsync();
         var otherPerson = Guid.NewGuid().ToString("D");
-        var own = ObjectId.GenerateNewId().ToString();
+        var own = Guid.CreateVersion7().ToString("N");
         var foreign = ObjectId.GenerateNewId().ToString();
         host.Photos.Owners = new Dictionary<string, string> { [own] = host.ClientSub, [foreign] = otherPerson };
         var onlyForeign = host.ValidBody();
@@ -44,7 +44,7 @@ public sealed class Spec020FotosTests
     {
         await using var host = await Spec020Host.StartAsync();
         var otherPerson = Guid.NewGuid().ToString("D");
-        var photo = ObjectId.GenerateNewId().ToString();
+        var photo = Guid.CreateVersion7().ToString("N");
         host.Photos.Owners = new Dictionary<string, string> { [photo] = host.ClientSub };
         var body = host.ValidBody();
         body["fotos"] = new[] { photo };
@@ -60,5 +60,20 @@ public sealed class Spec020FotosTests
         JsonElement.Parse(await asOtherPerson.Content.ReadAsStringAsync()).GetProperty("code").GetString().Should().Be("photo_invalid");
         host.Photos.LastOwnerId.Should().Be(otherPerson);
         (await host.CountRequestsAsync()).Should().Be(1, "solo se guardó la solicitud de la dueña de la foto");
+    }
+
+    [Fact]
+    public async Task Guarda_El_Id_De_Archivo_En_Minuscula_R_04()
+    {
+        await using var host = await Spec020Host.StartAsync();
+        var photo = Guid.CreateVersion7().ToString("N");
+        host.Photos.Owners = new Dictionary<string, string> { [photo] = host.ClientSub };
+        var body = host.ValidBody();
+        body["fotos"] = new[] { photo.ToUpperInvariant() };
+
+        using var response = await host.CreateAsync(body);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        (await Spec020Host.ReadAsync(response)).GetProperty("fotos")[0].GetProperty("id").GetString().Should().Be(photo, "se guarda y se devuelve en la forma canónica");
     }
 }

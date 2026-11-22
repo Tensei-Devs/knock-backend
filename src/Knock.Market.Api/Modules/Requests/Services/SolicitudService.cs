@@ -74,7 +74,7 @@ internal sealed class SolicitudService(
             return new CreateRequestOutcome(CreateRequestStatus.AddressNotApplicable);
         }
 
-        var photoIds = body.Fotos!.Select(id => ObjectId.Parse(id).ToString()).ToList();
+        var photoIds = body.Fotos!.Select(id => PhotoIds.TryParse(id, out var file) ? PhotoIds.Canonical(file) : string.Empty).ToList();
         if (!await photos.AreReadyForAsync(clientId, photoIds, cancellationToken))
         {
             return new CreateRequestOutcome(CreateRequestStatus.PhotoInvalid);

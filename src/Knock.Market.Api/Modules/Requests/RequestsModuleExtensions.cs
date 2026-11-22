@@ -56,8 +56,8 @@ public static class RequestsModuleExtensions
         services.AddScoped<RequestsStore>();
         services.AddScoped<CierreDeSolicitudStore>();
         services.AddScoped<CierreDeSolicitudService>();
-        // Fotos y moderación: hasta que lleguen los servicios reales (spec 013, OI-2) fallan cerrado; las pruebas los sustituyen por dobles.
-        services.TryAddScoped<IRequestPhotos, UnavailableRequestPhotos>();
+        // Fotos: adaptador sobre IMediaApi (spec 032); la moderación falla cerrado hasta que llegue el servicio real (spec 013). Las pruebas los sustituyen por dobles.
+        services.TryAddScoped<IRequestPhotos, MediaRequestPhotos>();
         services.TryAddSingleton<IContentModerator, UnavailableContentModerator>();
         services.AddScoped<SolicitudService>();
         services.AddSingleton<VisitCodeFactory>();

@@ -1,5 +1,6 @@
 using System.Globalization;
 using Knock.Market.Api.Modules.Requests.Data;
+using Knock.Market.Api.Modules.Requests.Domain;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 
@@ -71,7 +72,7 @@ internal sealed class DemoRequestSeeder(DemoRequestStore store, IConfiguration c
         && Text(d, "oficioClave") is "ele" or "mec" or "plo"
         && Text(d, "modalidad") is "domicilio" or "taller"
         && Text(d, "descripcion") is { Length: >= 8 and <= 500 } description && description.StartsWith("Problema ficticio", StringComparison.Ordinal)
-        && d["fotos"] is BsonArray { Count: >= 1 and <= 5 } photos && photos.All(x => x.IsString && ObjectId.TryParse(x.AsString, out _))
+        && d["fotos"] is BsonArray { Count: >= 1 and <= 5 } photos && photos.All(x => x.IsString && PhotoIds.TryParse(x.AsString, out _))
         && Day(d, "dia")
         && Text(d, "franja") is "manana" or "tarde" or "noche"
         && ObjectId.TryParse(Text(d, "coloniaId"), out _)

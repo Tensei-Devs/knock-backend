@@ -20,7 +20,7 @@ public sealed class Spec020ListadoTests
             { "oficioNombre", "Plomería" },
             { "modalidad", "domicilio" },
             { "descripcion", Spec020Host.Description },
-            { "fotos", new BsonArray { ObjectId.GenerateNewId().ToString() } },
+            { "fotos", new BsonArray { Guid.CreateVersion7().ToString("N") } },
             { "dia", Spec020Host.Tomorrow() },
             { "franja", "tarde" },
             { "coloniaId", host.ColoniaId.ToString() },
