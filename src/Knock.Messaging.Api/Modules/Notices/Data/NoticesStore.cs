@@ -21,6 +21,8 @@ internal interface INoticesStore
 
     /// <summary><see langword="false"/> si el aviso no existe o no es de la persona (no se distingue).</summary>
     Task<bool> MarkReadAsync(string userId, string noticeId, CancellationToken cancellationToken);
+
+    Task MarkAllReadAsync(string userId, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -92,6 +94,12 @@ internal sealed class NoticesStore(
         // Ya leído (idempotente, R-12): existe aunque no haya cambiado nada. Con el mismo filtro, ajeno e inexistente no se distinguen.
         return result.MatchedCount > 0;
     }
+
+    public Task MarkAllReadAsync(string userId, CancellationToken cancellationToken) =>
+        Notices.UpdateManyAsync(
+            _filter.And(_filter.Eq(_userField, userId), _filter.Eq(_readField, false)),
+            Builders<BsonDocument>.Update.Set(_readField, true),
+            cancellationToken: cancellationToken);
 
     /// <summary>Índices de la spec 044 (§6). Idempotente; el script <c>db/044-avisos-dentro-de-la-app.js</c> hace lo mismo.</summary>
     public async Task EnsureIndexesAsync(CancellationToken cancellationToken)

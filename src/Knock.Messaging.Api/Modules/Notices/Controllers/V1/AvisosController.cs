@@ -69,5 +69,24 @@ internal sealed class AvisosController(NoticesService notices) : ControllerBase
         return new EmptyResult();
     }
 
+    /// <summary>Marca como leídos todos los avisos de quien llama y solo los suyos.</summary>
+    [HttpPost("leidos")]
+    [EnableRateLimiting(RateLimitingExtensions.NoticesWritePolicy)]
+    [RequestSizeLimit(MaxBodyBytes)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status413PayloadTooLarge)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests)]
+    public async Task<IActionResult> MarkAllRead(CancellationToken cancellationToken)
+    {
+        if (Sub() is not { } sub)
+        {
+            return Unauthorized();
+        }
+
+        await notices.MarkAllReadAsync(sub, cancellationToken);
+        return NoContent();
+    }
+
     private string? Sub() => User.FindFirst("sub")?.Value is { Length: > 0 } sub ? sub : null;
 }
