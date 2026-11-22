@@ -72,7 +72,7 @@ internal sealed class FinishVisitBodyValidator : AbstractValidator<FinishVisitBo
         RuleFor(x => x.Fotos).Cascade(CascadeMode.Stop)
             .NotNull().WithMessage(RequiredReason)
             .Must(photos => photos!.Count is >= VisitCloseRules.MinPhotos and <= VisitCloseRules.MaxPhotos).WithMessage(FormatReason)
-            .Must(photos => photos!.All(id => MongoDB.Bson.ObjectId.TryParse(id, out _))).WithMessage(FormatReason)
+            .Must(photos => photos!.All(id => VisitCloseRules.TryParsePhotoId(id, out _))).WithMessage(FormatReason)
             .Must(photos => photos!.Select(id => id.ToUpperInvariant()).Distinct(StringComparer.Ordinal).Count() == photos!.Count).WithMessage(FormatReason);
     }
 }
