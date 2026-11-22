@@ -217,8 +217,11 @@ public sealed class Spec043BloqueosTests
         created.StatusCode.Should().Be(HttpStatusCode.Created);
         repeated.StatusCode.Should().Be(HttpStatusCode.Conflict);
         removed.StatusCode.Should().Be(HttpStatusCode.NoContent);
-        scenario.Events.Published.Should().HaveCount(2, "el segundo bloqueo fue 409 y no emite nada");
-        scenario.Events.Published[0].Should().BeOfType<BlockCreated>().Which.Should().Match<BlockCreated>(e => e.BlockerId == scenario.Caller && e.BlockedId == target);
-        scenario.Events.Published[1].Should().BeOfType<BlockRemoved>().Which.Should().Match<BlockRemoved>(e => e.BlockerId == scenario.Caller && e.BlockedId == target);
+        var events = await scenario.Outbox.Find(Builders<BsonDocument>.Filter.In("tipo", new[] { BlockCreated.EventType, BlockRemoved.EventType })).ToListAsync();
+        events.Should().HaveCount(4, "un evento por servicio destino y por cada bloqueo y desbloqueo; el segundo bloqueo fue 409 y no emite nada");
+        events.Select(e => e["destino"].AsString).Should().BeEquivalentTo("market", "market", "messaging", "messaging");
+        events.Where(e => e["tipo"] == BlockCreated.EventType).Should().HaveCount(2);
+        events.Should().OnlyContain(e => e["carga"]["bloqueaId"] == scenario.Caller && e["carga"]["bloqueadoId"] == target);
+        events.SelectMany(e => e["carga"].AsBsonDocument.Names).Distinct().Should().BeEquivalentTo("eventoId", "bloqueaId", "bloqueadoId", "ocurridoEn");
     }
 }
