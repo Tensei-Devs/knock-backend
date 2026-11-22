@@ -48,12 +48,12 @@ internal sealed class DeviceStore(IMongoDatabase database, TokenProtection prote
                     }
                 }
             }
-            catch (MongoCommandException exception) when (exception.Code == 112 && attempt < 5)
+            catch (MongoCommandException exception) when (IsWriteConflict(exception) && attempt < 5)
             {
                 await Task.Delay(WriteConflictBackoff(attempt), cancellationToken);
                 continue;
             }
-            catch (MongoCommandException exception) when (exception.Code == 112)
+            catch (MongoCommandException exception) when (IsWriteConflict(exception))
             {
                 throw new InvalidOperationException("Device registration is temporarily unavailable.");
             }
@@ -66,6 +66,10 @@ internal sealed class DeviceStore(IMongoDatabase database, TokenProtection prote
 
         throw new InvalidOperationException("Device registration retries exhausted.");
     }
+
+    /// <summary>WriteConflict (112) o, en DocumentDB, el bloqueo mutuo entre inserciones concurrentes del mismo identificador.</summary>
+    private static bool IsWriteConflict(MongoCommandException exception) =>
+        exception.Code == 112 || exception.Message.Contains("deadlock", StringComparison.OrdinalIgnoreCase);
 
     private static TimeSpan WriteConflictBackoff(int attempt) => TimeSpan.FromMilliseconds(50 * (attempt + 1));
 
