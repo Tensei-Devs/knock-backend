@@ -40,6 +40,36 @@ internal sealed class MongoMediaFileStore(
         }
     }
 
+    public async Task<PendingAddResult> AddPendingWithinLimitAsync(MediaFile file, int limit, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+        var document = ToDocument(file);
+        try
+        {
+            await Files.InsertOneAsync(document, cancellationToken: cancellationToken);
+        }
+        catch (MongoWriteException ex) when (IsDuplicateKey(ex))
+        {
+            throw new InvalidOperationException("A media file with the same id already exists.", ex);
+        }
+
+        var f = Builders<BsonDocument>.Filter;
+        var valid = f.Eq("propietarioId", file.OwnerId) & f.Eq("estado", "pendiente") & f.Gt("confirmarAntesDe", now.UtcDateTime);
+        var count = await Files.CountDocumentsAsync(valid, new CountOptions { MaxTime = options.Value.QueryMaxTime }, cancellationToken);
+        if (count <= limit)
+        {
+            return new PendingAddResult(true, null);
+        }
+
+        // Exceeded: withdraw only the document inserted here, and only while it is still pending (R-10).
+        await Files.DeleteOneAsync(f.Eq("_id", document["_id"]) & f.Eq("estado", "pendiente"), cancellationToken);
+        var oldest = await Files.Find(valid, new FindOptions { MaxTime = options.Value.QueryMaxTime })
+            .Sort(Builders<BsonDocument>.Sort.Ascending("confirmarAntesDe"))
+            .Limit(1)
+            .FirstOrDefaultAsync(cancellationToken);
+        return new PendingAddResult(false, oldest is null ? null : new DateTimeOffset(oldest["confirmarAntesDe"].ToUniversalTime(), TimeSpan.Zero));
+    }
+
     public async Task<StoredMediaFile?> FindAsync(Guid id, CancellationToken cancellationToken)
     {
         var document = await Files.Find(Builders<BsonDocument>.Filter.Eq("archivoId", FileId(id)), new FindOptions { MaxTime = options.Value.QueryMaxTime })

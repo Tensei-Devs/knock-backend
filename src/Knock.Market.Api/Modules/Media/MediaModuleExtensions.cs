@@ -34,6 +34,7 @@ public static class MediaModuleExtensions
         services.AddSingleton<IMediaFileStore, MongoMediaFileStore>();
         services.AddSingleton<IMediaBlobStore, AzureMediaBlobStore>();
         services.AddSingleton<ImageProcessor>();
+        services.AddSingleton<MediaMetrics>();
         services.AddSingleton<MediaService>();
         services.AddSingleton<IMediaApi, MediaApi>();
         return services;
