@@ -1,7 +1,9 @@
 using Knock.Contracts.Conversations;
+using Knock.Contracts.Moderation;
 using Knock.Messaging.Api.Modules.Chat.Options;
 using Knock.Messaging.Api.Modules.Conversaciones.Data;
 using Knock.Messaging.Api.Modules.Conversaciones.Services;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
 namespace Knock.Messaging.Api.Modules.Conversaciones;
@@ -30,6 +32,10 @@ public static class ConversacionesModuleExtensions
         services.AddSingleton<IValidateOptions<ConversacionesOptions>, ConversacionesOptionsValidator>();
         services.AddSingleton<ConversacionesStore>();
         services.AddSingleton<MensajesStore>();
+        services.AddSingleton<IMensajesStore>(provider => provider.GetRequiredService<MensajesStore>());
+        services.TryAddSingleton<IContentModerator, ModeradorNoDisponible>();
+        services.AddScoped<EnvioDeMensajeService>();
+        services.AddScoped<AccesoAConversacionService>();
         services.AddSingleton<INotificadorEnVivo, NotificadorEnVivo>();
         services.AddScoped<ConversacionService>();
         services.AddScoped<LecturaService>();

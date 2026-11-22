@@ -76,6 +76,8 @@ internal sealed class RecordingNotificador : INotificadorEnVivo
         }
     }
 
+    public Task NewMessageAsync(string conversationId, MessagingApi::Knock.Messaging.Api.Modules.Conversaciones.Dtos.MensajeResponse message, CancellationToken cancellationToken) => Task.CompletedTask;
+
     public Task UnreadChangedAsync(string subject, string conversationId, int unread, int total, CancellationToken cancellationToken)
     {
         lock (_events)

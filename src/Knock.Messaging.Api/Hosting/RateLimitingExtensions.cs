@@ -35,6 +35,11 @@ internal static class RateLimitingExtensions
     /// <summary>Crear conversaciones: 20 por hora por persona (spec 030, R-05), además del límite general por IP. Contador compartido en Redis.</summary>
     public const string CreateConversationPolicy = "conversaciones-crear";
 
+    /// <summary>Enviar mensajes: 30 por minuto por persona (spec 030, R-11 y CA-05), con contador compartido en Redis entre copias.</summary>
+    public const string SendMessagePolicy = "conversaciones-mensajes";
+
+    private const int _messagesPerMinute = 30;
+    private const string _messageLimitCode = "message_limit";
     private const string _healthPath = "/health";
     private const string _readyPath = "/health/ready";
     private const string _unknownClient = "unknown";
@@ -60,6 +65,7 @@ internal static class RateLimitingExtensions
             var ready = settings.Value.Ready;
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
             options.AddPolicy(CreateConversationPolicy, SubjectPolicy(CreateConversationPolicy, 20, TimeSpan.FromHours(1), provider));
+            options.AddPolicy(SendMessagePolicy, SubjectPolicy(SendMessagePolicy, _messagesPerMinute, TimeSpan.FromMinutes(1), provider));
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context => Partition(context, global, ready));
             options.OnRejected = async (context, _) =>
             {
@@ -68,11 +74,17 @@ internal static class RateLimitingExtensions
                 var seconds = Math.Max(1, (int)Math.Ceiling(retryAfter.TotalSeconds));
                 context.HttpContext.Response.Headers.RetryAfter = seconds.ToString(CultureInfo.InvariantCulture);
                 // Cuerpo uniforme: sin IP, clave de partición, límite ni contador.
-                await ProblemResponses.WriteAsync(context.HttpContext, StatusCodes.Status429TooManyRequests, "Too Many Requests", ErrorCodes.RateLimitedCode);
+                await ProblemResponses.WriteAsync(context.HttpContext, StatusCodes.Status429TooManyRequests, "Too Many Requests", CodeFor(context.HttpContext));
             };
         });
         return services;
     }
+
+    /// <summary>El límite de enviar mensajes tiene su propio <c>code</c> (<c>message_limit</c>, spec 030, R-11); los demás, el genérico.</summary>
+    private static string CodeFor(HttpContext context) =>
+        context.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName == SendMessagePolicy
+            ? _messageLimitCode
+            : ErrorCodes.RateLimitedCode;
 
     /// <summary>Política por <c>sub</c> del token con contador compartido; sin <c>sub</c> no limita (la autenticación ya respondió 401).</summary>
     private static Func<HttpContext, RateLimitPartition<string>> SubjectPolicy(string name, int permitLimit, TimeSpan window, IServiceProvider services) =>
