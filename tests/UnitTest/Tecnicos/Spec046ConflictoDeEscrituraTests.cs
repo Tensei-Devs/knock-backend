@@ -60,10 +60,21 @@ public sealed class Spec046ConflictoDeEscrituraTests
     {
         var act = () => TechnicianProfileStore.InsertOnceAsync(
             () => throw MongoConflictErrors.Command(13),
-            () => Task.FromResult(true),
+            () => Task.FromResult(false),
             _ => Task.CompletedTask);
 
         await act.Should().ThrowAsync<MongoCommandException>();
+    }
+
+    [Fact]
+    public async Task InsertOnce_UnknownServerErrorWithExistingProfile_ReportsAlreadyExisted_CA_046_69()
+    {
+        var inserted = await TechnicianProfileStore.InsertOnceAsync(
+            () => throw MongoConflictErrors.Command(13),
+            () => Task.FromResult(true),
+            _ => Task.CompletedTask);
+
+        inserted.Should().BeFalse();
     }
 
     [Fact]
@@ -113,7 +124,7 @@ public sealed class Spec046ConflictoDeEscrituraTests
 
         var act = () => TechnicianProfileStore.InsertOnceAsync(
             () => { calls++; throw MongoConflictErrors.Command(MongoConflictErrors.LockError, "Some other lock failure"); },
-            () => Task.FromResult(true),
+            () => Task.FromResult(false),
             _ => Task.CompletedTask);
 
         await act.Should().ThrowAsync<MongoCommandException>();
