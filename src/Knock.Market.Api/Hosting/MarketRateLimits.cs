@@ -24,6 +24,18 @@ internal static class MarketRateLimits
     /// <summary>Rutas de administración del panel (spec 045): 60 por minuto por IP; el token del panel no pasa por el esquema de la app, así que el sub aún no está disponible en el limitador.</summary>
     public const string AdminPolicy = "admin-catalogo";
 
+    /// <summary>Agenda del técnico: 60 por minuto por persona (spec 050, VIS-02).</summary>
+    public const string AgendaPolicy = "agenda-tecnico";
+
+    /// <summary>Reprogramar, responder, cancelar y cliente ausente: 20 por minuto por persona (spec 050).</summary>
+    public const string VisitChangePolicy = "visitas-cambios";
+
+    /// <summary>Cotización final y ajustes de precio (spec 049, §5).</summary>
+    public const string FinalQuotePolicy = "visitas-cotizacion-final";
+    public const string FinalQuoteDecisionPolicy = "visitas-cotizacion-final-decision";
+    public const string PriceAdjustmentPolicy = "cotizaciones-ajuste-precio";
+    public const string AdjustmentDecisionPolicy = "ajustes-decision";
+
     /// <summary>Registro como técnico: 5 por hora por persona (spec 046, R-52).</summary>
     public const string RegisterTechnicianPolicy = "tecnicos-registro";
 
@@ -45,6 +57,12 @@ internal static class MarketRateLimits
                 .PerSubject(TrustPolicy, 30, TimeSpan.FromMinutes(1))
                 .PerSubject(ServicesPolicy, 30, TimeSpan.FromMinutes(1))
                 .PerClient(AdminPolicy, AdminPolicy, 60, TimeSpan.FromMinutes(1))
+                .PerSubject(AgendaPolicy, 60, TimeSpan.FromMinutes(1))
+                .PerSubject(VisitChangePolicy, 20, TimeSpan.FromMinutes(1))
+                .PerSubject(FinalQuotePolicy, 10, TimeSpan.FromMinutes(1))
+                .PerSubject(FinalQuoteDecisionPolicy, 20, TimeSpan.FromMinutes(1))
+                .PerSubject(PriceAdjustmentPolicy, 10, TimeSpan.FromMinutes(1))
+                .PerSubject(AdjustmentDecisionPolicy, 20, TimeSpan.FromMinutes(1))
                 .PerSubject(RegisterTechnicianPolicy, 5, TimeSpan.FromHours(1)),
         });
 }
