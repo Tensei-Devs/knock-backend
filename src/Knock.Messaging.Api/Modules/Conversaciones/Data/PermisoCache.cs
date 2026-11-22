@@ -1,12 +1,14 @@
 using System.Text.Json;
-using Knock.Messaging.Api.Modules.Conversaciones.Domain;
 using StackExchange.Redis;
 
 namespace Knock.Messaging.Api.Modules.Conversaciones.Data;
 
+/// <summary>Lo único del permiso que se guarda en Redis (spec 030, R-09): nunca texto de mensajes.</summary>
+internal sealed record PermisoVigente(bool Abierta, string? MotivoCierre, bool Elegido, string? VisitaId);
+
 /// <summary>
-/// El permiso vigente de una conversación en Redis durante 60 segundos (spec 030, R-09): <c>conv:permiso:{conversacionId}</c> con solo <c>abierta</c>, <c>motivoCierre</c>, <c>elegido</c> y
-/// <c>visitaId</c>; nunca texto de mensajes. Un fallo de Redis no sale como excepción: se trata como «no hay permiso en caché» y el servicio pregunta a Mercado.
+/// El permiso vigente de una conversación en Redis durante 60 segundos (spec 030, R-09): <c>conv:permiso:{conversacionId}</c>. Un fallo de Redis no sale como excepción: se trata como «no hay
+/// permiso en caché» y quien llama falla cerrado.
 /// </summary>
 internal sealed class PermisoCache(IConnectionMultiplexer redis)
 {

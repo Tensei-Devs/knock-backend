@@ -85,6 +85,14 @@
 
 `EnviarMensaje` del hub `/hubs/chat` limita a **30 mensajes por minuto por persona** (`Chat:MensajesPorMinuto`, de 1 a 600), con una ventana fija de 60 segundos y un contador compartido en Redis (`chat:limite:{sub}`) que se incrementa y vence en una sola operación atómica, así que dos copias del servicio comparten el total. Al pasarse, la invocación responde `{ ok: false, codigo: "message_limit", reintentarEnSegundos }` y el mensaje no se retransmite. El saludo del hub (`POST /hubs/chat/negotiate`) y sus reintentos son peticiones HTTP y siguen los límites generales del gateway y del servicio. Si Redis no responde, el saludo responde 503 y no se acepta la conexión.
 
+## Crear conversaciones en Mensajería (spec 030, KNOCK-73)
+
+`POST /api/v1/conversaciones` tiene una política propia, `conversaciones-crear`: **20 por hora por persona** (el `sub` del token), con ventana fija de 1 hora y contador compartido en Redis (`ratelimit:messaging:{hash}`, el mismo `SharedRateLimiter` que usa el resto de Mensajería, así que dos copias del servicio comparten el total y la llave nunca lleva el `sub` en claro). La petición 21 de la hora responde `429` `rate_limited` con `Retry-After` y no llega a consultar a Mercado. Cuenta todo intento, también la repetición de una conversación que ya existe, porque la idempotencia no exime del límite. Si Redis no responde, la copia usa su propio contador en memoria (más laxo, nunca sin límite). Las demás rutas de conversaciones solo siguen la política global por IP. El límite de 30 mensajes por minuto del envío llega con T-06.
+
+## Enviar mensajes de una conversación en Mensajería (spec 030, KNOCK-73)
+
+`POST /api/v1/conversaciones/{id}/mensajes` tiene su propia política, `conversaciones-mensajes`: **30 por minuto por persona** (el `sub` del token), con ventana fija de 1 minuto y el mismo contador compartido en Redis (`ratelimit:messaging:{hash}`) que usa el resto de Mensajería, así que dos copias del servicio comparten el total. La petición 31 responde 429 con `Retry-After` y `code` `message_limit`. Se cobra antes de validar el texto, así que un texto inválido también cuenta; no comparte el contador `chat:limite:{sub}` del chat de visita.
+
 ## Gateway (spec 009, KNOCK-204)
 
 El gateway limita con contadores de ventana fija en Redis (`ratelimit:ip:*`, `ratelimit:auth:*`, `ratelimit:user:*`, `ratelimit:busqueda:*`), compartidos entre réplicas, a diferencia del limitador en memoria de los servicios.

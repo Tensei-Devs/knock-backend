@@ -9,4 +9,10 @@ internal static class ErrorCodes
     public const string UnauthorizedCode = "unauthorized";
     public const string ValidationFailedCode = "validation_failed";
     public const string RateLimitedCode = "rate_limited";
+
+    /// <summary>Más de 30 mensajes en un minuto por persona (spec 030, R-11); lo escribe el limitador.</summary>
+    public const string MessageLimitCode = "message_limit";
+
+    /// <summary>Mercado no respondió y no hay permiso en caché (spec 030, R-09): nunca se asume que la conversación está abierta.</summary>
+    public const string MarketUnavailableCode = "market_unavailable";
 }

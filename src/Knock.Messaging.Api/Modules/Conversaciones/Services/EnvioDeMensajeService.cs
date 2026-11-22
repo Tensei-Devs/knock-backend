@@ -1,5 +1,6 @@
 using Knock.Contracts.Conversations;
 using Knock.Contracts.Moderation;
+using Knock.Messaging.Api.Common.Errors;
 using Knock.Messaging.Api.Modules.Conversaciones.Data;
 using Knock.Messaging.Api.Modules.Conversaciones.Domain;
 using Knock.Messaging.Api.Modules.Conversaciones.Dtos;
@@ -7,91 +8,91 @@ using Knock.Messaging.Api.Modules.Conversaciones.Dtos;
 namespace Knock.Messaging.Api.Modules.Conversaciones.Services;
 
 /// <summary>
-/// Enviar un mensaje a una conversación (spec 030, R-08 a R-14), en este orden: participante, permiso vigente (caché de 60 s o Mercado), conversación abierta, ocultamiento de contacto,
-/// moderación que falla cerrada, guardado transaccional y entrega en vivo. El texto ya llega validado (R-10) y el límite de 30 por minuto lo cobra el limitador antes de llegar aquí (R-11).
-/// Nunca registra el texto, el original ocultado, el <c>sub</c> ni identificadores: solo códigos.
+/// Enviar un mensaje a una conversación (spec 030, R-08 a R-14), en este orden: participante, permiso vigente (Mercado o, si no contesta, la caché de 60 s), conversación abierta, ocultamiento
+/// de contacto, moderación que falla cerrada, guardado transaccional y entrega en vivo. El texto ya llega validado (R-10) y el límite de 30 por minuto lo cobra el limitador antes de llegar
+/// aquí (R-11). Nunca registra el texto, el original ocultado, el <c>sub</c> ni identificadores.
 /// </summary>
 internal sealed class EnvioDeMensajeService(
-    IMensajesStore store,
-    IPermisoDeConversacion permisos,
-    PermisoCache cache,
+    ConversacionesStore conversations,
+    MensajesStore messages,
+    IPermisoDeConversacion permissions,
     IContentModerator moderator,
-    INotificadorEnVivo vivo,
-    TimeProvider clock,
-    ILogger<EnvioDeMensajeService> logger)
+    INotificadorEnVivo live,
+    TimeProvider clock)
 {
-    private static readonly Action<ILogger, Exception?> _liveDeliveryFailed = LoggerMessage.Define(LogLevel.Warning, new EventId(301, "ConversationLiveDeliveryFailed"), "Live delivery of a saved message failed; the mailbox event remains.");
+    public const string ContentRejectedCode = "content_rejected";
+    public const string ModerationUnavailableCode = "moderation_unavailable";
 
-    public async Task<MensajeResponse> EnviarAsync(string sub, string bearerToken, string conversacionId, string texto, CancellationToken cancellationToken)
+    public async Task<MensajeView> SendAsync(string subject, string bearerToken, string conversationId, string text, CancellationToken cancellationToken)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(sub);
+        ArgumentException.ThrowIfNullOrWhiteSpace(subject);
         ArgumentException.ThrowIfNullOrWhiteSpace(bearerToken);
-        ArgumentNullException.ThrowIfNull(texto);
+        ArgumentNullException.ThrowIfNull(text);
 
-        var conversation = await store.ObtenerAsync(conversacionId, cancellationToken);
-        var role = conversation?.RolDe(sub);
-        if (conversation is null || role is null)
-        {
-            throw NotFound();
-        }
-
-        var permission = await PermisoAsync(conversation, role, bearerToken, cancellationToken);
+        var id = ConversacionErrors.ParseId(conversationId);
+        var conversation = await conversations.FindForParticipantAsync(id, subject, cancellationToken) ?? throw ConversacionErrors.NotFound();
+        var role = conversation.RoleOf(subject) ?? throw ConversacionErrors.NotFound();
+        var permission = await PermissionAsync(conversation, role, subject, bearerToken, cancellationToken);
         if (!permission.Abierta)
         {
             throw new DomainException(
                 DomainErrorKind.Conflict,
                 "The conversation is closed.",
-                CodigosDeConversacion.ConversationClosedCode,
+                ConversacionErrors.ConversationClosedCode,
                 permission.MotivoCierre is null ? null : new Dictionary<string, string> { ["motivoCierre"] = permission.MotivoCierre });
         }
 
-        var hidden = permission.Elegido ? new TextoOculto(texto, false) : OcultadorDeContacto.Ocultar(texto);
-        await ModerarAsync(hidden.Texto, cancellationToken);
+        var hidden = permission.Elegido ? new TextoOculto(text, false) : OcultadorDeContacto.Ocultar(text);
+        await ModerateAsync(hidden.Texto, cancellationToken);
 
         var now = clock.GetUtcNow();
-        var message = new NuevoMensaje(conversacionId, Guid.CreateVersion7(now).ToString("D"), role, sub, hidden.Texto, hidden.Oculto, now.UtcDateTime);
-        var saved = await store.GuardarAsync(message, cancellationToken);
-        var response = new MensajeResponse(message.MensajeId, role, hidden.Texto, hidden.Oculto, now);
-        await EntregarAsync(conversacionId, response, saved, cancellationToken);
-        return response;
+        var message = new NuevoMensaje(id, Guid.CreateVersion7(now).ToString("D"), role, subject, hidden.Texto, hidden.Oculto, now.UtcDateTime);
+        var saved = await messages.SaveAsync(message, cancellationToken);
+        var view = new MensajeView(message.MensajeId, role, hidden.Texto, hidden.Oculto, message.CreadoEnUtc);
+        await live.MessageAddedAsync(conversationId, view, cancellationToken);
+        await live.UnreadChangedAsync(saved.DestinatarioUsuarioId, conversationId, saved.NoLeidos, saved.TotalNoLeidos, cancellationToken);
+        return view;
     }
 
-    private static DomainException NotFound() => new(DomainErrorKind.NotFound, "Conversation not found.", CodigosDeConversacion.NotFoundCode);
-
-    private async Task<PermisoVigente> PermisoAsync(ConversacionParaEnvio conversation, string role, string bearerToken, CancellationToken cancellationToken)
+    private async Task<PermisoConversacion> PermissionAsync(StoredConversation conversation, string role, string subject, string bearerToken, CancellationToken cancellationToken)
     {
-        if (await cache.GetAsync(conversation.Id) is { } cached)
-        {
-            return cached;
-        }
-
         // El técnico no manda tecnicoId: Mercado lo resuelve por su sub (R-02).
-        var asked = await permisos.ConsultarAsync(
+        var answer = await permissions.ConsultarAsync(
             conversation.SolicitudId,
-            string.Equals(role, ReglasDeMensaje.RolCliente, StringComparison.Ordinal) ? conversation.TecnicoId : null,
+            role == ConversacionRoles.Cliente ? conversation.TecnicoId : null,
+            conversation.Id.ToString(),
+            subject,
             bearerToken,
             cancellationToken);
-        switch (asked)
+        switch (answer)
         {
-            case { Estado: EstadoConsultaPermiso.Concedido, Permiso: { } granted }:
-                var current = new PermisoVigente(granted.Abierta, granted.MotivoCierre, granted.Elegido, granted.VisitaId);
-                await store.GuardarPermisoAsync(conversation.Id, current, clock.GetUtcNow().UtcDateTime, cancellationToken);
-                await cache.SetAsync(conversation.Id, current);
-                return current;
-            case { Estado: EstadoConsultaPermiso.Denegado }:
-                throw NotFound();
+            case { Estado: EstadoPermisoConversacion.Concedido, Permiso: { } granted }:
+                if (Differs(conversation, granted))
+                {
+                    await conversations.RefreshPermissionAsync(conversation.Id, granted, clock.GetUtcNow().UtcDateTime, cancellationToken);
+                }
+
+                return granted;
+            case { Estado: EstadoPermisoConversacion.NoEncontrado }:
+                throw ConversacionErrors.NotFound();
             default:
-                throw new DomainException(DomainErrorKind.ServiceUnavailable, "Market did not answer.", CodigosDeConversacion.MarketUnavailableCode);
+                throw new DomainException(DomainErrorKind.ServiceUnavailable, "The market service did not answer.", ErrorCodes.MarketUnavailableCode);
         }
     }
 
+    private static bool Differs(StoredConversation stored, PermisoConversacion permission) =>
+        stored.Estado != (permission.Abierta ? ConversacionEstados.Abierta : ConversacionEstados.Cerrada)
+        || stored.MotivoCierre != permission.MotivoCierre
+        || stored.Elegido != permission.Elegido
+        || stored.VisitaId != permission.VisitaId;
+
     /// <summary>La moderación falla cerrada (constitución §2.13): rechazo es 422 y cualquier otra cosa que no sea «permitido» (incluida una excepción del moderador) es 503.</summary>
-    private async Task ModerarAsync(string texto, CancellationToken cancellationToken)
+    private async Task ModerateAsync(string text, CancellationToken cancellationToken)
     {
         ModerationResult result;
         try
         {
-            result = await moderator.ReviewTextAsync(texto, cancellationToken);
+            result = await moderator.ReviewTextAsync(text, cancellationToken);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -103,23 +104,9 @@ internal sealed class EnvioDeMensajeService(
             case ModerationOutcome.Allowed:
                 return;
             case ModerationOutcome.Rejected:
-                throw new DomainException(DomainErrorKind.Unprocessable, "The message was rejected by moderation.", CodigosDeConversacion.ContentRejectedCode);
+                throw new DomainException(DomainErrorKind.Unprocessable, "The message was rejected by moderation.", ContentRejectedCode);
             default:
-                throw new DomainException(DomainErrorKind.ServiceUnavailable, "Moderation is not available.", CodigosDeConversacion.ModerationUnavailableCode);
-        }
-    }
-
-    /// <summary>Después de confirmar: el mensaje al grupo de la conversación y el contador a la otra parte. Si falla, el mensaje ya está guardado y el buzón avisará; no se pierde ni se reintenta el guardado.</summary>
-    private async Task EntregarAsync(string conversacionId, MensajeResponse response, MensajeGuardado saved, CancellationToken cancellationToken)
-    {
-        try
-        {
-            await vivo.MensajeNuevoAsync(conversacionId, response, cancellationToken);
-            await vivo.NoLeidosAsync(saved.DestinatarioUsuarioId, new NoLeidosEvento(conversacionId, saved.NoLeidos, saved.TotalNoLeidos), cancellationToken);
-        }
-        catch (Exception exception) when (exception is not OperationCanceledException)
-        {
-            _liveDeliveryFailed(logger, null);
+                throw new DomainException(DomainErrorKind.ServiceUnavailable, "Moderation is not available.", ModerationUnavailableCode);
         }
     }
 }

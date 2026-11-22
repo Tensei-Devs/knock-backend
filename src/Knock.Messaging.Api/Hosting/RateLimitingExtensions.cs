@@ -82,7 +82,7 @@ internal static class RateLimitingExtensions
     /// <summary>El límite de enviar mensajes tiene su propio <c>code</c> (<c>message_limit</c>, spec 030, R-11); los demás, el genérico.</summary>
     private static string CodeFor(HttpContext context) =>
         context.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName == SendMessagePolicy
-            ? CodigosDeConversacion.MessageLimitCode
+            ? ErrorCodes.MessageLimitCode
             : ErrorCodes.RateLimitedCode;
 
     /// <summary>Política por <c>sub</c> del token con contador compartido; sin <c>sub</c> no limita (la autenticación ya respondió 401).</summary>

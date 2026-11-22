@@ -4,37 +4,57 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace Knock.Messaging.Api.Modules.Conversaciones.Services;
 
+/// <summary>Cuerpo del evento <c>noLeidos</c> (spec 030, §5): el contador de la conversación y el total de la persona. Sin texto, nombres ni <c>sub</c>.</summary>
+internal sealed record NoLeidosEvent(string ConversacionId, int NoLeidos, int Total);
+
 /// <summary>Cuerpo del evento <c>mensajeConversacion</c> (spec 030, §5): el mensaje con su conversación, sin <c>sub</c> ni nombre de quien lo escribió.</summary>
-internal sealed record MensajeConversacionEvento(string ConversacionId, string MensajeId, string AutorRol, string Texto, bool ContactoOculto, DateTimeOffset EnviadoEn);
+internal sealed record MensajeConversacionEvent(string ConversacionId, string MensajeId, string AutorRol, string Texto, bool ContactoOculto, DateTime EnviadoEn);
 
-/// <summary>Cuerpo del evento <c>noLeidos</c>: el contador de la conversación y el total de la persona.</summary>
-internal sealed record NoLeidosEvento(string ConversacionId, int NoLeidos, int Total);
-
-/// <summary>Entrega en vivo por el hub de la spec 026 (spec 030, R-14). Solo entrega: lo que se publica ya está guardado.</summary>
+/// <summary>Entrega en vivo a quien está conectado por el hub de la spec 026 (R-14 y R-19). Siempre después de confirmar el cambio; si falla, el cambio guardado no se pierde.</summary>
 internal interface INotificadorEnVivo
 {
-    Task MensajeNuevoAsync(string conversacionId, MensajeResponse mensaje, CancellationToken cancellationToken);
+    /// <summary>Entrega el mensaje recién guardado al grupo <c>conversacion:{id}</c> (R-14).</summary>
+    Task MessageAddedAsync(string conversationId, MensajeView message, CancellationToken cancellationToken);
 
-    Task NoLeidosAsync(string destinatarioUsuarioId, NoLeidosEvento evento, CancellationToken cancellationToken);
+    /// <summary>Avisa a todos los dispositivos conectados de <paramref name="subject"/> que cambió el contador de una conversación.</summary>
+    Task UnreadChangedAsync(string subject, string conversationId, int unread, int total, CancellationToken cancellationToken);
 }
 
-/// <summary>Publica por <see cref="IHubContext{THub}"/> a los grupos <c>conversacion:{id}</c> y <c>usuario:{sub}</c>.</summary>
+/// <summary>
+/// Publica <c>noLeidos</c> al grupo <c>usuario:{sub}</c> del hub (R-15). Es un aviso de mejor esfuerzo: el contador ya quedó guardado y la app lo lee con <c>GET /conversaciones/no-leidas</c>,
+/// así que un fallo del puente de Redis no convierte en error una lectura que ya se guardó.
+/// </summary>
 internal sealed class NotificadorEnVivo(IHubContext<ChatHub> hub) : INotificadorEnVivo
 {
-    public const string MensajeEvent = "mensajeConversacion";
-    public const string NoLeidosEvent = "noLeidos";
+    public const string UserGroupPrefix = "usuario:";
+    public const string UnreadEvent = "noLeidos";
+    public const string ConversationGroupPrefix = "conversacion:";
+    public const string MessageEvent = "mensajeConversacion";
 
-    public static string ConversationGroup(string conversacionId) => $"conversacion:{conversacionId}";
-
-    public static string UserGroup(string sub) => $"usuario:{sub}";
-
-    public Task MensajeNuevoAsync(string conversacionId, MensajeResponse mensaje, CancellationToken cancellationToken)
+    public async Task MessageAddedAsync(string conversationId, MensajeView message, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(mensaje);
-        var evento = new MensajeConversacionEvento(conversacionId, mensaje.MensajeId, mensaje.AutorRol, mensaje.Texto, mensaje.ContactoOculto, mensaje.EnviadoEn);
-        return hub.Clients.Group(ConversationGroup(conversacionId)).SendAsync(MensajeEvent, evento, cancellationToken);
+        ArgumentNullException.ThrowIfNull(message);
+        try
+        {
+            await hub.Clients.Group(ConversationGroupPrefix + conversationId)
+                .SendAsync(MessageEvent, new MensajeConversacionEvent(conversationId, message.MensajeId, message.AutorRol, message.Texto, message.ContactoOculto, message.EnviadoEn), cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // Aviso de mejor esfuerzo: el mensaje ya está guardado y el buzón avisará. Sin registrar la excepción, que puede traer el grupo.
+        }
     }
 
-    public Task NoLeidosAsync(string destinatarioUsuarioId, NoLeidosEvento evento, CancellationToken cancellationToken) =>
-        hub.Clients.Group(UserGroup(destinatarioUsuarioId)).SendAsync(NoLeidosEvent, evento, cancellationToken);
+    public async Task UnreadChangedAsync(string subject, string conversationId, int unread, int total, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(subject);
+        try
+        {
+            await hub.Clients.Group(UserGroupPrefix + subject).SendAsync(UnreadEvent, new NoLeidosEvent(conversationId, unread, total), cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // Aviso de mejor esfuerzo: el contador ya está guardado. Sin registrar la excepción, que puede traer el grupo (con el sub).
+        }
+    }
 }

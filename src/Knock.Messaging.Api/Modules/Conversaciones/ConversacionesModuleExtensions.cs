@@ -2,6 +2,7 @@ using Knock.Contracts.Moderation;
 using Knock.Messaging.Api.Modules.Conversaciones.Data;
 using Knock.Messaging.Api.Modules.Conversaciones.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Knock.Messaging.Api.Modules.Conversaciones;
 
@@ -13,11 +14,16 @@ public static class ConversacionesModuleExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
         services.AddExceptionHandler<DomainExceptionHandler>();
+        services.AddOptions<ConversacionesOptions>().BindConfiguration(ConversacionesOptions.SectionName).ValidateOnStart();
+        services.AddSingleton<IValidateOptions<ConversacionesOptions>, ConversacionesOptionsValidator>();
+        services.AddSingleton<ConversacionesStore>();
+        services.AddSingleton<MensajesStore>();
+        services.AddSingleton<INotificadorEnVivo, NotificadorEnVivo>();
+        services.AddScoped<ConversacionService>();
+        services.AddScoped<LecturaService>();
         services.AddSingleton<PermisoCache>();
         services.AddMarketPermisoDeConversacion();
         services.TryAddSingleton<IContentModerator, ModeradorNoDisponible>();
-        services.AddScoped<IMensajesStore, MensajesStore>();
-        services.AddScoped<INotificadorEnVivo, NotificadorEnVivo>();
         services.AddScoped<EnvioDeMensajeService>();
         services.AddScoped<AccesoAConversacionService>();
         return services;

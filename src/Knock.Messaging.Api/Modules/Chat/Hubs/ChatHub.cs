@@ -30,7 +30,7 @@ internal sealed class ChatHub(UnionService union, MensajeService messages, Acces
         // Spec 030, R-15: cada conexión recibe el contador de su persona en el grupo propio; no hay otra forma de entrar a ese grupo.
         if (Context.User?.FindFirst("sub")?.Value is { Length: > 0 } sub)
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, NotificadorEnVivo.UserGroup(sub), Context.ConnectionAborted);
+            await Groups.AddToGroupAsync(Context.ConnectionId, NotificadorEnVivo.UserGroupPrefix + sub, Context.ConnectionAborted);
         }
 
         await base.OnConnectedAsync();
@@ -88,12 +88,12 @@ internal sealed class ChatHub(UnionService union, MensajeService messages, Acces
     /// <summary>Entra al grupo de la conversación si quien pide es uno de sus dos participantes; cualquier otro caso es <c>unauthorized</c> sin distinguir «no existe» de «es ajena» (spec 030, R-15 y CA-03).</summary>
     public async Task<ChatResult> UnirseAConversacion(string conversacionId)
     {
-        if (!await conversaciones.PuedeUnirseAsync(State().Subject, conversacionId, Context.ConnectionAborted))
+        if (!await conversaciones.CanJoinAsync(State().Subject, conversacionId, Context.ConnectionAborted))
         {
             return ChatResult.Fail(ChatErrorCodes.UnauthorizedCode);
         }
 
-        await Groups.AddToGroupAsync(Context.ConnectionId, NotificadorEnVivo.ConversationGroup(conversacionId), Context.ConnectionAborted);
+        await Groups.AddToGroupAsync(Context.ConnectionId, NotificadorEnVivo.ConversationGroupPrefix + conversacionId, Context.ConnectionAborted);
         return ChatResult.Success;
     }
 
@@ -101,7 +101,7 @@ internal sealed class ChatHub(UnionService union, MensajeService messages, Acces
     {
         if (!string.IsNullOrEmpty(conversacionId) && conversacionId.Length <= 64)
         {
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, NotificadorEnVivo.ConversationGroup(conversacionId), Context.ConnectionAborted);
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, NotificadorEnVivo.ConversationGroupPrefix + conversacionId, Context.ConnectionAborted);
         }
 
         return ChatResult.Success;

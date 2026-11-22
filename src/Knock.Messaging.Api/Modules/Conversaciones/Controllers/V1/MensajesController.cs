@@ -25,7 +25,7 @@ internal sealed class MensajesController(EnvioDeMensajeService envio) : Controll
     [HttpPost]
     [EnableRateLimiting(RateLimitingExtensions.SendMessagePolicy)]
     [RequestSizeLimit(4096)]
-    [ProducesResponseType<MensajeResponse>(StatusCodes.Status201Created)]
+    [ProducesResponseType<MensajeView>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, _problemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, _problemJson)]
@@ -33,10 +33,10 @@ internal sealed class MensajesController(EnvioDeMensajeService envio) : Controll
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity, _problemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, _problemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable, _problemJson)]
-    public async Task<ActionResult<MensajeResponse>> Send(string id, EnviarMensajeRequest body, CancellationToken cancellationToken)
+    public async Task<ActionResult<MensajeView>> Send(string id, EnviarMensajeRequest body, CancellationToken cancellationToken)
     {
         var token = Request.Headers.Authorization.ToString()["Bearer ".Length..];
-        var message = await envio.EnviarAsync(User.FindFirst("sub")?.Value ?? string.Empty, token, id, body.Texto!, cancellationToken);
+        var message = await envio.SendAsync(User.FindFirst("sub")?.Value ?? string.Empty, token, id, body.Texto!, cancellationToken);
         return StatusCode(StatusCodes.Status201Created, message);
     }
 }

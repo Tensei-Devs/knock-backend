@@ -9,12 +9,19 @@ namespace Knock.Messaging.Api.Modules.Conversaciones.Data;
 
 /// <summary>
 /// Cliente HTTP tipado de Mercado: <c>GET /api/v1/solicitudes/{id}/conversacion</c> reenviando la sesión de quien pide, con la dirección y el tiempo límite de la spec 026 (spec 030, R-02 y R-09).
-/// Un 200 entendible concede; un 400, 401, 403 o 404 niega; cualquier otra cosa (sin respuesta, tiempo agotado, 5xx, cuerpo ilegible) es <see cref="EstadoConsultaPermiso.NoDisponible"/>.
-/// Es <c>scoped</c> y no se captura en un singleton. Nunca registra la ruta ni el cuerpo.
+/// Un 200 entendible concede (y, con <c>conversacionId</c>, guarda el permiso 60 s); un 400, 401, 403 o 404 es <see cref="EstadoPermisoConversacion.NoEncontrado"/>; cualquier otra cosa (sin
+/// respuesta, tiempo agotado, 5xx, cuerpo ilegible) responde con el permiso en caché si lo hay y, si no, <see cref="EstadoPermisoConversacion.NoDisponible"/>. Con el permiso en caché los datos que
+/// solo conoce Mercado (participantes, servicio, colonia) vienen vacíos: solo valen <c>Abierta</c>, <c>MotivoCierre</c>, <c>Elegido</c> y <c>VisitaId</c>. Nunca registra la ruta ni el cuerpo.
 /// </summary>
-internal sealed class MarketPermisoDeConversacion(HttpClient http) : IPermisoDeConversacion
+internal sealed class MarketPermisoDeConversacion(HttpClient http, PermisoCache cache) : IPermisoDeConversacion
 {
-    public async Task<ResultadoPermiso> ConsultarAsync(string solicitudId, string? tecnicoId, string bearerToken, CancellationToken cancellationToken)
+    public async Task<ResultadoPermisoConversacion> ConsultarAsync(
+        string solicitudId,
+        string? tecnicoId,
+        string? conversacionId,
+        string subject,
+        string bearerToken,
+        CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(solicitudId);
         ArgumentException.ThrowIfNullOrWhiteSpace(bearerToken);
@@ -29,25 +36,52 @@ internal sealed class MarketPermisoDeConversacion(HttpClient http) : IPermisoDeC
         try
         {
             using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-            return response.StatusCode switch
+            if (response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden or HttpStatusCode.NotFound)
             {
-                HttpStatusCode.OK => await ReadAsync(response, cancellationToken),
-                HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden or HttpStatusCode.NotFound => new ResultadoPermiso(EstadoConsultaPermiso.Denegado),
-                _ => new ResultadoPermiso(EstadoConsultaPermiso.NoDisponible),
-            };
+                return new ResultadoPermisoConversacion(EstadoPermisoConversacion.NoEncontrado);
+            }
+
+            if (response.StatusCode == HttpStatusCode.OK
+                && await response.Content.ReadFromJsonAsync<PermisoConversacion>(cancellationToken) is { } permission)
+            {
+                if (conversacionId is not null)
+                {
+                    await cache.SetAsync(conversacionId, new PermisoVigente(permission.Abierta, permission.MotivoCierre, permission.Elegido, permission.VisitaId));
+                }
+
+                return new ResultadoPermisoConversacion(EstadoPermisoConversacion.Concedido, permission);
+            }
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException or OperationCanceledException)
         {
-            // Sin respuesta, con tiempo agotado o ilegible: se cierra el paso. Sin registro: el mensaje podría traer la ruta con los identificadores.
+            // Sin respuesta, con tiempo agotado o ilegible: se usa la caché o se cierra el paso. Sin registro: el mensaje podría traer la ruta con los identificadores.
             cancellationToken.ThrowIfCancellationRequested();
-            return new ResultadoPermiso(EstadoConsultaPermiso.NoDisponible);
         }
+
+        return await FromCacheAsync(solicitudId, tecnicoId, conversacionId);
     }
 
-    private static async Task<ResultadoPermiso> ReadAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    private async Task<ResultadoPermisoConversacion> FromCacheAsync(string solicitudId, string? tecnicoId, string? conversacionId)
     {
-        var permission = await response.Content.ReadFromJsonAsync<PermisoConversacion>(cancellationToken);
-        return permission is null ? new ResultadoPermiso(EstadoConsultaPermiso.NoDisponible) : new ResultadoPermiso(EstadoConsultaPermiso.Concedido, permission);
+        if (conversacionId is null || await cache.GetAsync(conversacionId) is not { } cached)
+        {
+            return new ResultadoPermisoConversacion(EstadoPermisoConversacion.NoDisponible);
+        }
+
+        var permission = new PermisoConversacion(
+            solicitudId,
+            tecnicoId ?? string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            cached.Abierta,
+            cached.MotivoCierre,
+            cached.Elegido,
+            cached.VisitaId,
+            string.Empty,
+            string.Empty,
+            new TecnicoPublicoConversacion(string.Empty, null));
+        return new ResultadoPermisoConversacion(EstadoPermisoConversacion.Concedido, permission);
     }
 }
 

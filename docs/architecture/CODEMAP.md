@@ -1,6 +1,6 @@
 # Mapa de código
 
-> Generado por `scripts/codemap.py` el 2026-11-20T19:06:27Z. No editar a mano.
+> Generado por `scripts/codemap.py` el 2026-11-20T23:33:40Z. No editar a mano.
 > **Antes de crear una clase, método o archivo, busca aquí o corre `python scripts/codemap.py --query "<qué necesitas>"`.**
 
 ## Resumen
@@ -12,9 +12,9 @@
 | `Assistant` | data, services | 3 | 13 | 8 |
 | `Catalog` | -, controllers, data, domain, dtos, services, validators | 49 | 87 | 113 |
 | `Chat` | -, data, hubs, services | 6 | 18 | 26 |
-| `Conversaciones` | -, domain | 4 | 7 | 4 |
+| `Conversaciones` | -, controllers, data, domain, dtos, services, validators | 15 | 42 | 43 |
 | `HomeAndCar` | -, controllers, data, domain, dtos, services, validators | 8 | 32 | 29 |
-| `Knock.Contracts` | - | 9 | 16 | 7 |
+| `Knock.Contracts` | - | 10 | 19 | 7 |
 | `Knock.Gateway` | -, hosting | 16 | 43 | 60 |
 | `Knock.Identity.Api` | -, common, hosting | 34 | 68 | 97 |
 | `Knock.Market.Api` | -, common, hosting | 37 | 74 | 103 |
@@ -442,16 +442,51 @@
 **-**
 
 - `src/Knock.Messaging.Api/Modules/Conversaciones/ConversacionesModuleExtensions.cs` — class `ConversacionesModuleExtensions`
-  - `AddConversacionesModule()`:7
+  - `AddConversacionesModule()`:11
 - `src/Knock.Messaging.Api/Modules/Conversaciones/DomainExceptionHandler.cs` — class `DomainExceptionHandler`
   - `TryHandleAsync()`:14
 
+**controllers**
+
+- `src/Knock.Messaging.Api/Modules/Conversaciones/Controllers/CallerSession.cs` — class `CallerSession`
+  - `Subject()`:9, `BearerToken()`:15
+- `src/Knock.Messaging.Api/Modules/Conversaciones/Controllers/V1/ConversacionesController.cs` — class `ConversacionesController`
+  - `Create()`:36, `List()`:51, `Unread()`:59, `Get()`:69
+- `src/Knock.Messaging.Api/Modules/Conversaciones/Controllers/V1/LecturaController.cs` — class `LecturaController`
+  - `Messages()`:32, `MarkRead()`:43
+
+**data**
+
+- `src/Knock.Messaging.Api/Modules/Conversaciones/Data/ConversacionesStore.cs` — record `StoredLastMessage`, record `StoredConversation`, class `ConversacionesStore`
+  - `StoredConversation()`:17, `RoleOf()`:40, `UnreadFor()`:50, `ReadUntilFor()`:52, `EnsureIndexesAsync()`:85, `FindByPairAsync()`:98, `FindForParticipantAsync()`:106, `InsertAsync()`:115, `RefreshPermissionAsync()`:133, `ListAsync()`:148, `TotalUnreadAsync()`:159, `ApplyReadAsync()`:170
+- `src/Knock.Messaging.Api/Modules/Conversaciones/Data/MensajesStore.cs` — record `StoredMessage`, class `MensajesStore`
+  - `EnsureIndexesAsync()`:37, `ListAsync()`:49, `CountUnreadAsync()`:73
+
 **domain**
 
+- `src/Knock.Messaging.Api/Modules/Conversaciones/Domain/ConversacionRules.cs` — class `ConversacionRoles`, class `ConversacionEstados`, class `ConversacionErrors`, record struct `PageCursor`
+  - `NotFound()`:33, `Closed()`:35, `ParseId()`:38, `PageCursor()`:49, `Format()`:53, `Parse()`:57
 - `src/Knock.Messaging.Api/Modules/Conversaciones/Domain/DomainException.cs` — enum `DomainErrorKind`, class `DomainException`, class `DomainErrors`
   - `ToStatusCode()`:53
 - `src/Knock.Messaging.Api/Modules/Conversaciones/Domain/OcultadorDeContacto.cs` — record struct `TextoOculto`, class `OcultadorDeContacto`
   - `Ocultar()`:23
+
+**dtos**
+
+- `src/Knock.Messaging.Api/Modules/Conversaciones/Dtos/ConversacionDtos.cs` — record `CrearConversacionBody`, record `LeidoBody`, record `Contraparte`, record `ConversacionView`, record `ConversacionCreada`, record `UltimoMensajeView`, record `ConversacionItem`, record `ConversacionPage`, record `NoLeidasView`, record `MensajeView`, class `ConversacionesQuery`, class `MensajesQuery`
+
+**services**
+
+- `src/Knock.Messaging.Api/Modules/Conversaciones/Services/ConversacionService.cs` — class `ConversacionesOptions`, class `ConversacionesOptionsValidator`, class `ConversacionService`
+  - `Validate()`:20, `ConversacionService()`:33, `CreateAsync()`:43, `GetAsync()`:88, `ListAsync()`:95, `UnreadAsync()`:108
+- `src/Knock.Messaging.Api/Modules/Conversaciones/Services/LecturaService.cs` — class `LecturaService`
+  - `LecturaService()`:12, `MessagesAsync()`:18, `MarkReadAsync()`:36
+- `src/Knock.Messaging.Api/Modules/Conversaciones/Services/NotificadorEnVivo.cs` — record `NoLeidosEvent`, interface `INotificadorEnVivo`, class `NotificadorEnVivo`
+  - `UnreadChangedAsync()`:25
+
+**validators**
+
+- `src/Knock.Messaging.Api/Modules/Conversaciones/Validators/ConversacionValidators.cs` — class `CrearConversacionBodyValidator`, class `LeidoBodyValidator`, class `ConversacionesQueryValidator`, class `MensajesQueryValidator`
 
 ### HomeAndCar
 
@@ -497,6 +532,7 @@
 
 - `src/Knock.Contracts/Catalog/INeighborhoodCenterCatalog.cs` — interface `INeighborhoodCenterCatalog`
 - `src/Knock.Contracts/Colonias/IColoniaCatalog.cs` — interface `IColoniaCatalog`
+- `src/Knock.Contracts/Conversations/IPermisoDeConversacion.cs` — enum `EstadoPermisoConversacion`, record `ResultadoPermisoConversacion`, interface `IPermisoDeConversacion`
 - `src/Knock.Contracts/Conversations/PermisoConversacion.cs` — record `TecnicoPublicoConversacion`, record `PermisoConversacion`
 - `src/Knock.Contracts/Correlation/CorrelationId.cs` — class `CorrelationId`
   - `IsValid()`:24, `Create()`:44, `Current()`:47

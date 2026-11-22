@@ -12,8 +12,6 @@ internal static class ReglasDeMensaje
     public const int MaxBytesDelTexto = 4_096;
     public const int MensajesPorMinuto = 30;
     public const int LongitudDelResumen = 80;
-    public const string RolCliente = "cliente";
-    public const string RolTecnico = "tecnico";
 
     /// <summary>
     /// El texto recortado, o <see langword="null"/> si no vale (R-10): de 1 a <see cref="MaxCaracteres"/> caracteres, sin caracteres de control salvo el salto de línea y sin pasar de

@@ -19,6 +19,9 @@ public sealed class Spec030EnvioReglasTests
 {
     private static readonly EnviarMensajeRequestValidator _validator = new();
 
+    // Sin conversacionId la caché no se toca: estas pruebas no necesitan Redis.
+    private static readonly PermisoCache _noCache = new(null!);
+
     [Theory]
     [InlineData("a", "a")]
     [InlineData("  hola  ", "hola")]
@@ -66,21 +69,6 @@ public sealed class Spec030EnvioReglasTests
         char.IsHighSurrogate(summary[^1]).Should().BeFalse();
     }
 
-    [Fact]
-    public void RolDe_Distingue_Cliente_Tecnico_Y_Ajeno_CA_030_03()
-    {
-        var conversation = new ConversacionParaEnvio("id", "sol", "tec", "cliente-sub", "tecnico-sub");
-
-        conversation.RolDe("cliente-sub").Should().Be("cliente");
-        conversation.RolDe("tecnico-sub").Should().Be("tecnico");
-        conversation.RolDe("otro").Should().BeNull();
-        conversation.RolDe(null).Should().BeNull();
-        conversation.RolDe(string.Empty).Should().BeNull();
-        conversation.RolDe("CLIENTE-SUB").Should().BeNull("el sub se compara tal cual");
-        conversation.DestinatarioDe("cliente").Should().Be("tecnico-sub");
-        conversation.DestinatarioDe("tecnico").Should().Be("cliente-sub");
-    }
-
     [Theory]
     [InlineData(null, false)]
     [InlineData("", false)]
@@ -110,18 +98,18 @@ public sealed class Spec030EnvioReglasTests
     }
 
     [Theory]
-    [InlineData(HttpStatusCode.NotFound, EstadoConsultaPermiso.Denegado)]
-    [InlineData(HttpStatusCode.Forbidden, EstadoConsultaPermiso.Denegado)]
-    [InlineData(HttpStatusCode.Unauthorized, EstadoConsultaPermiso.Denegado)]
-    [InlineData(HttpStatusCode.BadRequest, EstadoConsultaPermiso.Denegado)]
-    [InlineData(HttpStatusCode.InternalServerError, EstadoConsultaPermiso.NoDisponible)]
-    [InlineData(HttpStatusCode.BadGateway, EstadoConsultaPermiso.NoDisponible)]
-    [InlineData(HttpStatusCode.TooManyRequests, EstadoConsultaPermiso.NoDisponible)]
-    public async Task El_Cliente_De_Permiso_Traduce_La_Respuesta_De_Mercado_CA_030_09(HttpStatusCode status, EstadoConsultaPermiso expected)
+    [InlineData(HttpStatusCode.NotFound, EstadoPermisoConversacion.NoEncontrado)]
+    [InlineData(HttpStatusCode.Forbidden, EstadoPermisoConversacion.NoEncontrado)]
+    [InlineData(HttpStatusCode.Unauthorized, EstadoPermisoConversacion.NoEncontrado)]
+    [InlineData(HttpStatusCode.BadRequest, EstadoPermisoConversacion.NoEncontrado)]
+    [InlineData(HttpStatusCode.InternalServerError, EstadoPermisoConversacion.NoDisponible)]
+    [InlineData(HttpStatusCode.BadGateway, EstadoPermisoConversacion.NoDisponible)]
+    [InlineData(HttpStatusCode.TooManyRequests, EstadoPermisoConversacion.NoDisponible)]
+    public async Task El_Cliente_De_Permiso_Traduce_La_Respuesta_De_Mercado_CA_030_09(HttpStatusCode status, EstadoPermisoConversacion expected)
     {
         using var http = new StubMarket(_ => new HttpResponseMessage(status));
 
-        var result = await new MarketPermisoDeConversacion(http.Client).ConsultarAsync("sol", "tec", "token", CancellationToken.None);
+        var result = await new MarketPermisoDeConversacion(http.Client, _noCache).ConsultarAsync("sol", "tec", null, "sub", "token", CancellationToken.None);
 
         result.Estado.Should().Be(expected);
         result.Permiso.Should().BeNull();
@@ -140,9 +128,9 @@ public sealed class Spec030EnvioReglasTests
             };
         });
 
-        var result = await new MarketPermisoDeConversacion(http.Client).ConsultarAsync("sol 1", "tec/1", "token-de-prueba", CancellationToken.None);
+        var result = await new MarketPermisoDeConversacion(http.Client, _noCache).ConsultarAsync("sol 1", "tec/1", null, "sub", "token-de-prueba", CancellationToken.None);
 
-        result.Estado.Should().Be(EstadoConsultaPermiso.Concedido);
+        result.Estado.Should().Be(EstadoPermisoConversacion.Concedido);
         result.Permiso!.Abierta.Should().BeTrue();
         result.Permiso.TecnicoPublico.Nombre.Should().Be("Ana");
         seen!.RequestUri!.ToString().Should().Be("http://market.invalid/api/v1/solicitudes/sol%201/conversacion?tecnicoId=tec%2F1");
@@ -159,7 +147,7 @@ public sealed class Spec030EnvioReglasTests
             return new HttpResponseMessage(HttpStatusCode.NotFound);
         });
 
-        await new MarketPermisoDeConversacion(http.Client).ConsultarAsync("sol", null, "token", CancellationToken.None);
+        await new MarketPermisoDeConversacion(http.Client, _noCache).ConsultarAsync("sol", null, null, "sub", "token", CancellationToken.None);
 
         seen!.RequestUri!.Query.Should().BeEmpty();
     }
@@ -171,9 +159,9 @@ public sealed class Spec030EnvioReglasTests
         using var garbage = new StubMarket(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("no es json", Encoding.UTF8, "application/json") });
         using var empty = new StubMarket(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("null", Encoding.UTF8, "application/json") });
 
-        (await new MarketPermisoDeConversacion(down.Client).ConsultarAsync("sol", "tec", "t", CancellationToken.None)).Estado.Should().Be(EstadoConsultaPermiso.NoDisponible);
-        (await new MarketPermisoDeConversacion(garbage.Client).ConsultarAsync("sol", "tec", "t", CancellationToken.None)).Estado.Should().Be(EstadoConsultaPermiso.NoDisponible);
-        (await new MarketPermisoDeConversacion(empty.Client).ConsultarAsync("sol", "tec", "t", CancellationToken.None)).Estado.Should().Be(EstadoConsultaPermiso.NoDisponible);
+        (await new MarketPermisoDeConversacion(down.Client, _noCache).ConsultarAsync("sol", "tec", null, "sub", "t", CancellationToken.None)).Estado.Should().Be(EstadoPermisoConversacion.NoDisponible);
+        (await new MarketPermisoDeConversacion(garbage.Client, _noCache).ConsultarAsync("sol", "tec", null, "sub", "t", CancellationToken.None)).Estado.Should().Be(EstadoPermisoConversacion.NoDisponible);
+        (await new MarketPermisoDeConversacion(empty.Client, _noCache).ConsultarAsync("sol", "tec", null, "sub", "t", CancellationToken.None)).Estado.Should().Be(EstadoPermisoConversacion.NoDisponible);
     }
 
     [Fact]
@@ -183,7 +171,7 @@ public sealed class Spec030EnvioReglasTests
         using var cancelled = new CancellationTokenSource();
         await cancelled.CancelAsync();
 
-        var act = () => new MarketPermisoDeConversacion(http.Client).ConsultarAsync("sol", "tec", "t", cancelled.Token);
+        var act = () => new MarketPermisoDeConversacion(http.Client, _noCache).ConsultarAsync("sol", "tec", null, "sub", "t", cancelled.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
