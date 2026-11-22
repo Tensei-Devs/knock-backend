@@ -22,6 +22,9 @@ public static class TrustModuleExtensions
         services.AddSingleton<IVerificationPurgeStore, VerificationPurgeStore>();
         services.AddScoped<PurgaDeVerificacion>();
         services.AddSingleton<VerificationPurgeScheduler>();
+        services.AddSingleton<DemoVerificationStore>();
+        services.AddSingleton<DemoVerificationSeeder>();
+        services.AddHostedService<DemoVerificationStartup>();
         services.AddScoped<IManejadorDeTarea, AvisarAlVerificadorHandler>();
         services.AddScoped<IManejadorDeTarea, BorrarFotosDeVerificacionHandler>();
         return services;

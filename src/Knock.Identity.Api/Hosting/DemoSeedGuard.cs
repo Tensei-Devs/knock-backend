@@ -1,7 +1,7 @@
 using MongoDB.Bson;
 using MongoDB.Driver;
 
-namespace Knock.Identity.Api.Modules.Usuarios.Data;
+namespace Knock.Identity.Api.Hosting;
 
 internal static class DemoSeedGuard
 {
