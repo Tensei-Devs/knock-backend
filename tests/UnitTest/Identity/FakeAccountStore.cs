@@ -118,6 +118,24 @@ internal sealed class FakeAccountStore : IAccountStore
         return Task.FromResult(true);
     }
 
+    /// <summary>Cuentas borradas por <see cref="EraseAccountAsync"/>, por <c>_id</c>.</summary>
+    public List<string> Erased { get; } = [];
+
+    public Task<IReadOnlyList<string>?> EraseAccountAsync(string userId, DateTime now, CancellationToken cancellationToken)
+    {
+        var index = Accounts.FindIndex(a => a.Id == userId);
+        if (index < 0 || Accounts[index].State != "eliminacion_programada" || Accounts[index].DeleteAt > now)
+        {
+            return Task.FromResult<IReadOnlyList<string>?>(null);
+        }
+
+        Accounts[index] = Accounts[index] with { State = "eliminada", DeleteAt = null };
+        Erased.Add(userId);
+        var revoked = Sessions.Where(s => s.UserId == userId && !s.Revoked).ToList();
+        revoked.ForEach(s => s.Revoked = true);
+        return Task.FromResult<IReadOnlyList<string>?>([.. revoked.Select(s => s.Id)]);
+    }
+
     public Task<bool> CancelDeletionAsync(string userId, DateTime now, CancellationToken cancellationToken)
     {
         var index = Accounts.FindIndex(a => a.Id == userId);

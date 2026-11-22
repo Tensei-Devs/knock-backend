@@ -7,6 +7,7 @@ internal static class AccountStates
 {
     public const string Active = "activa";
     public const string DeletionScheduled = "eliminacion_programada";
+    public const string Deleted = "eliminada";
 }
 
 /// <summary>Códigos de negocio de la spec 039 (§5): en inglés y en snake_case, sin datos de la persona.</summary>

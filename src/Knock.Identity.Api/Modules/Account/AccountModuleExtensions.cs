@@ -1,3 +1,4 @@
+using Knock.Identity.Api.Hosting.Procesos.TareasProgramadas;
 using Knock.Identity.Api.Modules.Account.Data;
 using Knock.Identity.Api.Modules.Account.Domain;
 using Knock.Identity.Api.Modules.Account.Services;
@@ -17,7 +18,7 @@ public static class AccountModuleExtensions
         services.AddSingleton<ISessionCanceller, RedisSessionCanceller>();
         services.AddSingleton<ProfileCacheInvalidator>();
         services.AddSingleton<IAccountStore>(provider => provider.GetRequiredService<AccountStore>());
-        services.TryAddSingleton<IAccountOutbox, PendingAccountOutbox>();
+        services.AddSingleton<IAccountOutbox, AccountOutbox>();
         services.AddSingleton<PhoneChangeService>();
         services.AddSingleton<IRecoveryAttemptLimiter, RecoveryAttemptLimiter>();
         services.AddSingleton<AccessRecoveryService>();
@@ -27,6 +28,7 @@ public static class AccountModuleExtensions
         services.TryAddSingleton<IMarketAccountClient, UnavailableMarketAccountClient>();
         services.AddSingleton<PendingService>();
         services.AddSingleton<AccountDeletionService>();
+        services.AddSingleton<IManejadorDeTarea, EliminarCuentaHandler>();
         return services;
     }
 }

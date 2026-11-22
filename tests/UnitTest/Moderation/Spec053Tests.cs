@@ -156,7 +156,7 @@ public class Spec053Tests
         var audit = new FakeAudit();
         var world = new PanelClock(new DateTimeOffset(2026, 11, 21, 12, 0, 0, TimeSpan.Zero));
         var auditService = new AuditoriaPanel(audit, new PanelIpHasher(PhoneProtectionTestKeys.Keys()), new NoHttpContext(), world, NullLogger<AuditoriaPanel>.Instance);
-        var service = new VerificationReviewService(store, new NoAccessRecoveryReviews(), links, blobs, new PanelApi(auditService), new TrustApi(), world, NullLogger<VerificationReviewService>.Instance);
+        var service = new VerificationReviewService(store, new NoAccessRecoveryReviews(), links, blobs, new PanelApi(auditService), new TrustApi(null!), world, NullLogger<VerificationReviewService>.Instance);
         return (service, store, links, blobs, audit);
     }
 

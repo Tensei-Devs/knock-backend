@@ -39,6 +39,7 @@ internal abstract record DeletionOutcome
 internal sealed partial class AccountDeletionService(
     IAccountStore store,
     IMarketAccountClient market,
+    IAccountOutbox outbox,
     IFirebaseIdTokenVerifier verifier,
     PhoneProtector phones,
     ProfileCacheInvalidator profileCache,
@@ -78,6 +79,8 @@ internal sealed partial class AccountDeletionService(
 
         await market.CancelOpenAsync(sub, cancellationToken);
         var deleteAt = now + GracePeriod;
+        // La tarea va antes del cambio de estado: si la escritura pierde la carrera, la tarea llega y no encuentra nada que borrar (es idempotente).
+        await outbox.EnqueueDeletionAsync(account.Sub, deleteAt, cancellationToken);
         if (!await store.ScheduleDeletionAsync(account.Id, deleteAt, now, cancellationToken))
         {
             // Otra petición la programó entre la lectura y la escritura: la regla de estado impide el duplicado (R-30).

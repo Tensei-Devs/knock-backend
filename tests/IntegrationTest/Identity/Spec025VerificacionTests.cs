@@ -241,6 +241,20 @@ public sealed class Spec025VerificacionTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Estado_Verificada_Con_Nivel_Otorgado_Y_Sin_Curp_CA_025_14()
+    {
+        var ana = await NewPersonAsync();
+        await UnderReviewAsync(ana, granted: "basica", state: "verificada");
+        using var response = await SendAsync(HttpMethod.Get, ana.Token);
+        var body = await response.Content.ReadAsStringAsync();
+        var json = JsonElement.Parse(body);
+        json.GetProperty("estado").GetString().Should().Be("verificada");
+        json.GetProperty("nivelOtorgado").GetString().Should().Be("basica");
+        json.GetProperty("puedeReintentar").GetBoolean().Should().BeTrue("la básica puede subir a completa");
+        body.ToUpperInvariant().Should().NotContain(_curp);
+    }
+
+    [Fact]
     public async Task Sin_Token_401_Y_No_Ve_La_De_Otra_Persona_CA_025_17()
     {
         var ana = await NewPersonAsync();

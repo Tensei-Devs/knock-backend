@@ -63,4 +63,11 @@ internal interface IAccountStore
     /// se borra <c>eliminarEn</c>. Falso si no había nada que cancelar.
     /// </summary>
     Task<bool> CancelDeletionAsync(string userId, DateTime now, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Borra los datos personales de la cuenta y cierra sus sesiones en una sola transacción, condicionada a que siga <c>eliminacion_programada</c> con la gracia vencida
+    /// (<c>eliminarEn</c> menor o igual que <paramref name="now"/>). La cuenta queda <c>eliminada</c> sin celular legible ni perfil. <c>null</c> si no se cumple la condición
+    /// (cancelada, ya borrada o gracia vigente); si se cumple, los ids de las sesiones que cerró para cancelarlos en Redis.
+    /// </summary>
+    Task<IReadOnlyList<string>?> EraseAccountAsync(string userId, DateTime now, CancellationToken cancellationToken);
 }
