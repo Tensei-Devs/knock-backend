@@ -10,7 +10,7 @@
 | T-02 | `POST /api/v1/tecnicos` (TEC-01): DTO, validador, servicio, almacén, controlador y pruebas | R-01 a R-03 · CA-01 a CA-05 | T-01 | otras rutas | Erick | hecha (KNOCK-48, #158): CA-01 a CA-05, CA-55 y CA-66 a CA-69 del registro |
 | T-03 | `GET /api/v1/tecnicos` (TEC-02): DTO, validador, servicio, almacén, controlador y pruebas | R-04 a R-07 · CA-06 a CA-09 | T-01 | otras rutas | por asignar | en revisión |
 | T-04 | `GET /api/v1/tecnicos/autocompletar` (TEC-03): DTO, validador, servicio, almacén, controlador y pruebas | R-08 a R-10 · CA-10 a CA-12 | T-01 | otras rutas | Erick | hecha (KNOCK-55, #174): CA-10 a CA-12 y CA-57; los servicios de la spec 047 se suman cuando exista su colección |
-| T-05 | `GET /api/v1/mapa/tecnicos` (TEC-04): DTO, validador, servicio, almacén, controlador y pruebas | R-11 a R-13 · CA-13 a CA-15 | T-01 | otras rutas | por asignar | pendiente |
+| T-05 | `GET /api/v1/mapa/tecnicos` (TEC-04): DTO, validador, servicio, almacén, controlador y pruebas | R-11 a R-13 · CA-13 a CA-15 | T-01 | otras rutas | por asignar | hecha en rama (KNOCK-266): CA-13 a CA-15 y CA-56 con pruebas unitarias; integración en CI |
 | T-06 | `GET /api/v1/tecnicos/{id}` (TEC-05): DTO, validador, servicio, almacén, controlador y pruebas | R-14 a R-17 · CA-16 a CA-19 | T-01 | otras rutas | Erick | hecha (KNOCK-56, #165): CA-16 a CA-19 y CA-58; servicios, fotos y horarios del detalle llegan con sus rutas |
 | T-07 | `GET /api/v1/tecnicos/{id}/llega-a-mi-colonia` (TEC-06): DTO, validador, servicio, almacén, controlador y pruebas | R-18 a R-21 · CA-20 a CA-24 | T-01 | otras rutas | Erick | hecha (KNOCK-56, #165): CA-20 a CA-24 y CA-59 |
 | T-08 | `GET /api/v1/tecnicos/{id}/fotos-trabajos` (TEC-07): DTO, validador, servicio, almacén, controlador y pruebas | R-22 a R-26 · CA-25 a CA-30 | T-01 | otras rutas | por asignar | hecha en rama (KNOCK-266): lectura y validador; CA-25 a CA-30 con pruebas unitarias; integración en CI |
@@ -19,9 +19,9 @@
 | T-11 | `GET /api/v1/tecnicos/me/horarios` (TEC-10): DTO, validador, servicio, almacén, controlador y pruebas | R-31 · CA-40 a CA-42 | T-01 | otras rutas | Erick | hecha (KNOCK-57, entregada en #173): CA-40 a CA-42 |
 | T-12 | `PUT /api/v1/tecnicos/me/horarios` (TEC-11): DTO, validador, servicio, almacén, controlador y pruebas | R-32 a R-33 · CA-43 a CA-47 | T-01 | otras rutas | Erick | hecha (KNOCK-57, entregada en #173): CA-43 a CA-47 y CA-63 |
 | T-13 | `GET /api/v1/tecnicos/me/reputacion` (TEC-13): DTO, validador, servicio, almacén, controlador y pruebas | R-34 a R-35 · CA-48 a CA-51 | T-01 | otras rutas | por asignar | hecha en rama (KNOCK-266): lectura y servicio; CA-48 a CA-51 con pruebas unitarias; integración en CI |
-| T-14 | `GET /api/v1/explorar` (TEC-14): DTO, validador, servicio, almacén, controlador y pruebas | R-36 a R-38 · CA-52 a CA-54 | T-01 | otras rutas | por asignar | pendiente |
-| T-15 | Reglas de negocio específicas de la spec (estados, plazos y límites) | R-39 a R-49 · CA-55 a CA-65 | T-01 | otras rutas | por asignar | pendiente |
-| T-16 | Transversales: `sub` del token, registros sin datos personales, 429 y 413, sin `Idempotency-Key` | R-50 a R-53 · CA-66 a CA-69 | T-02 a T-15 | T-17 | por asignar | pendiente |
+| T-14 | `GET /api/v1/explorar` (TEC-14): DTO, validador, servicio, almacén, controlador y pruebas | R-36 a R-38 · CA-52 a CA-54 | T-01 | otras rutas | por asignar | hecha en rama (KNOCK-266): CA-52 a CA-54 y CA-65 con pruebas unitarias; integración en CI |
+| T-15 | Reglas de negocio específicas de la spec (estados, plazos y límites) | R-39 a R-49 · CA-55 a CA-65 | T-01 | otras rutas | por asignar | hecha en rama (KNOCK-266): CA-55 a CA-65 con pruebas unitarias; integración en CI |
+| T-16 | Transversales: `sub` del token, registros sin datos personales, 429 y 413, sin `Idempotency-Key` | R-50 a R-53 · CA-66 a CA-69 | T-02 a T-15 | T-17 | por asignar | parcial en rama (KNOCK-266): CA-66 a CA-69 con pruebas unitarias; 429 y 413 de mapa y explorar en CI |
 | T-17 | OpenAPI, `docs/endpoints.md` y `docs/rate-limit-matrix.md` | §5 | T-02 a T-15 | T-16 | por asignar | pendiente |
 | T-18 | Gates, `Memoria.md` y revisión de par | §12 | todas | — | por asignar | pendiente |
 

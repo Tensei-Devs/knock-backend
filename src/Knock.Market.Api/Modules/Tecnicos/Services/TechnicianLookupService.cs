@@ -51,7 +51,8 @@ internal sealed class TechnicianLookupService(
     ICatalogApi catalog,
     INeighborhoodCenterCatalog centers,
     IMemoryCache cache,
-    TimeProvider clock)
+    TimeProvider clock,
+    TechnicianReadCache? readCache = null)
 {
     public const int MaxSuggestions = 8;
 
@@ -189,6 +190,7 @@ internal sealed class TechnicianLookupService(
     /// <summary>Quita de la caché de esta réplica todas las consultas de lista (llamada por las escrituras del perfil).</summary>
     public void ForgetListCache()
     {
+        readCache?.Invalidate();
         lock (_listKeysLock)
         {
             foreach (var key in _listKeys)
@@ -200,7 +202,7 @@ internal sealed class TechnicianLookupService(
         }
     }
 
-    private static TechnicianProfileResponse ToResponse(TechnicianProfileRecord record) =>
+    internal static TechnicianProfileResponse ToResponse(TechnicianProfileRecord record) =>
         new(record.Id.ToString(), record.Nombre, record.NombreNegocio, record.FotoUrl, record.Verificacion,
             record.Calificacion is { } rating ? Math.Round(rating, 1, MidpointRounding.AwayFromZero) : null, record.Anios,
             TechnicianProfileService.Shorten(record.Descripcion), record.Oficios, Detalle: null);
