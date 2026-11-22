@@ -38,7 +38,7 @@ public sealed class Spec058ArchivosSeguridadTests : IDisposable
 
         foreign.Should().Be(missing);
         foreign.Status.Should().Be(MediaOutcomeStatus.NotFound);
-        var api = new MediaApi(_service);
+        var api = Spec020bMediaUsoEnlacesTests.NewApi(_service);
         (await api.IsReadyAndOwnedByAsync(ticket.Id, "owner-b", CancellationToken.None)).Should().BeFalse();
         (await api.IsReadyAndOwnedByAsync(Guid.CreateVersion7(), "owner-b", CancellationToken.None)).Should().BeFalse();
         (await api.IsReadyAndOwnedByAsync(ticket.Id, "owner-a", CancellationToken.None)).Should().BeTrue("the real owner still sees it");

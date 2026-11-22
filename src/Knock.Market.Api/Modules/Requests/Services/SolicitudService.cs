@@ -115,7 +115,7 @@ internal sealed class SolicitudService(
         await store.InsertAsync(record, message, cancellationToken);
         return new CreateRequestOutcome(
             CreateRequestStatus.Created,
-            (await ClientViewAsync(record, totalQuotes: 0, cancellationToken))
+            (await ClientViewAsync(clientId, record, totalQuotes: 0, cancellationToken))
                 with
             { PuedeVolverAPedir = null });
     }
@@ -164,7 +164,7 @@ internal sealed class SolicitudService(
         if (string.Equals(record.ClienteId, sub, StringComparison.Ordinal))
         {
             var totals = await store.CountLiveQuotesAsync([record.Id], cancellationToken);
-            return await ClientViewAsync(record, totals.GetValueOrDefault(record.Id), cancellationToken);
+            return await ClientViewAsync(sub, record, totals.GetValueOrDefault(record.Id), cancellationToken);
         }
 
         // Spec 029, R-13: una solicitud cancelada o vencida solo la ve su dueño; el técnico recibe 404.
@@ -173,7 +173,7 @@ internal sealed class SolicitudService(
             return null;
         }
 
-        return await TechnicianMaySeeAsync(sub, record, cancellationToken) ? await TechnicianViewAsync(record, cancellationToken) : null;
+        return await TechnicianMaySeeAsync(sub, record, cancellationToken) ? await TechnicianViewAsync(sub, record, cancellationToken) : null;
     }
 
     /// <summary>Elegibilidad base (R-23), verificada en cada petición: técnico activo y visible, y o ya cotizó, o tiene el oficio, atiende la colonia y la solicitud sigue cotizable.</summary>
@@ -207,11 +207,11 @@ internal sealed class SolicitudService(
             && snapshot.ExpiresAt > clock.GetUtcNow();
     }
 
-    private async Task<RequestResponse> ClientViewAsync(RequestRecord record, int totalQuotes, CancellationToken cancellationToken) =>
-        ToResponse(record, await photos.ReadLinksAsync(record.Fotos, cancellationToken), record.DireccionCifrada is null ? null : cipher.Decrypt(record.DireccionCifrada, AddressContext(record.Id)), totalQuotes);
+    private async Task<RequestResponse> ClientViewAsync(string sub, RequestRecord record, int totalQuotes, CancellationToken cancellationToken) =>
+        ToResponse(record, await photos.ReadLinksAsync(sub, record.Fotos, cancellationToken), record.DireccionCifrada is null ? null : cipher.Decrypt(record.DireccionCifrada, AddressContext(record.Id)), totalQuotes);
 
-    private async Task<RequestResponse> TechnicianViewAsync(RequestRecord record, CancellationToken cancellationToken) =>
-        ToResponse(record, await photos.ReadLinksAsync(record.Fotos, cancellationToken), address: null, totalQuotes: null);
+    private async Task<RequestResponse> TechnicianViewAsync(string sub, RequestRecord record, CancellationToken cancellationToken) =>
+        ToResponse(record, await photos.ReadLinksAsync(sub, record.Fotos, cancellationToken), address: null, totalQuotes: null);
 
     private static RequestResponse ToResponse(RequestRecord record, IReadOnlyList<RequestPhoto> links, string? address, int? totalQuotes) => new(
         record.Id.ToString(),

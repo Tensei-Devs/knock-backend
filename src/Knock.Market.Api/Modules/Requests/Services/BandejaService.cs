@@ -24,7 +24,7 @@ internal sealed class BandejaService(ITechnicianDirectory technicians, EnviosSto
             var r = entry.Request;
             items.Add(new InboxItem(r.Id.ToString(), new RequestTrade(r.OficioClave, r.OficioNombre),
                 new InboxNeighborhood(r.ColoniaNombre, r.ColoniaCp), r.Descripcion,
-                await photos.ReadLinksAsync(r.Fotos, token), r.Dia, r.Franja, r.Modalidad, r.VenceEnUtc,
+                await photos.ReadLinksAsync(sub, r.Fotos, token), r.Dia, r.Franja, r.Modalidad, r.VenceEnUtc,
                 entry.Wave, entry.ReceivedAt, await requests.HasQuotedAsync(sub, r.Id, token)));
         }
         return new InboxResponse(items, page.NextCursor);
