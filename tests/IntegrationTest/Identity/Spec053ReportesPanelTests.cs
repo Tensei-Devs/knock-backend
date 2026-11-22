@@ -159,16 +159,17 @@ public sealed class Spec053ReportesPanelTests
             try
             {
                 await service.DecideAsync(Moderator(), id.ToString(), Decision("alta"), CancellationToken.None);
-                return true;
+                return (Decided: true, Failure: (Exception?)null);
             }
-            catch (Exception exception) when (exception is DomainException or MongoCommandException)
+            catch (DomainException exception)
             {
-                // El perdedor recibe 409 o, bajo contención en documentdb-local, un tiempo de bloqueo agotado; ninguno deja efectos.
-                return false;
+                return (Decided: false, Failure: exception);
             }
         }));
 
-        outcomes.Count(decided => decided).Should().Be(1);
+        // Cada perdedor recibe 409 determinista (sin MongoCommandException por bloqueo); exactamente uno decide y solo él deja efectos.
+        outcomes.Count(o => o.Decided).Should().Be(1);
+        outcomes.Where(o => !o.Decided).Should().OnlyContain(o => ((DomainException)o.Failure!).Kind == DomainErrorKind.Conflict);
         (await CountOutboxAsync(factory)).Should().Be(3);
     }
 
