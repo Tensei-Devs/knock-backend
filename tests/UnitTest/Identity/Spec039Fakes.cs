@@ -43,6 +43,10 @@ internal sealed class Spec039Outbox : IAccountOutbox
 
     public List<string> ExportTasks { get; } = [];
 
+    public List<(string Sub, DateTime DeleteAt)> DeletionTasks { get; } = [];
+
+    public List<string> AccountDeleted { get; } = [];
+
     /// <summary>Si es verdadero, programar la exportación falla (la tarea no se pudo encolar).</summary>
     public bool FailExport { get; set; }
 
@@ -54,6 +58,18 @@ internal sealed class Spec039Outbox : IAccountOutbox
         }
 
         ExportTasks.Add(userId);
+        return Task.CompletedTask;
+    }
+
+    public Task EnqueueDeletionAsync(string accountSub, DateTime deleteAt, CancellationToken cancellationToken)
+    {
+        DeletionTasks.Add((accountSub, deleteAt));
+        return Task.CompletedTask;
+    }
+
+    public Task EnqueueAccountDeletedAsync(string accountSub, CancellationToken cancellationToken)
+    {
+        AccountDeleted.Add(accountSub);
         return Task.CompletedTask;
     }
 

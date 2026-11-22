@@ -21,6 +21,13 @@ internal sealed class AccountStore(
     private const int _writeConflictCode = 112;
 
     public const string RecoveriesCollection = "recuperaciones";
+    private const string AddressesCollection = "direcciones";
+    private const string HomeAndCarCollection = "mi_casa_y_auto";
+    private const string ProfileCompleteField = "perfilCompleto";
+    private const string NameField = "nombre";
+    private const string PhotoUrlField = "fotoUrl";
+    private const string ColoniaField = "colonia";
+    private const string PostalCodeField = "codigoPostal";
 
     public const string DeleteAtField = "eliminarEn";
     public const string UpdatedAtField = "actualizadoEn";
@@ -43,6 +50,8 @@ internal sealed class AccountStore(
         .Include(DeleteAtField);
 
     private readonly FindOptions _findOptions = new() { MaxTime = mongoOptions.Value.QueryMaxTime };
+
+    private IMongoDatabase Database { get; } = database;
 
     public IMongoCollection<BsonDocument> Users { get; } = database.GetCollection<BsonDocument>(UsersCollection);
 
@@ -287,6 +296,66 @@ internal sealed class AccountStore(
             .Set(UpdatedAtField, new BsonDateTime(now))
             .Inc(Fields.VersionField, 1);
         return (await Users.UpdateOneAsync(filter, update, cancellationToken: cancellationToken)).ModifiedCount == 1;
+    }
+
+    public async Task<IReadOnlyList<string>?> EraseAccountAsync(string userId, DateTime now, CancellationToken cancellationToken)
+    {
+        var owner = ObjectId.Parse(userId);
+        var attempt = 0;
+        while (true)
+        {
+            attempt++;
+            try
+            {
+                using var session = await client.StartSessionAsync(cancellationToken: cancellationToken);
+                return await session.WithTransactionAsync(
+                    async (transaction, token) =>
+                    {
+                        var due = _filter.And(
+                            _filter.Eq(Fields.IdField, owner),
+                            _filter.Eq(Fields.StateField, AccountStates.DeletionScheduled),
+                            _filter.Lte(DeleteAtField, new BsonDateTime(now)));
+                        // El HMAC es único y obligatorio: se reemplaza por bytes al azar para liberar el celular sin dejar duplicados. El celular cifrado se borra.
+                        var update = Builders<BsonDocument>.Update
+                            .Set(Fields.StateField, AccountStates.Deleted)
+                            .Set(Fields.PhoneHashField, new BsonBinaryData(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)))
+                            .Set(Fields.IsTechnicianField, false)
+                            .Set(ProfileCompleteField, false)
+                            .Unset(Fields.PhoneCiphertextField)
+                            .Unset(Fields.PhoneCiphertextVersionField)
+                            .Unset(NameField)
+                            .Unset(PhotoUrlField)
+                            .Unset(ColoniaField)
+                            .Unset(PostalCodeField)
+                            .Unset(DeleteAtField)
+                            .Unset(ExportRequestedAtField)
+                            .Set(UpdatedAtField, new BsonDateTime(now))
+                            .Inc(Fields.VersionField, 1);
+                        if ((await Users.UpdateOneAsync(transaction, due, update, cancellationToken: token)).ModifiedCount != 1)
+                        {
+                            return null;
+                        }
+
+                        await Database.GetCollection<BsonDocument>(AddressesCollection).DeleteManyAsync(transaction, _filter.Eq(Fields.UserIdField, owner), cancellationToken: token);
+                        await Database.GetCollection<BsonDocument>(HomeAndCarCollection).DeleteManyAsync(transaction, _filter.Eq(Fields.UserIdField, userId), cancellationToken: token);
+                        var open = _filter.And(_filter.Eq(Fields.UserIdField, owner), _filter.Eq(Fields.RevokedField, false));
+                        var ids = (await Sessions.Find(transaction, open, _findOptions).Project(Builders<BsonDocument>.Projection.Include(Fields.IdField)).ToListAsync(token))
+                            .Select(document => document[Fields.IdField].AsObjectId)
+                            .ToList();
+                        if (ids.Count > 0)
+                        {
+                            await Sessions.UpdateManyAsync(transaction, _filter.In(Fields.IdField, ids), Builders<BsonDocument>.Update.Set(Fields.RevokedField, true), cancellationToken: token);
+                        }
+
+                        return (IReadOnlyList<string>?)[.. ids.Select(id => id.ToString())];
+                    },
+                    cancellationToken: cancellationToken);
+            }
+            catch (MongoCommandException exception) when (exception.Code == _writeConflictCode && attempt < _maxWriteConflictAttempts)
+            {
+                await Task.Delay(WriteConflictBackoff(attempt), cancellationToken);
+            }
+        }
     }
 
     private static FilterDefinition<BsonDocument> OpenSessionsExcept(string userId, string currentSessionId, DateTime now) =>

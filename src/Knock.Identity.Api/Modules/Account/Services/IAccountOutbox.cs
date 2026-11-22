@@ -1,9 +1,8 @@
 namespace Knock.Identity.Api.Modules.Account.Services;
 
 /// <summary>
-/// Salida de eventos de la cuenta hacia el buzón de salida y las tareas programadas (specs 037 y 054). Esos dos mecanismos todavía no están
-/// implementados (spec 039, §8): mientras no existan, <see cref="PendingAccountOutbox"/> solo deja constancia sin datos. Cuando existan, esta
-/// interfaz se implementa con la escritura en el buzón, dentro de la transacción del cambio.
+/// Salida de eventos de la cuenta hacia la bandeja de salida y las tareas programadas (specs 037 y 054). La implementación escribe en esos dos mecanismos; ninguna
+/// carga ni clave de negocio lleva datos personales (spec 054, R-02).
 /// </summary>
 internal interface IAccountOutbox
 {
@@ -12,23 +11,10 @@ internal interface IAccountOutbox
 
     /// <summary>Programa la tarea <c>PrepararExportacion</c> (spec 054) de la persona: reúne sus datos, arma el ZIP y la avisa con un enlace de 24 horas.</summary>
     Task EnqueueExportAsync(string userId, CancellationToken cancellationToken);
-}
 
-/// <summary>Sustituto mientras no existe el buzón de salida (spec 054): registra que el evento quedó pendiente, sin ids ni datos de la persona.</summary>
-internal sealed partial class PendingAccountOutbox(ILogger<PendingAccountOutbox> logger) : IAccountOutbox
-{
-    public Task EnqueueSessionRevokedAsync(string sessionId, CancellationToken cancellationToken)
-    {
-        LogPending(logger, "sesion_revocada");
-        return Task.CompletedTask;
-    }
+    /// <summary>Programa la tarea <c>EliminarCuenta</c> (spec 054) del <paramref name="accountSub"/> para cuando venza la gracia (<paramref name="deleteAt"/>). Cancelar y volver a programar crea otra tarea.</summary>
+    Task EnqueueDeletionAsync(string accountSub, DateTime deleteAt, CancellationToken cancellationToken);
 
-    public Task EnqueueExportAsync(string userId, CancellationToken cancellationToken)
-    {
-        LogPending(logger, "PrepararExportacion");
-        return Task.CompletedTask;
-    }
-
-    [LoggerMessage(EventId = 3990, Level = LogLevel.Warning, Message = "Account event {EventType} not delivered: the outbox (spec 054) is not implemented yet")]
-    private static partial void LogPending(ILogger logger, string eventType);
+    /// <summary>Deja el evento <c>CuentaEliminada { sub }</c> para Mercado (cancelar visitas confirmadas, anonimizar opiniones, spec 039 R-25). Repetirlo no duplica.</summary>
+    Task EnqueueAccountDeletedAsync(string accountSub, CancellationToken cancellationToken);
 }
