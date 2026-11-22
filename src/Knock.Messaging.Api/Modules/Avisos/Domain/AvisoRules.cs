@@ -28,6 +28,33 @@ internal static partial class AvisoRules
         [NewMessageEvent] = "mensajes",
     };
 
+    public const string SessionRevokedEvent = "sesion_revocada";
+
+    public const string ClientRole = "cliente";
+
+    public const string TechnicianRole = "tecnico";
+
+    /// <summary>Rol que recibe cada evento; <c>null</c> si lo reciben ambos (<c>mensaje_nuevo</c>). Un rol que no corresponde al tipo es 422 (R-11, CA-16).</summary>
+    private static readonly Dictionary<string, string?> _roleByEvent = new(StringComparer.Ordinal)
+    {
+        ["solicitud_nueva"] = TechnicianRole,
+        ["solicitud_sin_tecnicos"] = ClientRole,
+        ["cotizacion_nueva"] = ClientRole,
+        ["cotizacion_aceptada"] = TechnicianRole,
+        ["solicitud_cancelada"] = TechnicianRole,
+        ["solicitud_vencida"] = ClientRole,
+        ["cotizacion_vencida"] = TechnicianRole,
+        [NewMessageEvent] = null,
+    };
+
+    /// <summary>Si el evento es del catálogo cerrado (los ocho de la carga v1 o <c>sesion_revocada</c>).</summary>
+    public static bool IsCatalogType(string? tipo) =>
+        tipo is not null && (tipo == SessionRevokedEvent || _typeByEvent.ContainsKey(tipo));
+
+    /// <summary>Si <paramref name="rol"/> corresponde a <paramref name="tipo"/> (R-11).</summary>
+    public static bool RoleMatches(string tipo, string? rol) =>
+        _roleByEvent.TryGetValue(tipo, out var expected) && rol is ClientRole or TechnicianRole && (expected is null || expected == rol);
+
     /// <summary>Los campos que la carga v1 puede llevar y ningún otro (R-04).</summary>
     public static readonly IReadOnlyList<string> PayloadFields = ["v", "tipo", "evento", "recurso", "aviso", "conversacion"];
 
@@ -67,6 +94,13 @@ internal static partial class AvisoRules
 
     /// <summary>Clave única de envío: el mismo evento para la misma persona se envía una vez; eventos distintos sobre el mismo recurso, ambos (R-06).</summary>
     public static string DeduplicationKey(string eventoId, string destinatario) => $"{eventoId}|{destinatario}";
+
+    /// <summary>Separa la clave de <see cref="DeduplicationKey"/> en evento y persona (el <c>eventoId</c> es opaco y no lleva <c>|</c>: el validador de la ruta interna lo exige).</summary>
+    public static (string EventId, string Person) SplitDeduplicationKey(string key)
+    {
+        var separator = key.LastIndexOf('|', StringComparison.Ordinal);
+        return separator < 1 ? throw new ArgumentException("Invalid deduplication key.", nameof(key)) : (key[..separator], key[(separator + 1)..]);
+    }
 
     /// <summary>Primer aviso de la ventana se envía; los siguientes dentro de los 5 minutos se agrupan (R-07).</summary>
     public static WindowDecision DecideWindow(DateTime? windowStartUtc, DateTime nowUtc) =>

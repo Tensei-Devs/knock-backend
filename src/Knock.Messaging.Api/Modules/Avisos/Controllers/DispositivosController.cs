@@ -5,6 +5,7 @@ using Knock.Messaging.Api.Modules.Avisos.Dtos;
 using Knock.Messaging.Api.Modules.Avisos.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Knock.Messaging.Api.Modules.Avisos.Controllers;
 
@@ -12,6 +13,7 @@ namespace Knock.Messaging.Api.Modules.Avisos.Controllers;
 [ApiVersion("1.0")]
 [Authorize]
 [PrivateNoStore]
+[EnableRateLimiting(RateLimitingExtensions.DevicesPolicy)]
 [Route("api/v{version:apiVersion}/dispositivos")]
 internal sealed class DispositivosController(DispositivosService service) : ControllerBase
 {
@@ -40,6 +42,8 @@ internal sealed class DispositivosController(DispositivosService service) : Cont
             return StatusCode(StatusCodes.Status503ServiceUnavailable);
         }
 
-        return await service.DeleteAsync(User.FindFirst("sub")!.Value, id, cancellationToken) ? NoContent() : NotFound();
+        // R-02: 204 también si el dispositivo ya no existe o es de otra persona (no se revela cuál de los dos).
+        await service.DeleteAsync(User.FindFirst("sub")!.Value, id, cancellationToken);
+        return NoContent();
     }
 }

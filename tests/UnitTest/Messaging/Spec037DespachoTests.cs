@@ -122,6 +122,40 @@ public sealed class Spec037DespachoTests
     }
 
     [Fact]
+    public async Task Dispatch_NewMessageWithinWindow_CountsTheSuppressedMessage_R_07()
+    {
+        var harness = new Harness();
+        harness.Store.WindowStart = harness.Clock.GetUtcNow().UtcDateTime.AddMinutes(-1);
+
+        await harness.Dispatcher.DispatchAsync(Harness.Message("m3"), CancellationToken.None);
+
+        harness.Store.Suppressed.Should().Be(1);
+        harness.Store.Opened.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Dispatch_FirstNewMessage_OpensTheWindow_R_07()
+    {
+        var harness = new Harness();
+
+        (await harness.Dispatcher.DispatchAsync(Harness.Message("m4"), CancellationToken.None)).Should().Be(DispatchOutcome.Sent);
+
+        harness.Store.Opened.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Dispatch_OverThePersonHourlyLimit_IsNotSentAndIsRecordedAsLimited_CA_037_17()
+    {
+        var harness = new Harness();
+        harness.Store.Recent = PushOptions.DefaultHourlyLimit + 1;
+
+        (await harness.Dispatcher.DispatchAsync(Harness.Event("solicitud_nueva"), CancellationToken.None)).Should().Be(DispatchOutcome.Limited);
+
+        harness.Sender.Calls.Should().Be(0);
+        harness.Store.Results.Values.Should().ContainSingle().Which.Should().Be("limitado");
+    }
+
+    [Fact]
     public async Task Dispatch_InvalidToken_IsDeleted_CA_037_08()
     {
         var harness = new Harness();
@@ -219,6 +253,26 @@ public sealed class Spec037DespachoTests
 
         public DateTime? WindowStart { get; set; }
 
+        public int Recent { get; set; }
+
+        public int Opened { get; private set; }
+
+        public int Suppressed { get; private set; }
+
+        public Task OpenWindowAsync(string conversation, string person, DateTime nowUtc, CancellationToken cancellationToken)
+        {
+            Opened++;
+            return Task.CompletedTask;
+        }
+
+        public Task CountSuppressedAsync(string conversation, string person, CancellationToken cancellationToken)
+        {
+            Suppressed++;
+            return Task.CompletedTask;
+        }
+
+        public Task<int> CountRecentAsync(string person, DateTime sinceUtc, CancellationToken cancellationToken) => Task.FromResult(Recent);
+
         public Task<bool> TryReserveAsync(string deduplicationKey, string evento, string tipo, CancellationToken cancellationToken) =>
             Task.FromResult(Reserved.Add(deduplicationKey));
 
@@ -235,6 +289,14 @@ public sealed class Spec037DespachoTests
     private sealed class FakeDevices : IDeviceTokens
     {
         public List<string> Deleted { get; } = [];
+
+        public List<string> DeletedSessions { get; } = [];
+
+        public Task DeleteBySessionAsync(string session, CancellationToken cancellationToken)
+        {
+            DeletedSessions.Add(session);
+            return Task.CompletedTask;
+        }
 
         public Task<IReadOnlyList<string>> ListAsync(string person, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<string>>(["device-token"]);

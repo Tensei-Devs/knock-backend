@@ -7,7 +7,7 @@ namespace Knock.Messaging.Api.Modules.Avisos.Data;
 
 internal sealed record DeviceRegistration(DeviceRegistrationStatus Status, string? Id);
 
-// This store is not registered in DI while cross-replica HMAC consistency remains unverified.
+// DeviceStoreFactory only creates this store when Avisos:Devices:WritesEnabled is true: cross-replica HMAC key consistency is an operator decision.
 internal sealed class DeviceStore(IMongoDatabase database, TokenProtection protection)
 {
     private readonly IMongoCollection<BsonDocument> _devices = database.GetCollection<BsonDocument>("notifications.dispositivos");
@@ -76,6 +76,25 @@ internal sealed class DeviceStore(IMongoDatabase database, TokenProtection prote
         return result.DeletedCount == 1;
     }
 
+    // Spec 037 R-01: un teléfono cambia de cuenta al iniciar sesión, así que el último registro gana y la persona anterior deja de recibir avisos. Se cambia el id y se vuelve a cifrar con el
+    // nuevo dueño (el dueño y el id forman el contexto autenticado del cifrado); el identificador de la persona anterior nunca se devuelve. Si el registro desapareció entre la lectura y la
+    // escritura devuelve null y el llamador reintenta el alta.
+    private async Task<DeviceRegistration?> ReassignAsync(
+        BsonDocument other, string person, string session, string platform, string token, DateTime now, CancellationToken cancellationToken)
+    {
+        var newId = DispositivoId.Create();
+        var update = Builders<BsonDocument>.Update
+            .Set("id", newId)
+            .Set("personaId", person)
+            .Set("sid", session)
+            .Set("plataforma", platform)
+            .Set("identificadorCifrado", protection.Encrypt(token, person, newId))
+            .Set("renovadoEn", new BsonDateTime(now));
+        var filter = Builders<BsonDocument>.Filter.Eq("_id", other["_id"]) & Builders<BsonDocument>.Filter.Eq("id", other["id"].AsString);
+        var replaced = await _devices.FindOneAndUpdateAsync(filter, update, cancellationToken: cancellationToken);
+        return replaced is null ? null : new DeviceRegistration(DeviceRegistrationStatus.Created, newId);
+    }
+
     private async Task<DeviceRegistration?> UpdateExistingAsync(
         string person, string session, string platform, string token, string fingerprint, DateTime now, CancellationToken cancellationToken)
     {
@@ -90,7 +109,7 @@ internal sealed class DeviceStore(IMongoDatabase database, TokenProtection prote
         if (existing is null)
         {
             var other = await _devices.Find(filters.Eq("tokenHuella", fingerprint)).FirstOrDefaultAsync(cancellationToken);
-            return other is null ? null : new DeviceRegistration(DeviceRegistrationStatus.Conflict, null);
+            return other is null ? null : await ReassignAsync(other, person, session, platform, token, now, cancellationToken);
         }
 
         own &= filters.Eq("_id", existing["_id"]);
