@@ -1,8 +1,7 @@
 using Knock.Contracts.Correlation;
 using Knock.Hosting.ForwardedHeaders;
 using Knock.Messaging.Api.Hosting;
-using Knock.Messaging.Api.Modules.Avisos.Push;
-using Knock.Messaging.Api.Modules.Avisos.Services;
+using Knock.Messaging.Api.Modules.Avisos;
 using Knock.Messaging.Api.Modules.Chat;
 using Knock.Messaging.Api.Modules.Conversaciones;
 using Serilog;
@@ -31,12 +30,8 @@ builder.Services.AddKnockData();
 builder.Services.AddChatModule().AddKnockChatBridge();
 // Spec 030: errores de dominio de Conversaciones como ProblemDetails y cliente del permiso de Mercado con caché de 60 s (usa Services:Market que valida AddChatModule).
 builder.Services.AddConversacionesModule();
-builder.Services.AddSingleton(provider => DeviceKeyConfiguration.Read(provider.GetRequiredService<IConfiguration>()));
-builder.Services.AddScoped<Knock.Messaging.Api.Modules.Avisos.Data.DeviceStoreFactory>();
-builder.Services.AddScoped<DispositivosService>();
-// Spec 037: FCM detrás de IPushSender; Notificaciones:PushHabilitado apagado por omisión y envío no-op hasta tener credenciales (R-10).
-builder.Services.AddSingleton(provider => PushOptions.Read(provider.GetRequiredService<IConfiguration>()));
-builder.Services.AddSingleton<IPushSender, NoOpPushSender>();
+// Spec 037: dispositivos y despachador; FCM detrás de IPushSender con Notificaciones:PushHabilitado apagado por omisión (R-10).
+builder.Services.AddAvisosModule();
 
 var app = builder.Build();
 

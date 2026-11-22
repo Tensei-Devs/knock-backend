@@ -10,7 +10,7 @@ namespace Knock.Messaging.Api.Modules.Avisos.Data;
 /// Dispositivos de una persona para el despachador (spec 037, R-03, R-13): descifra el identificador solo al enviar y lo borra si FCM lo rechaza. Sin la configuración de claves del módulo
 /// (<see cref="DeviceKeyConfiguration"/>) no hay dispositivos que leer, así que el despachador no envía nada (falla cerrado).
 /// </summary>
-internal sealed class DeviceTokens(IMongoDatabase database, DeviceKeyConfiguration keys, ILogger<DeviceTokens> logger) : IDeviceTokens
+internal sealed partial class DeviceTokens(IMongoDatabase database, DeviceKeyConfiguration keys, ILogger<DeviceTokens> logger) : IDeviceTokens
 {
     private readonly IMongoCollection<BsonDocument> _devices = database.GetCollection<BsonDocument>("notifications.dispositivos");
 
@@ -32,7 +32,7 @@ internal sealed class DeviceTokens(IMongoDatabase database, DeviceKeyConfigurati
             catch (Exception exception) when (exception is CryptographicException or FormatException or KeyNotFoundException)
             {
                 // Sin el identificador ni el registro en el mensaje: el dispositivo se omite y queda para el TTL.
-                logger.LogWarning("A device registration could not be decrypted and was skipped.");
+                LogUndecryptable(logger, exception);
             }
         }
 
@@ -52,4 +52,7 @@ internal sealed class DeviceTokens(IMongoDatabase database, DeviceKeyConfigurati
 
     public Task DeleteBySessionAsync(string session, CancellationToken cancellationToken) =>
         _devices.DeleteManyAsync(Builders<BsonDocument>.Filter.Eq("sid", session), cancellationToken);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "A device registration could not be decrypted and was skipped.")]
+    private static partial void LogUndecryptable(ILogger logger, Exception exception);
 }

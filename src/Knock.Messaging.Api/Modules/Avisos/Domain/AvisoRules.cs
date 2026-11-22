@@ -98,7 +98,7 @@ internal static partial class AvisoRules
     /// <summary>Separa la clave de <see cref="DeduplicationKey"/> en evento y persona (el <c>eventoId</c> es opaco y no lleva <c>|</c>: el validador de la ruta interna lo exige).</summary>
     public static (string EventId, string Person) SplitDeduplicationKey(string key)
     {
-        var separator = key.LastIndexOf('|');
+        var separator = key.LastIndexOf('|', StringComparison.Ordinal);
         return separator < 1 ? throw new ArgumentException("Invalid deduplication key.", nameof(key)) : (key[..separator], key[(separator + 1)..]);
     }
 
