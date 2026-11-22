@@ -12,6 +12,10 @@ internal static class MarketRateLimits
     public const string CreateRequestPolicy = "solicitudes-crear";
     /// <summary>Cancelar solicitudes: 10 por hora por persona (spec 029, R-14).</summary>
     public const string CancelRequestPolicy = "solicitudes-cancelar";
+    /// <summary>Ampliar la búsqueda: 10 por hora por persona (spec 048, R-17).</summary>
+    public const string ExtendRequestPolicy = "solicitudes-ampliar";
+    /// <summary>Referencia de mercado: 30 por minuto por persona (spec 048, R-17).</summary>
+    public const string MarketReferencePolicy = "cotizaciones-referencia";
     public const string QuotePolicy = "quotes";
     public const string CompareQuotesPolicy = "cotizaciones-comparar";
     public const string ChooseQuotePolicy = "cotizaciones-elegir";
@@ -50,6 +54,8 @@ internal static class MarketRateLimits
                 .PerSubject(WaitlistPolicy, 5, TimeSpan.FromHours(1))
                 .PerSubject(CreateRequestPolicy, 10, TimeSpan.FromHours(1))
                 .PerSubject(CancelRequestPolicy, 10, TimeSpan.FromHours(1))
+                .PerSubject(ExtendRequestPolicy, 10, TimeSpan.FromHours(1))
+                .PerSubject(MarketReferencePolicy, 30, TimeSpan.FromMinutes(1))
                 .PerSubject(QuotePolicy, 3, TimeSpan.FromMinutes(1))
                 .PerSubject(CompareQuotesPolicy, 60, TimeSpan.FromMinutes(1))
                 .PerSubject(ChooseQuotePolicy, 10, TimeSpan.FromMinutes(1))

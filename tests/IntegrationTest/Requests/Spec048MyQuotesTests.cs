@@ -37,7 +37,7 @@ public sealed class Spec048MyQuotesTests
     }
 
     [Fact]
-    public async Task StateFilter_ReturnsOnlyOwnInDescendingOrder_CA_048_12()
+    public async Task StateFilter_ReturnsOnlyOwnInDescendingOrder_CA_048_12_CA_048_20()
     {
         await using var host = await Spec020Host.StartAsync();
         await host.SeedTechnicianAsync(host.ClientSub, "activo", false, [Spec020Host.Plumbing], host.ColoniaId);
