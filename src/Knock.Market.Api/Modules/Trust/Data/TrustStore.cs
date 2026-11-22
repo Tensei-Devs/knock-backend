@@ -1,3 +1,4 @@
+using Knock.Hosting.Concurrency;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Trust.Domain;
 using Microsoft.Extensions.Options;
@@ -57,8 +58,14 @@ internal sealed class TrustStore(
         return views.GetValueOrDefault(id);
     }
 
-    /// <summary>Guarda al técnico para la persona: lo crea o, si ya estaba, lo deja como está. Una carrera entre dos peticiones iguales la decide el índice único.</summary>
-    public async Task<TrustSaveResult> SaveAsync(string clientId, ObjectId technicianId, DateTime nowUtc, CancellationToken cancellationToken)
+    /// <summary>
+    /// Guarda al técnico para la persona: lo crea o, si ya estaba, lo deja como está. Dentro de la instancia las peticiones iguales se turnan (<see cref="KeyedGate"/>): varios upserts a la vez sobre el
+    /// índice único se bloqueaban entre sí en documentdb-local (código 24) y agotaban los reintentos como 500. Entre instancias decide el índice único con la relectura y el reintento de <see cref="SaveOnceAsync"/>.
+    /// </summary>
+    public Task<TrustSaveResult> SaveAsync(string clientId, ObjectId technicianId, DateTime nowUtc, CancellationToken cancellationToken) =>
+        KeyedGate.RunAsync(clientId + "|" + technicianId, () => SaveSerializedAsync(clientId, technicianId, nowUtc, cancellationToken), cancellationToken);
+
+    private async Task<TrustSaveResult> SaveSerializedAsync(string clientId, ObjectId technicianId, DateTime nowUtc, CancellationToken cancellationToken)
     {
         var filter = Builders<BsonDocument>.Filter.Eq(_clientField, clientId) & Builders<BsonDocument>.Filter.Eq(_technicianField, technicianId);
         return await SaveOnceAsync(
