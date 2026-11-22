@@ -138,11 +138,13 @@ public class Spec053Tests
     {
         public ReportDecisionApplied? Applied { get; private set; }
 
-        public Task ApplyAsync(StoreTransaction transaction, ReportDecisionApplied decision, CancellationToken cancellationToken)
+        public Task<IReadOnlyList<string>> ApplyAsync(StoreTransaction transaction, ReportDecisionApplied decision, CancellationToken cancellationToken)
         {
             Applied = decision;
-            return Task.CompletedTask;
+            return Task.FromResult<IReadOnlyList<string>>([]);
         }
+
+        public Task AfterCommitAsync(IReadOnlyList<string> sessionIds, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
     private static (VerificationReviewService Service, FakeVerifications Store, FakeLinks Links, FakeBlobs Blobs, FakeAudit Audit) NewVerificationService(bool underReview = true)
