@@ -42,7 +42,7 @@ internal sealed partial class AiClient(
             text = text[..MaxInputChars];
         }
 
-        var prompt = templates.Prompt(T.Function);
+        var prompt = templates.Prompt(AiOutputs.FunctionOf<T>());
         var (value, reason, tokensIn, tokensOut) = await TryProviderAsync<T>(solicitud, prompt, text, cancellationToken);
         var origin = value is null ? AiOrigin.Template : AiOrigin.Provider;
         if (value is null)
