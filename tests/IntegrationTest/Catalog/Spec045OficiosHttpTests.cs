@@ -195,7 +195,7 @@ public sealed class Spec045OficiosHttpTests
         using var response = await PanelAsync(host, HttpMethod.Post, _admin, PanelToken(), NewTrade());
 
         response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
-        (await Spec020Host.ReadAsync(response)).GetProperty("code").GetString().Should().Be("audit_unavailable");
+        (await Spec020Host.ReadAsync(response)).GetProperty("code").GetString().Should().Be("panel_audit_unavailable");
         (await host.Database.GetCollection<BsonDocument>("oficios").CountDocumentsAsync(Builders<BsonDocument>.Filter.Eq("clave", "gas"))).Should().Be(0);
     }
 

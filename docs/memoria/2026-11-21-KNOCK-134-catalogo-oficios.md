@@ -13,7 +13,7 @@ Reaplicar `oficios.json` con el cargador del catálogo reemplaza los oficios por
 - OFP-01 es para cuentas con perfil de técnico (registro ya hecho); cualquier otra recibe 404 `not_found` sin más datos.
 - El detalle público solo trae clave, nombre, modalidad y frases sugeridas; los parámetros de precio los ve solo el panel.
 - `PUT` es parcial (solo cambian los campos enviados, al menos uno).
-- Las dos rutas de escritura del panel responden 503 `audit_unavailable` sin escribir mientras la auditoría real del panel (spec 033) no exista; la puerta de permisos sigue negando todo.
+- Las dos rutas de escritura del panel responden 503 `panel_audit_unavailable` sin escribir mientras la auditoría real del panel (spec 033) no exista; la puerta de permisos sigue negando todo.
 - La moderación del texto de «Otro oficio» es de patrones (correo, dirección web y más de seis dígitos); la moderación de contenido con Azure es de la spec 031.
 
 ## PARA VALIDACIÓN DE JOSÉ

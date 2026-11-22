@@ -61,6 +61,7 @@ public static class CatalogModuleExtensions
         services.AddSingleton<CatalogAdminStore>();
         services.AddSingleton<CatalogAdminService>();
         services.AddSingleton<ITradeAdminStore, TradeAdminStore>();
+        services.TryAddSingleton<IPanelAuditTrail, UnavailablePanelAuditTrail>();
         services.AddSingleton<TradeAdminService>();
         services.AddSingleton<ITradeRequestStore, TradeRequestStore>();
         services.AddSingleton<TradeRequestService>();

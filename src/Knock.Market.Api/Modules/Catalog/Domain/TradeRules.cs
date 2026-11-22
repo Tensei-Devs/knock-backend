@@ -12,11 +12,12 @@ internal static class TradeErrorCodes
     public const string NotFoundCode = "not_found";
 
     /// <summary>La auditoría del panel no está disponible: la alta o el cambio no se hace (R-20).</summary>
-    public const string AuditUnavailableCode = "audit_unavailable";
+    public const string AuditUnavailableCode = "panel_audit_unavailable";
 }
 
-/// <summary>La auditoría del panel no está disponible: la alta o el cambio del catálogo no se hace (spec 045, R-20). El controlador la traduce a 503 <c>audit_unavailable</c>.</summary>
-public sealed class PanelAuditUnavailableException : Exception
+/// <summary>La auditoría del panel no está disponible: la alta o el cambio del catálogo no se hace (spec 045, R-20). El controlador la traduce a 503 <c>panel_audit_unavailable</c>.</summary>
+#pragma warning disable S3871 // Excepción interna del módulo: CA1515 y la regla de superficie pública de los módulos exigen que no sea pública.
+internal sealed class PanelAuditUnavailableException : Exception
 {
     public PanelAuditUnavailableException()
         : base("The panel audit trail is not available.")
@@ -33,6 +34,7 @@ public sealed class PanelAuditUnavailableException : Exception
     {
     }
 }
+#pragma warning restore S3871
 
 /// <summary>
 /// Reglas puras del oficio que administra el panel y del oficio pedido (spec 045, R-18 a R-22): clave, nombre, modalidad, porcentajes, montos y el texto de «Otro oficio». Los valores salen de §6 y

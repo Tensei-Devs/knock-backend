@@ -35,7 +35,7 @@ internal sealed class AdminTradesController(TradeAdminService service) : Control
 
     /// <summary>
     /// Alta de un oficio (OFI-04): 201 con el oficio creado. La clave repetida responde 409 <c>trade_key_taken</c>; un cuerpo ilegible, 400; un valor inválido, 422. Deja la auditoría del panel antes de escribir:
-    /// sin ella responde 503 <c>audit_unavailable</c> y no cambia nada.
+    /// sin ella responde 503 <c>panel_audit_unavailable</c> y no cambia nada.
     /// </summary>
     [HttpPost]
     [RequestSizeLimit(TradeBodies.MaxBodyBytes)]
