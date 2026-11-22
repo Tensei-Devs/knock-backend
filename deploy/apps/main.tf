@@ -199,6 +199,19 @@ resource "azurerm_role_assignment" "market_quarantine" {
   principal_id         = module.service["market"].identity_principal_id
 }
 
+# Identidad escribe las exportaciones de datos (spec 039, R-22) solo en `exportaciones` y firma el enlace de 24 horas con `Storage Blob Delegator`.
+resource "azurerm_role_assignment" "identity_exports" {
+  scope                = local.infra.exports_container_id
+  role_definition_name = "Storage Blob Data Contributor"
+  principal_id         = module.service["identity"].identity_principal_id
+}
+
+resource "azurerm_role_assignment" "identity_exports_delegator" {
+  scope                = local.infra.storage_account_id
+  role_definition_name = "Storage Blob Delegator"
+  principal_id         = module.service["identity"].identity_principal_id
+}
+
 resource "azurerm_role_assignment" "market_delegator" {
   for_each             = { privada = local.infra.storage_account_id, publica = local.infra.public_images_account_id }
   scope                = each.value
