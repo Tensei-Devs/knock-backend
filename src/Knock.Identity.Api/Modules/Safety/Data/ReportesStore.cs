@@ -1,5 +1,6 @@
 using Knock.Identity.Api.Hosting;
 using Knock.Identity.Api.Modules.Panel;
+using Knock.Identity.Api.Modules.Safety.Domain;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -50,6 +51,9 @@ internal sealed class ReportesStore(
                 new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("gravedad").Ascending(_stateField).Ascending(_createdField), new CreateIndexOptions { Name = "gravedad_1_estado_1_creadoEn_1" }),
                 new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending(_reportedField), new CreateIndexOptions { Name = "reportadoId_1" }),
                 new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending(_reporterField), new CreateIndexOptions { Name = "reportaId_1" }),
+                new CreateIndexModel<BsonDocument>(
+                    Builders<BsonDocument>.IndexKeys.Ascending(ReportRules.NotFinishedVisitField),
+                    new CreateIndexOptions { Name = "visitaNoTerminadaId_1", Unique = true, Sparse = true }),
             ],
             cancellationToken);
 
@@ -93,6 +97,39 @@ internal sealed class ReportesStore(
 
         await Reports.InsertOneAsync(document, cancellationToken: cancellationToken);
         return ToStored(document);
+    }
+
+    /// <summary>
+    /// Abre el reporte de «no terminado» de una visita (spec 053): un solo reporte por visita, aunque el evento llegue repetido o dos entregas corran a la vez (upsert por el campo <c>visitaNoTerminadaId</c>, con índice único y disperso).
+    /// <see langword="true"/> si lo abrió ahora, <see langword="false"/> si ya existía.
+    /// </summary>
+    public async Task<bool> OpenFromVisitAsync(NewReport report, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+        var filters = Builders<BsonDocument>.Filter;
+        try
+        {
+            var result = await Reports.UpdateOneAsync(
+                filters.Eq(ReportRules.NotFinishedVisitField, report.ReferenceId),
+                Builders<BsonDocument>.Update
+                    .SetOnInsert(_reporterField, report.ReporterId)
+                    .SetOnInsert(_reportedField, report.ReportedId)
+                    .SetOnInsert("referencia.tipo", report.ReferenceKind)
+                    .SetOnInsert("referencia.id", report.ReferenceId)
+                    .SetOnInsert("motivo", report.Reason)
+                    .SetOnInsert("descripcion", report.Text)
+                    .SetOnInsert("evidencia", new BsonArray(report.Evidence))
+                    .SetOnInsert(_stateField, "abierto")
+                    .SetOnInsert(_createdField, new BsonDateTime(report.CreatedAtUtc)),
+                new UpdateOptions { IsUpsert = true },
+                cancellationToken);
+            return result.UpsertedId is not null;
+        }
+        catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            // Otra entrega del mismo evento ganó la carrera: el reporte ya existe.
+            return false;
+        }
     }
 
     /// <summary>Los reportes hechos por quien llama, del más reciente al más antiguo (por <c>_id</c>). Pide uno de más para saber si hay otra página.</summary>
