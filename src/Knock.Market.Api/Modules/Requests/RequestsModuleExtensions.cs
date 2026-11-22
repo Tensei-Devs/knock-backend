@@ -39,6 +39,9 @@ public static class RequestsModuleExtensions
         services.AddScoped<IQuoteWriter, QuoteStore>();
         services.AddScoped<QuoteStore>();
         services.AddScoped<MyQuotesService>();
+        services.AddSingleton<MarketReferenceCache>();
+        services.AddScoped<MarketReferenceStore>();
+        services.AddScoped<MarketReferenceService>();
         services.AddScoped<QuoteService>();
         services.AddOptions<FieldEncryptionOptions>().BindConfiguration(FieldEncryptionOptions.SectionName);
         services.AddSingleton<FieldCipher>();
@@ -53,11 +56,16 @@ public static class RequestsModuleExtensions
         services.AddScoped<RepartoService>();
         services.AddScoped<IManejadorDeTarea, RepartirOleada>();
         services.AddScoped<IManejadorDeTarea, RevisarOleada>();
+        services.AddScoped<TareasProgramadasStore>(provider => new TareasProgramadasStore(provider.GetRequiredKeyedService<IMongoDatabase>(ModuleKey)));
+        services.AddScoped<VencerSolicitud>();
+        services.AddScoped<IManejadorDeTarea>(provider => provider.GetRequiredService<VencerSolicitud>());
+        services.AddScoped<BarrerVencidas>();
+        services.AddScoped<IManejadorDeTarea>(provider => provider.GetRequiredService<BarrerVencidas>());
         services.AddScoped<RequestsStore>();
         services.AddScoped<CierreDeSolicitudStore>();
         services.AddScoped<CierreDeSolicitudService>();
-        // Fotos y moderación: hasta que lleguen los servicios reales (spec 013, OI-2) fallan cerrado; las pruebas los sustituyen por dobles.
-        services.TryAddScoped<IRequestPhotos, UnavailableRequestPhotos>();
+        // Fotos: adaptador sobre IMediaApi (spec 032); la moderación falla cerrado hasta que llegue el servicio real (spec 013). Las pruebas los sustituyen por dobles.
+        services.TryAddScoped<IRequestPhotos, MediaRequestPhotos>();
         services.TryAddSingleton<IContentModerator, UnavailableContentModerator>();
         services.AddScoped<SolicitudService>();
         services.AddSingleton<VisitCodeFactory>();
@@ -76,7 +84,8 @@ public static class RequestsModuleExtensions
         services.AddScoped<VisitScheduleService>();
         services.AddScoped<VisitCloseStore>();
         services.AddScoped<VisitCloseService>();
-        services.TryAddScoped<IVisitPhotos, UnavailableVisitPhotos>();
+        // Fotos del trabajo terminado: adaptador sobre IMediaApi (spec 032); falla cerrado si el módulo de archivos no responde.
+        services.TryAddScoped<IVisitPhotos, MediaVisitPhotos>();
         services.AddScoped<IManejadorDeTarea, VencerPropuestaDeReprogramacion>();
         services.AddScoped<FinalQuoteStore>();
         services.AddScoped<FinalQuoteService>();

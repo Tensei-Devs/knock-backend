@@ -162,7 +162,7 @@ internal sealed class Spec020Host : IAsyncDisposable
     {
         ["oficioClave"] = trade,
         ["descripcion"] = Description,
-        ["fotos"] = new[] { ObjectId.GenerateNewId().ToString() },
+        ["fotos"] = new[] { Guid.CreateVersion7().ToString("N") },
         ["dia"] = Tomorrow(),
         ["franja"] = "tarde",
         ["coloniaId"] = ColoniaId.ToString(),

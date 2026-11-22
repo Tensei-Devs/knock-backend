@@ -119,6 +119,30 @@ public sealed class Spec033GatewayTests
         appOnApp.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
+    [Theory]
+    [InlineData("/api/v1/admin/reportes", "identidad")]
+    [InlineData("/api/v1/admin/verificaciones", "identidad")]
+    public async Task Las_Rutas_Admin_Van_Al_Servicio_Dueno_Y_Solo_Con_Token_Del_Panel_KNOCK_266(string path, string service)
+    {
+        await using var host = await StartAsync();
+        using var panelRequest = new HttpRequestMessage(HttpMethod.Get, new Uri(path, UriKind.Relative));
+        panelRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", PanelToken());
+        using var appRequest = new HttpRequestMessage(HttpMethod.Get, new Uri(path, UriKind.Relative));
+        appRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", GatewayTestSupport.IssueToken());
+        using var anonymousRequest = new HttpRequestMessage(HttpMethod.Get, new Uri(path, UriKind.Relative));
+
+        using var panel = await host.Client.SendAsync(panelRequest);
+        host.PathsSeen.Clear();
+        using var app = await host.Client.SendAsync(appRequest);
+        using var anonymous = await host.Client.SendAsync(anonymousRequest);
+
+        panel.StatusCode.Should().Be(HttpStatusCode.OK);
+        panel.Headers.GetValues("X-Servicio").Should().Equal(service);
+        app.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        anonymous.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        host.PathsSeen.Should().BeEmpty();
+    }
+
     [Fact]
     public async Task Un_Token_Del_Panel_Firmado_Con_Otra_Llave_O_Con_El_Destinatario_De_La_App_No_Entra_CA_033_10()
     {

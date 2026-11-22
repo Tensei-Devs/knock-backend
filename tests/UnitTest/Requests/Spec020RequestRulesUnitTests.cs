@@ -146,7 +146,7 @@ public sealed class Spec020RequestRulesUnitTests
     private static CreateRequestBodyValidator Validator(DateTimeOffset now) => new(new FixedTime(now));
 
     private static CreateRequestBody Body(string? dia = "2026-11-14", string? descripcion = "Se rompió el tubo debajo del fregadero", string[]? fotos = null) =>
-        new("plo", descripcion, fotos ?? [ObjectId.GenerateNewId().ToString()], dia, "tarde", ObjectId.GenerateNewId().ToString(), null);
+        new("plo", descripcion, fotos ?? [Guid.CreateVersion7().ToString("N")], dia, "tarde", ObjectId.GenerateNewId().ToString(), null);
 
     [Fact]
     public void Validator_AcceptsAValidBody_R_01()
@@ -211,16 +211,18 @@ public sealed class Spec020RequestRulesUnitTests
     }
 
     [Fact]
-    public void Validator_PhotosAreOneToFiveObjectIdsWithoutRepeats_R_04()
+    public void Validator_PhotosAreOneToFiveFileIdsWithoutRepeats_R_04()
     {
         var clock = new DateTimeOffset(2026, 11, 13, 18, 0, 0, TimeSpan.Zero);
-        var one = ObjectId.GenerateNewId().ToString();
+        var one = Guid.CreateVersion7().ToString("N");
 
         Validator(clock).TestValidate(Body(fotos: [])).ShouldHaveValidationErrorFor(x => x.Fotos);
-        Validator(clock).TestValidate(Body(fotos: [.. Enumerable.Range(0, 6).Select(_ => ObjectId.GenerateNewId().ToString())])).ShouldHaveValidationErrorFor(x => x.Fotos);
+        Validator(clock).TestValidate(Body(fotos: [.. Enumerable.Range(0, 6).Select(_ => Guid.CreateVersion7().ToString("N"))])).ShouldHaveValidationErrorFor(x => x.Fotos);
         Validator(clock).TestValidate(Body(fotos: [one, one.ToUpperInvariant()])).ShouldHaveValidationErrorFor(x => x.Fotos);
         Validator(clock).TestValidate(Body(fotos: ["no-es-un-id"])).ShouldHaveValidationErrorFor(x => x.Fotos);
-        Validator(clock).TestValidate(Body(fotos: [.. Enumerable.Range(0, 5).Select(_ => ObjectId.GenerateNewId().ToString())])).ShouldNotHaveValidationErrorFor(x => x.Fotos);
+        Validator(clock).TestValidate(Body(fotos: [ObjectId.GenerateNewId().ToString()])).ShouldHaveValidationErrorFor(x => x.Fotos);
+        Validator(clock).TestValidate(Body(fotos: [Guid.CreateVersion7().ToString("D")])).ShouldHaveValidationErrorFor(x => x.Fotos);
+        Validator(clock).TestValidate(Body(fotos: [.. Enumerable.Range(0, 5).Select(_ => Guid.CreateVersion7().ToString("N"))])).ShouldNotHaveValidationErrorFor(x => x.Fotos);
     }
 
     [Theory]

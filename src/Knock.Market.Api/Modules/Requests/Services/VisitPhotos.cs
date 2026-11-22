@@ -1,8 +1,11 @@
+using Knock.Market.Api.Modules.Media;
+using Microsoft.Extensions.Logging;
+
 namespace Knock.Market.Api.Modules.Requests.Services;
 
 /// <summary>
-/// Fotos privadas del trabajo terminado (spec 050, R-28, y spec 032). Cuando el módulo de archivos exponga <c>IMediaApi</c>, una sola clase de este módulo lo adapta a esta
-/// interfaz. Mientras tanto, <see cref="UnavailableVisitPhotos"/> falla cerrado y las pruebas usan dobles.
+/// Fotos privadas del trabajo terminado (spec 050, R-28, y spec 032). Una sola clase de este módulo, <see cref="MediaVisitPhotos"/>, adapta <c>IMediaApi</c> (módulo de archivos)
+/// a esta interfaz. <see cref="UnavailableVisitPhotos"/> falla cerrado y queda para quien registre el módulo sin archivos; las pruebas usan dobles.
 /// </summary>
 internal interface IVisitPhotos
 {
@@ -14,4 +17,11 @@ internal interface IVisitPhotos
 internal sealed class UnavailableVisitPhotos : IVisitPhotos
 {
     public Task<bool> AreReadyForAsync(string ownerId, IReadOnlyList<string> photoIds, CancellationToken cancellationToken) => Task.FromResult(false);
+}
+
+/// <summary>Adaptador de <see cref="IVisitPhotos"/> sobre <see cref="IMediaApi"/> (spec 032); la comprobación es la de <see cref="MediaPhotoCheck"/>.</summary>
+internal sealed class MediaVisitPhotos(IMediaApi media, ILogger<MediaVisitPhotos> logger) : IVisitPhotos
+{
+    public Task<bool> AreReadyForAsync(string ownerId, IReadOnlyList<string> photoIds, CancellationToken cancellationToken) =>
+        MediaPhotoCheck.AreReadyAsync(media, logger, ownerId, photoIds, cancellationToken);
 }

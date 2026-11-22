@@ -16,6 +16,10 @@ internal static class VisitCloseRules
     public const int MaxRecommendationLength = 300;
     public const int MinPhotos = 1;
     public const int MaxPhotos = 5;
+
+    /// <summary>Identificador de una foto: el <c>archivoId</c> del módulo de archivos (ver <see cref="PhotoIds"/>).</summary>
+    public static bool TryParsePhotoId(string? value, out Guid fileId) => PhotoIds.TryParse(value, out fileId);
+
     public const int MinReportLength = 8;
     public const int MaxReportLength = 500;
 
