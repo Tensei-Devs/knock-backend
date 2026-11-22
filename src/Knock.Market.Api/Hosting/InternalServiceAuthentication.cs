@@ -16,6 +16,8 @@ internal static class InternalServiceAuthentication
 {
     public const string Scheme = "InternalService";
     public const string HistoryPolicy = "InternalHistory";
+    public const string AccountPolicy = "InternalAccount";
+    public const string AccountPermission = "cuenta";
     public const string KeyConfigurationKey = "Security:InternalTokens:IdentityKey";
     public const string Issuer = "knock-identity";
     public const string Audience = "knock-market";
@@ -56,6 +58,9 @@ internal static class InternalServiceAuthentication
         services.AddAuthorizationBuilder().AddPolicy(
             HistoryPolicy,
             policy => policy.AddAuthenticationSchemes(Scheme).RequireAuthenticatedUser().RequireClaim(PermissionsClaim, HistoryPermission));
+        services.AddAuthorizationBuilder().AddPolicy(
+            AccountPolicy,
+            policy => policy.AddAuthenticationSchemes(Scheme).RequireAuthenticatedUser().RequireClaim(PermissionsClaim, AccountPermission));
         return services;
     }
 
