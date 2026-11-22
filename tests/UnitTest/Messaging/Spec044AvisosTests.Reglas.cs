@@ -61,6 +61,6 @@ public sealed partial class Spec044AvisosTests
         actions.Should().NotBeEmpty();
         actions.Where(m => m.GetCustomAttributes<HttpPutAttribute>().Any() || m.GetCustomAttributes<HttpDeleteAttribute>().Any() || m.GetCustomAttributes<HttpPatchAttribute>().Any())
             .Should().BeEmpty("el cambio de preferencias lo define la spec 037 y los avisos solo los crea su despachador");
-        actions.Where(m => m.GetCustomAttributes<HttpPostAttribute>().Any()).Select(m => m.Name).Should().BeEquivalentTo(["MarkRead", "MarkAllRead"]);
+        actions.Where(m => m.GetCustomAttributes<HttpPostAttribute>().Any()).Select(m => m.Name).Should().HaveCount(2).And.Contain("MarkRead").And.Contain("MarkAllRead");
     }
 }
