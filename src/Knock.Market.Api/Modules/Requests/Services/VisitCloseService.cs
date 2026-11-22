@@ -32,7 +32,7 @@ internal sealed class VisitCloseService(VisitCloseStore store, VisitStore visits
             return new(VisitScheduleStatus.NotInProgress);
         }
 
-        var photoIds = body.Fotos!.Select(photo => ObjectId.Parse(photo).ToString()).ToList();
+        var photoIds = body.Fotos!.Select(photo => Guid.ParseExact(photo, "N").ToString("N")).ToList();
         if (!await photos.AreReadyForAsync(sub, photoIds, cancellationToken))
         {
             return new(VisitScheduleStatus.InvalidProposal);
