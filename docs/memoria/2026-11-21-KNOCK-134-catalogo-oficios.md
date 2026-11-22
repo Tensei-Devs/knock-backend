@@ -17,4 +17,4 @@ Reaplicar `oficios.json` con el cargador del catálogo reemplaza los oficios por
 - La moderación del texto de «Otro oficio» es de patrones (correo, dirección web y más de seis dígitos); la moderación de contenido con Azure es de la spec 031.
 
 ## PARA VALIDACIÓN DE JOSÉ
-Las cinco decisiones de arriba. Alternativa descartada para el detalle: devolver también los parámetros de precio (se descartó por mínima exposición en una ruta pública). Alternativa descartada para la auditoría: escribirla después del cambio (podría dejar un cambio sin constancia).
+Las cinco decisiones de arriba. Alternativa descartada para el detalle: devolver también los parámetros de precio (se descartó por mínima exposición en una ruta pública). Alternativa descartada para la auditoría: escribirla después del cambio (podría dejar un cambio sin constancia).- 2026-11-22: la auditoria no disponible ya no se lanza como excepcion propia: TradeAdminService devuelve null y el controlador responde 503 panel_audit_unavailable. Se quito el pragma de S3871, que la gobernanza rechaza sin excepcion registrada. A evitar: suprimir reglas con pragma sin EXC-NNN.

@@ -17,10 +17,10 @@ internal sealed class TradeAdminService(ITradeAdminStore store, IActiveOficios c
         new([.. (await store.ListAllAsync(cancellationToken)).Select(ToResponse)]);
 
     /// <summary>
-    /// Alta de un oficio (OFI-04). Primero la auditoría (quién, cuándo y qué): sin ella no se escribe nada (<see cref="PanelAuditUnavailableException"/>). La clave repetida lanza 409 <c>trade_key_taken</c>.
+    /// Alta de un oficio (OFI-04). Primero la auditoría (quién, cuándo y qué): sin ella no se escribe nada y devuelve <c>null</c> (el controlador responde 503 <c>panel_audit_unavailable</c>). La clave repetida lanza 409 <c>trade_key_taken</c>.
     /// Después de escribir invalida la caché de oficios activos para que la lista y el detalle lo vean enseguida.
     /// </summary>
-    public async Task<AdminTradeResponse> CreateAsync(string panelSubject, CreateTradeBody body, CancellationToken cancellationToken)
+    public async Task<AdminTradeResponse?> CreateAsync(string panelSubject, CreateTradeBody body, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrEmpty(panelSubject);
         ArgumentNullException.ThrowIfNull(body);
@@ -29,7 +29,7 @@ internal sealed class TradeAdminService(ITradeAdminStore store, IActiveOficios c
             body.TopePorcentaje!.Value, body.TopeFijoPorcentaje!.Value, body.PisoAprobacion!.Value, body.VisitaMaxima!.Value, body.Activo ?? true);
         if (!await audit.RecordAsync(new PanelAuditEntry(panelSubject, "trade.create", trade.Clave, clock.GetUtcNow(), Describe(trade)), cancellationToken))
         {
-            throw new PanelAuditUnavailableException();
+            return null;
         }
 
         if (!await store.InsertAsync(trade, cancellationToken))
@@ -46,7 +46,7 @@ internal sealed class TradeAdminService(ITradeAdminStore store, IActiveOficios c
     /// Edición parcial de un oficio (OFI-05). La auditoría va antes de escribir; un oficio que no existe lanza 404 <c>trade_not_found</c>. La clave no cambia nunca. Después de escribir invalida la caché de
     /// oficios activos: la siguiente consulta pública ya ve el cambio (R-19).
     /// </summary>
-    public async Task<AdminTradeResponse> UpdateAsync(string panelSubject, string clave, UpdateTradeBody body, CancellationToken cancellationToken)
+    public async Task<AdminTradeResponse?> UpdateAsync(string panelSubject, string clave, UpdateTradeBody body, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrEmpty(panelSubject);
         ArgumentException.ThrowIfNullOrEmpty(clave);
@@ -57,7 +57,7 @@ internal sealed class TradeAdminService(ITradeAdminStore store, IActiveOficios c
         var entry = new PanelAuditEntry(panelSubject, "trade.update", clave, clock.GetUtcNow(), DescribeChanges(changes));
         if (!await audit.RecordAsync(entry, cancellationToken))
         {
-            throw new PanelAuditUnavailableException();
+            return null;
         }
 
         var updated = await store.UpdateAsync(clave, changes, cancellationToken)

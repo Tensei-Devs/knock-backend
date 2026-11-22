@@ -55,15 +55,10 @@ internal sealed class AdminTradesController(TradeAdminService service) : Control
             return Unauthorized();
         }
 
-        try
-        {
-            var created = await service.CreateAsync(subject, body, cancellationToken);
-            return Created(new Uri($"/api/v1/oficios/{created.Clave}", UriKind.Relative), created);
-        }
-        catch (PanelAuditUnavailableException)
-        {
-            return AuditUnavailable();
-        }
+        var created = await service.CreateAsync(subject, body, cancellationToken);
+        return created is null
+            ? AuditUnavailable()
+            : Created(new Uri($"/api/v1/oficios/{created.Clave}", UriKind.Relative), created);
     }
 
     /// <summary>
@@ -93,14 +88,8 @@ internal sealed class AdminTradesController(TradeAdminService service) : Control
             return KeyCannotChange();
         }
 
-        try
-        {
-            return Ok(await service.UpdateAsync(subject, route.Clave!, body, cancellationToken));
-        }
-        catch (PanelAuditUnavailableException)
-        {
-            return AuditUnavailable();
-        }
+        var updated = await service.UpdateAsync(subject, route.Clave!, body, cancellationToken);
+        return updated is null ? AuditUnavailable() : Ok(updated);
     }
 
     private ObjectResult KeyCannotChange()
