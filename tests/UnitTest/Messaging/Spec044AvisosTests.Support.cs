@@ -44,6 +44,19 @@ public sealed partial class Spec044AvisosTests
             LastUser = userId;
             return Task.FromResult(Math.Min(cap, Notices.Count(n => n.User == userId && !n.Read)));
         }
+
+        public Task<bool> MarkReadAsync(string userId, string noticeId, CancellationToken cancellationToken)
+        {
+            LastUser = userId;
+            var index = Notices.FindIndex(n => n.User == userId && n.Id == noticeId);
+            if (index < 0)
+            {
+                return Task.FromResult(false);
+            }
+
+            Notices[index] = Notices[index] with { Read = true };
+            return Task.FromResult(true);
+        }
     }
 
     private static string Id(int n) => n.ToString("x24", System.Globalization.CultureInfo.InvariantCulture);
@@ -75,6 +88,12 @@ public sealed partial class Spec044AvisosTests
     }
 
     private static Controllers.AvisosController Avisos(FakeStore store, string? sub = _me) => Controller(s => new Controllers.AvisosController(s), store, sub);
+
+    private static async Task<string> ReadAsync(Stream body)
+    {
+        using var reader = new StreamReader(body, leaveOpen: true);
+        return await reader.ReadToEndAsync();
+    }
 
     private static Dtos.NoticeListResponse ListOf(IActionResult result) =>
         (Dtos.NoticeListResponse)result.Should().BeOfType<OkObjectResult>().Which.Value!;

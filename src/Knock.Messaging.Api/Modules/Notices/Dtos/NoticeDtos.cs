@@ -18,6 +18,13 @@ internal sealed class ListNoticesQuery
     public string? ComoRol { get; init; }
 }
 
+/// <summary>Ruta de <c>POST /api/v1/avisos/{id}/leido</c> (AVI-03).</summary>
+internal sealed class MarkNoticeReadRequest
+{
+    [FromRoute(Name = "id")]
+    public string? Id { get; init; }
+}
+
 /// <summary>Un aviso tal como lo ve la persona (R-10): sin códigos de visita, direcciones ni datos sensibles.</summary>
 internal sealed record NoticeResponse(string Id, string Tipo, string ComoRol, string Titulo, string Texto, object? Destino, bool Leido, DateTime CreadoEn);
 

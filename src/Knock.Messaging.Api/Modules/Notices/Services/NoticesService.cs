@@ -28,6 +28,10 @@ internal sealed class NoticesService(INoticesStore store)
         return new UnreadCountResponse(Math.Min(count, NoticeRules.MaxUnreadShown), count > NoticeRules.MaxUnreadShown);
     }
 
+    /// <summary><see langword="false"/> si no existe o no es de la persona (404 uniforme, R-12).</summary>
+    public Task<bool> MarkReadAsync(string sub, string noticeId, CancellationToken cancellationToken) =>
+        store.MarkReadAsync(sub, noticeId, cancellationToken);
+
     private static NoticeResponse ToResponse(StoredNotice notice) => new(
         notice.Id, notice.Type, notice.Role, notice.Title, notice.Text, notice.Target is null ? null : BsonTypeMapper.MapToDotNetValue(notice.Target), notice.Read, notice.CreatedAt);
 }
