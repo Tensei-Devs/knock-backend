@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Knock.Identity.Api.Common.Errors;
+using Knock.Identity.Api.Hosting.Procesos.TareasProgramadas;
 using Knock.Identity.Api.Modules.Trust.Crypto;
 using Knock.Identity.Api.Modules.Trust.Data;
 using Knock.Identity.Api.Modules.Trust.Dtos;
@@ -7,6 +8,7 @@ using Knock.Identity.Api.Modules.Trust.Services;
 using Knock.Identity.Api.Modules.Trust.Storage;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
+using MongoDB.Driver;
 using System.Security.Cryptography;
 using Xunit;
 
@@ -36,11 +38,35 @@ public sealed class Spec025ServicioTests
         var crypto = new CifradoDeVerificacion(new Spec025FotosTests.MemoryWrapper());
         var curp = new CurpHmac(new CurpHmacKeys(new Dictionary<int, byte[]> { [1] = RandomNumberGenerator.GetBytes(32) }, 1));
         var events = new FakeEvents();
-        var service = new VerificationService(store, options, clock, curp, new CurpDuplicateGuard(curp, store), crypto, new FotoVerificacionStore(blobs, crypto, clock), events);
-        return new Rig(service, store, blobs, events, crypto);
+        var tasks = new FakeTasks();
+        var service = new VerificationService(store, options, clock, curp, new CurpDuplicateGuard(curp, store), crypto, new FotoVerificacionStore(blobs, crypto, clock), events,
+            new VerificationPurgeScheduler(tasks, clock));
+        return new Rig(service, store, blobs, events, crypto, tasks);
     }
 
-    internal sealed record Rig(VerificationService Service, FakeStore Store, Spec025FotosTests.MemoryBlobs Blobs, FakeEvents Events, CifradoDeVerificacion Crypto);
+    internal sealed record Rig(VerificationService Service, FakeStore Store, Spec025FotosTests.MemoryBlobs Blobs, FakeEvents Events, CifradoDeVerificacion Crypto, FakeTasks Tasks);
+
+    /// <summary>Guarda las tareas que se programan (tipo, clave de negocio y fecha) sin tocar MongoDB.</summary>
+    internal sealed class FakeTasks : ITareasProgramadasStore
+    {
+        public List<(string Type, string Key, DateTime Due)> Scheduled { get; } = [];
+
+        public Task<bool> ScheduleAsync(IClientSessionHandle? session, string type, string businessKey, DateTime due, DateTime now, CancellationToken cancellationToken)
+        {
+            Scheduled.Add((type, businessKey, due));
+            return Task.FromResult(true);
+        }
+
+        public Task<TareaReservada?> ReserveAsync(DateTime now, IReadOnlyCollection<string> excludedTypes, CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<bool> CompleteAsync(TareaReservada task, DateTime now, CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<bool> FailAsync(TareaReservada task, DateTime now, CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<bool> AbortAsync(TareaReservada task, DateTime now, CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<bool> ConfirmLeaseAsync(IClientSessionHandle session, TareaReservada task, DateTime now, CancellationToken cancellationToken) => throw new NotSupportedException();
+    }
 
     private static StoredVerification Latest(string state, string? granted = null, string? reason = null) =>
         new(ObjectId.GenerateNewId(), "basica", state, granted, reason, [new StoredPhoto("ine_frente", "cifrada"), new StoredPhoto("selfie", "cifrada")],
@@ -229,10 +255,15 @@ public sealed class Spec025ServicioTests
             return Task.FromResult(true);
         }
 
-        public Task<SubmitOutcome> SubmitAsync(string sub, ObjectId id, DateTime sentAt, DateTime expiresAt, CancellationToken cancellationToken)
+        public async Task<SubmitOutcome> SubmitAsync(string sub, ObjectId id, DateTime sentAt, DateTime expiresAt, Func<IClientSessionHandle, Task> scheduleInTransaction, CancellationToken cancellationToken)
         {
             Submitted = (sentAt, expiresAt);
-            return Task.FromResult(SubmitResult);
+            if (SubmitResult == SubmitOutcome.Submitted)
+            {
+                await scheduleInTransaction(null!);
+            }
+
+            return SubmitResult;
         }
     }
 
