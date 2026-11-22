@@ -21,7 +21,7 @@ public static class ModerationModuleExtensions
         services.TryAddSingleton<IVerificationPhotoLinks, UnavailableVerificationPhotoLinks>();
         services.TryAddSingleton<IVerificationBlobPurger, NoVerificationBlobs>();
         services.TryAddSingleton<IAccessRecoveryReviews, NoAccessRecoveryReviews>();
-        services.TryAddSingleton<IReportDecisionEffects, NoReportDecisionEffects>();
+        services.TryAddSingleton<IReportDecisionEffects, ReportDecisionEffects>();
         services.AddSingleton<VerificationReviewService>();
         services.AddSingleton<ReportReviewService>();
         return services;
