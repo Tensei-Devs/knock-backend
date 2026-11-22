@@ -67,13 +67,14 @@ public sealed class Spec047ServiciosHttpTests
     public async Task Oficio_Ajeno_Al_Tecnico_Responde_422_Y_El_51_Responde_409_CA_047_07_CA_047_26()
     {
         await using var host = await Spec020Host.StartAsync();
-        var (_, sub) = await SeedTechnicianAsync(host);
+        var (id, sub) = await SeedTechnicianAsync(host);
 
         using var wrongTrade = await host.SendAsync(HttpMethod.Post, _mine, sub, Body(Spec020Host.Workshop));
-        for (var i = 0; i < 50; i++)
+        // Los 50 servicios se siembran en la base: crearlos por HTTP superaría las 30 peticiones por minuto de la política y respondería 429 (CA-29).
+        await host.Database.GetCollection<BsonDocument>("servicios_tecnico").InsertManyAsync(Enumerable.Range(0, 50).Select(i => new BsonDocument
         {
-            (await host.SendAsync(HttpMethod.Post, _mine, sub, Body())).EnsureSuccessStatusCode();
-        }
+            { "tecnicoId", id }, { "nombre", $"Servicio {i}" }, { "precioReferencia", 350 }, { "oficio", Spec020Host.Plumbing },
+        }));
 
         using var overLimit = await host.SendAsync(HttpMethod.Post, _mine, sub, Body());
 
