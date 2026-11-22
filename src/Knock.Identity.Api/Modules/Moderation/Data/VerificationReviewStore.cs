@@ -108,6 +108,28 @@ internal sealed class VerificationReviewStore(
     {
         ArgumentNullException.ThrowIfNull(decision);
         ArgumentNullException.ThrowIfNull(writeAudit);
+        return await DecisionTurns.RunAsync(
+            decision.Id.ToString(),
+            () => SettledAsync(decision.Id, cancellationToken),
+            outcome => outcome,
+            () => DecideInTransactionAsync(decision, writeAudit, cancellationToken),
+            cancellationToken);
+    }
+
+    private async Task<DecisionStoreOutcome?> SettledAsync(ObjectId id, CancellationToken cancellationToken)
+    {
+        var state = await Verifications.Find(_filter.Eq(_idField, id), new FindOptions { MaxTime = mongoOptions.Value.QueryMaxTime })
+            .Project(Builders<BsonDocument>.Projection.Include(_stateField)).Limit(1).FirstOrDefaultAsync(cancellationToken);
+        if (state is null)
+        {
+            return DecisionStoreOutcome.NotFound;
+        }
+
+        return Text(state, _stateField) == ReviewStates.UnderReview ? null : DecisionStoreOutcome.AlreadyDecided;
+    }
+
+    private async Task<DecisionStoreOutcome> DecideInTransactionAsync(VerificationDecisionRecord decision, Func<StoreTransaction, Task> writeAudit, CancellationToken cancellationToken)
+    {
         using var session = await database.Client.StartSessionAsync(cancellationToken: cancellationToken);
         try
         {

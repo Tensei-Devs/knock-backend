@@ -128,6 +128,32 @@ internal sealed class ReportReviewStore(
         ArgumentNullException.ThrowIfNull(decision);
         ArgumentNullException.ThrowIfNull(applyEffects);
         ArgumentNullException.ThrowIfNull(writeAudit);
+        return await DecisionTurns.RunAsync(
+            decision.Id.ToString(),
+            () => SettledAsync(decision.Id, cancellationToken),
+            outcome => new ReportDecisionStoreResult(outcome),
+            () => DecideInTransactionAsync(decision, applyEffects, writeAudit, cancellationToken),
+            cancellationToken);
+    }
+
+    private async Task<DecisionStoreOutcome?> SettledAsync(ObjectId id, CancellationToken cancellationToken)
+    {
+        var state = await Reports.Find(_filter.Eq(_idField, id), new FindOptions { MaxTime = mongoOptions.Value.QueryMaxTime })
+            .Project(Builders<BsonDocument>.Projection.Include(_stateField)).Limit(1).FirstOrDefaultAsync(cancellationToken);
+        if (state is null)
+        {
+            return DecisionStoreOutcome.NotFound;
+        }
+
+        return _pendingStates.Contains(state[_stateField].AsString) ? null : DecisionStoreOutcome.AlreadyDecided;
+    }
+
+    private async Task<ReportDecisionStoreResult> DecideInTransactionAsync(
+        ReportDecisionRecord decision,
+        Func<StoreTransaction, DecidedReportParties, Task> applyEffects,
+        Func<StoreTransaction, Task> writeAudit,
+        CancellationToken cancellationToken)
+    {
         using var session = await database.Client.StartSessionAsync(cancellationToken: cancellationToken);
         return await session.WithTransactionAsync(
             async (transaction, token) =>
