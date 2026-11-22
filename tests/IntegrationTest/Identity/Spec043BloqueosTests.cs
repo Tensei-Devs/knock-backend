@@ -108,12 +108,7 @@ public sealed class Spec043BloqueosTests
         await using var scenario = await SafetyHost.StartAsync();
         var target = await scenario.SeedUserAsync("Demo Carrera");
 
-        // El emulador a veces contesta 500 por bloqueo mutuo; esa ráfaga se repite con la colección vacía, así el conteo sigue siendo exacto.
-        var summary = await ResponseSummary.WithoutEmulatorDeadlockAsync(async () =>
-        {
-            await scenario.Blocks.DeleteManyAsync(FilterDefinition<BsonDocument>.Empty);
-            return await ResponseSummary.ReadAsync(await Task.WhenAll(Enumerable.Range(0, 5).Select(_ => scenario.SendAsync(HttpMethod.Post, $"/api/v1/usuarios/{target}/bloqueo", scenario.Caller))));
-        });
+        var summary = await ResponseSummary.ReadAsync(await Task.WhenAll(Enumerable.Range(0, 5).Select(_ => scenario.SendAsync(HttpMethod.Post, $"/api/v1/usuarios/{target}/bloqueo", scenario.Caller))));
 
         summary.Count(HttpStatusCode.Created).Should().Be(1, $"solo uno bloquea; respuestas: {summary}");
         summary.Count(HttpStatusCode.Conflict).Should().Be(4, $"los otros cuatro chocan con el índice único; respuestas: {summary}");

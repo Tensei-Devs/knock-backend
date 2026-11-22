@@ -1,3 +1,4 @@
+using Knock.Hosting.Concurrency;
 using Knock.Identity.Api.Hosting;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
@@ -37,23 +38,33 @@ internal sealed class BloqueosStore(
             ],
             cancellationToken);
 
-    /// <summary>Guarda el bloqueo; falso si ya existía (el índice único decide también una carrera entre dos peticiones iguales; ante un conflicto de escritura relee el bloqueo y reintenta).</summary>
-    public async Task<bool> AddAsync(string blockerId, string blockedId, DateTime nowUtc, CancellationToken cancellationToken)
+    /// <summary>
+    /// Guarda el bloqueo; falso si ya existía. Dentro de la instancia, los bloqueos del mismo par se turnan (<see cref="KeyedGate"/>) y quien entra después relee: varios <c>insert</c> a la vez sobre el índice
+    /// único se bloqueaban entre sí en documentdb-local (código 24) y agotaban los reintentos como 500. Entre instancias decide el índice único, que ante un conflicto de escritura relee el bloqueo y reintenta.
+    /// </summary>
+    public Task<bool> AddAsync(string blockerId, string blockedId, DateTime nowUtc, CancellationToken cancellationToken) =>
+        KeyedGate.RunAsync(blockerId + "|" + blockedId, () => AddSerializedAsync(blockerId, blockedId, nowUtc, cancellationToken), cancellationToken);
+
+    private async Task<bool> AddSerializedAsync(string blockerId, string blockedId, DateTime nowUtc, CancellationToken cancellationToken)
     {
         var filters = Builders<BsonDocument>.Filter;
-        return await MongoWriteErrors.InsertIfAbsentAsync(
-            () => Blocks.InsertOneAsync(
-                new BsonDocument
-                {
-                    [_idField] = ObjectId.GenerateNewId(),
-                    [_blockerField] = blockerId,
-                    [_blockedField] = blockedId,
-                    [_createdField] = new BsonDateTime(nowUtc),
-                },
-                cancellationToken: cancellationToken),
-            async () => await Blocks.Find(filters.Eq(_blockerField, blockerId) & filters.Eq(_blockedField, blockedId), _findOptions)
-                .Project(Builders<BsonDocument>.Projection.Include(_idField)).FirstOrDefaultAsync(cancellationToken) is not null,
-            delay => Task.Delay(delay, cancellationToken));
+        var pair = filters.Eq(_blockerField, blockerId) & filters.Eq(_blockedField, blockedId);
+        async Task<bool> ExistsAsync() =>
+            await Blocks.Find(pair, _findOptions).Project(Builders<BsonDocument>.Projection.Include(_idField)).FirstOrDefaultAsync(cancellationToken) is not null;
+
+        return !await ExistsAsync()
+            && await MongoWriteErrors.InsertIfAbsentAsync(
+                () => Blocks.InsertOneAsync(
+                    new BsonDocument
+                    {
+                        [_idField] = ObjectId.GenerateNewId(),
+                        [_blockerField] = blockerId,
+                        [_blockedField] = blockedId,
+                        [_createdField] = new BsonDateTime(nowUtc),
+                    },
+                    cancellationToken: cancellationToken),
+                ExistsAsync,
+                delay => Task.Delay(delay, cancellationToken));
     }
 
     /// <summary>Quita el bloqueo de quien llama; falso si no había.</summary>
