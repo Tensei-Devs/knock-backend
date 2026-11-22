@@ -34,6 +34,13 @@ internal sealed class NoticesService(INoticesStore store)
 
     public Task MarkAllReadAsync(string sub, CancellationToken cancellationToken) => store.MarkAllReadAsync(sub, cancellationToken);
 
+    public async Task<NoticePreferencesResponse> GetPreferencesAsync(string sub, CancellationToken cancellationToken)
+    {
+        var stored = await store.GetPreferencesAsync(sub, cancellationToken);
+        return new NoticePreferencesResponse([.. NoticeRules.Types.Select(type =>
+            new NoticePreferenceResponse(type, NoticeRules.Effective(type, stored), NoticeRules.CanBeTurnedOff(type)))]);
+    }
+
     private static NoticeResponse ToResponse(StoredNotice notice) => new(
         notice.Id, notice.Type, notice.Role, notice.Title, notice.Text, notice.Target is null ? null : BsonTypeMapper.MapToDotNetValue(notice.Target), notice.Read, notice.CreatedAt);
 }

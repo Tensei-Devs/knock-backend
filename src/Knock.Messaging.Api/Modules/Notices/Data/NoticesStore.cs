@@ -23,6 +23,9 @@ internal interface INoticesStore
     Task<bool> MarkReadAsync(string userId, string noticeId, CancellationToken cancellationToken);
 
     Task MarkAllReadAsync(string userId, CancellationToken cancellationToken);
+
+    /// <summary>Lo que la persona guardó por tipo, o <see langword="null"/> si nunca cambió nada.</summary>
+    Task<IReadOnlyDictionary<string, bool>?> GetPreferencesAsync(string userId, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -100,6 +103,17 @@ internal sealed class NoticesStore(
             _filter.And(_filter.Eq(_userField, userId), _filter.Eq(_readField, false)),
             Builders<BsonDocument>.Update.Set(_readField, true),
             cancellationToken: cancellationToken);
+
+    public async Task<IReadOnlyDictionary<string, bool>?> GetPreferencesAsync(string userId, CancellationToken cancellationToken)
+    {
+        var document = await Preferences.Find(_filter.Eq(_userField, userId), _findOptions).Limit(1).FirstOrDefaultAsync(cancellationToken);
+        if (document is null || !document.TryGetValue("tipos", out var types) || !types.IsBsonDocument)
+        {
+            return null;
+        }
+
+        return types.AsBsonDocument.Where(e => e.Value.IsBoolean).ToDictionary(e => e.Name, e => e.Value.AsBoolean, StringComparer.Ordinal);
+    }
 
     /// <summary>Índices de la spec 044 (§6). Idempotente; el script <c>db/044-avisos-dentro-de-la-app.js</c> hace lo mismo.</summary>
     public async Task EnsureIndexesAsync(CancellationToken cancellationToken)
