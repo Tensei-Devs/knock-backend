@@ -18,7 +18,8 @@ namespace Knock.Market.Api.Modules.Tecnicos.Controllers.V1;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/tecnicos")]
-internal sealed class TecnicosController(TechnicianRegistrationService registration, TechnicianProfileService profiles, TechnicianLookupService lookup)
+internal sealed class TecnicosController(TechnicianRegistrationService registration, TechnicianProfileService profiles, TechnicianLookupService lookup,
+    TechnicianWorkPhotoService workPhotos)
     : ControllerBase
 {
     private const string _problemJson = TechnicianProblems.ProblemJson;
@@ -125,6 +126,24 @@ internal sealed class TecnicosController(TechnicianRegistrationService registrat
             CoverageStatus.TechnicianNotFound => Rule(StatusCodes.Status404NotFound, TechnicianRules.TechnicianNotFoundCode),
             _ => Rule(StatusCodes.Status422UnprocessableEntity, ErrorCodes.ColoniaNotFoundCode, "colonia"),
         };
+    }
+
+    /// <summary>
+    /// Fotos de trabajos terminados que el cliente permitió publicar y que pasaron la moderación (TEC-07), por cursor (20 por defecto, máx. 50). 404 si el técnico
+    /// no existe o está oculto; el servidor guarda cada página 1 minuto.
+    /// </summary>
+    [HttpGet("{id}/fotos-trabajos")]
+    [Authorize]
+    [ProducesResponseType<WorkPhotoListResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, _problemJson)]
+    public async Task<IActionResult> WorkPhotos([FromRoute] TechnicianIdRoute route, [FromQuery] WorkPhotoQuery query, CancellationToken cancellationToken)
+    {
+        Response.Headers.CacheControl = "private, no-store";
+        var photos = await workPhotos.ListAsync(MongoDB.Bson.ObjectId.Parse(route.Id), query, cancellationToken);
+        return photos is null ? Rule(StatusCodes.Status404NotFound, TechnicianRules.TechnicianNotFoundCode) : Ok(photos);
     }
 
     private ObjectResult Rule(int status, string code, string? field = null) => TechnicianProblems.Rule(this, status, code, field);
