@@ -32,3 +32,7 @@ internal sealed record NoticeListResponse(IReadOnlyList<NoticeResponse> Items, s
 
 /// <summary>Contador de no leídos, hasta 99; <c>MasDe99</c> avisa a la app que debe mostrar «99+».</summary>
 internal sealed record UnreadCountResponse(int Cantidad, bool MasDe99);
+
+internal sealed record NoticePreferenceResponse(string Tipo, bool Activo, bool Apagable);
+
+internal sealed record NoticePreferencesResponse(IReadOnlyList<NoticePreferenceResponse> Tipos);

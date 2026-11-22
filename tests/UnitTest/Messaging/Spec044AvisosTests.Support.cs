@@ -25,6 +25,8 @@ public sealed partial class Spec044AvisosTests
     {
         public List<(string User, string Id, bool Read, string Role, DateTime At)> Notices { get; } = [];
 
+        public Dictionary<string, Dictionary<string, bool>> Preferences { get; } = [];
+
         public string? LastUser { get; private set; }
 
         public Task<Data.NoticePage> ListAsync(string userId, bool? read, string? role, Domain.NoticeCursor? after, int limit, CancellationToken cancellationToken)
@@ -70,6 +72,12 @@ public sealed partial class Spec044AvisosTests
             }
 
             return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyDictionary<string, bool>?> GetPreferencesAsync(string userId, CancellationToken cancellationToken)
+        {
+            LastUser = userId;
+            return Task.FromResult<IReadOnlyDictionary<string, bool>?>(Preferences.TryGetValue(userId, out var types) ? types : null);
         }
     }
 
