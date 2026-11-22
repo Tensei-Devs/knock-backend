@@ -31,8 +31,8 @@ internal sealed class TechnicianProfileStore(
 
     /// <summary>
     /// Dos registros simultáneos de la misma cuenta chocan en el índice único de <c>usuarioId</c>: MongoDB responde «llave duplicada» (11000) y DocumentDB puede responder «conflicto
-    /// de escritura» (112) o «interbloqueo» (24). En todos los casos se relee el perfil por <c>usuarioId</c>: si existe, el otro registro ganó (CA-69, <see langword="false"/>); si no, se reintenta con espera
-    /// creciente y, agotados los intentos, se relanza la excepción.
+    /// de escritura» (112) o «interbloqueo» (24). Ante cualquier error del servidor se relee el perfil por <c>usuarioId</c>: si existe, el otro registro ganó (CA-69, <see langword="false"/>); si no, los conflictos se reintentan con espera
+    /// creciente y, agotados los intentos (u otro error), se relanza la excepción.
     /// </summary>
     internal static async Task<bool> InsertOnceAsync(Func<Task> insert, Func<Task<bool>> exists, Func<TimeSpan, Task> wait)
     {
@@ -45,14 +45,15 @@ internal sealed class TechnicianProfileStore(
                 await insert();
                 return true;
             }
-            catch (MongoException exception) when (IsConflict(exception))
+            catch (MongoException exception)
             {
+                // Cualquier fallo del servidor con el perfil ya guardado significa que el otro registro ganó (CA-69): no es un 500.
                 if (await exists())
                 {
                     return false;
                 }
 
-                if (attempt >= _maxWriteConflictAttempts)
+                if (!IsConflict(exception) || attempt >= _maxWriteConflictAttempts)
                 {
                     throw;
                 }
