@@ -36,6 +36,7 @@ public static class CatalogModuleExtensions
             services.AddSingleton<ISearchResponseCache>(sp => sp.GetRequiredService<RedisCatalogCache>());
         }
         services.AddSingleton<CatalogStore>();
+        services.AddSingleton<IActiveOficios>(sp => sp.GetRequiredService<CatalogStore>());
         services.AddOptions<SearchCursorOptions>().BindConfiguration(SearchCursorOptions.SectionName).ValidateOnStart();
         services.AddSingleton<IPostConfigureOptions<SearchCursorOptions>, DevelopmentSearchCursorKey>();
         services.AddSingleton<IValidateOptions<SearchCursorOptions>, SearchCursorOptionsValidator>();
@@ -59,6 +60,11 @@ public static class CatalogModuleExtensions
         services.AddScoped<ZonaService>();
         services.AddSingleton<CatalogAdminStore>();
         services.AddSingleton<CatalogAdminService>();
+        services.AddSingleton<ITradeAdminStore, TradeAdminStore>();
+        services.TryAddSingleton<IPanelAuditTrail, UnavailablePanelAuditTrail>();
+        services.AddSingleton<TradeAdminService>();
+        services.AddSingleton<ITradeRequestStore, TradeRequestStore>();
+        services.AddSingleton<TradeRequestService>();
         return services;
     }
 }
