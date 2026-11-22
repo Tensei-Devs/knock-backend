@@ -49,22 +49,39 @@ internal sealed class CurpHmacKeys
 /// HMAC-SHA256 de la CURP normalizada (mayúsculas, sin espacios a los lados). El valor guardado es <c>{versión}.{hex en minúsculas}</c>: la versión permite rotar la
 /// llave sin perder el índice de duplicados (se busca con <see cref="ComputeAll"/>). Nunca devuelve ni registra la CURP, y los mensajes de error no la incluyen.
 /// </summary>
-internal sealed class CurpHmac(CurpHmacKeys keys)
+internal sealed class CurpHmac
 {
+    private readonly Lazy<CurpHmacKeys> _lazyKeys;
+
+    public CurpHmac(CurpHmacKeys keys)
+    {
+        ArgumentNullException.ThrowIfNull(keys);
+        _lazyKeys = new(keys);
+    }
+
+    /// <summary>Resuelve las llaves al primer uso: sin llaves configuradas solo fallan las operaciones que firman, no las lecturas de estado.</summary>
+    public CurpHmac(Func<CurpHmacKeys> keysFactory)
+    {
+        ArgumentNullException.ThrowIfNull(keysFactory);
+        _lazyKeys = new(keysFactory);
+    }
+
+    private CurpHmacKeys Keys => _lazyKeys.Value;
+
     private const char _separator = '.';
 
     /// <summary>HMAC con la llave vigente.</summary>
-    public string Compute(string curp) => ComputeWith(curp, keys.CurrentVersion);
+    public string Compute(string curp) => ComputeWith(curp, Keys.CurrentVersion);
 
     /// <summary>HMAC de la misma CURP con cada versión de llave configurada, para buscar duplicados guardados con una llave anterior.</summary>
-    public IReadOnlyList<string> ComputeAll(string curp) => [.. keys.Versions.Select(version => ComputeWith(curp, version))];
+    public IReadOnlyList<string> ComputeAll(string curp) => [.. Keys.Versions.Select(version => ComputeWith(curp, version))];
 
     /// <summary>Compara en tiempo constante la CURP con un valor guardado; falso si la versión del valor no existe o el formato no es el esperado.</summary>
     public bool Matches(string curp, string stored)
     {
         ArgumentNullException.ThrowIfNull(stored);
         var split = stored.IndexOf(_separator, StringComparison.Ordinal);
-        if (split <= 0 || !int.TryParse(stored.AsSpan(0, split), NumberStyles.None, CultureInfo.InvariantCulture, out var version) || !keys.Versions.Contains(version))
+        if (split <= 0 || !int.TryParse(stored.AsSpan(0, split), NumberStyles.None, CultureInfo.InvariantCulture, out var version) || !Keys.Versions.Contains(version))
         {
             return false;
         }
@@ -84,7 +101,7 @@ internal sealed class CurpHmac(CurpHmacKeys keys)
         var data = Encoding.ASCII.GetBytes(curp.Trim().ToUpperInvariant());
         try
         {
-            var mac = HMACSHA256.HashData(keys.KeyOf(version), data);
+            var mac = HMACSHA256.HashData(Keys.KeyOf(version), data);
             return string.Create(CultureInfo.InvariantCulture, $"{version}{_separator}{Convert.ToHexStringLower(mac)}");
         }
         finally

@@ -5,11 +5,14 @@ using System.Security.Cryptography;
 using IdentityApi::Knock.Identity.Api.Modules.Panel.Data;
 using IdentityApi::Knock.Identity.Api.Modules.Sesiones.Data;
 using IdentityApi::Knock.Identity.Api.Modules.Sesiones.Services;
+using IdentityApi::Knock.Identity.Api.Modules.Trust.Crypto;
+using IdentityApi::Knock.Identity.Api.Modules.Trust.Storage;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using StackExchange.Redis;
@@ -34,6 +37,7 @@ internal sealed class IdentityApiFactory(IReadOnlyDictionary<string, string?> se
     private static readonly byte[] _phoneEncryptionKey = RandomNumberGenerator.GetBytes(32);
     private static readonly byte[] _phoneHmacKey = RandomNumberGenerator.GetBytes(32);
     private static readonly byte[] _fieldEncryptionKey = RandomNumberGenerator.GetBytes(32);
+    private static readonly byte[] _curpHmacKey = RandomNumberGenerator.GetBytes(32);
 
     /// <summary>Servicios que la prueba sustituye en el host (por ejemplo, el catálogo de colonias de Mercado).</summary>
     public Action<IServiceCollection>? ExtraServices { get; private init; }
@@ -99,6 +103,9 @@ internal sealed class IdentityApiFactory(IReadOnlyDictionary<string, string?> se
                 // Cifrado de campo de la dirección (spec 040): llave sintética por proceso; en producción llega de Key Vault.
                 ["Security:FieldEncryption:ActiveVersion"] = "1",
                 ["Security:FieldEncryption:Keys:1"] = Convert.ToBase64String(_fieldEncryptionKey),
+                // Llave HMAC de la CURP (spec 025): sintética por proceso; en producción llega de Key Vault.
+                ["Verificacion:CurpHmac:ActiveVersion"] = "1",
+                ["Verificacion:CurpHmac:Keys:1"] = Convert.ToBase64String(_curpHmacKey),
             };
             foreach (var (key, value) in settings)
             {
@@ -110,6 +117,9 @@ internal sealed class IdentityApiFactory(IReadOnlyDictionary<string, string?> se
         builder.ConfigureServices(services =>
         {
             services.AddSingleton<IStartupFilter>(new RemoteIpStartupFilter());
+            // Sin Key Vault real (bloqueo: costo) el envoltorio de llaves de la verificación falla cerrado; el host de pruebas usa uno en memoria.
+            services.Replace(ServiceDescriptor.Singleton<IVerificationKeyWrapper>(new MaskVerificationKeyWrapper()));
+            services.Replace(ServiceDescriptor.Singleton<IVerificationBlobStore>(new LinksOnlyVerificationBlobStore()));
             ExtraServices?.Invoke(services);
         });
     }
@@ -136,4 +146,36 @@ internal sealed class RemoteIpStartupFilter : IStartupFilter
             next(app);
         };
     }
+}
+
+/// <summary>Envoltorio de llaves de verificación en memoria para el host de pruebas (máscara XOR aleatoria por proceso; no es criptografía de producción).</summary>
+internal sealed class MaskVerificationKeyWrapper : IVerificationKeyWrapper
+{
+    private static readonly byte[] _mask = RandomNumberGenerator.GetBytes(64);
+
+    public Task<WrappedVerificationKey> WrapAsync(byte[] dataKey, CancellationToken cancellationToken) =>
+        Task.FromResult(new WrappedVerificationKey(Convert.ToBase64String(Xor(dataKey)), "test-kek"));
+
+    public Task<byte[]> UnwrapAsync(WrappedVerificationKey wrapped, CancellationToken cancellationToken) =>
+        Task.FromResult(Xor(Convert.FromBase64String(wrapped.Value)));
+
+    private static byte[] Xor(byte[] data) => [.. data.Select((b, i) => (byte)(b ^ _mask[i % _mask.Length]))];
+}
+
+/// <summary>Almacén privado de fotos para el host de pruebas: solo emite enlaces (sin Blob real, bloqueo: costo); no guarda contenido, así que lecturas y escrituras no encuentran nada.</summary>
+internal sealed class LinksOnlyVerificationBlobStore : IVerificationBlobStore
+{
+    public Task<Uri> IssueQuarantineUploadLinkAsync(string blobName, TimeSpan lifetime, CancellationToken cancellationToken) => Task.FromResult(new Uri("https://almacen.invalid/q/" + blobName));
+
+    public Task<Uri> IssueFinalReadLinkAsync(string blobName, TimeSpan lifetime, CancellationToken cancellationToken) => Task.FromResult(new Uri("https://almacen.invalid/f/" + blobName));
+
+    public Task<byte[]?> ReadQuarantineAsync(string blobName, int maxBytes, CancellationToken cancellationToken) => Task.FromResult<byte[]?>(null);
+
+    public Task<byte[]?> ReadFinalAsync(string blobName, CancellationToken cancellationToken) => Task.FromResult<byte[]?>(null);
+
+    public Task<bool> WriteFinalAsync(string blobName, byte[] content, CancellationToken cancellationToken) => Task.FromResult(false);
+
+    public Task DeleteQuarantineAsync(string blobName, CancellationToken cancellationToken) => Task.CompletedTask;
+
+    public Task DeleteFinalAsync(string blobName, CancellationToken cancellationToken) => Task.CompletedTask;
 }

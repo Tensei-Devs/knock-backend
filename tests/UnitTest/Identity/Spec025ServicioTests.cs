@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using AwesomeAssertions;
 using Knock.Identity.Api.Common.Errors;
 using Knock.Identity.Api.Hosting.Procesos.TareasProgramadas;
@@ -9,7 +10,6 @@ using Knock.Identity.Api.Modules.Trust.Storage;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using System.Security.Cryptography;
 using Xunit;
 
 namespace Knock.UnitTest.Identity;
@@ -35,7 +35,7 @@ public sealed class Spec025ServicioTests
         var options = Options.Create(new VerificationOptions { AvisoVersion = "1.0", AvisoTexto = "Texto del aviso" });
         var clock = new FixedClock(_now);
         var blobs = new Spec025FotosTests.MemoryBlobs();
-        var crypto = new CifradoDeVerificacion(new Spec025FotosTests.MemoryWrapper());
+        var crypto = new CifradoDeVerificacion(new Spec025CurpTests.FakeWrapper());
         var curp = new CurpHmac(new CurpHmacKeys(new Dictionary<int, byte[]> { [1] = RandomNumberGenerator.GetBytes(32) }, 1));
         var events = new FakeEvents();
         var tasks = new FakeTasks();
@@ -255,12 +255,12 @@ public sealed class Spec025ServicioTests
             return Task.FromResult(true);
         }
 
-        public async Task<SubmitOutcome> SubmitAsync(string sub, ObjectId id, DateTime sentAt, DateTime expiresAt, Func<IClientSessionHandle, Task> scheduleInTransaction, CancellationToken cancellationToken)
+        public async Task<SubmitOutcome> SubmitAsync(string sub, ObjectId id, DateTime sentAt, DateTime expiresAt, VerificationPurgeScheduler purgeScheduler, CancellationToken cancellationToken)
         {
             Submitted = (sentAt, expiresAt);
             if (SubmitResult == SubmitOutcome.Submitted)
             {
-                await scheduleInTransaction(null!);
+                await purgeScheduler.ScheduleAsync(null, id, sentAt, cancellationToken);
             }
 
             return SubmitResult;
