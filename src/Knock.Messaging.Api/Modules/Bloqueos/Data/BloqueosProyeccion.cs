@@ -5,13 +5,10 @@ using MongoDB.Driver;
 namespace Knock.Messaging.Api.Modules.Bloqueos.Data;
 
 /// <summary>Proyección mínima <c>bloqueos</c> de Mensajería (spec 043, R-23): solo los dos identificadores públicos, el estado y la fecha del último evento. El <c>_id</c> es el par («bloquea|bloqueado»), así que no necesita más índices. Nunca lee la base de Identidad.</summary>
-internal interface IBloqueosProyeccion
+internal interface IBloqueosProyeccion : IBloqueosApi
 {
     /// <summary>Aplica <c>BloqueoCreado</c> (<paramref name="blocked"/> verdadero) o <c>BloqueoEliminado</c>. Idempotente y a prueba de desorden: un evento más viejo que el ya aplicado no cambia nada.</summary>
     Task ApplyAsync(string blockerId, string blockedId, bool blocked, DateTime occurredAtUtc, string eventId, CancellationToken cancellationToken);
-
-    /// <summary>Si alguna de las dos personas bloqueó a la otra (el bloqueo corta en ambos sentidos, R-16).</summary>
-    Task<bool> AreBlockedAsync(string personA, string personB, CancellationToken cancellationToken);
 }
 
 internal sealed class BloqueosProyeccion([FromKeyedServices(DataExtensions.DatabaseKey)] IMongoDatabase database) : IBloqueosProyeccion

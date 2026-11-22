@@ -12,4 +12,7 @@ internal static class CodigosDeConversacion
     public const string ModerationUnavailableCode = "moderation_unavailable";
     public const string MarketUnavailableCode = "market_unavailable";
     public const string MessageLimitCode = "message_limit";
+
+    /// <summary>Motivo con el que se cierra una conversación por un bloqueo (spec 043, R-18): el mismo de un técnico descartado, para no delatar el bloqueo (R-17).</summary>
+    public const string BlockClosureReason = "dismissed";
 }
