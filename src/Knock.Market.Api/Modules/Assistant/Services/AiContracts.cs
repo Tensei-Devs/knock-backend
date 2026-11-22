@@ -30,13 +30,23 @@ internal sealed record ResultadoIa<T>(T? Valor, AiOrigin Origen, string? MotivoR
 /// <summary>Tipo de dato censurado y cuántos; nunca el valor.</summary>
 internal readonly record struct CensorshipSummary(string Type, int Count);
 
+/// <summary>Resuelve la función de IA de cada tipo cerrado de salida.</summary>
+internal static class AiOutputs
+{
+    public static AiFunction FunctionOf<T>() where T : class, IAiOutput<T>
+    {
+        if (typeof(T) == typeof(AsistenteKnockSalida))
+        {
+            return AiFunction.AsistenteKnock;
+        }
+
+        return typeof(T) == typeof(ResumenChatSalida) ? AiFunction.ResumenChat : AiFunction.BorradorCotizacion;
+    }
+}
+
 /// <summary>Tipo cerrado de salida de una función (spec 024, R-05 y R-06).</summary>
 internal interface IAiOutput<TSelf> where TSelf : class, IAiOutput<TSelf>
 {
-#pragma warning disable S2743 // miembro abstracto estático: no es un campo compartido, cada tipo cerrado lo implementa
-    static abstract AiFunction Function { get; }
-#pragma warning restore S2743
-
     /// <summary>Verdadero si cumple las reglas de contenido más allá del tipo (campos no vacíos, rangos y tamaños de listas).</summary>
     bool IsValid();
 

@@ -45,7 +45,7 @@ internal sealed class PlantillaIa
     {
         try
         {
-            var value = JsonSerializer.Deserialize<T>(_templates[T.Function], AiText.Strict);
+            var value = JsonSerializer.Deserialize<T>(_templates[AiOutputs.FunctionOf<T>()], AiText.Strict);
             return value is not null && value.IsValid() ? value : null;
         }
         catch (JsonException)
