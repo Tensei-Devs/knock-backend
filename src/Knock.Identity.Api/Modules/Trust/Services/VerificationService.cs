@@ -30,7 +30,8 @@ internal sealed class VerificationService(
     CurpDuplicateGuard duplicates,
     CifradoDeVerificacion crypto,
     FotoVerificacionStore photos,
-    IVerificationEvents events)
+    IVerificationEvents events,
+    VerificationPurgeScheduler purgeScheduler)
 {
     /// <summary>La verificación vive 7 días en revisión (R-13).</summary>
     public static readonly TimeSpan ReviewLifetime = TimeSpan.FromDays(7);
@@ -161,7 +162,7 @@ internal sealed class VerificationService(
         }
 
         var expires = now + ReviewLifetime;
-        switch (await store.SubmitAsync(sub, id, now, expires, cancellationToken))
+        switch (await store.SubmitAsync(sub, id, now, expires, session => purgeScheduler.ScheduleAsync(session, id, now, cancellationToken), cancellationToken))
         {
             case SubmitOutcome.DuplicateCurp:
                 await events.PublishAsync("CurpDuplicada", sub, null, cancellationToken);
