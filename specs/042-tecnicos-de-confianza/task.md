@@ -1,6 +1,6 @@
 # Tareas 042 — Técnicos de confianza
 
-> **Estado:** pendientes. En esta etapa **no se ejecutan**: se activan cuando la spec esté Aprobada y una persona lo indique.
+> **Estado:** T-01 a T-08 implementadas (KNOCK-91); T-00 sigue sin hacerse aquí (la spec lee `tecnicos` directamente). Conciliado contra el código el 2026-11-22: CA-01 a CA-19 con prueba (`sdd_lint --trace 042` en verde); `docs/endpoints.md` y `docs/rate-limit-matrix.md` por revisar en el cierre.
 > «Depende de» = tareas que deben estar fusionadas antes; «Paralelo con» = tareas que se pueden trabajar a la vez.
 
 | Tarea | Qué se hace | Cubre | Depende de | Paralelo con | Responsable sugerido | Estado |

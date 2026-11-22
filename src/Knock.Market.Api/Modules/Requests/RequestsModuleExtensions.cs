@@ -39,6 +39,9 @@ public static class RequestsModuleExtensions
         services.AddScoped<IQuoteWriter, QuoteStore>();
         services.AddScoped<QuoteStore>();
         services.AddScoped<MyQuotesService>();
+        services.AddSingleton<MarketReferenceCache>();
+        services.AddScoped<MarketReferenceStore>();
+        services.AddScoped<MarketReferenceService>();
         services.AddScoped<QuoteService>();
         services.AddOptions<FieldEncryptionOptions>().BindConfiguration(FieldEncryptionOptions.SectionName);
         services.AddSingleton<FieldCipher>();
