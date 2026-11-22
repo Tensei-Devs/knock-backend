@@ -31,6 +31,7 @@ builder.Services.AddChatModule().AddKnockChatBridge();
 // Spec 030: errores de dominio de Conversaciones como ProblemDetails y cliente del permiso de Mercado con caché de 60 s (usa Services:Market que valida AddChatModule).
 builder.Services.AddConversacionesModule();
 builder.Services.AddSingleton(provider => DeviceKeyConfiguration.Read(provider.GetRequiredService<IConfiguration>()));
+builder.Services.AddScoped<Knock.Messaging.Api.Modules.Avisos.Data.DeviceStoreFactory>();
 builder.Services.AddScoped<DispositivosService>();
 
 var app = builder.Build();

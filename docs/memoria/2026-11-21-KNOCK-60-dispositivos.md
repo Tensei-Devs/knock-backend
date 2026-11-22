@@ -32,3 +32,4 @@
 - No abrir el PR de T-03 antes de que se fusione el PR #237.
 - Actualización: José autoriza abrir un PR apilado antes de fusionar #237, únicamente si las validaciones y permisos lo permiten.
 - No habilitar la escritura con distintas llaves HMAC entre réplicas: una huella diferente para el mismo token eludiría el índice único. La política de rotación y migración del índice ciego aún necesita resolverse.
+- 2026-11-22: DispositivosService deja de usar MongoDB y pide el DeviceStore a DeviceStoreFactory (capa Data), como exige la spec 003 (R-04). Los dos reintentos de DeviceStore esperan con WriteConflictBackoff, el patron de los demas stores, y no con Task.Delay directo. A evitar: construir stores desde Services o escribir Task.Delay(TimeSpan...) en src/**/Modules.

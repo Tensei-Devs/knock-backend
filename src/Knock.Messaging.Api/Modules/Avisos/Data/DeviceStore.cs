@@ -50,7 +50,7 @@ internal sealed class DeviceStore(IMongoDatabase database, TokenProtection prote
             }
             catch (MongoCommandException exception) when (exception.Code == 112 && attempt < 5)
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(50 * (attempt + 1)), cancellationToken);
+                await Task.Delay(WriteConflictBackoff(attempt), cancellationToken);
                 continue;
             }
             catch (MongoCommandException exception) when (exception.Code == 112)
@@ -60,12 +60,14 @@ internal sealed class DeviceStore(IMongoDatabase database, TokenProtection prote
 
             if (attempt < 5)
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(50 * (attempt + 1)), cancellationToken);
+                await Task.Delay(WriteConflictBackoff(attempt), cancellationToken);
             }
         }
 
         throw new InvalidOperationException("Device registration retries exhausted.");
     }
+
+    private static TimeSpan WriteConflictBackoff(int attempt) => TimeSpan.FromMilliseconds(50 * (attempt + 1));
 
     public async Task<bool> DeleteAsync(string person, string id, CancellationToken cancellationToken)
     {
