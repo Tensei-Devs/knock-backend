@@ -2,7 +2,7 @@
 
 ## Qué cambió
 
-- `ConversacionesStore.InsertAsync` ahora turna, dentro de la instancia, las creaciones de un mismo par (solicitud, técnico) con un candado por franja del par y, ya dentro del turno, relee el par: si existe responde «ya existía» (200 con la misma conversación) sin escribir; si no, inserta.
+- `ConversacionesStore.InsertAsync` ahora turna, dentro de la instancia, las creaciones de un mismo par (solicitud, técnico) con el `KeyedGate` compartido de `Knock.Hosting` (turno por par) y, ya dentro del turno, relee el par: si existe responde «ya existía» (200 con la misma conversación) sin escribir; si no, inserta.
 - Ante llave duplicada responde «ya existía»; ante conflicto de escritura (112) o interbloqueo de documentdb-local (24, «deadlock») reintenta con espera creciente antes de relanzar.
 
 ## Por qué
