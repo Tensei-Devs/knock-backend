@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
-using Knock.Identity.Api.Common.Errors;
 using Knock.Hosting.RateLimiting;
+using Knock.Identity.Api.Common.Errors;
 using Knock.Identity.Api.Hosting;
 using Knock.Identity.Api.Modules.Panel.Data;
 using Knock.Identity.Api.Modules.Panel.Domain;
