@@ -1,3 +1,4 @@
+using Knock.Identity.Api.Hosting.Procesos.TareasProgramadas;
 using Knock.Identity.Api.Modules.Trust.Data;
 using Knock.Identity.Api.Modules.Trust.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -18,6 +19,11 @@ public static class TrustModuleExtensions
         services.AddSingleton<VerificationStore>();
         services.AddSingleton<IVerificationStore>(provider => provider.GetRequiredService<VerificationStore>());
         services.AddScoped<VerificationService>();
+        services.AddSingleton<IVerificationPurgeStore, VerificationPurgeStore>();
+        services.AddScoped<PurgaDeVerificacion>();
+        services.AddSingleton<VerificationPurgeScheduler>();
+        services.AddScoped<IManejadorDeTarea, AvisarAlVerificadorHandler>();
+        services.AddScoped<IManejadorDeTarea, BorrarFotosDeVerificacionHandler>();
         return services;
     }
 }
