@@ -58,7 +58,7 @@ internal sealed record StoredConversation(
 /// </summary>
 internal sealed class ConversacionesStore(
     [FromKeyedServices(DataExtensions.DatabaseKey)] IMongoDatabase database,
-    IOptions<KnockMongoOptions> mongoOptions)
+    IOptions<KnockMongoOptions> mongoOptions) : IConversacionesApi
 {
     public const string ConversationsCollection = "conversaciones";
     public const string PairIndexName = "solicitudId_1_tecnicoId_1";
@@ -139,6 +139,19 @@ internal sealed class ConversacionesStore(
             .Set("visitaId", ToBson(permission.VisitaId))
             .Set("actualizadoEn", nowUtc);
         await Conversations.UpdateOneAsync(Builders<BsonDocument>.Filter.Eq(_idField, id), update, cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
+    /// Deja de solo lectura las conversaciones abiertas entre las dos personas, sin borrar mensajes (spec 043, R-18). Compara los dos órdenes del par porque el bloqueo corta en ambos sentidos. El
+    /// motivo es uno de los ya existentes, para que quien fue bloqueada no vea un cierre distinto de los demás (R-17).
+    /// </summary>
+    public async Task<long> CloseForBlockAsync(string personA, string personB, DateTime nowUtc, CancellationToken cancellationToken)
+    {
+        var filters = Builders<BsonDocument>.Filter;
+        var pair = (filters.Eq(_clientField, personA) & filters.Eq(_technicianUserField, personB)) | (filters.Eq(_clientField, personB) & filters.Eq(_technicianUserField, personA));
+        var update = Builders<BsonDocument>.Update.Set("estado", ConversacionEstados.Cerrada).Set("motivoCierre", CodigosDeConversacion.BlockClosureReason).Set("actualizadoEn", nowUtc);
+        var result = await Conversations.UpdateManyAsync(pair & filters.Eq("estado", ConversacionEstados.Abierta), update, cancellationToken: cancellationToken);
+        return result.ModifiedCount;
     }
 
     /// <summary>

@@ -31,6 +31,7 @@ public static class ConversacionesModuleExtensions
         services.AddOptions<ConversacionesOptions>().BindConfiguration(ConversacionesOptions.SectionName).ValidateOnStart();
         services.AddSingleton<IValidateOptions<ConversacionesOptions>, ConversacionesOptionsValidator>();
         services.AddSingleton<ConversacionesStore>();
+        services.AddSingleton<IConversacionesApi>(provider => provider.GetRequiredService<ConversacionesStore>());
         services.AddSingleton<MensajesStore>();
         services.AddSingleton<IMensajesStore>(provider => provider.GetRequiredService<MensajesStore>());
         services.TryAddSingleton<IContentModerator, ModeradorNoDisponible>();
