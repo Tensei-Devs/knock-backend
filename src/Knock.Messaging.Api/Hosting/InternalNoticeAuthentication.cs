@@ -93,35 +93,19 @@ internal static class InternalNoticeAuthentication
     /// <summary>La clave de la configuración si es Base64 de al menos 32 bytes; si no, una clave al azar que nadie conoce, así que ningún token de ese emisor se valida.</summary>
     internal static byte[] ReadKey(string? configured)
     {
-        if (!string.IsNullOrWhiteSpace(configured))
-        {
-            try
-            {
-                var key = Convert.FromBase64String(configured);
-                if (key.Length >= MinKeyBytes)
-                {
-                    return key;
-                }
-            }
-            catch (FormatException)
-            {
-                // Una clave mal escrita deja la ruta interna cerrada para ese emisor; el mensaje nunca la repite.
-            }
-        }
-
-        return RandomNumberGenerator.GetBytes(MinKeyBytes);
+        var buffer = new byte[configured?.Length ?? 0];
+        var valid = !string.IsNullOrWhiteSpace(configured) && Convert.TryFromBase64String(configured, buffer, out var written) && written >= MinKeyBytes;
+        return valid ? Convert.FromBase64String(configured!) : RandomNumberGenerator.GetBytes(MinKeyBytes);
     }
 
     /// <summary>El token trae <c>jti</c> e <c>iat</c> y vive 5 minutos o menos (<c>exp</c> menos <c>iat</c>).</summary>
     private static bool HasBoundedLifetime(ClaimsPrincipal? principal)
     {
-        if (principal?.FindFirst("jti") is not { Value.Length: > 0 }
-            || !long.TryParse(principal.FindFirst("iat")?.Value, NumberStyles.None, CultureInfo.InvariantCulture, out var issuedAt)
-            || !long.TryParse(principal.FindFirst("exp")?.Value, NumberStyles.None, CultureInfo.InvariantCulture, out var expires))
-        {
-            return false;
-        }
-
-        return expires - issuedAt is > 0 and <= MaxLifetimeSeconds;
+        var lifetime = TimestampOf(principal, "exp") - TimestampOf(principal, "iat");
+        return !string.IsNullOrEmpty(principal?.FindFirst("jti")?.Value) && lifetime is > 0 and <= MaxLifetimeSeconds;
     }
+
+    /// <summary>Un claim numérico (segundos Unix) o un valor muy negativo que hace fallar la vida útil si falta o no es número.</summary>
+    private static long TimestampOf(ClaimsPrincipal? principal, string claim) =>
+        long.TryParse(principal?.FindFirst(claim)?.Value, NumberStyles.None, CultureInfo.InvariantCulture, out var value) ? value : long.MinValue / 4;
 }
