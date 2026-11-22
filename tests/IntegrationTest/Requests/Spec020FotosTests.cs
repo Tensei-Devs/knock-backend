@@ -16,7 +16,7 @@ public sealed class Spec020FotosTests
         await using var host = await Spec020Host.StartAsync();
         var otherPerson = Guid.NewGuid().ToString("D");
         var own = Guid.CreateVersion7().ToString("N");
-        var foreign = ObjectId.GenerateNewId().ToString();
+        var foreign = Guid.CreateVersion7().ToString("N");
         host.Photos.Owners = new Dictionary<string, string> { [own] = host.ClientSub, [foreign] = otherPerson };
         var onlyForeign = host.ValidBody();
         onlyForeign["fotos"] = new[] { foreign };
