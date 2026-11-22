@@ -79,6 +79,26 @@ public sealed partial class Spec044AvisosTests
             LastUser = userId;
             return Task.FromResult<IReadOnlyDictionary<string, bool>?>(Preferences.TryGetValue(userId, out var types) ? types : null);
         }
+
+        public int SetCalls { get; private set; }
+
+        public Task SetPreferencesAsync(string userId, IReadOnlyDictionary<string, bool> changes, CancellationToken cancellationToken)
+        {
+            LastUser = userId;
+            SetCalls++;
+            if (!Preferences.TryGetValue(userId, out var types))
+            {
+                types = [];
+                Preferences[userId] = types;
+            }
+
+            foreach (var (type, enabled) in changes)
+            {
+                types[type] = enabled;
+            }
+
+            return Task.CompletedTask;
+        }
     }
 
     private static string Id(int n) => n.ToString("x24", System.Globalization.CultureInfo.InvariantCulture);
