@@ -1,8 +1,6 @@
 extern alias MarketApi;
 
 using System.Net;
-using System.Net.Http.Headers;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using AwesomeAssertions;
@@ -10,7 +8,6 @@ using Knock.IntegrationTest.Requests;
 using Knock.IntegrationTest.Support;
 using MarketApi::Knock.Market.Api.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -27,7 +24,7 @@ public sealed class Spec045OficiosHttpTests
     private const string _public = "/api/v1/oficios";
     private const string _admin = "/api/v1/admin/oficios";
     private const string _requests = "/api/v1/oficios-pedidos";
-    private static readonly byte[] _panelKey = RandomNumberGenerator.GetBytes(32);
+    private static readonly byte[] _panelKey = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
 
     private sealed class RecordingAudit(bool available) : IPanelAuditTrail
     {
@@ -55,11 +52,14 @@ public sealed class Spec045OficiosHttpTests
                 services.AddSingleton<IPanelPermissionGate>(gate);
                 services.AddSingleton<IPanelAuditTrail>(audit);
             });
+        // El host de pruebas no corre el sembrador, que es quien crea el índice único de la clave natural.
+        await host.Database.GetCollection<BsonDocument>("oficios").Indexes.CreateOneAsync(
+            new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("clave"), new CreateIndexOptions { Unique = true }));
         return (host, gate, audit);
     }
 
     private static string PanelToken(string? audience = PanelAuthentication.DefaultAudience) =>
-        new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
+        new Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
         {
             Issuer = GatewayTestSupport.Issuer,
             Audience = audience,
@@ -73,7 +73,7 @@ public sealed class Spec045OficiosHttpTests
         using var request = new HttpRequestMessage(method, new Uri(path, UriKind.Relative));
         if (bearer is not null)
         {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", bearer);
         }
 
         if (body is not null || raw is not null)
@@ -109,7 +109,7 @@ public sealed class Spec045OficiosHttpTests
         body.GetProperty("clave").GetString().Should().Be(Spec020Host.Plumbing);
         body.EnumerateObject().Select(p => p.Name).Should().BeEquivalentTo("clave", "nombre", "modalidad", "frasesSugeridas");
         using var again = new HttpRequestMessage(HttpMethod.Get, $"{_public}/{Spec020Host.Plumbing}");
-        again.Headers.IfNoneMatch.Add(EntityTagHeaderValue.Parse(response.Headers.ETag!.ToString()));
+        again.Headers.IfNoneMatch.Add(System.Net.Http.Headers.EntityTagHeaderValue.Parse(response.Headers.ETag!.ToString()));
         using var notModified = await host.Client.SendAsync(again);
         notModified.StatusCode.Should().Be(HttpStatusCode.NotModified);
     }
