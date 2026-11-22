@@ -1,5 +1,6 @@
 using Knock.Contracts.Conversations;
 using Knock.Messaging.Api.Common.Errors;
+using Knock.Messaging.Api.Modules.Bloqueos;
 using Knock.Messaging.Api.Modules.Conversaciones.Data;
 using Knock.Messaging.Api.Modules.Conversaciones.Domain;
 using Knock.Messaging.Api.Modules.Conversaciones.Dtos;
@@ -32,6 +33,7 @@ internal sealed class ConversacionesOptionsValidator : IValidateOptions<Conversa
 /// </summary>
 internal sealed class ConversacionService(
     ConversacionesStore store,
+    IBloqueosApi blocks,
     IPermisoDeConversacion permissions,
     IOptions<ConversacionesOptions> options,
     TimeProvider clock)
@@ -50,6 +52,12 @@ internal sealed class ConversacionService(
             { Estado: EstadoPermisoConversacion.NoEncontrado } => throw ConversacionErrors.NotFound(),
             _ => throw new DomainException(DomainErrorKind.ServiceUnavailable, "The market service did not answer.", ErrorCodes.MarketUnavailableCode),
         };
+
+        // Con un bloqueo entre ambas no se crea ni se reabre: responde como una solicitud o un técnico que no están disponibles (spec 043, R-17, CA-27).
+        if (await blocks.AreBlockedAsync(permission.ClienteId, permission.TecnicoUsuarioId, cancellationToken))
+        {
+            throw ConversacionErrors.NotFound();
+        }
 
         var existing = await store.FindByPairAsync(permission.SolicitudId, permission.TecnicoId, cancellationToken);
         if (existing is null)

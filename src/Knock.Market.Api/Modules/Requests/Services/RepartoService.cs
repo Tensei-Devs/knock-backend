@@ -10,6 +10,7 @@ namespace Knock.Market.Api.Modules.Requests.Services;
 internal sealed class RepartoService(
     RepartoStore store,
     CandidatosStore candidates,
+    IBlockLookup blocks,
     INeighborhoodCenterCatalog catalog,
     IOptions<OleadasOptions> options,
     TimeProvider clock)
@@ -22,8 +23,11 @@ internal sealed class RepartoService(
         if (request is null) return;
         var colonia = request["coloniaId"].AsString;
         var center = await catalog.FindNeighborhoodCenterAsync(colonia, token);
-        var eligible = await candidates.FindAsync(id, request["clienteId"].AsString, request["oficioClave"].AsString, colonia,
-            center?.Latitude, center?.Longitude, now, token);
+        var clientId = request["clienteId"].AsString;
+        var found = await candidates.FindAsync(id, clientId, request["oficioClave"].AsString, colonia, center?.Latitude, center?.Longitude, now, token);
+        // Condición adicional de elegibilidad (spec 043, R-18, CA-28): no se reparte a quien tiene un bloqueo con la persona que pidió.
+        var blocked = await blocks.BlockedWithAsync(clientId, found.Select(x => x.TechnicianUserId!), token);
+        var eligible = blocked.Count == 0 ? found : [.. found.Where(x => !blocked.Contains(x.TechnicianUserId!))];
         var selected = SeleccionDeOleada.Select(eligible, [], options.Value);
         await store.DistributeAsync(task, id, wave, eligible, selected, options.Value, now, token);
     }
