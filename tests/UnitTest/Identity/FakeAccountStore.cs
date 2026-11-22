@@ -69,6 +69,22 @@ internal sealed class FakeAccountStore : IAccountStore
         return Task.FromResult(true);
     }
 
+    /// <summary>Casos de recuperación vencidos por la tarea <c>VencerRecuperacion</c>: usuario y segundo Unix de creación.</summary>
+    public List<(string UserId, long CreatedAtSeconds)> ExpiredRecoveries { get; } = [];
+
+    public Task<bool> ExpireRecoveryAsync(string userId, long createdAtSeconds, DateTime now, CancellationToken cancellationToken)
+    {
+        var index = RecoveryCases.FindIndex(c => c.UserId == userId && new DateTimeOffset(c.CreatedAt, TimeSpan.Zero).ToUnixTimeSeconds() == createdAtSeconds);
+        if (index < 0)
+        {
+            return Task.FromResult(false);
+        }
+
+        RecoveryCases.RemoveAt(index);
+        ExpiredRecoveries.Add((userId, createdAtSeconds));
+        return Task.FromResult(true);
+    }
+
     /// <summary>Cuentas con una exportación en curso (por <c>_id</c>).</summary>
     public HashSet<string> ExportsInProgress { get; } = [];
 

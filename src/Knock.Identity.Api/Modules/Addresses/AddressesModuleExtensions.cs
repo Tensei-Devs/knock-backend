@@ -19,6 +19,7 @@ public static class AddressesModuleExtensions
         services.AddSingleton<AddressesStore>();
         services.AddSingleton<IAddressesStore>(provider => provider.GetRequiredService<AddressesStore>());
         services.AddScoped<AddressService>();
+        services.AddSingleton<IAddressesApi, AddressesApi>();
         return services;
     }
 }

@@ -1,5 +1,6 @@
 using Knock.Identity.Api.Hosting;
 using Knock.Identity.Api.Modules.Account.Domain;
+using Knock.Identity.Api.Modules.Account.Services;
 using Knock.Identity.Api.Modules.Sesiones.Services;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
@@ -14,7 +15,7 @@ namespace Knock.Identity.Api.Modules.Account.Data;
 internal sealed class AccountStore(
     [FromKeyedServices(DataExtensions.DatabaseKey)] IMongoDatabase database,
     IMongoClient client,
-    IOptions<KnockMongoOptions> mongoOptions) : IAccountStore
+    IOptions<KnockMongoOptions> mongoOptions) : IAccountStore, IAccountExportSource
 {
     public const string UsersCollection = "usuarios";
     public const string SessionsCollection = "sesiones";
@@ -186,6 +187,21 @@ internal sealed class AccountStore(
         return before is null;
     }
 
+    public async Task<bool> ExpireRecoveryAsync(string userId, long createdAtSeconds, DateTime now, CancellationToken cancellationToken)
+    {
+        var from = DateTimeOffset.FromUnixTimeSeconds(createdAtSeconds).UtcDateTime;
+        var filter = _filter.And(
+            _filter.Eq(Fields.UserIdField, ObjectId.Parse(userId)),
+            _filter.Eq(Fields.StateField, RecoveryStates.Pending),
+            _filter.Gte(Fields.CreatedAtField, new BsonDateTime(from)),
+            _filter.Lt(Fields.CreatedAtField, new BsonDateTime(from.AddSeconds(1))));
+        var result = await Recoveries.UpdateOneAsync(
+            filter,
+            Builders<BsonDocument>.Update.Set(Fields.StateField, RecoveryStates.Expired).Set(UpdatedAtField, new BsonDateTime(now)),
+            cancellationToken: cancellationToken);
+        return result.ModifiedCount == 1;
+    }
+
     public async Task<ExportStartOutcome> TryStartExportAsync(string userId, DateTime now, CancellationToken cancellationToken)
     {
         var filter = _filter.And(
@@ -204,6 +220,34 @@ internal sealed class AccountStore(
             _filter.Eq(Fields.IdField, ObjectId.Parse(userId)),
             Builders<BsonDocument>.Update.Unset(ExportRequestedAtField).Inc(Fields.VersionField, 1),
             cancellationToken: cancellationToken);
+
+    public async Task<AccountExportRecord?> FindAsync(string userId, CancellationToken cancellationToken)
+    {
+        if (!ObjectId.TryParse(userId, out var id))
+        {
+            return null;
+        }
+
+        var projection = Builders<BsonDocument>.Projection.Include(Fields.SubField).Include(Fields.StateField).Include(Fields.IsTechnicianField).Include(_nameField)
+            .Include(_coloniaField).Include(_postalCodeField).Include(Fields.CreatedAtField).Include(Fields.ConsentsField);
+        var document = await Users.Find(_filter.Eq(Fields.IdField, id) & _filter.Ne(Fields.StateField, AccountStates.Deleted), _findOptions).Project(projection).Limit(1).FirstOrDefaultAsync(cancellationToken);
+        if (document is null)
+        {
+            return null;
+        }
+
+        return new AccountExportRecord(
+            document[Fields.SubField].AsString,
+            document[Fields.StateField].AsString,
+            document.GetValue(Fields.IsTechnicianField, false).AsBoolean,
+            Text(document, _nameField),
+            Text(document, _coloniaField),
+            Text(document, _postalCodeField),
+            document.TryGetValue(Fields.CreatedAtField, out var created) && created.IsBsonDateTime ? created.ToUniversalTime() : null,
+            ReadConsents(document));
+    }
+
+    private static string? Text(BsonDocument document, string name) => document.TryGetValue(name, out var value) && value.IsString ? value.AsString : null;
 
     public async Task<IReadOnlyList<StoredConsent>?> FindConsentsAsync(string sub, CancellationToken cancellationToken)
     {
