@@ -1,5 +1,10 @@
 # Memoria — knock-backend
 
+## 2026-11-22 — Spec 047 T-07: transversales de los servicios del técnico (KNOCK-57)
+- **Qué cambió:** nueva `Spec047TransversalesTests` (integración, CA_047_27 a CA_047_30): un identificador ajeno en el cuerpo se ignora y el servicio queda del técnico del token; los registros y los errores no llevan el detalle escrito, el `sub` ni el nombre; la lectura responde 429 con `Retry-After` en la petición 31 (política `tecnicos-servicios`, 30 por minuto); 413 con `payload_too_large` en POST, PUT (2 KiB) y DELETE (1 KiB); crear sin `Idempotency-Key` y el tope de 50 evita acumular repeticiones. Sin cambio de código de producción.
+- **Por qué:** cerrar T-07 con pruebas de las reglas R-18 a R-21; las pruebas de integración solo corren en CI.
+- **A evitar:** aceptar identificadores de persona en el cuerpo, registrar textos escritos por la persona o exigir `Idempotency-Key` (retirado en la spec 020).
+- **Pendiente:** T-08 (OpenAPI y matrices) queda para F3 y falta ver el CI de estas pruebas.
 ## 2026-11-20 — Spec 055, etapa 1: biblioteca técnica compartida `Knock.Hosting` (KNOCK-251)
 - **Qué se movió:** nuevo `src/Knock.Hosting` (net11.0; solo `OpenTelemetry.Extensions.Hosting` 1.21.0 y `Serilog.AspNetCore` 10.0.0, las mismas versiones de los servicios). Tiene `ForwardedHeaders/ForwardedHeadersExtensions` y `Logging/TelemetryRedactor` (con `CoordinatePairs`, los dos procesadores y `RedactingJsonFormatter`). Se borraron las 7 copias de los servicios y `AddKnockGatewayForwardedHeaders` de `CorsExtensions`; el gateway ahora llama a `AddKnockForwardedHeaders`.
 - **Sin cambio de comportamiento:** las copias eran idénticas salvo el espacio de nombres (comparadas antes de mover). Solo cambió la visibilidad: es pública solo la API que usan los servicios (`ExceptionEvent`, los procesadores y el formateador); `Redact`, `RedactUrl` y demás quedan `internal`, visibles para las pruebas (R-06). El enum `ForwardedHeaders` de ASP.NET se usa con el alias `ForwardedHeaderFlags`, porque choca con el espacio de nombres `Knock.Hosting.ForwardedHeaders`.
