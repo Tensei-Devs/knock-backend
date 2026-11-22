@@ -56,7 +56,7 @@ public sealed partial class Spec044AvisosTests
     [Fact]
     public async Task MarkRead_OnANoticeOfAnotherPerson_IsRefusedAsNotFoundAndChangesNothing_CA_044_09()
     {
-        // La spec pide 403 (CA-09) y también 404 sin revelar que existe (R-12, CA-11, CA-18). Se aplica el 404 uniforme: todo token válido es una persona, y un 403 distinto del 404 diría que el aviso existe.
+        // La spec pide 403 (CA-09) y también 404 sin revelar que existe (R-12, CA-11, CA-18). Se aplica el 404 uniforme: cualquier token válido es una persona, y un 403 distinto del 404 diría que el aviso existe.
         var store = StoreWith(0, others: 1);
         var controller = Avisos(store);
         var context = controller.ControllerContext.HttpContext;

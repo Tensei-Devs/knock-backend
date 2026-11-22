@@ -30,6 +30,9 @@ internal static class NoticeRules
     public static readonly IReadOnlyList<string> Types =
         ["cotizaciones", "mensajes", "visitas", "solicitudes", "opiniones", "verificaciones", SecurityType, PromotionsType];
 
+    /// <summary>Fecha de vencimiento (<c>venceEn</c>) de un aviso creado en <paramref name="createdAt"/>: 30 días después (D-04). La usa quien crea avisos (despachador de la spec 037); el TTL de la base lo borra.</summary>
+    public static DateTime ExpiresAt(DateTime createdAt) => createdAt.AddDays(RetentionDays);
+
     public static bool IsKnownRole(string? role) => role is not null && Roles.Contains(role, StringComparer.Ordinal);
 
     /// <summary>Los avisos de seguridad siempre llegan y no se pueden apagar (D-06).</summary>
