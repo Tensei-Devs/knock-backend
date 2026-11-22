@@ -6,7 +6,7 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace Knock.Market.Api.Modules.Assistant.Services;
 
-/// <summary>Puertos hacia otros módulos y servicios (spec 052, §8). Mientras no existan sus implementaciones reales, las de respaldo fallan cerrado.</summary>
+/// <summary>Puertos hacia otros módulos y servicios (spec 052, §8). Cuentas y solicitudes tienen implementación real (<c>AsistentePuertosReales</c>); conversaciones (spec 030) y referencia de mercado (spec 048) siguen con respaldo que falla cerrado.</summary>
 internal interface IAsistenteCuentas
 {
     /// <summary>Verdadero si la cuenta del <c>sub</c> tiene perfil de técnico.</summary>
@@ -39,20 +39,10 @@ internal interface IReferenciaMercado
     Task<PriceRange?> GetRangeAsync(string oficio, string tipoTrabajo, CancellationToken cancellationToken);
 }
 
-internal sealed class UnavailableAsistenteCuentas : IAsistenteCuentas
-{
-    public Task<bool> IsTechnicianAsync(string sub, CancellationToken cancellationToken) => Task.FromResult(false);
-}
-
 internal sealed class UnavailableConversaciones : IConversacionesAsistente
 {
     public Task<ConversationAccess> GetForTechnicianAsync(string conversationId, string sub, CancellationToken cancellationToken) =>
         Task.FromResult(new ConversationAccess(ConversationAccessStatus.Unavailable, string.Empty));
-}
-
-internal sealed class UnavailableSolicitudes : ISolicitudesAsistente
-{
-    public Task<RequestAccess> GetAccessAsync(string solicitudId, string sub, CancellationToken cancellationToken) => Task.FromResult(new RequestAccess(false, null));
 }
 
 internal sealed class UnavailableReferenciaMercado : IReferenciaMercado
