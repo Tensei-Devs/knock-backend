@@ -12,6 +12,25 @@ internal static class TradeErrorCodes
     public const string AuditUnavailableCode = "audit_unavailable";
 }
 
+/// <summary>La auditoría del panel no está disponible: la alta o el cambio del catálogo no se hace (spec 045, R-20). El controlador la traduce a 503 <c>audit_unavailable</c>.</summary>
+public sealed class PanelAuditUnavailableException : Exception
+{
+    public PanelAuditUnavailableException()
+        : base("The panel audit trail is not available.")
+    {
+    }
+
+    public PanelAuditUnavailableException(string message)
+        : base(message)
+    {
+    }
+
+    public PanelAuditUnavailableException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
+}
+
 /// <summary>
 /// Reglas puras del oficio que administra el panel y del oficio pedido (spec 045, R-18 a R-22): clave, nombre, modalidad, porcentajes, montos y el texto de «Otro oficio». Los valores salen de §6 y
 /// de las decisiones D-04 a D-07 de la spec.

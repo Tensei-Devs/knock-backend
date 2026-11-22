@@ -55,6 +55,7 @@ internal static class AuthenticationExtensions
         services.AddKnockPanelAuthentication();
         services.AddHttpContextAccessor();
         services.TryAddSingleton<IPanelPermissionGate, DenyAllPanelPermissionGate>();
+        services.TryAddSingleton<IPanelAuditTrail, UnavailablePanelAuditTrail>();
         services.AddHostedService<AuthenticationStartupCheck>();
         return services;
     }

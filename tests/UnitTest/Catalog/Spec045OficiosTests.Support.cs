@@ -1,8 +1,13 @@
 using AwesomeAssertions;
+using Knock.Market.Api.Hosting;
+using Knock.Market.Api.Modules.Catalog.Controllers.V1;
 using Knock.Market.Api.Modules.Catalog.Data;
+using Knock.Market.Api.Modules.Catalog.Dtos;
+using Knock.Market.Api.Modules.Catalog.Services;
 using Knock.Market.Api.Modules.Catalog.Domain;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 
 namespace Knock.UnitTest.Catalog;
 
@@ -35,9 +40,69 @@ public sealed partial class Spec045OficiosTests
     {
         public List<AdminTrade> Trades { get; } = [];
 
+        public int Inserts { get; private set; }
+
+        public Task<bool> InsertAsync(NewTrade trade, CancellationToken cancellationToken)
+        {
+            if (Trades.Any(t => t.Clave == trade.Clave))
+            {
+                return Task.FromResult(false);
+            }
+
+            Inserts++;
+            Trades.Add(new AdminTrade(trade.Clave, trade.Nombre, trade.Modalidad, trade.FrasesSugeridas, trade.TopePorcentaje, trade.TopeFijoPorcentaje, trade.PisoAprobacion, trade.VisitaMaxima, trade.Activo));
+            return Task.FromResult(true);
+        }
+
         public Task<IReadOnlyList<AdminTrade>> ListAllAsync(CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<AdminTrade>>([.. Trades.OrderBy(t => t.Nombre, StringComparer.Ordinal).ThenBy(t => t.Clave, StringComparer.Ordinal)]);
     }
+
+    private sealed class FakeAudit(bool available = true) : IPanelAuditTrail
+    {
+        public List<PanelAuditEntry> Entries { get; } = [];
+
+        public Task<bool> RecordAsync(PanelAuditEntry entry, CancellationToken cancellationToken)
+        {
+            if (!available)
+            {
+                return Task.FromResult(false);
+            }
+
+            Entries.Add(entry);
+            return Task.FromResult(true);
+        }
+    }
+
+    private sealed class TestProblemFactory : ProblemDetailsFactory
+    {
+        public override ProblemDetails CreateProblemDetails(HttpContext httpContext, int? statusCode = null, string? title = null, string? type = null, string? detail = null, string? instance = null) =>
+            new() { Status = statusCode, Title = title, Type = type, Detail = detail, Instance = instance };
+
+        public override ValidationProblemDetails CreateValidationProblemDetails(
+            HttpContext httpContext, Microsoft.AspNetCore.Mvc.ModelBinding.ModelStateDictionary modelStateDictionary, int? statusCode = null, string? title = null, string? type = null, string? detail = null, string? instance = null) =>
+            new(modelStateDictionary) { Status = statusCode, Title = title, Type = type, Detail = detail, Instance = instance };
+    }
+
+    private static readonly DateTimeOffset _now = new(2026, 11, 21, 12, 0, 0, TimeSpan.Zero);
+
+    private sealed class FixedClock : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => _now;
+    }
+
+    private static TradeAdminService AdminService(FakeTradeAdminStore store, FakeActiveOficios? catalog = null, FakeAudit? audit = null) =>
+        new(store, catalog ?? new FakeActiveOficios(), audit ?? new FakeAudit(), new FixedClock());
+
+    private static AdminTradesController Admin(TradeAdminService service, string? sub = "cuenta-de-prueba")
+    {
+        var identity = sub is null ? new System.Security.Claims.ClaimsIdentity() : new System.Security.Claims.ClaimsIdentity([new System.Security.Claims.Claim("sub", sub)], "test");
+        var http = new DefaultHttpContext { User = new System.Security.Claims.ClaimsPrincipal(identity) };
+        return new AdminTradesController(service) { ControllerContext = Context(http), ProblemDetailsFactory = new TestProblemFactory() };
+    }
+
+    private static CreateTradeBody NewBody(string key = "gas") =>
+        new(key, "Instalaciones de gas", "ambos", ["Huele a gas"], 25m, 10m, 200, 500, null);
 
     private static AdminTrade Trade(string key = "plomeria", string name = "Plomería", bool active = true) =>
         new(key, name, "domicilio", ["Fuga"], 30m, 10m, 150, 450, active);
