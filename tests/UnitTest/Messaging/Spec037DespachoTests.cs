@@ -19,9 +19,9 @@ namespace Knock.UnitTest.Messaging;
 
 public sealed class Spec037DespachoTests
 {
-    private const string Resource = "507f1f77bcf86cd799439011";
-    private const string Conversation = "507f1f77bcf86cd799439012";
-    private const string Person = "sub-1";
+    private const string _resource = "507f1f77bcf86cd799439011";
+    private const string _conversation = "507f1f77bcf86cd799439012";
+    private const string _person = "sub-1";
 
     [Theory]
     [InlineData("solicitud_nueva", "cotizaciones")]
@@ -29,7 +29,7 @@ public sealed class Spec037DespachoTests
     [InlineData("mensaje_nuevo", "mensajes")]
     public void Payload_OnlyV1Fields_CA_037_04(string evento, string tipo)
     {
-        var payload = AvisoRules.BuildPayload(evento, Resource, evento == "mensaje_nuevo" ? Conversation : null, Guid.NewGuid());
+        var payload = AvisoRules.BuildPayload(evento, _resource, evento == "mensaje_nuevo" ? _conversation : null, Guid.NewGuid());
 
         payload.Should().NotBeNull();
         payload["tipo"].Should().Be(tipo);
@@ -39,10 +39,10 @@ public sealed class Spec037DespachoTests
     }
 
     [Theory]
-    [InlineData("desconocido", Resource)]
+    [InlineData("desconocido", _resource)]
     [InlineData("solicitud_nueva", "no-es-objectid")]
     [InlineData("solicitud_nueva", null)]
-    [InlineData("mensaje_nuevo", Resource)]
+    [InlineData("mensaje_nuevo", _resource)]
     public void Payload_InvalidEventOrResource_IsRejected_CA_037_04(string evento, string? recurso)
     {
         AvisoRules.BuildPayload(evento, recurso, null, Guid.NewGuid()).Should().BeNull();
@@ -51,9 +51,9 @@ public sealed class Spec037DespachoTests
     [Fact]
     public void DeduplicationKey_SameEvent_SameKey_DifferentEvents_Differ_CA_037_03()
     {
-        AvisoRules.DeduplicationKey("e1", Person).Should().Be(AvisoRules.DeduplicationKey("e1", Person));
-        AvisoRules.DeduplicationKey("e1", Person).Should().NotBe(AvisoRules.DeduplicationKey("e2", Person));
-        AvisoRules.DeduplicationKey("e1", Person).Should().NotBe(AvisoRules.DeduplicationKey("e1", "sub-2"));
+        AvisoRules.DeduplicationKey("e1", _person).Should().Be(AvisoRules.DeduplicationKey("e1", _person));
+        AvisoRules.DeduplicationKey("e1", _person).Should().NotBe(AvisoRules.DeduplicationKey("e2", _person));
+        AvisoRules.DeduplicationKey("e1", _person).Should().NotBe(AvisoRules.DeduplicationKey("e1", "sub-2"));
     }
 
     [Fact]
@@ -210,9 +210,9 @@ public sealed class Spec037DespachoTests
 
         public DespachadorDeAvisos Dispatcher { get; }
 
-        public static AvisoEvent Event(string evento) => new("evt-1", evento, Person, Resource, null);
+        public static AvisoEvent Event(string evento) => new("evt-1", evento, _person, _resource, null);
 
-        public static AvisoEvent Message(string eventoId) => new(eventoId, "mensaje_nuevo", Person, Resource, Conversation);
+        public static AvisoEvent Message(string eventoId) => new(eventoId, "mensaje_nuevo", _person, _resource, _conversation);
 
         private sealed class Presence(Harness owner) : IPresenceReader
         {

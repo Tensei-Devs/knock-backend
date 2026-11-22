@@ -1,6 +1,6 @@
 using Knock.Hosting.RateLimiting;
-using Microsoft.AspNetCore.RateLimiting;
 using Knock.Messaging.Api.Common.Errors;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Knock.Messaging.Api.Hosting;
 
@@ -13,6 +13,16 @@ internal static class MessagingRateLimits
     /// <summary>Enviar mensajes: 30 por minuto por persona (spec 030, R-11 y CA-05), con contador compartido en Redis entre copias.</summary>
     public const string SendMessagePolicy = "conversaciones-mensajes";
 
+    /// <summary>Registrar y borrar dispositivos: 30 por hora por persona (spec 037, T-03), con contador compartido en Redis.</summary>
+    public const string DevicesPolicy = "dispositivos";
+
+    /// <summary>Leer avisos y preferencias: 120 por minuto por persona (spec 044, R-17).</summary>
+    public const string NoticesReadPolicy = "avisos-leer";
+
+    /// <summary>Marcar avisos como leídos: 60 por minuto por persona (spec 044, R-17).</summary>
+    public const string NoticesWritePolicy = "avisos-marcar";
+
+    private const int _devicesPerHour = 30;
     private const int _messagesPerMinute = 30;
     private const string _messageLimitCode = "message_limit";
 
@@ -27,7 +37,10 @@ internal static class MessagingRateLimits
             WriteTooManyRequestsAsync = context => ProblemResponses.WriteAsync(context, StatusCodes.Status429TooManyRequests, "Too Many Requests", CodeFor(context)),
             ConfigurePolicies = policies => policies
                 .PerSubject(CreateConversationPolicy, 20, TimeSpan.FromHours(1))
-                .PerSubject(SendMessagePolicy, _messagesPerMinute, TimeSpan.FromMinutes(1)),
+                .PerSubject(SendMessagePolicy, _messagesPerMinute, TimeSpan.FromMinutes(1))
+                .PerSubject(DevicesPolicy, _devicesPerHour, TimeSpan.FromHours(1))
+                .PerSubject(NoticesReadPolicy, 120, TimeSpan.FromMinutes(1))
+                .PerSubject(NoticesWritePolicy, 60, TimeSpan.FromMinutes(1)),
         });
 
     /// <summary>El límite de enviar mensajes tiene su propio <c>code</c> (<c>message_limit</c>, spec 030, R-11); los demás, el genérico.</summary>

@@ -21,13 +21,13 @@ internal sealed class AccountStore(
     private const int _writeConflictCode = 112;
 
     public const string RecoveriesCollection = "recuperaciones";
-    private const string AddressesCollection = "direcciones";
-    private const string HomeAndCarCollection = "mi_casa_y_auto";
-    private const string ProfileCompleteField = "perfilCompleto";
-    private const string NameField = "nombre";
-    private const string PhotoUrlField = "fotoUrl";
-    private const string ColoniaField = "colonia";
-    private const string PostalCodeField = "codigoPostal";
+    private const string _addressesCollection = "direcciones";
+    private const string _homeAndCarCollection = "mi_casa_y_auto";
+    private const string _profileCompleteField = "perfilCompleto";
+    private const string _nameField = "nombre";
+    private const string _photoUrlField = "fotoUrl";
+    private const string _coloniaField = "colonia";
+    private const string _postalCodeField = "codigoPostal";
 
     public const string DeleteAtField = "eliminarEn";
     public const string UpdatedAtField = "actualizadoEn";
@@ -320,13 +320,13 @@ internal sealed class AccountStore(
                             .Set(Fields.StateField, AccountStates.Deleted)
                             .Set(Fields.PhoneHashField, new BsonBinaryData(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)))
                             .Set(Fields.IsTechnicianField, false)
-                            .Set(ProfileCompleteField, false)
+                            .Set(_profileCompleteField, false)
                             .Unset(Fields.PhoneCiphertextField)
                             .Unset(Fields.PhoneCiphertextVersionField)
-                            .Unset(NameField)
-                            .Unset(PhotoUrlField)
-                            .Unset(ColoniaField)
-                            .Unset(PostalCodeField)
+                            .Unset(_nameField)
+                            .Unset(_photoUrlField)
+                            .Unset(_coloniaField)
+                            .Unset(_postalCodeField)
                             .Unset(DeleteAtField)
                             .Unset(ExportRequestedAtField)
                             .Set(UpdatedAtField, new BsonDateTime(now))
@@ -336,8 +336,8 @@ internal sealed class AccountStore(
                             return null;
                         }
 
-                        await Database.GetCollection<BsonDocument>(AddressesCollection).DeleteManyAsync(transaction, _filter.Eq(Fields.UserIdField, owner), cancellationToken: token);
-                        await Database.GetCollection<BsonDocument>(HomeAndCarCollection).DeleteManyAsync(transaction, _filter.Eq(Fields.UserIdField, userId), cancellationToken: token);
+                        await Database.GetCollection<BsonDocument>(_addressesCollection).DeleteManyAsync(transaction, _filter.Eq(Fields.UserIdField, owner), cancellationToken: token);
+                        await Database.GetCollection<BsonDocument>(_homeAndCarCollection).DeleteManyAsync(transaction, _filter.Eq(Fields.UserIdField, userId), cancellationToken: token);
                         var open = _filter.And(_filter.Eq(Fields.UserIdField, owner), _filter.Eq(Fields.RevokedField, false));
                         var ids = (await Sessions.Find(transaction, open, _findOptions).Project(Builders<BsonDocument>.Projection.Include(Fields.IdField)).ToListAsync(token))
                             .Select(document => document[Fields.IdField].AsObjectId)

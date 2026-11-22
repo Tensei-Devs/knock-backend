@@ -13,7 +13,7 @@ namespace Knock.Messaging.Api.Modules.Avisos.Controllers;
 [ApiVersion("1.0")]
 [Authorize]
 [PrivateNoStore]
-[EnableRateLimiting(RateLimitingExtensions.DevicesPolicy)]
+[EnableRateLimiting(MessagingRateLimits.DevicesPolicy)]
 [Route("api/v{version:apiVersion}/dispositivos")]
 internal sealed class DispositivosController(DispositivosService service) : ControllerBase
 {

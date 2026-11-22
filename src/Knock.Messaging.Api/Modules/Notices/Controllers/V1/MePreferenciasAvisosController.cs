@@ -18,7 +18,7 @@ internal sealed class MePreferenciasAvisosController(NoticesService notices) : C
 {
     /// <summary>Un interruptor por tipo; sin cambios guardados, todos activos salvo promociones; seguridad siempre activa y no apagable.</summary>
     [HttpGet]
-    [EnableRateLimiting(RateLimitingExtensions.NoticesReadPolicy)]
+    [EnableRateLimiting(MessagingRateLimits.NoticesReadPolicy)]
     [ProducesResponseType<NoticePreferencesResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests)]

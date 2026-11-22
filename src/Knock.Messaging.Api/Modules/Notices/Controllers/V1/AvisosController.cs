@@ -28,7 +28,7 @@ internal sealed class AvisosController(NoticesService notices) : ControllerBase
 
     /// <summary>Lista los avisos de quien llama, del más reciente al más antiguo, por cursor (20 por omisión, 50 como máximo).</summary>
     [HttpGet]
-    [EnableRateLimiting(RateLimitingExtensions.NoticesReadPolicy)]
+    [EnableRateLimiting(MessagingRateLimits.NoticesReadPolicy)]
     [ProducesResponseType<NoticeListResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
@@ -38,7 +38,7 @@ internal sealed class AvisosController(NoticesService notices) : ControllerBase
 
     /// <summary>Cantidad de avisos sin leer, hasta 99; no se cachea.</summary>
     [HttpGet("no-leidos/contador")]
-    [EnableRateLimiting(RateLimitingExtensions.NoticesReadPolicy)]
+    [EnableRateLimiting(MessagingRateLimits.NoticesReadPolicy)]
     [ProducesResponseType<UnreadCountResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests)]
@@ -47,7 +47,7 @@ internal sealed class AvisosController(NoticesService notices) : ControllerBase
 
     /// <summary>Marca un aviso como leído; repetirlo responde 204 igual. Uno ajeno o inexistente responde 404 <c>notice_not_found</c>.</summary>
     [HttpPost("{id}/leido")]
-    [EnableRateLimiting(RateLimitingExtensions.NoticesWritePolicy)]
+    [EnableRateLimiting(MessagingRateLimits.NoticesWritePolicy)]
     [RequestSizeLimit(MaxBodyBytes)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
@@ -78,7 +78,7 @@ internal sealed class AvisosController(NoticesService notices) : ControllerBase
 
     /// <summary>Marca como leídos todos los avisos de quien llama y solo los suyos.</summary>
     [HttpPost("leidos")]
-    [EnableRateLimiting(RateLimitingExtensions.NoticesWritePolicy)]
+    [EnableRateLimiting(MessagingRateLimits.NoticesWritePolicy)]
     [RequestSizeLimit(MaxBodyBytes)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
