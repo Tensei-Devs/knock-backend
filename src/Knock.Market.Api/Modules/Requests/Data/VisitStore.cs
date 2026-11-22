@@ -25,10 +25,15 @@ internal sealed record VisitRecord(
     bool CodeUsed,
     int Attempts,
     bool Locked,
-    DateTime? ArrivedAtUtc)
+    DateTime? ArrivedAtUtc,
+    int Reschedules = 0,
+    RescheduleProposal? Proposal = null)
 {
     public VisitState State => new(Estado, Modality, Day, Locked, CodeUsed, CodeExpiresAtUtc);
 }
+
+/// <summary>Propuesta de reprogramación pendiente de la visita (spec 050, §6): quién la hizo (<c>cliente</c> o <c>tecnico</c>), la cita propuesta y cuándo vence.</summary>
+internal sealed record RescheduleProposal(DateTime ProposedAtUtc, string ProposedBy, DateTime ExpiresAtUtc);
 
 /// <summary>Resultado de registrar un intento fallido: si se aplicó (la visita seguía abierta a intentos), cuántos van y si quedó bloqueada.</summary>
 internal sealed record FailedAttempt(bool Applied, int Attempts, bool Locked);
@@ -231,5 +236,9 @@ internal sealed class VisitStore(
         d.GetValue("codigoUsado", false).AsBoolean,
         d.GetValue("intentos", 0).ToInt32(),
         d.GetValue("bloqueada", false).AsBoolean,
-        d.TryGetValue("llegadaEn", out var arrived) && arrived.IsBsonDateTime ? arrived.ToUniversalTime() : null);
+        d.TryGetValue("llegadaEn", out var arrived) && arrived.IsBsonDateTime ? arrived.ToUniversalTime() : null,
+        d.GetValue("reprogramaciones", 0).ToInt32(),
+        d.TryGetValue("propuestaReprogramacion", out var proposal) && proposal.IsBsonDocument ? ToProposal(proposal.AsBsonDocument) : null);
+
+    private static RescheduleProposal ToProposal(BsonDocument d) => new(d["fechaHora"].ToUniversalTime(), d["propuestaPor"].AsString, d["venceEn"].ToUniversalTime());
 }

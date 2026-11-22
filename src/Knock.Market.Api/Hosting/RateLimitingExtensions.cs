@@ -52,6 +52,11 @@ internal static class RateLimitingExtensions
     /// <summary>Rutas de administración del panel (spec 045): 60 por minuto por IP; el token del panel no pasa por el esquema de la app, así que el sub aún no está disponible en el limitador.</summary>
     public const string AdminPolicy = "admin-catalogo";
     /// <summary>Cotización final y ajustes de precio (spec 049, §5).</summary>
+    /// <summary>Agenda del técnico: 60 por minuto por persona (spec 050, VIS-02).</summary>
+    public const string AgendaPolicy = "agenda-tecnico";
+
+    /// <summary>Reprogramar, responder, cancelar y cliente ausente: 20 por minuto por persona (spec 050).</summary>
+    public const string VisitChangePolicy = "visitas-cambios";
     public const string FinalQuotePolicy = "visitas-cotizacion-final";
     public const string FinalQuoteDecisionPolicy = "visitas-cotizacion-final-decision";
     public const string PriceAdjustmentPolicy = "cotizaciones-ajuste-precio";
@@ -92,6 +97,8 @@ internal static class RateLimitingExtensions
             options.AddPolicy(TrustPolicy, SubjectPolicy(TrustPolicy, 30, TimeSpan.FromMinutes(1), services));
             options.AddPolicy(ServicesPolicy, SubjectPolicy(ServicesPolicy, 30, TimeSpan.FromMinutes(1), services));
             options.AddPolicy(AdminPolicy, context => SharedPartition($"{AdminPolicy}:{ClientKey(context)}", new RateLimitPolicySettings { PermitLimit = 60, Window = TimeSpan.FromMinutes(1) }, services));
+            options.AddPolicy(AgendaPolicy, SubjectPolicy(AgendaPolicy, 60, TimeSpan.FromMinutes(1), services));
+            options.AddPolicy(VisitChangePolicy, SubjectPolicy(VisitChangePolicy, 20, TimeSpan.FromMinutes(1), services));
             options.AddPolicy(FinalQuotePolicy, SubjectPolicy(FinalQuotePolicy, 10, TimeSpan.FromMinutes(1), services));
             options.AddPolicy(FinalQuoteDecisionPolicy, SubjectPolicy(FinalQuoteDecisionPolicy, 20, TimeSpan.FromMinutes(1), services));
             options.AddPolicy(PriceAdjustmentPolicy, SubjectPolicy(PriceAdjustmentPolicy, 10, TimeSpan.FromMinutes(1), services));
