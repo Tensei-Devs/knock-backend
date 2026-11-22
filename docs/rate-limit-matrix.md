@@ -145,19 +145,19 @@ Políticas por `sub` del JWT (ventana fija; el contador vive en Redis compartido
 
 ## Ampliar y referencia de mercado en Mercado (spec 048)
 
-`POST /api/v1/solicitudes/{id}/ampliar` tiene la política `solicitudes-ampliar`: **10 peticiones por hora por `sub`**. `GET /api/v1/cotizaciones/referencia-mercado` tiene `cotizaciones-referencia`: **30 peticiones por minuto por `sub`**. Ambas en `MarketRateLimits` de `wip/integration-market` (e0a51fcc); no están en sprint-05.
+`POST /api/v1/solicitudes/{id}/ampliar` tiene la política `solicitudes-ampliar`: **10 peticiones por hora por `sub`**. `GET /api/v1/cotizaciones/referencia-mercado` tiene `cotizaciones-referencia`: **30 peticiones por minuto por `sub`**. Ambas en `MarketRateLimits`.
 
-## Mapa y Explorar en Mercado (spec 046, PR #265)
+## Mapa y Explorar en Mercado (spec 046)
 
-`GET /api/v1/mapa/tecnicos` (`tecnicos-mapa`) y `GET /api/v1/explorar` (`tecnicos-explorar`) son públicos: **60 peticiones por minuto por IP cada uno**, con contador propio por política (clave `{política}:{IP del cliente}`), además del límite global. Están en el PR #265 (`feature/KNOCK-266-market-b-visitas-opiniones-mapa`); no están en sprint-05.
+`GET /api/v1/mapa/tecnicos` (`tecnicos-mapa`) y `GET /api/v1/explorar` (`tecnicos-explorar`) son públicos: **60 peticiones por minuto por IP cada uno**, con contador propio por política (clave `{política}:{IP del cliente}`), además del límite global. Están en sprint-05.
 
-## Opiniones en Mercado (spec 051, PR #265)
+## Opiniones en Mercado (spec 051)
 
-Las tres rutas de opiniones (`GET /api/v1/tecnicos/{id}/opiniones`, `POST /api/v1/visitas/{id}/opinion` y `POST /api/v1/opiniones/{id}/respuesta`) comparten la política `opiniones`: **30 peticiones por minuto por `sub`**. Está en el PR #265; no está en sprint-05.
+Las tres rutas de opiniones (`GET /api/v1/tecnicos/{id}/opiniones`, `POST /api/v1/visitas/{id}/opinion` y `POST /api/v1/opiniones/{id}/respuesta`) comparten la política `opiniones`: **30 peticiones por minuto por `sub`**. Está en sprint-05.
 
 ## Asistente en Mercado (spec 052)
 
-`POST /api/v1/asistente/conversaciones`, `.../resumen-chat` y `.../borrador-cotizacion` (las que llaman al modelo) tienen la política `asistente-ia`: **10 peticiones por minuto por `sub`**. `GET /api/v1/asistente/rango-precio` y `PUT`/`GET .../bitacora/{solicitudId}` tienen `asistente-consulta`: **60 peticiones por minuto por `sub`**. Aparte, el presupuesto de la IA se frena con `Asistente:Limites` (`TokensPorUsuarioPorDia` 20 000, `TokensGlobalesPorDia` 200 000, `TiempoMaximoSegundos` 10, `TokensSalidaMaximos` 800): al agotarlo responde 429 `ai_daily_limit_reached` con `Retry-After`. `Asistente:Habilitado` viene en `false`. Está en `wip/integration-messaging` (c980320e); no está en sprint-05.
+`POST /api/v1/asistente/conversaciones`, `.../resumen-chat` y `.../borrador-cotizacion` (las que llaman al modelo) tienen la política `asistente-ia`: **10 peticiones por minuto por `sub`**. `GET /api/v1/asistente/rango-precio` y `PUT`/`GET .../bitacora/{solicitudId}` tienen `asistente-consulta`: **60 peticiones por minuto por `sub`**. Aparte, el presupuesto de la IA se frena con `Asistente:Limites` (`TokensPorUsuarioPorDia` 20 000, `TokensGlobalesPorDia` 200 000, `TiempoMaximoSegundos` 10, `TokensSalidaMaximos` 800): al agotarlo responde 429 `ai_daily_limit_reached` con `Retry-After`. `Asistente:Habilitado` viene en `false`. Está en sprint-05.
 
 ## Conversaciones, dispositivos y avisos en Mensajería (specs 030, 037 y 044)
 
@@ -173,13 +173,13 @@ Políticas por `sub` del JWT de `MessagingRateLimits` (ventana fija; contador co
 | `avisos-preferencias` | `PUT /api/v1/me/preferencias-avisos` | 20 peticiones | 1 minuto | `sub` |
 
 - El 429 de `conversaciones-mensajes` lleva `code` `message_limit` (spec 030, R-11); los demás, `rate_limited`.
-- Existen en sprint-05 todas salvo `avisos-preferencias` (`wip/integration-messaging`, c980320e, junto con el `PUT`).
+- Existen en sprint-05 todas las políticas de esta tabla.
 - `GET /api/v1/conversaciones`, `.../no-leidas`, `GET /api/v1/conversaciones/{id}`, `.../mensajes` y `POST .../leido` no tienen política propia: rigen los límites globales.
 - El límite global por IP de Mensajería (100 por minuto, `/health/ready` 60) sigue siendo por copia (`SharedGlobalCounters = false`); las políticas por `sub` de arriba sí usan el contador compartido. La línea sobre Redis en el párrafo de Mensajería de arriba quedó atrás: las políticas por persona ya lo usan.
 
 ## Verificación de identidad: confirmar foto (spec 025, R-19)
 
-`POST /api/v1/me/verificacion/{id}/fotos/{tipo}/confirmar` tiene la política `verificacion-confirmar` (`IdentityRateLimits.VerificationConfirmPolicy`): **10 peticiones por hora por `sub`**. Está en `wip/integration-identity` (2479ad59); no está en sprint-05. `POST /api/v1/me/verificacion/{id}/enviar` no tiene política propia.
+`POST /api/v1/me/verificacion/{id}/fotos/{tipo}/confirmar` tiene la política `verificacion-confirmar` (`IdentityRateLimits.VerificationConfirmPolicy`): **10 peticiones por hora por `sub`**. Está en el PR #272 de integración de Identidad, sin fusionar. `POST /api/v1/me/verificacion/{id}/enviar` no tiene política propia.
 
 ## Rutas internas (specs 037, 039, 043, 053 y 054)
 

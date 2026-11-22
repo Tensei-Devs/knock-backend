@@ -71,9 +71,9 @@ Identidad escribe cada evento en su `outbox` con `_id` determinista `{tipo}:{rec
 | `ReporteDecidido` | 053 | messaging | Al decidir un reporte en el panel; uno por cada parte, sin datos de la otra | `eventoId`, `usuarioId`, `reporteId`, `rol`, `accion` | Sin consumidor en Mensajería en las ramas revisadas (el aviso a la persona queda pendiente) |
 | `TecnicoOcultado` | 053 | market | Al decidir con gravedad alta que oculta al técnico | `eventoId`, `usuarioId`, `reporteId` | `POST /api/v1/interno/tecnicos-ocultados` de Mercado: el técnico deja de aparecer en búsqueda y perfil público |
 
-Dónde existe cada uno: `sesion_revocada` y `CuentaEliminada` están en sprint-05 (`AccountOutbox`); `CuentaSuspendida` y `CuentaReactivada` se escriben en sprint-05 (`AccountSuspension`), pero su consumidor `/interno/eventos` y `visita_afectada` están en `wip/integration-identity` (2479ad59); los consumidores de `/interno/cuentas/...` también. `BloqueoCreado` y `BloqueoEliminado` los escribe el PR #264 (`feature/KNOCK-95-spec-043-bloqueos-reportes`; sprint-05 solo conoce el tipo). `ReporteDecidido` y `TecnicoOcultado` se escriben en `wip/bb1-spec-053-efectos-reporte` (y en `wip/integration-identity`) y el consumidor de `TecnicoOcultado` en `wip/bb7-spec-053b` (54c3032a); ninguno está en sprint-05.
+Dónde existe cada uno: `sesion_revocada`, `CuentaEliminada`, `BloqueoCreado` y `BloqueoEliminado` (PR #264) están en sprint-05 con sus consumidores en Mercado y Mensajería. `CuentaSuspendida` y `CuentaReactivada` se escriben en sprint-05 (`AccountSuspension`), pero su consumidor `/interno/eventos` de Mercado, `visita_afectada` y los consumidores de `/interno/cuentas/...` están en el PR #272 de integración de Identidad, sin fusionar. `ReporteDecidido` y `TecnicoOcultado` (y el consumidor de `TecnicoOcultado` en Mercado) esperan al PR de Identidad de B (spec 053), sin fusionar.
 
-`visita_afectada` no es un evento de la bandeja sino un tipo de aviso (rol `cliente`, recurso de `visitas`): Mercado lo entrega a `POST /api/v1/interno/avisos` por cada cita próxima del técnico suspendido (`wip/integration-identity`).
+`visita_afectada` no es un evento de la bandeja sino un tipo de aviso (rol `cliente`, recurso de `visitas`): Mercado lo entrega a `POST /api/v1/interno/avisos` por cada cita próxima del técnico suspendido (PR #272, sin fusionar).
 
 ## Eventos de Mercado: elección, permiso de fotos y reporte (specs 048, 050, 053 y 054)
 
@@ -81,9 +81,9 @@ Mismo formato que los eventos de Mercado de arriba (`_id` `{tipo}:{agregadoId}`,
 
 | Evento | Spec | Cuándo | `datos` | Consumidor |
 |---|---|---|---|---|
-| `CotizacionElegida` | 048 | Al elegir la cotización, además de `CotizacionAceptada` y `CotizacionRechazada` | `solicitudId`, `cotizacionId`, `tecnicoUsuarioId` | `POST /api/v1/interno/eventos` de Mensajería (permiso `CotizacionElegida`): cierra las demás conversaciones de la solicitud sin borrar mensajes. Se escribe en `wip/integration-market` (e0a51fcc); no está en sprint-05 |
+| `CotizacionElegida` | 048 | Al elegir la cotización, además de `CotizacionAceptada` y `CotizacionRechazada` | `solicitudId`, `cotizacionId`, `tecnicoUsuarioId` | `POST /api/v1/interno/eventos` de Mensajería (permiso `CotizacionElegida`): cierra las demás conversaciones de la solicitud sin borrar mensajes. Se escribe en sprint-05 |
 | `PermisoFotosCambiado` | 050 | Al cambiar el permiso del cliente de publicar las fotos del trabajo (`PUT /api/v1/visitas/{id}/permiso-fotos`; `_id` `PermisoFotosCambiado:{visitaId}:{ticks}`) | `visitaId`, `solicitudId`, `clienteId`, `tecnicoUsuarioId`, `permiso` | Quien publica o retira las fotos del trabajo (consumidor pendiente). En sprint-05 |
-| `ReporteNoTerminadoCreado` | 050, 053 | Al reportar el cliente que la visita no se terminó (`POST /api/v1/visitas/{id}/no-terminado`) | `visitaId`, `solicitudId`, `clienteId`, `tecnicoUsuarioId`; el texto no viaja | `POST /api/v1/interno/reportes-no-terminados` de Identidad: lee el texto en `GET /api/v1/interno/visitas/{visitaId}/reporte-no-terminado` y abre el reporte en la cola del panel. El evento se escribe en sprint-05; el despachador y el consumidor están en `wip/bb15-spec-053-despachador-market` (44477fee) y `wip/bb13-spec-053-reporte-no-terminado` (c29a18bb) |
+| `ReporteNoTerminadoCreado` | 050, 053 | Al reportar el cliente que la visita no se terminó (`POST /api/v1/visitas/{id}/no-terminado`) | `visitaId`, `solicitudId`, `clienteId`, `tecnicoUsuarioId`; el texto no viaja | `POST /api/v1/interno/reportes-no-terminados` de Identidad: lee el texto en `GET /api/v1/interno/visitas/{visitaId}/reporte-no-terminado` y abre el reporte en la cola del panel. El evento se escribe en sprint-05; el despachador y el consumidor están en el PR de Identidad de B (spec 053), sin fusionar |
 
 ## Tareas programadas de vencimiento (specs 029 y 050)
 
@@ -91,5 +91,5 @@ Viven en `tareas_programadas` de Mercado (mismo formato que las de reparto de ar
 
 | Tipo | Cuándo se programa | Efecto |
 |---|---|---|
-| `VencerSolicitud` (spec 029, R-09) | Al crear la solicitud, para su `venceEn` (el catálogo de Identidad la lista con 48 h) | Vence la solicitud de su clave de negocio; sin efectos si ya tiene cita, está cancelada o ya venció. El manejador está en `wip/integration-market` (e0a51fcc); en sprint-05 solo existe su duración en el catálogo de tareas |
+| `VencerSolicitud` (spec 029, R-09) | Al crear la solicitud, para su `venceEn` (el catálogo de Identidad la lista con 48 h) | Vence la solicitud de su clave de negocio; sin efectos si ya tiene cita, está cancelada o ya venció. El manejador está en sprint-05 |
 | `CerrarPeriodoDeOpinion` (spec 054) | Al terminar la visita (`POST /api/v1/visitas/{id}/terminar`), 30 días después | Cierra el plazo de opinar; una visita ya calificada lo cierra igual, sin efecto. Se programa en sprint-05; el manejador `CerrarPeriodoDeOpinion` está en el PR #265 |
