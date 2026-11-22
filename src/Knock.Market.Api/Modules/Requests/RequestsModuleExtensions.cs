@@ -95,6 +95,11 @@ public static class RequestsModuleExtensions
         services.AddScoped<IManejadorDeTarea, VencerAjuste>();
         services.AddScoped<TechnicianAccessStore>();
         services.AddScoped<IRequestsApi, RequestsApi>();
+        return services.AddAccountDataAndDemoServices();
+    }
+
+    private static IServiceCollection AddAccountDataAndDemoServices(this IServiceCollection services)
+    {
         services.AddScoped<AccountDataStore>();
         services.TryAddScoped<IOpinionAnonymizer, NoOpinionsToAnonymize>();
         services.AddScoped<AccountDataService>();
