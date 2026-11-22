@@ -79,3 +79,15 @@ internal sealed record UpdateTradeBody(
         if (Activo is not null) { yield return "activo"; }
     }
 }
+
+/// <summary>Cuerpo de <c>POST /api/v1/oficios-pedidos</c> (OFP-01): el texto de «Otro oficio». La persona es siempre la del <c>sub</c> del token: el cuerpo no acepta identificadores (R-23).</summary>
+internal sealed record TradeRequestBody(string? Texto);
+
+/// <summary>Oficio pedido guardado (OFP-01). Repetir el mismo texto devuelve el mismo registro.</summary>
+internal sealed record TradeRequestResponse(string Id, string Texto);
+
+/// <summary>Límite del cuerpo de OFP-01 (spec 009): 1 KiB; más responde 413.</summary>
+internal static class TradeRequestBodies
+{
+    public const int MaxBodyBytes = 1024;
+}

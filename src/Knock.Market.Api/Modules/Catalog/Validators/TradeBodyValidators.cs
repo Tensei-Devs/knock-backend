@@ -39,3 +39,10 @@ internal sealed class UpdateTradeBodyValidator : AbstractValidator<UpdateTradeBo
         RuleFor(x => x).Must(x => x.ChangedFields.Count > 0).OverridePropertyName("campos").WithMessage(Reason);
     }
 }
+
+/// <summary>Forma de <c>POST /api/v1/oficios-pedidos</c> (spec 045, R-13 y R-21): de 2 a 60 caracteres, sin datos de contacto. Un valor inválido responde 422 con <c>errors.texto</c> sin repetirlo.</summary>
+internal sealed class TradeRequestBodyValidator : AbstractValidator<TradeRequestBody>
+{
+    public TradeRequestBodyValidator() =>
+        RuleFor(x => x.Texto).Must(TradeRules.IsValidRequestText).WithMessage(CreateTradeBodyValidator.Reason);
+}
