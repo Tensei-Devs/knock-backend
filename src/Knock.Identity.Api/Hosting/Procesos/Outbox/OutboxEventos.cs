@@ -28,7 +28,7 @@ internal static class OutboxReglas
     [
         "solicitud_nueva", "solicitud_sin_tecnicos", "cotizacion_nueva", "cotizacion_aceptada", "solicitud_cancelada", "solicitud_vencida", "cotizacion_vencida", "mensaje_nuevo",
         "sesion_revocada", "CotizacionElegida", "BloqueoCreado", "BloqueoEliminado",
-        "VerificacionSinRevisarAlertada", "FotosDeVerificacionBorradas",
+        "VerificacionSinRevisarAlertada", "FotosDeVerificacionBorradas", "CuentaSuspendida", "CuentaReactivada",
     ];
 
     public static readonly IReadOnlyCollection<string> Destinos = ["messaging", "market", "identity"];

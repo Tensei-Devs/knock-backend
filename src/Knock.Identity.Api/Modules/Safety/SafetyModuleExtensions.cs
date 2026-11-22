@@ -1,7 +1,9 @@
 using Knock.Contracts.Moderation;
 using Knock.Identity.Api.Modules.Safety.Data;
+using Knock.Identity.Api.Modules.Safety.Domain;
 using Knock.Identity.Api.Modules.Safety.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Knock.Identity.Api.Modules.Safety;
 
@@ -19,6 +21,10 @@ public static class SafetyModuleExtensions
         // Hasta que exista la moderación de la spec 031 en Identidad, un reporte no se guarda sin revisión (falla cerrado). Las pruebas la sustituyen.
         services.TryAddSingleton<IContentModerator, UnavailableContentModerator>();
         services.AddSingleton<ReportService>();
+        services.AddOptions<SuspensionOptions>().BindConfiguration(SuspensionOptions.SectionName).ValidateOnStart();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<SuspensionOptions>, SuspensionOptionsValidator>());
+        services.AddSingleton<ISuspensionStore, SuspensionStore>();
+        services.AddSingleton<AccountSuspension>();
         return services;
     }
 }

@@ -27,13 +27,22 @@ public interface IPanelApi
 
     /// <summary>Escribe un evento de tipo acción dentro de la transacción de MongoDB de quien llama: el registro y el cambio se confirman juntos o ninguno.</summary>
     Task RecordActionInTransactionAsync(StoreTransaction transaction, string eventName, string result, string? subject, string? resourceId, CancellationToken cancellationToken);
+
+    /// <summary>Revoca las sesiones abiertas de la cuenta del panel de ese <c>sub</c> dentro de la transacción de quien llama; no hace nada si no tiene cuenta del panel (spec 059, R-04 d).</summary>
+    Task RevokeSessionsInTransactionAsync(StoreTransaction transaction, string subject, CancellationToken cancellationToken);
 }
 
-internal sealed class PanelApi(Services.AuditoriaPanel audit) : IPanelApi
+internal sealed class PanelApi(Services.AuditoriaPanel audit, Data.PanelSesionesStore? sessions = null) : IPanelApi
 {
     public Task RecordActionAsync(string eventName, string result, string? subject, string? sessionId, string? permission, string? resourceId, CancellationToken cancellationToken) =>
         audit.WriteAsync(Data.PanelAuditValues.TipoAccion, eventName, result, subject, sessionId, permission, null, resourceId, cancellationToken);
 
     public Task RecordActionInTransactionAsync(StoreTransaction transaction, string eventName, string result, string? subject, string? resourceId, CancellationToken cancellationToken) =>
         audit.WriteInTransactionAsync(transaction, Data.PanelAuditValues.TipoAccion, eventName, result, subject, resourceId, cancellationToken);
+
+    public async Task RevokeSessionsInTransactionAsync(StoreTransaction transaction, string subject, CancellationToken cancellationToken)
+    {
+        var store = sessions ?? throw new InvalidOperationException("The panel session store is not configured.");
+        await store.RevokeAllInTransactionAsync(transaction, subject, cancellationToken);
+    }
 }

@@ -1,4 +1,5 @@
 using Knock.Identity.Api.Hosting;
+using Knock.Identity.Api.Modules.Panel;
 using Knock.Identity.Api.Modules.Sesiones.Domain;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
@@ -15,7 +16,7 @@ internal sealed class SesionesStore(
     [FromKeyedServices(SesionesDataExtensions.ModuleKey)] IMongoDatabase database,
     IMongoClient client,
     IOptions<KnockMongoOptions> mongoOptions,
-    TimeProvider timeProvider) : ISesionesStore
+    TimeProvider timeProvider) : ISesionesStore, ISesionesSuspensionStore
 {
     public const string UsersCollection = "usuarios";
     public const string SessionsCollection = "sesiones";
@@ -381,6 +382,58 @@ internal sealed class SesionesStore(
         { ExpiresAtField, new BsonDateTime(session.ExpiresAt) },
         { RevokedField, false },
     };
+
+    public async Task<AccountForSuspension?> ReadAsync(StoreTransaction transaction, string sub, CancellationToken cancellationToken)
+    {
+        var document = await Users.Find((IClientSessionHandle)transaction.Handle, _filter.Eq(SubField, sub))
+            .Project(Builders<BsonDocument>.Projection.Include(StateField).Include(IsTechnicianField)).Limit(1).FirstOrDefaultAsync(cancellationToken);
+        return document is null
+            ? null
+            : new AccountForSuspension(document[StateField].AsString, document.TryGetValue(IsTechnicianField, out var technician) && technician.IsBoolean && technician.AsBoolean);
+    }
+
+    /// <summary>
+    /// Un solo <c>findOneAndUpdate</c> condicionado al estado leído: de dos suspensiones simultáneas solo una cambia la cuenta (spec 059, R-05); la otra pierde con un conflicto de escritura o
+    /// ve el estado nuevo y devuelve <see langword="null"/>. Las sesiones se revocan en la misma transacción (R-04 c).
+    /// </summary>
+    public async Task<IReadOnlyList<string>?> SuspendAsync(StoreTransaction transaction, string sub, string expectedState, string type, ObjectId reportId, DateTime since, CancellationToken cancellationToken)
+    {
+        var handle = (IClientSessionHandle)transaction.Handle;
+        var updated = await Users.FindOneAndUpdateAsync(
+            handle,
+            _filter.Eq(SubField, sub) & _filter.Eq(StateField, expectedState),
+            Builders<BsonDocument>.Update
+                .Set(StateField, AccountState.Suspended)
+                .Set("suspension", new BsonDocument { ["tipo"] = type, ["reporteId"] = reportId, ["desde"] = new BsonDateTime(since) }),
+            new FindOneAndUpdateOptions<BsonDocument> { ReturnDocument = ReturnDocument.After, Projection = Builders<BsonDocument>.Projection.Include(IdField) },
+            cancellationToken);
+        if (updated is null)
+        {
+            return null;
+        }
+
+        var userId = updated[IdField].AsObjectId;
+        var open = _filter.Eq(UserIdField, userId) & _filter.Eq(RevokedField, false);
+        var ids = (await Sessions.Find(handle, open).Project(Builders<BsonDocument>.Projection.Include(IdField)).ToListAsync(cancellationToken))
+            .Select(document => document[IdField].AsObjectId)
+            .ToList();
+        if (ids.Count > 0)
+        {
+            await Sessions.UpdateManyAsync(handle, _filter.In(IdField, ids), Builders<BsonDocument>.Update.Set(RevokedField, true), cancellationToken: cancellationToken);
+        }
+
+        return [.. ids.Select(id => id.ToString())];
+    }
+
+    public async Task<bool> ReactivateAsync(StoreTransaction transaction, string sub, CancellationToken cancellationToken)
+    {
+        var result = await Users.UpdateOneAsync(
+            (IClientSessionHandle)transaction.Handle,
+            _filter.Eq(SubField, sub) & _filter.Eq(StateField, AccountState.Suspended),
+            Builders<BsonDocument>.Update.Set(StateField, AccountState.Active).Unset("suspension"),
+            cancellationToken: cancellationToken);
+        return result.ModifiedCount == 1;
+    }
 
     private static UserAccount? ToAccount(BsonDocument? document) =>
         document is null

@@ -228,6 +228,8 @@ public sealed class Spec057PurgaTests
             Records.Add((eventName, subject ?? string.Empty, resourceId ?? string.Empty));
             return Task.CompletedTask;
         }
+
+        public Task RevokeSessionsInTransactionAsync(StoreTransaction transaction, string subject, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
     private sealed class FakeTasksStore : ITareasProgramadasStore
