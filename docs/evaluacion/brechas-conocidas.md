@@ -24,6 +24,7 @@ Lista honesta de lo que **no** está o **no actúa** hoy, para que nadie (person
 | Asistente de IA (`Knock.Assistant.Api`) | No existe el servicio; el cliente de Azure OpenAI está en una rama sin verificar. |
 | Moderación de contenido (Azure Content Safety) | En una rama sin verificar; no está en `sprint-05`. |
 | Envío por Firebase Cloud Messaging | Sin código de envío. No debe listarse como servicio externo activo. |
+| Registro de dispositivos (spec 037 T-03) | Sin endpoints implementados. R-01 sigue parcial: Mensajería no tiene evidencia verificable de inicio de sesión reciente; se autorizó rechazar la reasignación con 409 cuando se implemente. Falta definir el identificador de DELETE y cómo lo obtiene la app. El borrado por `sesion_revocada` depende del evento y su consumidor, aún pendientes. |
 | Panel de revisión, imágenes públicas con SAS, verificación con fotos privadas | Parte en ramas locales o PR pendientes; no están completos en `sprint-05`. |
 | CDN | Módulo preparado y validado (terraform validate, 3 de 3 pruebas con proveedor simulado, plan real con 8 recursos a crear y 0 a destruir); no desplegado porque la suscripción Azure for Students prohíbe Front Door (error 400, 2026-11-21). Mensaje de Azure: `400 BadRequest: Free Trial and Student account is forbidden for Azure Frontdoor resources`, al crear `module.edge.azurerm_cdn_frontdoor_profile.this` con `terraform apply` el 2026-11-21 (suscripción Azure for Students). Después del fallo, `terraform state list` en `deploy/edge` salió vacío y `az resource list -g rg-knock-dev` no mostró ningún recurso `afd`: no quedó nada creado. Hoy las imágenes públicas salen del Blob con `Cache-Control` largo (ADR-007, opción D). El punto 15c sigue parcial. |
 
@@ -100,4 +101,3 @@ Las rutas `/api/v1/admin/verificaciones` y `/api/v1/admin/reportes` están en el
 1. **Las fotos de verificación no se entregan todavía.** Abrir el detalle de una verificación depende de `IVerificationPhotoLinks`; en esta rama queda `UnavailableVerificationPhotoLinks` (falla cerrado) hasta que llegue el adaptador real de la pila de KNOCK-79 y KNOCK-86.
 2. **La `descripcion` de un reporte es texto libre y no se enmascara.** La cola muestra motivo y texto escritos por el usuario; podrían incluir datos personales que el usuario haya puesto ahí. No se devuelven teléfono ni dirección.
 3. **El límite de peticiones de las rutas `/admin` lo aplica el gateway** (contador por el `sub` del panel). Identity no tiene una política de límite propia para esas rutas; depende de que el tráfico pase por el gateway.
-

@@ -17,6 +17,31 @@ public sealed class Spec037IndicesTests
     private const string _scriptName = "037-notificaciones.js";
 
     [Fact]
+    public async Task DevicePublicIdScript_CreatesUniqueIndexAndIsIdempotent()
+    {
+        var documentDb = await DocumentDbFixture.SharedAsync();
+        var name = "s037_id_" + Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(6));
+        using var client = new MongoClient(documentDb.ConnectionString);
+        try
+        {
+            await using var tools = await MongoToolsContainer.StartAsync(documentDb, new Dictionary<string, string> { ["KNOCK_DB_MESSAGING"] = name });
+            var first = $"{MongoToolsContainer.DbDirectory}/{_scriptName}";
+            var second = $"{MongoToolsContainer.DbDirectory}/037-z-dispositivos-id.js";
+            (await tools.RunAsync("mongosh", "--nodb", "--quiet", "--file", first)).ExitCode.Should().Be(0);
+            (await tools.RunAsync("mongosh", "--nodb", "--quiet", "--file", second)).ExitCode.Should().Be(0);
+            (await tools.RunAsync("mongosh", "--nodb", "--quiet", "--file", second)).ExitCode.Should().Be(0);
+            var collection = client.GetDatabase(name).GetCollection<BsonDocument>("notifications.dispositivos");
+            await collection.InsertOneAsync(new BsonDocument { ["id"] = "opaque-a", ["tokenHuella"] = "hash-a" });
+            var duplicate = async () => await collection.InsertOneAsync(new BsonDocument { ["id"] = "opaque-a", ["tokenHuella"] = "hash-b" });
+            (await duplicate.Should().ThrowAsync<MongoWriteException>()).Which.WriteError.Category.Should().Be(ServerErrorCategory.DuplicateKey);
+        }
+        finally
+        {
+            await client.DropDatabaseAsync(name);
+        }
+    }
+
+    [Fact]
     public async Task Script_CreatesTheCollectionsAndIndexes_AndIsIdempotent_R_06()
     {
         var documentDb = await DocumentDbFixture.SharedAsync();
