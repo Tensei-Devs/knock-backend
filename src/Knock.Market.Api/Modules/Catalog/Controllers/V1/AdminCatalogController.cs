@@ -17,7 +17,7 @@ namespace Knock.Market.Api.Modules.Catalog.Controllers.V1;
 [Route("api/v{version:apiVersion}/admin")]
 [Authorize(AuthenticationSchemes = PanelAuthentication.Scheme, Policy = PanelAuthentication.MetricsReadPolicy)]
 [PrivateNoStore]
-[EnableRateLimiting(RateLimitingExtensions.AdminPolicy)]
+[EnableRateLimiting(MarketRateLimits.AdminPolicy)]
 internal sealed class AdminCatalogController(CatalogAdminService service) : ControllerBase
 {
     private const string _problemJson = "application/problem+json";

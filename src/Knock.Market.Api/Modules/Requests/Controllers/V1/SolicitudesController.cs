@@ -27,7 +27,7 @@ internal sealed class SolicitudesController(SolicitudService service) : Controll
     /// <summary>Crea la solicitud en estado <c>enviada</c> y con <c>venceEn</c> a 48 h.</summary>
     [HttpPost]
     [RequestSizeLimit(CreateRequestBody.MaxBodyBytes)]
-    [EnableRateLimiting(RateLimitingExtensions.CreateRequestPolicy)]
+    [EnableRateLimiting(MarketRateLimits.CreateRequestPolicy)]
     [ProducesResponseType<RequestResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, _problemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]

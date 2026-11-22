@@ -17,7 +17,7 @@ internal sealed record QuoteRequest(string? TipoPrecio, decimal? Precio, decimal
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/solicitudes/{id}/cotizaciones")]
 [Authorize]
-[EnableRateLimiting(RateLimitingExtensions.QuotePolicy)]
+[EnableRateLimiting(MarketRateLimits.QuotePolicy)]
 internal sealed class CotizacionesController(QuoteService service) : ControllerBase
 {
     [HttpPost]

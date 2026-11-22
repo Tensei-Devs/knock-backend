@@ -26,7 +26,7 @@ internal sealed class MeEliminacionController(AccountDeletionService deletion) :
     /// texto <c>ELIMINAR</c>; con una sesión de más de 24 horas pide además el token de Firebase.
     /// </summary>
     [HttpPost]
-    [EnableRateLimiting(RateLimitingExtensions.DeletionPolicy)]
+    [EnableRateLimiting(IdentityRateLimits.DeletionPolicy)]
     [RequestSizeLimit(MaxBodyBytes)]
     [ProducesResponseType<DeletionScheduledResponse>(StatusCodes.Status202Accepted)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]

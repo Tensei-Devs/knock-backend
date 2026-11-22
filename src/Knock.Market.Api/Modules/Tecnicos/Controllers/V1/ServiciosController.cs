@@ -19,7 +19,7 @@ namespace Knock.Market.Api.Modules.Tecnicos.Controllers.V1;
 [Route("api/v{version:apiVersion}/tecnicos")]
 [Authorize]
 [PrivateNoStore]
-[EnableRateLimiting(RateLimitingExtensions.ServicesPolicy)]
+[EnableRateLimiting(MarketRateLimits.ServicesPolicy)]
 internal sealed class ServiciosController(ServiceService service) : ControllerBase
 {
     public const string ServiceNotFoundCode = "service_not_found";

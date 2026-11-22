@@ -20,6 +20,9 @@ public class HostingLibraryBoundaryTests
     private static readonly string[] _stage1Types =
         ["ForwardedHeadersExtensions", "TelemetryRedactor", "CoordinatePairs", "TelemetryRedactionProcessor", "LogRedactionProcessor", "RedactingJsonFormatter"];
 
+    /// <summary>Piezas de la etapa 2 (R-08, KNOCK-280): el limitador vive en la biblioteca; el gateway conserva solo sus middlewares.</summary>
+    private static readonly string[] _stage2Types = ["SharedRateLimiter", "RedisRequestCounter", "RateLimitingExtensions", "IRequestCounter"];
+
     public static TheoryData<string> Projects
     {
         get
@@ -72,4 +75,9 @@ public class HostingLibraryBoundaryTests
     public void Gateway_Sin_Copia_Propia_De_Los_Encabezados_Reenviados_CA_055_03() =>
         Assembly.Load("Knock.Gateway").GetTypes().SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.DeclaredOnly))
             .Select(m => m.Name).Should().NotContain("AddKnockGatewayForwardedHeaders");
+
+    [Theory]
+    [MemberData(nameof(Projects))]
+    public void Servicios_Sin_Copias_De_La_Etapa_2_CA_055_11(string project) =>
+        Assembly.Load(project).GetTypes().Select(t => t.Name).Should().NotContain(_stage2Types);
 }

@@ -1,7 +1,5 @@
-// jscpd:ignore-start -- EXC-025
 using System.Globalization;
-using System.Net;
-using System.Net.Sockets;
+using Knock.Hosting.RateLimiting;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 
@@ -33,39 +31,7 @@ internal sealed class RateLimitSettings
     public RateLimitPolicy Discard { get; set; } = new() { PermitLimit = 30, Window = TimeSpan.FromHours(1) };
 }
 
-/// <summary>Contador de ventana fija compartido entre réplicas. Existe para probar el límite con dobles sin Redis.</summary>
-internal interface IRequestCounter
-{
-    /// <summary>Cuenta una petición en la ventana de <paramref name="key"/> y devuelve cuántas van y cuánto falta para que termine la ventana.</summary>
-    Task<(long Count, TimeSpan Remaining)> HitAsync(string key, TimeSpan window, CancellationToken cancellationToken);
-}
-
-/// <summary>
-/// Contadores en Redis (<c>ratelimit:*</c>) con un script: el incremento y la expiración de la ventana van juntos, así una caída entre los dos no deja
-/// una clave sin vencimiento que bloquee a alguien para siempre.
-/// </summary>
-internal sealed class RedisRequestCounter(IConnectionMultiplexer redis) : IRequestCounter
-{
-    private const string _script = """
-        local count = redis.call('INCR', KEYS[1])
-        if count == 1 then redis.call('PEXPIRE', KEYS[1], ARGV[1]) end
-        return {count, redis.call('PTTL', KEYS[1])}
-        """;
-
-    public async Task<(long Count, TimeSpan Remaining)> HitAsync(string key, TimeSpan window, CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        var result = (long[]?)await redis.GetDatabase().ScriptEvaluateAsync(
-            _script,
-            [new RedisKey(key)],
-            [new RedisValue(((long)window.TotalMilliseconds).ToString(CultureInfo.InvariantCulture))])
-            ?? throw new InvalidOperationException("Redis returned no counter.");
-        var remaining = result[1] > 0 ? TimeSpan.FromMilliseconds(result[1]) : window;
-        return (result[0], remaining);
-    }
-}
-
-internal static class RateLimitingExtensions
+internal static class GatewayRateLimits
 {
     public static IServiceCollection AddKnockGatewayRateLimiting(this IServiceCollection services)
     {
@@ -75,54 +41,8 @@ internal static class RateLimitingExtensions
                 s => s.Ip.IsValid && s.Auth.IsValid && s.User.IsValid && s.Search.IsValid && s.Discard.IsValid,
                 "RateLimiting:Ip, RateLimiting:Auth, RateLimiting:User and RateLimiting:Search need a PermitLimit > 0 and a Window > 0.")
             .ValidateOnStart();
-        services.AddSingleton<IRequestCounter, RedisRequestCounter>();
+        services.AddKnockRequestCounter();
         return services;
-    }
-
-    /// <summary>Es <c>/api/v{version}/{segment}</c> o lo que cuelga de ahí; sin distinguir mayúsculas porque el enrutador tampoco las distingue.</summary>
-    internal static bool IsApiPath(PathString path, string segment)
-    {
-        var segments = path.Value?.Split('/', StringSplitOptions.RemoveEmptyEntries) ?? [];
-        return segments.Length >= 3
-            && segments[0].Equals("api", StringComparison.OrdinalIgnoreCase)
-            && segments[1][0] is 'v' or 'V'
-            && segments[2].Equals(segment, StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <summary>Rutas del panel interno: <c>/api/v{n}/panel/**</c> (spec 033) y <c>/api/v{n}/admin/**</c> (spec 053): las dos solo aceptan el token del panel y cuentan por el <c>sub</c> del panel.</summary>
-    internal static bool IsPanelApiPath(PathString path) => IsApiPath(path, "panel") || IsApiPath(path, "admin");
-
-    /// <summary>Spec 033, R-27: <c>/api/v{n}/panel/sesion/*</c> y <c>/api/v{n}/panel/activacion</c>, los endpoints de sesión del panel que llevan el límite estricto por IP.</summary>
-    internal static bool IsPanelSessionPath(PathString path)
-    {
-        var segments = path.Value?.Split('/', StringSplitOptions.RemoveEmptyEntries) ?? [];
-        return IsApiPath(path, "panel")
-            && segments.Length >= 4
-            && (segments[3].Equals("sesion", StringComparison.OrdinalIgnoreCase) || segments[3].Equals("activacion", StringComparison.OrdinalIgnoreCase));
-    }
-
-    /// <summary>IP del cliente: la de la conexión (ya sustituida por la reenviada solo si viene de un proxy de confianza). IPv4 mapeada se normaliza y las IPv6 se agrupan por /64.</summary>
-    internal static string ClientKey(HttpContext context)
-    {
-        var address = context.Connection.RemoteIpAddress;
-        if (address is null)
-        {
-            return "unknown";
-        }
-
-        if (address.IsIPv4MappedToIPv6)
-        {
-            address = address.MapToIPv4();
-        }
-
-        if (address.AddressFamily != AddressFamily.InterNetworkV6)
-        {
-            return address.ToString();
-        }
-
-        var bytes = address.GetAddressBytes();
-        Array.Clear(bytes, 8, 8);
-        return $"{new IPAddress(bytes)}/64";
     }
 }
 
@@ -144,10 +64,10 @@ internal sealed class IpRateLimitMiddleware(RequestDelegate next, IRequestCounte
         }
 
         var settings = options.Value;
-        var client = RateLimitingExtensions.ClientKey(context);
+        var client = RequestKeys.ClientKey(context);
         if (await RateLimitCheck.RejectedAsync(context, counter, $"ratelimit:ip:{client}", settings.Ip)
             || (IsAuthPath(context.Request.Path) && await RateLimitCheck.RejectedAsync(context, counter, $"ratelimit:auth:{client}", settings.Auth))
-            || (RateLimitingExtensions.IsPanelSessionPath(context.Request.Path) && await RateLimitCheck.RejectedAsync(context, counter, $"ratelimit:panel-sesion:{client}", settings.Auth)))
+            || (RequestKeys.IsPanelSessionPath(context.Request.Path) && await RateLimitCheck.RejectedAsync(context, counter, $"ratelimit:panel-sesion:{client}", settings.Auth)))
         {
             return;
         }
@@ -158,7 +78,7 @@ internal sealed class IpRateLimitMiddleware(RequestDelegate next, IRequestCounte
     /// <summary>
     /// <c>/api/v{version}/auth</c> y lo que cuelga de ahí; sin distinguir mayúsculas porque el enrutador tampoco las distingue.
     /// </summary>
-    internal static bool IsAuthPath(PathString path) => RateLimitingExtensions.IsApiPath(path, "auth");
+    internal static bool IsAuthPath(PathString path) => RequestKeys.IsApiPath(path, "auth");
 }
 
 /// <summary>
@@ -172,8 +92,8 @@ internal sealed class UserRateLimitMiddleware(RequestDelegate next, IRequestCoun
         ArgumentNullException.ThrowIfNull(context);
         var sub = context.User.Identity?.IsAuthenticated == true ? context.User.FindFirst("sub")?.Value : null;
         if (sub is not null
-            && (await RateLimitCheck.RejectedAsync(context, counter, RateLimitingExtensions.IsPanelApiPath(context.Request.Path) ? $"ratelimit:panel-user:{sub}" : $"ratelimit:user:{sub}", options.Value.User)
-                || (RateLimitingExtensions.IsApiPath(context.Request.Path, "busqueda") && await RateLimitCheck.RejectedAsync(context, counter, $"ratelimit:busqueda:{sub}", options.Value.Search))
+            && (await RateLimitCheck.RejectedAsync(context, counter, RequestKeys.IsPanelApiPath(context.Request.Path) ? $"ratelimit:panel-user:{sub}" : $"ratelimit:user:{sub}", options.Value.User)
+                || (RequestKeys.IsApiPath(context.Request.Path, "busqueda") && await RateLimitCheck.RejectedAsync(context, counter, $"ratelimit:busqueda:{sub}", options.Value.Search))
                 || (IsDiscard(context.Request) && await RateLimitCheck.RejectedAsync(context, counter, $"ratelimit:descarte:{sub}", options.Value.Discard))))
         {
             return;
@@ -221,4 +141,3 @@ internal static class RateLimitCheck
         return true;
     }
 }
-// jscpd:ignore-end

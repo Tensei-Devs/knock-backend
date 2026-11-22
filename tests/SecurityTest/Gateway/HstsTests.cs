@@ -26,7 +26,7 @@ public sealed class HstsTests
     private static readonly string[] _paths = ["/health", "/api/v1/colonias/en-punto", "/interno/secreto"];
 
     /// <summary>Un contador de peticiones de mentira: el gateway cuenta contra Redis, y estas pruebas no usan Redis.</summary>
-    private sealed class FakeCounter(long count) : GatewayHosting.IRequestCounter
+    private sealed class FakeCounter(long count) : Knock.Hosting.RateLimiting.IRequestCounter
     {
         public Task<(long Count, TimeSpan Remaining)> HitAsync(string key, TimeSpan window, CancellationToken cancellationToken) =>
             Task.FromResult((count, TimeSpan.FromSeconds(30)));
@@ -49,7 +49,7 @@ public sealed class HstsTests
             builder.ConfigureTestServices(services =>
             {
                 services.AddSingleton<IStartupFilter>(new RemoteIpStartupFilter());
-                services.AddSingleton<GatewayHosting.IRequestCounter>(new FakeCounter(counted));
+                services.AddSingleton<Knock.Hosting.RateLimiting.IRequestCounter>(new FakeCounter(counted));
             });
         }
     }

@@ -1,26 +1,38 @@
-// jscpd:ignore-start -- EXC-025
-// Copia temporal: se mueve a la biblioteca compartida en KNOCK-251
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.RateLimiting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 
-namespace Knock.Identity.Api.Hosting;
+namespace Knock.Hosting.RateLimiting;
 
+/// <summary>
+/// Límite con contador compartido en Redis (ventana fija, un solo script atómico): dos copias del servicio comparten el mismo contador y no duplican el límite.
+/// Si Redis no está conectado o no responde, la copia usa su propio contador en memoria (límite más laxo pero nunca sin límite) y deja el aviso 247.
+/// La clave de Redis es un hash de la partición: nunca lleva el <c>sub</c> ni la IP en claro.
+/// </summary>
 internal sealed class SharedRateLimiter : RateLimiter
 {
-    private static readonly Action<ILogger, Exception?> _unavailable = LoggerMessage.Define(LogLevel.Warning, new EventId(247, "RateLimitFallback"), "Redis rate limiting unavailable; using per-instance limit.");
+    /// <summary>Evento del aviso de degradación (KNOCK-247); no lleva datos de la petición.</summary>
+    internal const int FallbackEventId = 247;
+
+    private static readonly Action<ILogger, Exception?> _unavailable = LoggerMessage.Define(LogLevel.Warning, new EventId(FallbackEventId, "RateLimitFallback"), "Redis rate limiting unavailable; using per-instance limit.");
+
     private readonly IServiceProvider _services;
     private readonly ILogger _logger;
     private readonly string _key;
     private readonly RateLimitPolicySettings _policy;
     private readonly FixedWindowRateLimiter _fallback;
 
-    public SharedRateLimiter(IServiceProvider services, string partition, RateLimitPolicySettings policy)
+    public SharedRateLimiter(IServiceProvider services, string serviceName, string partition, RateLimitPolicySettings policy)
     {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrWhiteSpace(serviceName);
+        ArgumentNullException.ThrowIfNull(policy);
         _services = services;
         _logger = services.GetRequiredService<ILoggerFactory>().CreateLogger<SharedRateLimiter>();
-        _key = "ratelimit:identity:" + Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(partition)));
+        _key = $"ratelimit:{serviceName}:" + Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(partition)));
         _policy = policy;
         _fallback = new FixedWindowRateLimiter(new FixedWindowRateLimiterOptions
         {
@@ -39,14 +51,14 @@ internal sealed class SharedRateLimiter : RateLimiter
 
     protected override async ValueTask<RateLimitLease> AcquireAsyncCore(int permitCount, CancellationToken cancellationToken)
     {
+        var redis = _services.GetService<IConnectionMultiplexer>();
+        if (redis is null || !redis.IsConnected)
+        {
+            return await UseFallbackAsync(permitCount, cancellationToken);
+        }
+
         try
         {
-            var redis = _services.GetService<IConnectionMultiplexer>();
-            if (redis is null || !redis.IsConnected)
-            {
-                return await _fallback.AcquireAsync(permitCount, cancellationToken);
-            }
-
             var (count, remaining) = await new RedisRequestCounter(redis).HitAsync(_key, _policy.Window, cancellationToken);
             return new SharedLease(count <= _policy.PermitLimit, remaining);
         }
@@ -54,12 +66,6 @@ internal sealed class SharedRateLimiter : RateLimiter
         {
             return await UseFallbackAsync(permitCount, cancellationToken);
         }
-    }
-
-    private ValueTask<RateLimitLease> UseFallbackAsync(int permitCount, CancellationToken cancellationToken)
-    {
-        _unavailable(_logger, null);
-        return _fallback.AcquireAsync(permitCount, cancellationToken);
     }
 
     protected override void Dispose(bool disposing)
@@ -70,6 +76,12 @@ internal sealed class SharedRateLimiter : RateLimiter
         }
 
         base.Dispose(disposing);
+    }
+
+    private ValueTask<RateLimitLease> UseFallbackAsync(int permitCount, CancellationToken cancellationToken)
+    {
+        _unavailable(_logger, null);
+        return _fallback.AcquireAsync(permitCount, cancellationToken);
     }
 
     private sealed class SharedLease(bool acquired, TimeSpan remaining) : RateLimitLease
@@ -85,4 +97,3 @@ internal sealed class SharedRateLimiter : RateLimiter
         }
     }
 }
-// jscpd:ignore-end
