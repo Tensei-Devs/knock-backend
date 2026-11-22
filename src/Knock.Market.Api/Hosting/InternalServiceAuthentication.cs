@@ -16,11 +16,13 @@ internal static class InternalServiceAuthentication
 {
     public const string Scheme = "InternalService";
     public const string HistoryPolicy = "InternalHistory";
+    public const string EventsPolicy = "InternalEvents";
     public const string KeyConfigurationKey = "Security:InternalTokens:IdentityKey";
     public const string Issuer = "knock-identity";
     public const string Audience = "knock-market";
     public const string PermissionsClaim = "permisos";
     public const string HistoryPermission = "historial";
+    public const string EventsPermission = "eventos";
     public const string ServiceNotAllowedCode = "service_not_allowed";
 
     /// <summary>Un token de servicio dura 5 minutos como máximo (spec 037, R-11).</summary>
@@ -55,7 +57,10 @@ internal static class InternalServiceAuthentication
         });
         services.AddAuthorizationBuilder().AddPolicy(
             HistoryPolicy,
-            policy => policy.AddAuthenticationSchemes(Scheme).RequireAuthenticatedUser().RequireClaim(PermissionsClaim, HistoryPermission));
+            policy => policy.AddAuthenticationSchemes(Scheme).RequireAuthenticatedUser().RequireClaim(PermissionsClaim, HistoryPermission))
+            .AddPolicy(
+                EventsPolicy,
+                policy => policy.AddAuthenticationSchemes(Scheme).RequireAuthenticatedUser().RequireClaim(PermissionsClaim, EventsPermission));
         return services;
     }
 
