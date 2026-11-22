@@ -17,27 +17,6 @@ internal sealed record PropiedadesBlob(long Bytes, string ETag);
 /// <summary>Llave de delegación de usuario con su cuenta, para reutilizarla mientras le quede margen.</summary>
 internal sealed record LlaveDelegacion(UserDelegationKey Llave, string Cuenta);
 
-/// <summary>El almacenamiento no respondió o falló (5xx, red, autenticación): el endpoint responde 503 <c>storage_unavailable</c> (spec 032, R-17).</summary>
-#pragma warning disable CA1032, S3871 // interna: solo la traducen el servicio y el controller del módulo
-internal sealed class AlmacenNoDisponibleException : Exception
-{
-    public AlmacenNoDisponibleException()
-        : base("Blob storage is unavailable.")
-    {
-    }
-
-    public AlmacenNoDisponibleException(string message)
-        : base(message)
-    {
-    }
-
-    public AlmacenNoDisponibleException(string message, Exception innerException)
-        : base(message, innerException)
-    {
-    }
-}
-#pragma warning restore CA1032, S3871
-
 /// <summary>Operaciones de Blob que necesita el servicio de subidas; permite probar el servicio sin almacenamiento.</summary>
 internal interface IAlmacenBlob
 {
@@ -254,11 +233,11 @@ internal sealed class AlmacenBlob(BlobServiceClient privado, BlobServiceClient p
         }
         catch (RequestFailedException ex)
         {
-            throw new AlmacenNoDisponibleException("Blob storage is unavailable.", ex);
+            throw new IOException("Blob storage is unavailable.", ex);
         }
         catch (HttpRequestException ex)
         {
-            throw new AlmacenNoDisponibleException("Blob storage is unavailable.", ex);
+            throw new IOException("Blob storage is unavailable.", ex);
         }
     }
 

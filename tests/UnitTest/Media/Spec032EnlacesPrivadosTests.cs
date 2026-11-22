@@ -9,23 +9,27 @@ using Xunit;
 namespace Knock.UnitTest.Media;
 
 /// <summary>Spec 032, R-16 y CA-20: enlaces de lectura privados con motivo cerrado y registro de acceso.</summary>
-public sealed class Spec032EnlacesPrivadosTests
+public sealed class Spec032EnlacesPrivadosTests : IDisposable
 {
     private static readonly DateTimeOffset _ahora = new(2026, 11, 21, 12, 0, 0, TimeSpan.Zero);
     private const string _sub = "persona-1";
 
-#pragma warning disable CA2000 // el almacén vive lo que dura la prueba
-    private static (EnlacesPrivados Servicio, AccesosFalso Accesos) Crear()
+    private AlmacenBlob? _almacen;
+
+    /// <summary>El almacén vive lo que dura la prueba y se libera en <see cref="Dispose"/>.</summary>
+    public void Dispose() => _almacen?.Dispose();
+
+    private (EnlacesPrivados Servicio, AccesosFalso Accesos) Crear()
     {
         var reloj = new Spec032SasTests.RelojFalso(_ahora);
-        var almacen = new AlmacenBlob(
+        _almacen = new AlmacenBlob(
             new Spec032SasTests.ServicioFalso("stknockprivada", _ahora), new Spec032SasTests.ServicioFalso("stknockpublica", _ahora), reloj);
+        var almacen = _almacen;
         var accesos = new AccesosFalso();
         var llave = Convert.ToBase64String(new byte[32]);
         var huella = new HuellaSubHmac(Microsoft.Extensions.Options.Options.Create(new ImagenesOptions { LlaveBusqueda = llave }));
         return (new EnlacesPrivados(almacen, accesos, huella, reloj), accesos);
     }
-#pragma warning restore CA2000
 
     [Fact]
     public async Task Lectura_Firmada_Con_Registro_CA_032_20()

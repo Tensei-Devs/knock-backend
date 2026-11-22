@@ -78,7 +78,7 @@ internal sealed class SubidaImagenService(
         {
             enlace = await almacen.CrearEnlaceSubidaAsync(clave, tipoContenido, cancellationToken);
         }
-        catch (AlmacenNoDisponibleException)
+        catch (IOException)
         {
             return Respuesta<EnlaceSubidaEmitido>.Falla(ResultadoSubida.StorageUnavailable, EsperaPorFalla);
         }
@@ -120,7 +120,7 @@ internal sealed class SubidaImagenService(
         {
             return await ProcesarAsync(subida, cancellationToken);
         }
-        catch (AlmacenNoDisponibleException)
+        catch (IOException)
         {
             return Respuesta<ImagenConfirmada>.Falla(ResultadoSubida.StorageUnavailable, EsperaPorFalla);
         }

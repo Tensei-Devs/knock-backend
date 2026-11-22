@@ -82,6 +82,8 @@ internal sealed class SecurityMarketFactory(IReadOnlyDictionary<string, string?>
             ["ConnectionStrings:KnockMongo"] = mongo.ConnectionString,
             ["ConnectionStrings:KnockRedis"] = redisConnectionString,
             ["Mongo:Databases:Catalog"] = "market_sec_" + Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(6)),
+            // Mercado exige la dirección base de las imágenes públicas al arrancar (spec 032, R-03); en Production no hay appsettings.Development que la dé.
+            ["Imagenes:BaseUrlPublica"] = "https://localhost/imagenes-publicas",
         };
         foreach (var (key, value) in overrides ?? new Dictionary<string, string?>())
         {
