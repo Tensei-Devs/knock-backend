@@ -48,7 +48,10 @@ public sealed class Spec044AvisosSeguridadTests
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
         var body = await response.Content.ReadAsStringAsync();
         body.Should().Contain("errors");
-        body.Should().NotContain(query.Split('=')[1], "el valor recibido nunca vuelve en el error");
+        // Los identificadores aleatorios (traceId, correlationId) pueden contener por azar un valor corto como «0»: se compara solo el detalle por campo.
+        var problem = System.Text.Json.Nodes.JsonNode.Parse(body)!.AsObject();
+        var errors = problem["errors"]!.ToJsonString();
+        errors.Should().NotContain(query.Split('=')[1], "el valor recibido nunca vuelve en el error");
     }
 
     [Fact]

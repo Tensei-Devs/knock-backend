@@ -48,18 +48,24 @@ public sealed class Spec037DeviceAvailabilityTests
             repeated.StatusCode.Should().Be(HttpStatusCode.OK);
             using var repeatedJson = JsonDocument.Parse(await repeated.Content.ReadAsStringAsync());
             repeatedJson.RootElement.GetProperty("id").GetString().Should().Be(id);
-            using var conflict = await SecureHttp.PostJsonAsync(client, "/api/v1/dispositivos", new { identificador = token, plataforma = "android" }, other);
-            conflict.StatusCode.Should().Be(HttpStatusCode.Conflict);
-            (await conflict.Content.ReadAsStringAsync()).Should().NotContain(token);
+            using var moved = await SecureHttp.PostJsonAsync(client, "/api/v1/dispositivos", new { identificador = token, plataforma = "android" }, other);
+            moved.StatusCode.Should().Be(HttpStatusCode.Created, "el último registro gana y el teléfono cambia de cuenta (spec 037, R-01)");
+            var movedText = await moved.Content.ReadAsStringAsync();
+            movedText.Should().NotContain(token);
+            using var movedJson = JsonDocument.Parse(movedText);
+            var movedId = movedJson.RootElement.GetProperty("id").GetString()!;
+            movedId.Should().NotBe(id);
             using var invalid = await SecureHttp.PostJsonAsync(client, "/api/v1/dispositivos", new { identificador = token, plataforma = "Windows" }, owner);
             invalid.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
             (await invalid.Content.ReadAsStringAsync()).Should().NotContain(token);
-            using var otherDelete = await SecureHttp.SendAsync(client, HttpMethod.Delete, $"/api/v1/dispositivos/{id}", bearer: other);
-            otherDelete.StatusCode.Should().Be(HttpStatusCode.NotFound);
-            using var deleted = await SecureHttp.SendAsync(client, HttpMethod.Delete, $"/api/v1/dispositivos/{id}", bearer: owner);
+            using var previousOwnerDelete = await SecureHttp.SendAsync(client, HttpMethod.Delete, $"/api/v1/dispositivos/{movedId}", bearer: owner);
+            previousOwnerDelete.StatusCode.Should().Be(HttpStatusCode.NoContent, "DELETE responde siempre 204 (spec 037 T-03), sin revelar de quién es el dispositivo");
+            (await devices.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(1, "la persona anterior no puede borrar el dispositivo de la nueva");
+            using var deleted = await SecureHttp.SendAsync(client, HttpMethod.Delete, $"/api/v1/dispositivos/{movedId}", bearer: other);
             deleted.StatusCode.Should().Be(HttpStatusCode.NoContent);
-            using var missing = await SecureHttp.SendAsync(client, HttpMethod.Delete, $"/api/v1/dispositivos/{id}", bearer: owner);
-            missing.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            (await devices.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(0);
+            using var missing = await SecureHttp.SendAsync(client, HttpMethod.Delete, $"/api/v1/dispositivos/{movedId}", bearer: other);
+            missing.StatusCode.Should().Be(HttpStatusCode.NoContent, "DELETE responde siempre 204");
         }
         finally
         {
