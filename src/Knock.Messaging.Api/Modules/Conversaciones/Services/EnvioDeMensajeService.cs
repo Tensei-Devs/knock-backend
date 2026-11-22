@@ -1,5 +1,6 @@
 using Knock.Contracts.Conversations;
 using Knock.Contracts.Moderation;
+using Knock.Messaging.Api.Modules.Bloqueos;
 using Knock.Messaging.Api.Modules.Conversaciones.Data;
 using Knock.Messaging.Api.Modules.Conversaciones.Domain;
 using Knock.Messaging.Api.Modules.Conversaciones.Dtos;
@@ -7,12 +8,13 @@ using Knock.Messaging.Api.Modules.Conversaciones.Dtos;
 namespace Knock.Messaging.Api.Modules.Conversaciones.Services;
 
 /// <summary>
-/// Enviar un mensaje a una conversación (spec 030, R-08 a R-14), en este orden: participante, permiso vigente (caché de 60 s o Mercado), conversación abierta, ocultamiento de contacto,
+/// Enviar un mensaje a una conversación (spec 030, R-08 a R-14), en este orden: participante, sin bloqueo entre ambas, permiso vigente (caché de 60 s o Mercado), conversación abierta, ocultamiento de contacto,
 /// moderación que falla cerrada, guardado transaccional y entrega en vivo. El texto ya llega validado (R-10) y el límite de 30 por minuto lo cobra el limitador antes de llegar aquí (R-11).
 /// Nunca registra el texto, el original ocultado, el <c>sub</c> ni identificadores: solo códigos.
 /// </summary>
 internal sealed class EnvioDeMensajeService(
     IMensajesStore store,
+    IBloqueosApi blocks,
     IPermisoDeConversacion permisos,
     IContentModerator moderator,
     INotificadorEnVivo vivo,
@@ -30,6 +32,12 @@ internal sealed class EnvioDeMensajeService(
         var conversation = await store.ObtenerAsync(conversacionId, cancellationToken);
         var role = conversation?.RolDe(sub);
         if (conversation is null || role is null)
+        {
+            throw NotFound();
+        }
+
+        // Un bloqueo en cualquier sentido corta el envío y responde igual que una conversación que no existe: no se revela el bloqueo (spec 043, R-16, R-17, CA-26, CA-27).
+        if (await blocks.AreBlockedAsync(conversation.ClienteId, conversation.TecnicoUsuarioId, cancellationToken))
         {
             throw NotFound();
         }

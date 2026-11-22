@@ -45,6 +45,9 @@ public static class RequestsModuleExtensions
         services.AddScoped<IOutbox, MongoOutbox>();
         services.AddScoped<CandidatosStore>();
         services.AddScoped<EnviosStore>();
+        services.AddScoped<BlockProjectionStore>();
+        services.AddScoped<IBlockLookup>(provider => provider.GetRequiredService<BlockProjectionStore>());
+        services.AddScoped<BlockEventService>();
         services.AddScoped<BandejaService>();
         services.AddScoped<RepartoStore>();
         services.AddScoped<RepartoService>();

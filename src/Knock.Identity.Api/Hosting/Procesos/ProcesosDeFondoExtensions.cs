@@ -18,7 +18,10 @@ internal static class ProcesosDeFondoExtensions
             .Validate(x => x.IntervaloSegundos > 0, "Outbox:IntervaloSegundos must be positive.").ValidateOnStart();
         services.AddSingleton<ITareasProgramadasStore>(provider => new TareasProgramadasStore(provider.GetRequiredKeyedService<IMongoDatabase>(DataExtensions.DatabaseKey)));
         services.AddSingleton<IOutboxStore>(provider => new OutboxStore(provider.GetRequiredKeyedService<IMongoDatabase>(DataExtensions.DatabaseKey)));
-        services.TryAddSingleton<IEntregaInterna, EntregaInternaNoDisponible>();
+        // Sin dirección o sin clave del destino la entrega deja el evento para reintento, igual que EntregaInternaNoDisponible.
+        services.AddOptions<EntregaInternaOptions>().BindConfiguration(EntregaInternaOptions.SectionName).ValidateDataAnnotations();
+        services.AddHttpClient(EntregaInternaHttp.ClientName).RemoveAllLoggers();
+        services.TryAddScoped<IEntregaInterna, EntregaInternaHttp>();
         services.AddScoped<EjecutorDeTareasProgramadas>();
         services.AddScoped<ProcesadorDeOutbox>();
         services.AddHostedService<TareasProgramadasHostedService>();

@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Knock.Market.Api.Modules.Requests.Data;
 using Knock.Market.Api.Modules.Requests.Domain;
 using Knock.Market.Api.Modules.Requests.Services;
 using Knock.Market.Api.Modules.Requests.Validators;
@@ -24,7 +25,7 @@ public class QuoteServiceTests
     public async Task ExistingButFilteredTechnicianIsNotFound()
     {
         var directory = new FakeDirectory(null, true);
-        var service = new QuoteService(directory, new FakeRequests(Request()), new QuoteValidator(Options.Create(new QuotePricingOptions())), new FixedTimeProvider(), new FakeModerator(), new FakeWriter());
+        var service = new QuoteService(directory, new FakeRequests(Request()), new QuoteValidator(Options.Create(new QuotePricingOptions())), new FixedTimeProvider(), new FakeModerator(), new FakeWriter(), new FakeBlocks());
         (await service.SendAsync("sub", "request", _body)).Should().Be(QuoteCheckResult.NotFound);
     }
 
@@ -110,8 +111,27 @@ public class QuoteServiceTests
 
     private static Technician Technician() => new("sub", "activo", false, ["plo"], "colonia", null, null, 5);
     private static QuoteRequestSnapshot Request() => new("plo", "colonia", RequestState.Enviada, _now.AddHours(1), _day, null, null);
-    private static QuoteService Create(Technician? technician, QuoteRequestSnapshot? request, INoteModerator? moderator = null, IQuoteWriter? writer = null) =>
-        new(new FakeDirectory(technician), new FakeRequests(request), new QuoteValidator(Options.Create(new QuotePricingOptions())), new FixedTimeProvider(), moderator ?? new FakeModerator(), writer ?? new FakeWriter());
+    private static QuoteService Create(Technician? technician, QuoteRequestSnapshot? request, INoteModerator? moderator = null, IQuoteWriter? writer = null, IBlockLookup? blocks = null) =>
+        new(new FakeDirectory(technician), new FakeRequests(request), new QuoteValidator(Options.Create(new QuotePricingOptions())), new FixedTimeProvider(), moderator ?? new FakeModerator(), writer ?? new FakeWriter(), blocks ?? new FakeBlocks());
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task BlockedPairGetsTheSameAnswerAsAnUnavailableTechnician(bool blocked)
+    {
+        var writer = new FakeWriter();
+        var service = Create(Technician(), Request() with { ClientId = "client" }, writer: writer, blocks: new FakeBlocks(blocked));
+        (await service.SendAsync("sub", "request", _body)).Should().Be(blocked ? QuoteCheckResult.NotFound : QuoteCheckResult.Created);
+        writer.Calls.Should().Be(blocked ? 0 : 1);
+    }
+
+    private sealed class FakeBlocks(bool blocked = false) : IBlockLookup
+    {
+        public Task<bool> AreBlockedAsync(string personA, string personB, CancellationToken token) => Task.FromResult(blocked);
+
+        public Task<IReadOnlySet<string>> BlockedWithAsync(string person, IEnumerable<string> others, CancellationToken token) =>
+            Task.FromResult<IReadOnlySet<string>>(blocked ? others.ToHashSet() : new HashSet<string>());
+    }
 
     private sealed class FakeWriter : IQuoteWriter
     {

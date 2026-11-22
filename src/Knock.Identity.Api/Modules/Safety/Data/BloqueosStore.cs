@@ -1,4 +1,7 @@
+using System.Globalization;
+using Knock.Contracts.Safety;
 using Knock.Identity.Api.Hosting;
+using Knock.Identity.Api.Hosting.Procesos.Outbox;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -14,6 +17,8 @@ internal sealed record StoredBlock(ObjectId RecordId, string BlockedId, DateTime
 /// </summary>
 internal sealed class BloqueosStore(
     [FromKeyedServices(DataExtensions.DatabaseKey)] IMongoDatabase database,
+    IMongoClient client,
+    IOutboxStore outbox,
     IOptions<KnockMongoOptions> mongoOptions)
 {
     public const string BlocksCollection = "bloqueos";
@@ -21,6 +26,7 @@ internal sealed class BloqueosStore(
     private const string _blockedField = "bloqueadoId";
     private const string _createdField = "creadoEn";
     private const string _idField = "_id";
+    private static readonly string[] _destinations = ["market", "messaging"];
 
     private readonly FindOptions _findOptions = new() { MaxTime = mongoOptions.Value.QueryMaxTime };
 
@@ -37,30 +43,82 @@ internal sealed class BloqueosStore(
             ],
             cancellationToken);
 
-    /// <summary>Guarda el bloqueo; falso si ya existía (el índice único decide también una carrera entre dos peticiones iguales; ante un conflicto de escritura relee el bloqueo y reintenta).</summary>
+    /// <summary>
+    /// Guarda el bloqueo y deja <c>BloqueoCreado</c> en la bandeja de salida para Mercado y Mensajería, en la misma transacción (spec 043, R-23; spec 054, R-02): o quedan los dos o ninguno.
+    /// Falso si ya existía (el índice único decide también una carrera entre dos peticiones iguales; ante un conflicto de escritura relee el bloqueo y reintenta).
+    /// </summary>
     public async Task<bool> AddAsync(string blockerId, string blockedId, DateTime nowUtc, CancellationToken cancellationToken)
     {
         var filters = Builders<BsonDocument>.Filter;
         return await MongoWriteErrors.InsertIfAbsentAsync(
-            () => Blocks.InsertOneAsync(
-                new BsonDocument
-                {
-                    [_idField] = ObjectId.GenerateNewId(),
-                    [_blockerField] = blockerId,
-                    [_blockedField] = blockedId,
-                    [_createdField] = new BsonDateTime(nowUtc),
-                },
-                cancellationToken: cancellationToken),
+            async () =>
+            {
+                var recordId = ObjectId.GenerateNewId();
+                using var session = await client.StartSessionAsync(cancellationToken: cancellationToken);
+                await session.WithTransactionAsync(
+                    async (transaction, token) =>
+                    {
+                        await Blocks.InsertOneAsync(
+                            transaction,
+                            new BsonDocument
+                            {
+                                [_idField] = recordId,
+                                [_blockerField] = blockerId,
+                                [_blockedField] = blockedId,
+                                [_createdField] = new BsonDateTime(TruncateToMilliseconds(nowUtc)),
+                            },
+                            cancellationToken: token);
+                        await AddEventsAsync(transaction, BlockCreated.EventType, recordId, blockerId, blockedId, nowUtc, token);
+                        return true;
+                    },
+                    cancellationToken: cancellationToken);
+            },
             async () => await Blocks.Find(filters.Eq(_blockerField, blockerId) & filters.Eq(_blockedField, blockedId), _findOptions)
                 .Project(Builders<BsonDocument>.Projection.Include(_idField)).FirstOrDefaultAsync(cancellationToken) is not null,
             delay => Task.Delay(delay, cancellationToken));
     }
 
-    /// <summary>Quita el bloqueo de quien llama; falso si no había.</summary>
-    public async Task<bool> RemoveAsync(string blockerId, string blockedId, CancellationToken cancellationToken)
+    /// <summary>Quita el bloqueo de quien llama y deja <c>BloqueoEliminado</c> en la bandeja en la misma transacción; falso si no había.</summary>
+    public async Task<bool> RemoveAsync(string blockerId, string blockedId, DateTime nowUtc, CancellationToken cancellationToken)
     {
         var filters = Builders<BsonDocument>.Filter;
-        return (await Blocks.DeleteOneAsync(filters.Eq(_blockerField, blockerId) & filters.Eq(_blockedField, blockedId), cancellationToken)).DeletedCount > 0;
+        using var session = await client.StartSessionAsync(cancellationToken: cancellationToken);
+        return await session.WithTransactionAsync(
+            async (transaction, token) =>
+            {
+                var removed = await Blocks.FindOneAndDeleteAsync(
+                    transaction,
+                    filters.Eq(_blockerField, blockerId) & filters.Eq(_blockedField, blockedId),
+                    new FindOneAndDeleteOptions<BsonDocument> { Projection = Builders<BsonDocument>.Projection.Include(_idField) },
+                    token);
+                if (removed is null)
+                {
+                    return false;
+                }
+
+                await AddEventsAsync(transaction, BlockRemoved.EventType, removed[_idField].AsObjectId, blockerId, blockedId, nowUtc, token);
+                return true;
+            },
+            cancellationToken: cancellationToken);
+    }
+
+    private static DateTime TruncateToMilliseconds(DateTime value) => value.AddTicks(-(value.Ticks % TimeSpan.TicksPerMillisecond));
+
+    /// <summary>Un evento por servicio destino (Mercado y Mensajería, R-23). El <c>_id</c> sale del bloqueo, así que repetir la operación no duplica; la carga solo lleva identificadores y la fecha.</summary>
+    private async Task AddEventsAsync(IClientSessionHandle transaction, string type, ObjectId recordId, string blockerId, string blockedId, DateTime nowUtc, CancellationToken cancellationToken)
+    {
+        foreach (var destination in _destinations)
+        {
+            var eventId = OutboxReglas.BuildId(type, $"{recordId}:{destination}", 1);
+            var payload = new BsonDocument
+            {
+                ["eventoId"] = eventId,
+                ["bloqueaId"] = blockerId,
+                ["bloqueadoId"] = blockedId,
+                ["ocurridoEn"] = nowUtc.ToString("O", CultureInfo.InvariantCulture),
+            };
+            await outbox.AddAsync(transaction, new EventoDeOutbox(eventId, type, destination, payload), nowUtc, cancellationToken);
+        }
     }
 
     /// <summary>
