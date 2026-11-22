@@ -111,6 +111,71 @@ public sealed class GatewayRoutingTests : IAsyncLifetime, IDisposable
         _requestsSeen.Should().BeEmpty();
     }
 
+    [Theory]
+    [InlineData("GET", "/api/v1/tecnicos/507f1f77bcf86cd799439011/servicios")]
+    [InlineData("POST", "/api/v1/tecnicos/me/servicios")]
+    [InlineData("PUT", "/api/v1/tecnicos/me/servicios/507f1f77bcf86cd799439011")]
+    [InlineData("DELETE", "/api/v1/tecnicos/me/servicios/507f1f77bcf86cd799439011")]
+    [InlineData("GET", "/api/v1/tecnicos/507f1f77bcf86cd799439011/fotos-trabajos")]
+    [InlineData("GET", "/api/v1/tecnicos/me/reputacion")]
+    [InlineData("GET", "/api/v1/agenda")]
+    [InlineData("POST", "/api/v1/visitas/507f1f77bcf86cd799439011/reprogramar")]
+    [InlineData("POST", "/api/v1/visitas/507f1f77bcf86cd799439011/reprogramar/respuesta")]
+    [InlineData("POST", "/api/v1/visitas/507f1f77bcf86cd799439011/cancelar")]
+    [InlineData("POST", "/api/v1/visitas/507f1f77bcf86cd799439011/cliente-ausente")]
+    [InlineData("POST", "/api/v1/visitas/507f1f77bcf86cd799439011/terminar")]
+    [InlineData("POST", "/api/v1/visitas/507f1f77bcf86cd799439011/no-terminado")]
+    [InlineData("PUT", "/api/v1/visitas/507f1f77bcf86cd799439011/permiso-fotos")]
+    [InlineData("POST", "/api/v1/visitas/507f1f77bcf86cd799439011/cotizacion-final")]
+    [InlineData("POST", "/api/v1/visitas/507f1f77bcf86cd799439011/cotizacion-final/decision")]
+    [InlineData("POST", "/api/v1/cotizaciones/507f1f77bcf86cd799439011/ajuste-precio")]
+    [InlineData("POST", "/api/v1/ajustes/507f1f77bcf86cd799439011/decision")]
+    [InlineData("POST", "/api/v1/solicitudes/507f1f77bcf86cd799439011/cancelar")]
+    [InlineData("GET", "/api/v1/solicitudes/507f1f77bcf86cd799439011/conversacion")]
+    public async Task MarketRoute_IsForwardedToMarketWithTheToken_KNOCK_266(string method, string path)
+    {
+        using var request = new HttpRequestMessage(new HttpMethod(method), new Uri(path, UriKind.Relative));
+        using var response = await _client!.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Headers.GetValues("X-Servicio").Should().ContainSingle().Which.Should().Be("mercado");
+        var forwarded = _requestsSeen.Should().ContainSingle().Which;
+        forwarded.Path.Should().Be(path);
+        forwarded.Method.Should().Be(method);
+        forwarded.Authorization.Should().Be(_client.DefaultRequestHeaders.Authorization!.ToString());
+    }
+
+    [Theory]
+    [InlineData("GET", "/api/v1/tecnicos/507f1f77bcf86cd799439011/servicios")]
+    [InlineData("POST", "/api/v1/tecnicos/me/servicios")]
+    [InlineData("PUT", "/api/v1/tecnicos/me/servicios/507f1f77bcf86cd799439011")]
+    [InlineData("DELETE", "/api/v1/tecnicos/me/servicios/507f1f77bcf86cd799439011")]
+    [InlineData("GET", "/api/v1/tecnicos/507f1f77bcf86cd799439011/fotos-trabajos")]
+    [InlineData("GET", "/api/v1/tecnicos/me/reputacion")]
+    [InlineData("GET", "/api/v1/agenda")]
+    [InlineData("POST", "/api/v1/visitas/507f1f77bcf86cd799439011/reprogramar")]
+    [InlineData("POST", "/api/v1/visitas/507f1f77bcf86cd799439011/reprogramar/respuesta")]
+    [InlineData("POST", "/api/v1/visitas/507f1f77bcf86cd799439011/cancelar")]
+    [InlineData("POST", "/api/v1/visitas/507f1f77bcf86cd799439011/cliente-ausente")]
+    [InlineData("POST", "/api/v1/visitas/507f1f77bcf86cd799439011/terminar")]
+    [InlineData("POST", "/api/v1/visitas/507f1f77bcf86cd799439011/no-terminado")]
+    [InlineData("PUT", "/api/v1/visitas/507f1f77bcf86cd799439011/permiso-fotos")]
+    [InlineData("POST", "/api/v1/visitas/507f1f77bcf86cd799439011/cotizacion-final")]
+    [InlineData("POST", "/api/v1/visitas/507f1f77bcf86cd799439011/cotizacion-final/decision")]
+    [InlineData("POST", "/api/v1/cotizaciones/507f1f77bcf86cd799439011/ajuste-precio")]
+    [InlineData("POST", "/api/v1/ajustes/507f1f77bcf86cd799439011/decision")]
+    [InlineData("POST", "/api/v1/solicitudes/507f1f77bcf86cd799439011/cancelar")]
+    [InlineData("GET", "/api/v1/solicitudes/507f1f77bcf86cd799439011/conversacion")]
+    public async Task MarketRoute_WithoutToken_IsNotForwarded_KNOCK_266(string method, string path)
+    {
+        _client!.DefaultRequestHeaders.Authorization = null;
+        using var request = new HttpRequestMessage(new HttpMethod(method), new Uri(path, UriKind.Relative));
+        using var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        _requestsSeen.Should().BeEmpty();
+    }
+
     [Fact]
     public async Task HubToken_InTheQuery_ReachesTheServiceAsABearerHeaderAndLeavesTheUrl_CA_026_18()
     {
