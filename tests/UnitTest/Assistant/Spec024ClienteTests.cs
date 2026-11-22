@@ -99,13 +99,13 @@ internal sealed class AiHarness
         Options.AzureOpenAI.Clave = "clave-sintetica-no-real";
         configure?.Invoke(Options);
         var wrapped = Microsoft.Extensions.Options.Options.Create(Options);
-#pragma warning disable CA2000 // el cliente vive lo que la prueba
-        var http = new HttpClient(Azure) { BaseAddress = new Uri(Options.AzureOpenAI.Endpoint) };
-#pragma warning restore CA2000
-        Client = new AiClient(new ProveedorIa(http, wrapped, Clock), Images, Consumo, Uso, PlantillaIa.Load(), wrapped, Clock, NullLogger<AiClient>.Instance);
+        Http = new HttpClient(Azure) { BaseAddress = new Uri(Options.AzureOpenAI.Endpoint) };
+        Client = new AiClient(new ProveedorIa(Http, wrapped, Clock), Images, Consumo, Uso, PlantillaIa.Load(), wrapped, Clock, NullLogger<AiClient>.Instance);
     }
 
     public AssistantOptions Options { get; }
+
+    public HttpClient Http { get; }
 
     public AiHandler Azure { get; } = new();
 
