@@ -130,4 +130,32 @@ public sealed class Spec046ConflictoDeEscrituraTests
         await act.Should().ThrowAsync<MongoCommandException>();
         calls.Should().Be(1);
     }
+
+    [Fact]
+    public async Task InsertSerialized_SimultaneousRegistrationsOfOneAccount_InsertOnlyOnce_CA_046_69()
+    {
+        var inserted = false;
+        var running = 0;
+        var overlapped = false;
+
+        async Task<bool> Exists()
+        {
+            await Task.Yield();
+            return inserted;
+        }
+
+        async Task<bool> Insert()
+        {
+            if (Interlocked.Increment(ref running) > 1) overlapped = true;
+            await Task.Delay(20);
+            inserted = true;
+            Interlocked.Decrement(ref running);
+            return true;
+        }
+
+        var results = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => TechnicianProfileStore.InsertSerializedAsync("sub-1", Exists, Insert, CancellationToken.None)));
+
+        results.Count(created => created).Should().Be(1);
+        overlapped.Should().BeFalse();
+    }
 }
