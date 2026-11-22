@@ -62,6 +62,8 @@ public static class CatalogModuleExtensions
         services.AddSingleton<CatalogAdminService>();
         services.AddSingleton<ITradeAdminStore, TradeAdminStore>();
         services.AddSingleton<TradeAdminService>();
+        services.AddSingleton<ITradeRequestStore, TradeRequestStore>();
+        services.AddSingleton<TradeRequestService>();
         return services;
     }
 }
