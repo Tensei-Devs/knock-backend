@@ -12,6 +12,9 @@ internal sealed class CapturingLoggerProvider : ILoggerProvider
 
     public int Count(int eventId) => _events.Count(e => e.EventId == eventId);
 
+    /// <summary>Todos los mensajes registrados, para comprobar que un dato personal nunca se escribió.</summary>
+    public string AllMessages() => string.Join(Environment.NewLine, _events.Select(e => e.Message));
+
     public string Messages(int eventId) => string.Join(" | ", _events.Where(e => e.EventId == eventId).Select(e => e.Message).Distinct());
 
     /// <summary>Eventos de nivel Error o Critical (con el tipo y el mensaje de su excepción), sin repetir y acotados, para que una prueba que recibió un 500 diga por qué.</summary>
