@@ -16,7 +16,7 @@ public sealed class Spec032MediaVisitPhotosTests
     [Fact]
     public async Task AreReadyForAsync_AllReadyAndOwned_ReturnsTrueAndAsksWithTheOwner_CA_050_49()
     {
-        var media = new FakeMedia((_, _) => true);
+        var media = new FakeMediaApi((_, _) => true);
 
         var ready = await Adapter(media).AreReadyForAsync(_owner, [_photoA, _photoB], CancellationToken.None);
 
@@ -27,7 +27,7 @@ public sealed class Spec032MediaVisitPhotosTests
     [Fact]
     public async Task AreReadyForAsync_OneNotReadyOrNotOwned_ReturnsFalse_CA_050_49()
     {
-        var media = new FakeMedia((id, _) => id != Guid.ParseExact(_photoB, "N"));
+        var media = new FakeMediaApi((id, _) => id != Guid.ParseExact(_photoB, "N"));
 
         (await Adapter(media).AreReadyForAsync(_owner, [_photoA, _photoB], CancellationToken.None)).Should().BeFalse();
     }
@@ -38,7 +38,7 @@ public sealed class Spec032MediaVisitPhotosTests
     [InlineData("018f3c2e-7a4b-7c3d-9e1f-2a3b4c5d6e7f")]
     public async Task AreReadyForAsync_IdentifierThatIsNotAFileId_ReturnsFalseWithoutAskingMedia_CA_050_49(string photo)
     {
-        var media = new FakeMedia((_, _) => true);
+        var media = new FakeMediaApi((_, _) => true);
 
         (await Adapter(media).AreReadyForAsync(_owner, [_photoA, photo], CancellationToken.None)).Should().BeFalse();
         media.Calls.Should().BeEmpty();
@@ -47,7 +47,7 @@ public sealed class Spec032MediaVisitPhotosTests
     [Fact]
     public async Task AreReadyForAsync_MediaFails_FailsClosed_CA_050_49()
     {
-        var media = new FakeMedia((_, _) => throw new InvalidOperationException("storage down"));
+        var media = new FakeMediaApi((_, _) => throw new InvalidOperationException("storage down"));
 
         (await Adapter(media).AreReadyForAsync(_owner, [_photoA], CancellationToken.None)).Should().BeFalse();
     }
@@ -55,7 +55,7 @@ public sealed class Spec032MediaVisitPhotosTests
     [Fact]
     public async Task AreReadyForAsync_Cancelled_PropagatesTheCancellation_CA_050_49()
     {
-        var media = new FakeMedia((_, _) => throw new OperationCanceledException());
+        var media = new FakeMediaApi((_, _) => throw new OperationCanceledException());
 
         await Assert.ThrowsAsync<OperationCanceledException>(() => Adapter(media).AreReadyForAsync(_owner, [_photoA], CancellationToken.None));
     }
@@ -63,23 +63,11 @@ public sealed class Spec032MediaVisitPhotosTests
     [Fact]
     public async Task AreReadyForAsync_NoOwnerOrNoPhotos_ReturnsFalse_CA_050_49()
     {
-        var media = new FakeMedia((_, _) => true);
+        var media = new FakeMediaApi((_, _) => true);
 
         (await Adapter(media).AreReadyForAsync("", [_photoA], CancellationToken.None)).Should().BeFalse();
         (await Adapter(media).AreReadyForAsync(_owner, [], CancellationToken.None)).Should().BeFalse();
     }
 
     private static MediaVisitPhotos Adapter(IMediaApi media) => new(media, NullLogger<MediaVisitPhotos>.Instance);
-
-    private sealed class FakeMedia(Func<Guid, string, bool> answer) : IMediaApi
-    {
-        public List<(Guid, string)> Calls { get; } = [];
-
-        public Task<bool> IsReadyAndOwnedByAsync(Guid fileId, string ownerId, CancellationToken cancellationToken)
-        {
-            var result = answer(fileId, ownerId);
-            Calls.Add((fileId, ownerId));
-            return Task.FromResult(result);
-        }
-    }
 }
