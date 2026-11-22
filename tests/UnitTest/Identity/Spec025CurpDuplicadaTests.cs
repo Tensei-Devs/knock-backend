@@ -37,7 +37,7 @@ public sealed class Spec025CurpDuplicadaTests
 
         public Task<bool> MarkPhotoEncryptedAsync(ObjectId id, string type, DateTime confirmedAt, CancellationToken cancellationToken) => throw new NotSupportedException();
 
-        public Task<SubmitOutcome> SubmitAsync(string sub, ObjectId id, DateTime sentAt, DateTime expiresAt, Func<IClientSessionHandle, Task> scheduleInTransaction, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<SubmitOutcome> SubmitAsync(string sub, ObjectId id, DateTime sentAt, DateTime expiresAt, VerificationPurgeScheduler purgeScheduler, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 
     [Fact]

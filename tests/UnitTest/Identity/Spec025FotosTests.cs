@@ -20,7 +20,7 @@ public sealed class Spec025FotosTests
     private static async Task<(FotoVerificacionStore Store, MemoryBlobs Blobs, WrappedVerificationKey Key, CifradoDeVerificacion Crypto)> CreateAsync()
     {
         var blobs = new MemoryBlobs();
-        var crypto = new CifradoDeVerificacion(new MemoryWrapper());
+        var crypto = new CifradoDeVerificacion(new Spec025CurpTests.FakeWrapper());
         var (key, wrapped) = await crypto.CreateKeyAsync(CancellationToken.None);
         key.Dispose();
         return (new FotoVerificacionStore(blobs, crypto, new FixedClock(_now)), blobs, wrapped, crypto);
@@ -159,29 +159,6 @@ public sealed class Spec025FotosTests
         {
             Final.Remove(blobName);
             return Task.CompletedTask;
-        }
-    }
-
-    internal sealed class MemoryWrapper : IVerificationKeyWrapper
-    {
-        private readonly byte[] _kek = RandomNumberGenerator.GetBytes(32);
-
-        public Task<WrappedVerificationKey> WrapAsync(byte[] dataKey, CancellationToken cancellationToken)
-        {
-            var packed = new byte[12 + 16 + dataKey.Length];
-            RandomNumberGenerator.Fill(packed.AsSpan(0, 12));
-            using var aes = new AesGcm(_kek, 16);
-            aes.Encrypt(packed.AsSpan(0, 12), dataKey, packed.AsSpan(28), packed.AsSpan(12, 16));
-            return Task.FromResult(new WrappedVerificationKey(Convert.ToBase64String(packed), "kek-1"));
-        }
-
-        public Task<byte[]> UnwrapAsync(WrappedVerificationKey wrapped, CancellationToken cancellationToken)
-        {
-            var packed = Convert.FromBase64String(wrapped.Value);
-            var plain = new byte[packed.Length - 28];
-            using var aes = new AesGcm(_kek, 16);
-            aes.Decrypt(packed.AsSpan(0, 12), packed.AsSpan(28), packed.AsSpan(12, 16), plain);
-            return Task.FromResult(plain);
         }
     }
 }
