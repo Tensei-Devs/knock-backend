@@ -50,6 +50,7 @@ internal sealed class MarketApiFactory(IReadOnlyDictionary<string, string?> sett
         {
             ["ConnectionStrings:KnockMongo"] = mongo.ConnectionString,
             ["ConnectionStrings:KnockRedis"] = redis.ConnectionString,
+            ["ConnectionStrings:KnockBlob"] = "UseDevelopmentStorage=true", // perezoso: las pruebas de Reviews no tocan Blob, pero el módulo Media lo exige al resolver IMediaApi
             ["Mongo:Databases:Catalog"] = database,
             ["Mongo:Databases:Requests"] = database,
             ["Mongo:Databases:Trust"] = database,
@@ -134,6 +135,8 @@ internal sealed class MarketApiFactory(IReadOnlyDictionary<string, string?> sett
                 Name = "clienteId_1_elementoId_1_estado_1",
                 PartialFilterExpression = new BsonDocument("elementoId", new BsonDocument("$exists", true)),
             }));
+        // Spec 051 (db/051-opiniones-y-reputacion.js): una opinión por visita; decide la carrera entre dos envíos iguales (CA-28).
+        await database.GetCollection<BsonDocument>("opiniones").Indexes.CreateOneAsync(Index("visitaId_1", new BsonDocument("visitaId", 1), unique: true));
         var quotes = database.GetCollection<BsonDocument>("cotizaciones").Indexes;
         await quotes.CreateManyAsync(
         [
