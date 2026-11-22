@@ -25,7 +25,7 @@ internal sealed class EnvioDeMensajeService(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sub);
         ArgumentException.ThrowIfNullOrWhiteSpace(bearerToken);
-        ArgumentNullException.ThrowIfNull(texto);
+        var clean = ReglasDeMensaje.Limpiar(texto) ?? throw new ArgumentException("The message text is not valid.", nameof(texto));
 
         var conversation = await store.ObtenerAsync(conversacionId, cancellationToken);
         var role = conversation?.RolDe(sub);
@@ -44,7 +44,7 @@ internal sealed class EnvioDeMensajeService(
                 permission.MotivoCierre is null ? null : new Dictionary<string, string> { ["motivoCierre"] = permission.MotivoCierre });
         }
 
-        var hidden = permission.Elegido ? new TextoOculto(texto, false) : OcultadorDeContacto.Ocultar(texto);
+        var hidden = permission.Elegido ? new TextoOculto(clean, false) : OcultadorDeContacto.Ocultar(clean);
         await ModerarAsync(hidden.Texto, cancellationToken);
 
         var now = clock.GetUtcNow();

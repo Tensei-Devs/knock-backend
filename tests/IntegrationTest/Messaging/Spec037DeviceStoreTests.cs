@@ -69,11 +69,17 @@ public sealed class Spec037DeviceStoreTests
             before.ToJson().Should().NotContain("synthetic-token");
             protection.Decrypt(before["identificadorCifrado"].AsString, "owner", id).Should().Be("synthetic-token");
             var other = await store.RegisterAsync("other", "other-session", "ios", "synthetic-token", now.AddMinutes(1), CancellationToken.None);
-            other.Status.Should().Be(DeviceRegistrationStatus.Conflict);
-            (await devices.Find(FilterDefinition<BsonDocument>.Empty).SingleAsync()).ToJson().Should().Be(before.ToJson());
-            (await store.DeleteAsync("other", id, CancellationToken.None)).Should().BeFalse();
-            (await store.DeleteAsync("owner", id, CancellationToken.None)).Should().BeTrue();
-            (await store.DeleteAsync("owner", id, CancellationToken.None)).Should().BeFalse();
+            other.Status.Should().Be(DeviceRegistrationStatus.Created, "el último registro gana y el teléfono cambia de cuenta (spec 037, R-01)");
+            other.Id.Should().NotBe(id);
+            var after = await devices.Find(FilterDefinition<BsonDocument>.Empty).SingleAsync();
+            after["personaId"].AsString.Should().Be("other");
+            after["id"].AsString.Should().Be(other.Id);
+            after.ToJson().Should().NotContain("synthetic-token");
+            protection.Decrypt(after["identificadorCifrado"].AsString, "other", other.Id).Should().Be("synthetic-token");
+            (await store.DeleteAsync("owner", id, CancellationToken.None)).Should().BeFalse("la persona anterior ya no tiene el dispositivo");
+            (await store.DeleteAsync("owner", other.Id, CancellationToken.None)).Should().BeFalse();
+            (await store.DeleteAsync("other", other.Id, CancellationToken.None)).Should().BeTrue();
+            (await store.DeleteAsync("other", other.Id, CancellationToken.None)).Should().BeFalse();
         }
         finally
         {

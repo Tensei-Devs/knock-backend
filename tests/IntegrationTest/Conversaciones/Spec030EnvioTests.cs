@@ -234,7 +234,8 @@ public sealed class Spec030EnvioTests
         first.StatusCode.Should().Be(HttpStatusCode.Created);
         var redis = await RedisTestFixture.SharedAsync();
         await using var connection = await ConnectionMultiplexer.ConnectAsync(redis.ConnectionString);
-        var key = "conv:permiso:" + scenario.ConversationId;
+        var server = connection.GetServers()[0];
+        var key = (await server.KeysAsync(pattern: "conv:permiso:" + scenario.ConversationId + ":*").ToListAsync()).Single();
 
         var ttl = await connection.GetDatabase().KeyTimeToLiveAsync(key);
         var value = (string?)await connection.GetDatabase().StringGetAsync(key);
