@@ -1,4 +1,5 @@
 using Knock.Identity.Api.Hosting;
+using Knock.Identity.Api.Modules.Panel;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -11,13 +12,23 @@ internal sealed record StoredReport(ObjectId Id, string ReporterId, string Repor
 /// <summary>Lo que hace falta para guardar un reporte nuevo.</summary>
 internal sealed record NewReport(string ReporterId, string ReportedId, string? ReferenceKind, string? ReferenceId, string Reason, string Text, IReadOnlyList<string> Evidence, DateTime CreatedAtUtc);
 
+/// <summary>Cuenta las advertencias que cuentan para la regla gradual (spec 059, R-16). Existe para probar <c>SafetyApi</c> sin MongoDB.</summary>
+internal interface IWarningCounter
+{
+    /// <summary>
+    /// Las advertencias <b>decididas por un moderador y vigentes</b> contra esa persona, leídas dentro de la transacción de la decisión (así incluyen la que se está decidiendo). Un reporte abierto,
+    /// en apelación o sin decidir nunca cuenta (R-17).
+    /// </summary>
+    Task<int> CountDecidedWarningsAsync(StoreTransaction transaction, string reportedId, CancellationToken cancellationToken);
+}
+
 /// <summary>
 /// Colección <c>reportes</c> (spec 043, §6). Es el único acceso a MongoDB de los reportes. La persona que reporta y la reportada se guardan con su identificador público (el <c>sub</c>).
 /// Toda lectura de la lista lleva el <c>sub</c> de quien llama (R-24). El texto y la evidencia no salen de aquí hacia quien llama: solo los lee el panel (R-22).
 /// </summary>
 internal sealed class ReportesStore(
     [FromKeyedServices(DataExtensions.DatabaseKey)] IMongoDatabase database,
-    IOptions<KnockMongoOptions> mongoOptions)
+    IOptions<KnockMongoOptions> mongoOptions) : IWarningCounter
 {
     public const string ReportsCollection = "reportes";
     private const string _reporterField = "reportaId";
@@ -41,6 +52,16 @@ internal sealed class ReportesStore(
                 new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending(_reporterField), new CreateIndexOptions { Name = "reportaId_1" }),
             ],
             cancellationToken);
+
+    public async Task<int> CountDecidedWarningsAsync(StoreTransaction transaction, string reportedId, CancellationToken cancellationToken)
+    {
+        var filters = Builders<BsonDocument>.Filter;
+        var count = await Reports.CountDocumentsAsync(
+            (IClientSessionHandle)transaction.Handle,
+            filters.Eq(_reportedField, reportedId) & filters.Eq(_stateField, "decidido") & filters.Eq(_decisionField + ".respuesta", "advertencia"),
+            cancellationToken: cancellationToken);
+        return (int)count;
+    }
 
     /// <summary>El reporte abierto de esa persona contra la misma otra por el mismo motivo, si ya existe: una repetición por mala señal no abre otro.</summary>
     public async Task<StoredReport?> FindOpenDuplicateAsync(string reporterId, string reportedId, string reason, CancellationToken cancellationToken)

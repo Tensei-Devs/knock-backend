@@ -5,8 +5,11 @@ namespace Knock.Identity.Api.Modules.Safety;
 /// <summary>Lo que se hace sobre la persona reportada al decidir un reporte (spec 053, R-20).</summary>
 internal enum ReportAction
 {
-    /// <summary>Solo avisar a las dos partes (advertencia y mediación).</summary>
+    /// <summary>Solo avisar a las dos partes (mediación).</summary>
     NotifyOnly,
+
+    /// <summary>Advertencia: avisa a las dos partes y cuenta para la regla gradual (spec 059, R-16).</summary>
+    Warn,
 
     /// <summary>Suspensión preventiva de un técnico (spec 059).</summary>
     Suspend,
