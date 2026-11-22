@@ -1,3 +1,4 @@
+using Knock.Hosting.Observability;
 using System.Diagnostics;
 using Serilog.Context;
 

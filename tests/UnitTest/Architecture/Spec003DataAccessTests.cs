@@ -40,8 +40,13 @@ public sealed class Spec003DataAccessTests
 
         foreach (var (client, expected) in new[] { (_mongoNamespace, usesMongo), (_redisNamespace, usesRedis) })
         {
-            Types.InAssembly(assembly).That().ResideInNamespaceMatching(hosting).And().HaveDependencyOnAny(client).GetTypes()
-                .Any().Should().Be(expected, $"{service} {(expected ? "usa" : "no usa")} {client} (decisión del líder, 2026-11-04)");
+            // El cliente de Redis vive en Knock.Hosting (spec 055): en el servicio solo importa que no lo use quien no debe.
+            if (client == _mongoNamespace || !expected)
+            {
+                Types.InAssembly(assembly).That().ResideInNamespaceMatching(hosting).And().HaveDependencyOnAny(client).GetTypes()
+                    .Any().Should().Be(expected, $"{service} {(expected ? "usa" : "no usa")} {client} (decisión del líder, 2026-11-04)");
+            }
+
             var result = Types.InAssembly(assembly)
                 .That().DoNotResideInNamespaceMatching(moduleData)
                 .And().DoNotResideInNamespaceMatching(hosting)
@@ -54,13 +59,10 @@ public sealed class Spec003DataAccessTests
     [Fact]
     public void RedisClientOnlyInHostingAndModuleData_CA_003_02()
     {
-        var hosting = $"^{Regex.Escape($"{_root}.Hosting")}([.]|$)";
-
-        Types.InAssembly(ModuleCatalog.ApiAssembly)
-            .That().ResideInNamespaceMatching(hosting)
-            .And().HaveDependencyOnAny(_redisNamespace)
+        Types.InAssembly(typeof(Knock.Hosting.Redis.RedisExtensions).Assembly)
+            .That().HaveDependencyOnAny(_redisNamespace)
             .GetTypes()
-            .Should().NotBeEmpty("el cliente de Redis vive en Hosting; si no, la regla pasaría en vacío");
+            .Should().NotBeEmpty("el cliente de Redis vive en Knock.Hosting (spec 055); si no, la regla pasaría en vacío");
 
         var result = RedisAccessRule.Evaluate(ModuleCatalog.ApiAssembly, _root);
 

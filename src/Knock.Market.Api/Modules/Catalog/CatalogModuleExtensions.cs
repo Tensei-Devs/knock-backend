@@ -1,3 +1,4 @@
+using Knock.Hosting.Redis;
 using Knock.Contracts.Catalog;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Catalog.Data;
@@ -30,7 +31,7 @@ public static class CatalogModuleExtensions
         }
         else
         {
-            services.AddKnockRedis();
+            services.AddKnockRedis("knock-api");
             services.AddSingleton<RedisCatalogCache>();
             services.AddSingleton<ICatalogCache>(sp => sp.GetRequiredService<RedisCatalogCache>());
             services.AddSingleton<ISearchResponseCache>(sp => sp.GetRequiredService<RedisCatalogCache>());

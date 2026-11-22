@@ -1,6 +1,3 @@
-extern alias gateway;
-extern alias identity;
-extern alias messaging;
 
 using System.Collections.Concurrent;
 using System.Globalization;
@@ -13,9 +10,6 @@ using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
 using Xunit;
-using GatewayHosting = gateway::Knock.Gateway.Hosting;
-using IdentityHosting = identity::Knock.Identity.Api.Hosting;
-using MessagingHosting = messaging::Knock.Messaging.Api.Hosting;
 
 namespace Knock.UnitTest.Hosting;
 
@@ -58,24 +52,24 @@ public sealed class Spec011ObservabilityTests
         ["identity"] = new(
             "Knock.Identity.Api",
             "knock-identity",
-            (services, configuration, environment) => IdentityHosting.ObservabilityExtensions.AddKnockObservability(
-                IdentityHosting.LoggingExtensions.AddKnockLogging(services, configuration), configuration, environment),
+            (services, configuration, environment) => Knock.Hosting.Observability.ObservabilityExtensions.AddKnockObservability(
+                Knock.Hosting.Logging.LoggingExtensions.AddKnockLogging(services, configuration), configuration, environment),
             Knock.Hosting.Logging.TelemetryRedactor.Redact,
             Knock.Hosting.Logging.TelemetryRedactor.RedactAttribute,
             Knock.Hosting.Logging.TelemetryRedactor.Placeholder),
         ["messaging"] = new(
             "Knock.Messaging.Api",
             "knock-messaging",
-            (services, configuration, environment) => MessagingHosting.ObservabilityExtensions.AddKnockObservability(
-                MessagingHosting.LoggingExtensions.AddKnockLogging(services, configuration), configuration, environment),
+            (services, configuration, environment) => Knock.Hosting.Observability.ObservabilityExtensions.AddKnockObservability(
+                Knock.Hosting.Logging.LoggingExtensions.AddKnockLogging(services, configuration), configuration, environment),
             Knock.Hosting.Logging.TelemetryRedactor.Redact,
             Knock.Hosting.Logging.TelemetryRedactor.RedactAttribute,
             Knock.Hosting.Logging.TelemetryRedactor.Placeholder),
         ["gateway"] = new(
             "Knock.Gateway",
             "knock-gateway",
-            (services, configuration, environment) => GatewayHosting.ObservabilityExtensions.AddKnockObservability(
-                GatewayHosting.LoggingExtensions.AddKnockLogging(services, configuration), configuration, environment),
+            (services, configuration, environment) => Knock.Hosting.Observability.ObservabilityExtensions.AddKnockObservability(
+                Knock.Hosting.Logging.LoggingExtensions.AddKnockLogging(services, configuration), configuration, environment),
             Knock.Hosting.Logging.TelemetryRedactor.Redact,
             Knock.Hosting.Logging.TelemetryRedactor.RedactAttribute,
             Knock.Hosting.Logging.TelemetryRedactor.Placeholder),

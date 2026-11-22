@@ -1,3 +1,6 @@
+using Knock.Hosting.Health;
+using Knock.Hosting.Observability;
+using Knock.Hosting.Logging;
 // jscpd:ignore-start -- EXC-015
 using Knock.Hosting.ForwardedHeaders;
 using Microsoft.Extensions.Options;
@@ -25,7 +28,7 @@ internal static class KnockApplicationExtensions
             .AddKnockOpenApi()
             .AddKnockData()
             .AddKnockModules()
-            .AddKnockObservability(builder.Configuration, builder.Environment);
+            .AddKnockObservability(builder.Configuration, builder.Environment, "knock-api");
         return builder;
     }
 

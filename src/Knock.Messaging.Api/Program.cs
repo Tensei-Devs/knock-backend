@@ -1,3 +1,6 @@
+using Knock.Hosting.Health;
+using Knock.Hosting.Observability;
+using Knock.Hosting.Logging;
 using Knock.Contracts.Correlation;
 using Knock.Hosting.ForwardedHeaders;
 using Knock.Messaging.Api.Hosting;
@@ -22,7 +25,7 @@ builder.Services
 builder.Services.AddOpenApi();
 // Spec 011: Serilog estructurado y OpenTelemetry con redacción; Azure Monitor solo si hay APPLICATIONINSIGHTS_CONNECTION_STRING.
 builder.Services.AddKnockLogging(builder.Configuration);
-builder.Services.AddKnockObservability(builder.Configuration, builder.Environment);
+builder.Services.AddKnockObservability(builder.Configuration, builder.Environment, additionalMeters: [Knock.Messaging.Api.Modules.Chat.Services.ChatMetrics.MeterName]);
 builder.Services.AddKnockForwardedHeaders();
 builder.Services.AddKnockData();
 // Spec 026: chat de visita en tiempo real con SignalR y Redis como puente entre copias.

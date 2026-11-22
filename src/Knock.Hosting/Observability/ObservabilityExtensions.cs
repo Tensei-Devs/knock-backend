@@ -1,10 +1,10 @@
-// jscpd:ignore-start -- EXC-007: copia de src/Knock.Market.Api/Hosting/ObservabilityExtensions.cs (spec 011); se unifica en una biblioteca técnica.
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using Azure.Monitor.OpenTelemetry.Exporter;
+using Knock.Hosting.Health;
 using Knock.Hosting.Logging;
 using Microsoft.AspNetCore.Diagnostics;
 using OpenTelemetry;
@@ -17,10 +17,10 @@ using OpenTelemetry.Trace;
 using Serilog.Core;
 using Serilog.Events;
 
-namespace Knock.Identity.Api.Hosting;
+namespace Knock.Hosting.Observability;
 
 /// <summary>Opciones sin secretos de <c>Observability:*</c> (TT-OBS-01). La cadena de conexión nunca vive aquí.</summary>
-internal sealed class ObservabilityOptions
+public sealed class ObservabilityOptions
 {
     public const string SectionName = "Observability";
 
@@ -34,10 +34,10 @@ internal sealed class ObservabilityOptions
 }
 
 /// <summary>Valores con los que el exportador de Azure Monitor construyó una señal.</summary>
-internal sealed record AzureMonitorSignalSettings(bool DisableOfflineStorage, bool EnableLiveMetrics, float SamplingRatio, double? TracesPerSecond);
+public sealed record AzureMonitorSignalSettings(bool DisableOfflineStorage, bool EnableLiveMetrics, float SamplingRatio, double? TracesPerSecond);
 
 /// <summary>Qué señales se exportan a Azure Monitor: cada exportador se anota al construirse (lo leen las pruebas y el diagnóstico).</summary>
-internal sealed class AzureMonitorExportStatus
+public sealed class AzureMonitorExportStatus
 {
     private readonly ConcurrentDictionary<string, AzureMonitorSignalSettings> _signals = new(StringComparer.Ordinal);
 
@@ -45,20 +45,17 @@ internal sealed class AzureMonitorExportStatus
 
     public IReadOnlyDictionary<string, AzureMonitorSignalSettings> Signals => _signals;
 
-    public void Record(string signal, AzureMonitorExporterOptions options) =>
+    internal void Record(string signal, AzureMonitorExporterOptions options) =>
         _signals[signal] = new AzureMonitorSignalSettings(options.DisableOfflineStorage, options.EnableLiveMetrics, options.SamplingRatio, options.TracesPerSecond);
 }
 
-internal static class ObservabilityExtensions
+public static class ObservabilityExtensions
 {
     /// <summary>Única fuente de la cadena de conexión: variable de entorno o referencia de Key Vault en Container Apps.</summary>
     public const string ConnectionStringKey = "APPLICATIONINSIGHTS_CONNECTION_STRING";
 
     /// <summary>Variable que lee el exportador de Azure Monitor para no enviar Statsbeat (estadísticas internas del SDK a Microsoft).</summary>
     public const string StatsbeatDisabledKey = "APPLICATIONINSIGHTS_STATSBEAT_DISABLED";
-
-    /// <summary>Raíz de las rutas de salud (<c>/health</c> y <c>/health/ready</c>, specs 001 y 003): no generan spans.</summary>
-    private const string _healthPath = "/health";
 
     public const string CorrelationIdAttribute = "knock.correlation_id";
     public const string TracesSignal = "traces";
@@ -69,11 +66,17 @@ internal static class ObservabilityExtensions
     /// OpenTelemetry siempre (trazas, métricas y logs con redacción) y los exportadores de Azure Monitor solo si hay cadena de conexión.
     /// La tubería es la misma en todos los entornos; las pruebas solo agregan un exportador en memoria (decisión previa 3).
     /// </summary>
-    public static IServiceCollection AddKnockObservability(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
+    public static IServiceCollection AddKnockObservability(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment environment,
+        string defaultServiceName = "knock-api",
+        IReadOnlyCollection<string>? additionalMeters = null)
     {
         ArgumentNullException.ThrowIfNull(configuration);
         ArgumentNullException.ThrowIfNull(environment);
-        var options = configuration.GetSection(ObservabilityOptions.SectionName).Get<ObservabilityOptions>() ?? new ObservabilityOptions();
+        var options = new ObservabilityOptions { ServiceName = defaultServiceName };
+        configuration.GetSection(ObservabilityOptions.SectionName).Bind(options);
         if (options.SamplingRatio is < 0f or > 1f || string.IsNullOrWhiteSpace(options.ServiceName))
         {
             throw new InvalidOperationException("Observability:SamplingRatio must be between 0 and 1 and Observability:ServiceName is required.");
@@ -126,6 +129,10 @@ internal static class ObservabilityExtensions
             .WithMetrics(metrics =>
             {
                 metrics.AddAspNetCoreInstrumentation().AddMeter("System.Runtime");
+                foreach (var meter in additionalMeters ?? [])
+                {
+                    metrics.AddMeter(meter);
+                }
                 if (status.Enabled)
                 {
                     metrics.AddAzureMonitorMetricExporter(exporter => Configure(MetricsSignal, exporter));
@@ -154,7 +161,7 @@ internal static class ObservabilityExtensions
     /// </summary>
     private static void ConfigureServerSpans(AspNetCoreTraceInstrumentationOptions server)
     {
-        server.Filter = context => !context.Request.Path.StartsWithSegments(_healthPath, StringComparison.OrdinalIgnoreCase);
+        server.Filter = context => !context.Request.Path.StartsWithSegments(HealthExtensions.LivenessPath, StringComparison.OrdinalIgnoreCase);
         server.RecordException = false;
         server.EnrichWithHttpResponse = (activity, response) =>
         {
@@ -215,7 +222,7 @@ internal sealed class IgnoreIncomingTraceContextPropagator : DistributedContextP
 /// </summary>
 internal sealed class OpenTelemetryLogSink(IServiceProvider services) : ILogEventSink
 {
-    private const string _defaultCategory = "Knock.Identity.Api";
+    private const string _defaultCategory = "Knock.Gateway";
 
     private readonly Lazy<ILoggerProvider?> _provider = new(
         () => services.GetServices<ILoggerProvider>().OfType<OpenTelemetryLoggerProvider>().FirstOrDefault());
@@ -287,4 +294,3 @@ internal sealed class SerilogLogState : IReadOnlyList<KeyValuePair<string, objec
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }
-// jscpd:ignore-end -- EXC-007

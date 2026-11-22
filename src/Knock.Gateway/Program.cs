@@ -1,3 +1,6 @@
+using Knock.Hosting.Observability;
+using Knock.Hosting.Health;
+using Knock.Hosting.Logging;
 using Knock.Contracts.Correlation;
 using Knock.Gateway.Hosting;
 using Knock.Hosting.ForwardedHeaders;

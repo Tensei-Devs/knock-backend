@@ -1,3 +1,6 @@
+using Knock.Hosting.Observability;
+using Knock.Hosting.Health;
+using Knock.Hosting.Logging;
 using Knock.Hosting.ForwardedHeaders;
 using Microsoft.Extensions.Options;
 using Serilog;
@@ -25,7 +28,7 @@ internal static class KnockApplicationExtensions
             .AddKnockHealth()
             .AddKnockMongo()
             .AddKnockModules(builder.Configuration, builder.Environment.IsDevelopment())
-            .AddKnockObservability(builder.Configuration, builder.Environment);
+            .AddKnockObservability(builder.Configuration, builder.Environment, "knock-market");
         return builder;
     }
 

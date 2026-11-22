@@ -1,3 +1,4 @@
+using Knock.Hosting.Observability;
 // jscpd:ignore-start -- EXC-015
 using System.Diagnostics;
 using Serilog.Context;

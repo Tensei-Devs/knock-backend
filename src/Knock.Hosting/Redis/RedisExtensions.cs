@@ -1,18 +1,18 @@
 using System.Globalization;
+using Knock.Hosting.Health;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 
-namespace Knock.Identity.Api.Hosting;
+namespace Knock.Hosting.Redis;
 
-// jscpd:ignore-start -- EXC-008: copia de src/Knock.Market.Api/Hosting/RedisExtensions.cs (spec 003); se unifica en una biblioteca técnica.
 
 /// <summary>
 /// Conexión a Redis del proceso (sección <c>Redis</c> de appsettings, sin secretos). La cadena llega por
 /// <c>ConnectionStrings:KnockRedis</c> desde variables de entorno o user-secrets; en Azure, Key Vault. Spec 003, R-07: un
 /// contenedor compartido, con contraseña y sin persistencia.
 /// </summary>
-internal sealed class KnockRedisOptions
+public sealed class KnockRedisOptions
 {
     public const string ConnectionStringName = "KnockRedis";
     public const string ConnectionStringKey = "ConnectionStrings:" + ConnectionStringName;
@@ -36,7 +36,7 @@ internal sealed class KnockRedisOptions
 }
 
 /// <summary>Valida la conexión al arrancar. Los mensajes nombran la clave, nunca el valor (la cadena trae la contraseña).</summary>
-internal sealed class KnockRedisOptionsValidator : IValidateOptions<KnockRedisOptions>
+public sealed class KnockRedisOptionsValidator : IValidateOptions<KnockRedisOptions>
 {
     public ValidateOptionsResult Validate(string? name, KnockRedisOptions options)
     {
@@ -90,7 +90,7 @@ internal sealed class KnockRedisOptionsValidator : IValidateOptions<KnockRedisOp
     }
 }
 
-internal static class RedisExtensions
+public static class RedisExtensions
 {
     public const string HealthCheckName = "redis";
 
@@ -102,9 +102,10 @@ internal static class RedisExtensions
     /// una vez no registra nada nuevo. Lo llama el módulo que use Redis, y solo su capa <c>Data</c> lo usa (spec 003, R-04); sin
     /// ningún módulo que lo pida, la API arranca sin Redis.
     /// </summary>
-    public static IServiceCollection AddKnockRedis(this IServiceCollection services)
+    public static IServiceCollection AddKnockRedis(this IServiceCollection services, string clientName)
     {
         ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrWhiteSpace(clientName);
         if (services.Any(descriptor => descriptor.ServiceType == typeof(IConnectionMultiplexer)))
         {
             return services;
@@ -115,17 +116,17 @@ internal static class RedisExtensions
             .ValidateOnStart();
         services.AddSingleton<IValidateOptions<KnockRedisOptions>, KnockRedisOptionsValidator>();
         services.AddSingleton<IConnectionMultiplexer>(provider =>
-            ConnectionMultiplexer.Connect(CreateConfiguration(provider.GetRequiredService<IOptions<KnockRedisOptions>>().Value)));
+            ConnectionMultiplexer.Connect(CreateConfiguration(provider.GetRequiredService<IOptions<KnockRedisOptions>>().Value, clientName)));
         services.AddHealthChecks().AddCheck<RedisReadinessHealthCheck>(HealthCheckName, tags: [HealthExtensions.ReadyTag]);
         return services;
     }
 
-    internal static ConfigurationOptions CreateConfiguration(KnockRedisOptions options)
+    internal static ConfigurationOptions CreateConfiguration(KnockRedisOptions options, string clientName)
     {
         var configuration = ConfigurationOptions.Parse(options.ConnectionString
             ?? throw new InvalidOperationException($"{KnockRedisOptions.ConnectionStringKey} is not configured."));
         configuration.AbortOnConnectFail = false;
-        configuration.ClientName = "knock-identity";
+        configuration.ClientName = clientName;
         configuration.ConnectTimeout = Milliseconds(options.ConnectTimeoutSeconds, KnockRedisOptions.ConnectTimeoutKey);
         configuration.SyncTimeout = Milliseconds(options.SyncTimeoutSeconds, KnockRedisOptions.SyncTimeoutKey);
         configuration.DefaultDatabase = options.Database
@@ -177,4 +178,3 @@ internal sealed class RedisReadinessHealthCheck(IConnectionMultiplexer connectio
         }
     }
 }
-// jscpd:ignore-end -- EXC-008

@@ -1,3 +1,4 @@
+using Knock.Hosting.Health;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;

@@ -33,13 +33,13 @@ public sealed class Spec003DataClientsTests
     private static readonly Dictionary<string, Service> _services = new()
     {
         ["Identity"] = new(s => identity::Knock.Identity.Api.Hosting.DataExtensions.AddKnockData(s),
-            e => identity::Knock.Identity.Api.Hosting.HealthExtensions.MapKnockReadiness(e), "Identity", Redis: true),
+            e => Knock.Hosting.Health.HealthExtensions.MapKnockReadiness(e), "Identity", Redis: true),
         ["Messaging"] = new(s => messaging::Knock.Messaging.Api.Hosting.DataExtensions.AddKnockData(s),
-            e => messaging::Knock.Messaging.Api.Hosting.HealthExtensions.MapKnockReadiness(e), "Messaging", Redis: false),
+            e => Knock.Hosting.Health.HealthExtensions.MapKnockReadiness(e), "Messaging", Redis: false),
         ["Gateway"] = new(s => gateway::Knock.Gateway.Hosting.DataExtensions.AddKnockData(s),
-            e => gateway::Knock.Gateway.Hosting.HealthExtensions.MapKnockReadiness(e), MongoKey: null, Redis: true),
+            e => Knock.Hosting.Health.HealthExtensions.MapKnockReadiness(e), MongoKey: null, Redis: true),
         // Market registra Redis a demanda del módulo que lo use (spec 003); aquí se prueba ese registro.
-        ["Market"] = new(s => MarketHosting.RedisExtensions.AddKnockRedis(s), Map: null, MongoKey: null, Redis: true),
+        ["Market"] = new(s => Knock.Hosting.Redis.RedisExtensions.AddKnockRedis(s, "knock-api"), Map: null, MongoKey: null, Redis: true),
     };
 
     public static TheoryData<string> AllServices() => [.. _services.Keys];

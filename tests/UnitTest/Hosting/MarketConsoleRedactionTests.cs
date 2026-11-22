@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using AwesomeAssertions;
 using Knock.Hosting.Logging;
+using Knock.Hosting.Observability;
 using Knock.Market.Api.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,7 +54,6 @@ public sealed class MarketConsoleRedactionTests
     {
         var (_, serviceName) = await CaptureAsync("ordinary");
         serviceName.Should().Be("knock-market");
-        new ObservabilityOptions().ServiceName.Should().Be("knock-market");
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public sealed class MarketConsoleRedactionTests
             var root = directory?.FullName ?? throw new InvalidOperationException("Knock.slnx not found");
             builder.Configuration.AddJsonFile(Path.Combine(root, "src", "Knock.Market.Api", "appsettings.json"));
             builder.Services.AddKnockLogging(builder.Configuration);
-            builder.Services.AddKnockObservability(builder.Configuration, builder.Environment);
+            builder.Services.AddKnockObservability(builder.Configuration, builder.Environment, "knock-market");
             builder.Services.ConfigureOpenTelemetryLoggerProvider(logging => logging.AddProcessor(capture));
             using var host = builder.Build();
             await host.StartAsync();
