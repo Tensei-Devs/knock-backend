@@ -1,6 +1,7 @@
 using Knock.Contracts.Conversations;
 using Knock.Messaging.Api.Modules.Chat.Options;
 using Knock.Messaging.Api.Modules.Conversaciones.Data;
+using Knock.Messaging.Api.Modules.Conversaciones.Services;
 using Microsoft.Extensions.Options;
 
 namespace Knock.Messaging.Api.Modules.Conversaciones;
@@ -25,6 +26,13 @@ public static class ConversacionesModuleExtensions
                 client.Timeout = TimeSpan.FromSeconds(options.TiempoLimiteSegundos);
             })
             .RemoveAllLoggers();
+        services.AddOptions<ConversacionesOptions>().BindConfiguration(ConversacionesOptions.SectionName).ValidateOnStart();
+        services.AddSingleton<IValidateOptions<ConversacionesOptions>, ConversacionesOptionsValidator>();
+        services.AddSingleton<ConversacionesStore>();
+        services.AddSingleton<MensajesStore>();
+        services.AddSingleton<INotificadorEnVivo, NotificadorEnVivo>();
+        services.AddScoped<ConversacionService>();
+        services.AddScoped<LecturaService>();
         return services;
     }
 }
