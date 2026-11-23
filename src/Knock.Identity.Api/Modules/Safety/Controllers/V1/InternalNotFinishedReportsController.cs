@@ -15,24 +15,9 @@ namespace Knock.Identity.Api.Modules.Safety.Controllers.V1;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/interno/reportes-no-terminados")]
 [InternalServiceToken(Permission)]
-internal sealed class InternalNotFinishedReportsController(NotFinishedReportConsumer consumer) : ControllerBase
+internal sealed class InternalNotFinishedReportsController(NotFinishedReportConsumer consumer) : InternalEventDeliveryController<NotFinishedReportEventBody>
 {
     public const string Permission = "reporte-no-terminado-creado";
-    private const string _problemJson = "application/problem+json";
 
-    [HttpPost]
-    [RequestSizeLimit(2048)]
-    [ProducesResponseType(StatusCodes.Status202Accepted)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, _problemJson)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status413PayloadTooLarge, _problemJson)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity, _problemJson)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, _problemJson)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable, _problemJson)]
-    public async Task<IActionResult> Post([FromBody] NotFinishedReportEventBody body, CancellationToken cancellationToken)
-    {
-        Response.Headers.CacheControl = "private, no-store";
-        await consumer.ConsumeAsync(body, cancellationToken);
-        return Accepted();
-    }
+    protected override async Task ConsumeAsync(NotFinishedReportEventBody body, CancellationToken cancellationToken) => _ = await consumer.ConsumeAsync(body, cancellationToken);
 }
