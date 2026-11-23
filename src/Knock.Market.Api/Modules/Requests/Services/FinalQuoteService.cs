@@ -155,6 +155,44 @@ internal sealed class FinalQuoteService(
         return new(FinalQuoteStatus.Done, new AdjustmentDecisionResponse(adjustment.Id.ToString(), approve ? FinalQuoteRules.AdjustmentApproved : FinalQuoteRules.AdjustmentRejected, approve ? adjustment.NewAmount : null));
     }
 
+    /// <summary>
+    /// Lectura de la cotización final (spec 063, R-01 a R-03): la ve el cliente dueño y el técnico de la visita; para cualquier otra persona, una visita inexistente o una visita sin
+    /// cotización final devuelve <see langword="null"/> (404 uniforme). El estado <c>vencida</c> se calcula al leer, sin escribir.
+    /// </summary>
+    public async Task<FinalQuoteReadResponse?> ReadFinalQuoteAsync(string sub, string id, CancellationToken cancellationToken)
+    {
+        var visit = await FindParticipantVisitAsync(sub, id, cancellationToken);
+        var quote = visit is null ? null : await store.FindFinalQuoteAsync(visit.Id, cancellationToken);
+        if (visit is null || quote is null)
+        {
+            return null;
+        }
+
+        var state = FinalQuoteRules.EffectiveState(quote.State, quote.ExpiresAtUtc, clock.GetUtcNow().UtcDateTime);
+        return new FinalQuoteReadResponse(visit.Id.ToString(), quote.Price, quote.Description, state, Utc(quote.ExpiresAtUtc), quote.DecidedAtUtc is { } decided ? Utc(decided) : null);
+    }
+
+    /// <summary>Lectura de los ajustes pendientes y vigentes de la visita (spec 063, R-04 y R-05), con el mismo acceso que la cotización final. Sin ajustes, lista vacía; sin acceso, <see langword="null"/>.</summary>
+    public async Task<PendingAdjustmentsResponse?> ReadPendingAdjustmentsAsync(string sub, string id, CancellationToken cancellationToken)
+    {
+        var visit = await FindParticipantVisitAsync(sub, id, cancellationToken);
+        if (visit is null)
+        {
+            return null;
+        }
+
+        var pending = await store.ListPendingAdjustmentsAsync(visit.Id, clock.GetUtcNow().UtcDateTime, cancellationToken);
+        return new PendingAdjustmentsResponse([.. pending.Select(a => new PendingAdjustmentItem(a.Id.ToString(), a.QuoteId.ToString(), a.NewAmount, a.Reason, a.State, Utc(a.ExpiresAtUtc)))]);
+    }
+
+    private static DateTimeOffset Utc(DateTime value) => new(value, TimeSpan.Zero);
+
+    private async Task<VisitRecord?> FindParticipantVisitAsync(string sub, string id, CancellationToken cancellationToken)
+    {
+        var visit = await FindVisitAsync(id, cancellationToken);
+        return visit is not null && VisitAccess.RoleOf(sub, visit.ClientId, visit.TechnicianUserId) != VisitRole.Stranger ? visit : null;
+    }
+
     private async Task<VisitRecord?> FindVisitAsync(string id, CancellationToken cancellationToken)
     {
         if (!ObjectId.TryParse(id, out var visitId))
