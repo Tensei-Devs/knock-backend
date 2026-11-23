@@ -14,24 +14,9 @@ namespace Knock.Identity.Api.Modules.Panel.Controllers.V1;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/interno/opiniones-moderadas")]
 [InternalServiceToken(Permission)]
-internal sealed class InternalOpinionModeratedController(OpinionModeradaConsumer consumer) : ControllerBase
+internal sealed class InternalOpinionModeratedController(OpinionModeradaConsumer consumer) : InternalEventDeliveryController<OpinionModeratedEventBody>
 {
     public const string Permission = "opinion-moderada";
-    private const string _problemJson = "application/problem+json";
 
-    [HttpPost]
-    [RequestSizeLimit(2048)]
-    [ProducesResponseType(StatusCodes.Status202Accepted)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, _problemJson)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status413PayloadTooLarge, _problemJson)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity, _problemJson)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, _problemJson)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable, _problemJson)]
-    public async Task<IActionResult> Post([FromBody] OpinionModeratedEventBody body, CancellationToken cancellationToken)
-    {
-        Response.Headers.CacheControl = "private, no-store";
-        await consumer.ConsumeAsync(body, cancellationToken);
-        return Accepted();
-    }
+    protected override async Task ConsumeAsync(OpinionModeratedEventBody body, CancellationToken cancellationToken) => _ = await consumer.ConsumeAsync(body, cancellationToken);
 }
