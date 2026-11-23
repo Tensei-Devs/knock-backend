@@ -1,6 +1,6 @@
 # Spec 063 — Lectura de la cotización final y de los ajustes de precio pendientes
 
-> **Estado:** Borrador (sin firmar) · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Jira:** KNOCK-266 (Seguimiento de la spec 049) · **Responsable:** por asignar
 > **Fuentes:** spec 049 (rutas de **escritura** COT-06, COT-07, AJU-01 y AJU-02, que ya existen), spec 050 (la visita y su cierre) y la app (pantallas de la visita y de «Pedir ajuste»), que hoy no puede leer lo que escribe.
 > **Servicios:** Mercado (`Knock.Market.Api`, módulo `Requests`; gateway: `/api/v1/visitas/{**resto}` ya enruta) · **Colecciones:** `visitas` (campo `cotizacionFinal`) y `ajustes_precio`, sin cambios
@@ -87,7 +87,7 @@ Unitarias del cálculo de vigencia, integración con MongoDB real, seguridad neg
 CA-01 a CA-11 con prueba; `python scripts/sdd_lint.py --trace 063` en OK; OpenAPI de Mercado regenerado con `scripts/export_openapi.py`; `docs/endpoints.md` al día; gates de `AGENTS.md §5` en verde; `Memoria.md` y `docs/memoria/` actualizados.
 
 ## 13. Decisiones
-- **D-01 (propuesta, por confirmar):** los ajustes se leen por visita (`/visitas/{id}/ajustes-pendientes`) y no por cotización, porque la app abre la visita y no la cotización.
+- **D-01 (DECIDIDO, José, 2026-11-23):** los ajustes se leen por visita (`/visitas/{id}/ajustes-pendientes`) y no por cotización, porque la app abre la visita y no la cotización.
 
 ## 14. Decisiones tomadas sin consulta
 1. **Estado `vencida` calculado al leer**, sin esperar al ejecutor de vencimientos de la spec 054. Alternativa: devolver el estado guardado.
@@ -96,9 +96,8 @@ CA-01 a CA-11 con prueba; `python scripts/sdd_lint.py --trace 063` en OK; OpenAP
 
 ## 15. Riesgos y dudas abiertas
 - Si la spec 049 se enmienda para mover la cotización final a otra colección, esta lectura cambia con ella.
-- Falta confirmar con José la decisión 2 de §14 (solo pendientes).
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ______ fecha: ______
-- [ ] Sin conflicto con la constitución
-- **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-23
+- [x] Sin conflicto con la constitución
+- **Estados:** Aprobada

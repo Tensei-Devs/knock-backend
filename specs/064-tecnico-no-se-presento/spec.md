@@ -1,6 +1,6 @@
 # Spec 064 — El técnico no se presentó
 
-> **Estado:** Borrador (sin firmar) · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
 > **Jira:** KNOCK-266 (Seguimiento de las specs 021 y 050) · **Responsable:** por asignar
 > **Fuentes:** spec 021 (§ fuera de alcance: «Reprogramar, cancelar y "no se presentó" (HU-034, HU-041)»; estado `no_presentado` ya existe), spec 050 (R-13 y R-27: «cliente ausente», la ruta simétrica que sí existe) y la app (acción «El técnico no llegó»).
 > **Servicios:** Mercado (`Knock.Market.Api`, módulo `Requests`; gateway: `/api/v1/visitas/{**resto}` ya enruta) · **Colecciones:** `visitas`, buzón de eventos, sin colecciones nuevas
@@ -83,18 +83,17 @@ Unitarias de la ventana, integración con MongoDB real, seguridad negativa y con
 CA-01 a CA-09 con prueba; `python scripts/sdd_lint.py --trace 064` en OK; OpenAPI regenerado; `docs/endpoints.md`, `docs/events.md` y `docs/rate-limit-matrix.md` al día; gates de `AGENTS.md §5`; memoria.
 
 ## 13. Decisiones
-- **D-01 (PENDIENTE, José):** ¿Qué consecuencia tiene para el técnico? Esta spec solo registra el hecho y avisa; no penaliza. Alternativa: contador para el panel de seguridad (spec 053/059).
-- **D-02 (propuesta):** misma ventana que «cliente ausente» (15 minutos a 2 horas), por simetría.
+- **D-01 (DECIDIDO, José, 2026-11-23):** el hecho solo se registra y se avisa al técnico; no hay penalización automática ni cambio de reputación. Motivo: el reporte lo hace una sola parte y una sanción automática permitiría abusos. El evento `TecnicoNoSePresento` queda disponible para que una spec futura (053/059) lo cuente en el panel de seguridad.
+- **D-02 (DECIDIDO, José, 2026-11-23):** misma ventana que «cliente ausente» (15 minutos a 2 horas), por simetría.
 
 ## 14. Decisiones tomadas sin consulta
 1. **Ruta propia `tecnico-ausente`**, simétrica a `cliente-ausente`. Alternativa: un solo `POST /ausente` con cuerpo.
 2. **Idempotente (200)** al repetir. Alternativa: 409.
 
 ## 15. Riesgos y dudas abiertas
-- D-01 sin decidir; sin ella no hay efecto sobre la reputación.
 - La spec 021 lo dejó fuera de alcance sin spec dueña: esta la crea; falta confirmar que no choca con HU-034/HU-041.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ______ fecha: ______
-- [ ] Sin conflicto con la constitución
-- **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-23
+- [x] Sin conflicto con la constitución
+- **Estados:** Aprobada
