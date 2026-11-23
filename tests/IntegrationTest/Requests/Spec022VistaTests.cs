@@ -27,6 +27,7 @@ public sealed class Spec022VistaTests
         json.GetProperty("codigoVenceEn").GetDateTimeOffset().Should().BeAfter(DateTimeOffset.UtcNow);
         json.GetProperty("reglaSeguridad").GetString().Should().Be($"Pídele a {Spec021Host.TechnicianName} que te diga este código en la puerta. Si no lo sabe, no abras.");
         json.GetProperty("tecnico").GetProperty("nombre").GetString().Should().Be(Spec021Host.TechnicianName);
+        json.GetProperty("tecnicoUsuarioId").GetString().Should().Be(visit.Technician.Sub);
         json.GetProperty("puedeAvisar").GetBoolean().Should().BeTrue();
         json.GetProperty("puedeLlegar").GetBoolean().Should().BeFalse();
         json.TryGetProperty("motivoCodigo", out _).Should().BeFalse();

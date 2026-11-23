@@ -68,7 +68,8 @@ internal sealed class ChooseQuoteService(ChoiceStore choices, FieldCipher cipher
                     technician?.VerificationLevel ?? QuoteComparer.NoVerification,
                     technician?.Phone,
                     technician?.WhatsApp),
-                new AppointmentPlace(visit.Modality, address)));
+                new AppointmentPlace(visit.Modality, address),
+                visit.TechnicianUserId));
     }
 
     private string? TryDecryptAddress(ChosenVisit visit)

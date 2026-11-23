@@ -8,7 +8,7 @@ using MongoDB.Driver;
 namespace Knock.Market.Api.Modules.Trust.Data;
 
 /// <summary>Un técnico visible tal como lo necesita la lista de confianza: identificador y datos públicos (spec 042, R-12).</summary>
-internal sealed record TrustTechnicianView(ObjectId Id, string Name, string? PhotoUrl, string VerificationLevel);
+internal sealed record TrustTechnicianView(ObjectId Id, string Name, string? PhotoUrl, string VerificationLevel, string? UserId = null);
 
 /// <summary>Un técnico guardado: el registro de la persona, la fecha en que lo guardó y el identificador del registro (base del cursor).</summary>
 internal sealed record TrustSaved(ObjectId TechnicianId, DateTime SavedAtUtc, ObjectId RecordId);
@@ -191,7 +191,7 @@ internal sealed class TrustStore(
         var filters = Builders<BsonDocument>.Filter;
         var documents = await Technicians
             .Find(filters.In(_idField, ids) & filters.Eq("oculto", false) & filters.Eq("estado", "activo"), _findOptions)
-            .Project(Builders<BsonDocument>.Projection.Include("nombre").Include("fotoUrl").Include("nivelVerificacion"))
+            .Project(Builders<BsonDocument>.Projection.Include("nombre").Include("fotoUrl").Include("nivelVerificacion").Include("usuarioId"))
             .ToListAsync(cancellationToken);
         return documents
             .Where(d => d.TryGetValue("nombre", out var name) && name.IsString)
@@ -201,6 +201,7 @@ internal sealed class TrustStore(
                     d[_idField].AsObjectId,
                     d["nombre"].AsString,
                     d.TryGetValue("fotoUrl", out var photo) && photo.IsString ? photo.AsString : null,
-                    d.TryGetValue("nivelVerificacion", out var level) && level.IsString ? level.AsString : "ninguno"));
+                    d.TryGetValue("nivelVerificacion", out var level) && level.IsString ? level.AsString : "ninguno",
+                    d.TryGetValue("usuarioId", out var user) && user.IsString ? user.AsString : null));
     }
 }

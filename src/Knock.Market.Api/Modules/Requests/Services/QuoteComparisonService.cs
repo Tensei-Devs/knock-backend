@@ -59,7 +59,8 @@ internal sealed class QuoteComparisonService(RequestsStore requests, ChoiceStore
             compared.Cubre,
             compared.Etiquetas,
             new QuoteTechnician(q.TecnicoId, q.TecnicoNombre, q.TecnicoFotoUrl, q.Calificacion, q.Verificado, q.NivelVerificacion),
-            q.Estado == "rechazada" ? q.MotivoRechazo : null);
+            q.Estado == "rechazada" ? q.MotivoRechazo : null,
+            q.TecnicoUsuarioId);
     }
 
     private static QuoteToCompare ToQuote(BsonDocument document, IReadOnlyDictionary<ObjectId, TechnicianPublic> technicians)
@@ -84,7 +85,8 @@ internal sealed class QuoteComparisonService(RequestsStore requests, ChoiceStore
             technician?.Name ?? "Técnico",
             technician?.PhotoUrl,
             technician?.Rating,
-            technician?.VerificationLevel ?? QuoteComparer.NoVerification);
+            technician?.VerificationLevel ?? QuoteComparer.NoVerification,
+            Text(document, "tecnicoUsuarioId"));
     }
 
     private static int? Number(BsonDocument document, string name) => document.TryGetValue(name, out var value) && value.IsNumeric ? value.ToInt32() : null;

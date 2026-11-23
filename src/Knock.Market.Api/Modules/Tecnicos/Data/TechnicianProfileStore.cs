@@ -103,11 +103,11 @@ internal sealed class TechnicianProfileStore(
         return filters.Eq("estado", TechnicianRules.ActiveState) & filters.Eq("oculto", false) & (filters.Exists("ocultoHasta", false) | filters.Lte("ocultoHasta", nowUtc));
     }
 
-    /// <summary>Campos del perfil público: nunca se proyectan <c>tallerDireccion</c>, <c>contactoPublico</c>, <c>ubicacionBase</c> ni <c>usuarioId</c>.</summary>
+    /// <summary>Campos del perfil público: nunca se proyectan <c>tallerDireccion</c>, <c>contactoPublico</c> ni <c>ubicacionBase</c>; <c>usuarioId</c> se lee pero solo sale en el perfil con sesión (<c>tecnicoUsuarioId</c>), nunca en lista, explorar ni mapa.</summary>
     internal static readonly string[] ProfileFields =
     [
         "nombre", "nombreNegocio", "fotoUrl", "nivelVerificacion", "calificacion", "anios", "descripcion", "oficios", "atencion", "radioAtencionKm",
-        "coloniaBaseId", "estado", "oculto", "ocultoHasta", "disponibleHasta",
+        "coloniaBaseId", "estado", "oculto", "ocultoHasta", "disponibleHasta", "usuarioId",
     ];
 
     public async Task<TechnicianProfileRecord?> FindByIdAsync(ObjectId id, CancellationToken cancellationToken)
@@ -134,7 +134,8 @@ internal sealed class TechnicianProfileStore(
         Text(d, "estado") ?? string.Empty,
         !d.TryGetValue("oculto", out var hidden) || !hidden.IsBoolean || hidden.AsBoolean,
         Date(d, "ocultoHasta"),
-        Date(d, "disponibleHasta"));
+        Date(d, "disponibleHasta"),
+        Text(d, "usuarioId"));
 
     private static string? Text(BsonDocument d, string name) => d.TryGetValue(name, out var v) && v.IsString ? v.AsString : null;
 

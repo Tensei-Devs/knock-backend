@@ -25,7 +25,8 @@ internal sealed record QuoteComparisonItem(
     string Cubre,
     IReadOnlyList<string> Etiquetas,
     QuoteTechnician Tecnico,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? MotivoRechazo);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? MotivoRechazo,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? TecnicoUsuarioId = null);
 
 /// <summary>
 /// Respuesta de <c>GET /solicitudes/{id}/cotizaciones</c>: hasta 5 cotizaciones vivas y si el cliente ya puede elegir. <c>TiposMixtos</c> es verdadero cuando
@@ -74,4 +75,5 @@ internal sealed record Appointment(
     int? Precio,
     int Tope,
     ChosenTechnician Tecnico,
-    AppointmentPlace Lugar);
+    AppointmentPlace Lugar,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? TecnicoUsuarioId = null);
