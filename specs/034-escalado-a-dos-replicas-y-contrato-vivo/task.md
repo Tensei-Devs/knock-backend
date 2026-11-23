@@ -13,7 +13,7 @@
 | T-06 | Declarar en el contrato de cada servicio `ProblemDetails` completo, `X-Correlation-Id` y `Retry-After`; prueba sobre el contrato | R-14 · CA-15 | — | Sí (con T-07 y T-08) | Guillermo | pendiente |
 | T-07 | `export_openapi.py`: Mensajería, `--publico` (unión filtrada por rutas del gateway, conflictos) y comprobación de datos internos; pruebas | R-12, R-13, R-19 · CA-14, CA-18 | — | Sí | José Julián | pendiente |
 | T-08 | `tests/ContractTest`: fábricas por servicio, lector del contrato, validador de esquemas y comprobación de rutas en ambos sentidos | R-16 · CA-13 | — | Sí | Guillermo | pendiente |
-| T-09 | `ci-pr.yml`: regenerar todos los contratos y `oasdiff` del público con la etiqueta `contrato-incompatible` | R-15 · CA-11, CA-12 | T-07 | Sí (con T-08) | José Julián | pendiente |
+| T-09 | `ci-pr.yml`: regenerar todos los contratos y `oasdiff` del público con la etiqueta `contrato-incompatible` | R-15 · CA-11, CA-12 | T-07 | Sí (con T-08) | José Julián | parcial: oasdiff con etiqueta en los tres contratos de servicio; falta el público (depende de T-07) |
 | T-10 | GitHub App solo en knock-frontend, entorno `contrato` y `contract-publish.yml` (un PR a la vez, sin PR ni bifurcaciones, acciones por SHA); primera ejecución real | R-17, R-18 · CA-16, CA-17 | T-07, T-09 | No (cierre del frente B) | José Julián | pendiente |
 | T-11 | Coordinación con frontend (contrato combinado), `Memoria.md` y revisión final de evidencias | DoD | T-05, T-10 | No | José Julián | pendiente |
 
