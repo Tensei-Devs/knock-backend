@@ -3985,6 +3985,193 @@
         }
       }
     },
+    "/api/v{version}/interno/permisos-del-panel": {
+      "post": {
+        "tags": [
+          "InternalPanelPermission"
+        ],
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PanelPermissionCheckBody"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PanelPermissionCheckBody"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PanelPermissionCheckBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanelPermissionCheckResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanelPermissionCheckResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanelPermissionCheckResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Segundos que el cliente debe esperar antes de reintentar.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Segundos que el cliente debe esperar antes de reintentar.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v{version}/panel/activacion": {
       "post": {
         "tags": [
@@ -10362,6 +10549,57 @@
         },
         "description": "Respuesta del primer paso (R-07): el desafío de un solo uso y cuándo vence (UTC)."
       },
+      "PanelPermissionCheckBody": {
+        "required": [
+          "sub",
+          "sid",
+          "pv",
+          "permiso"
+        ],
+        "type": "object",
+        "properties": {
+          "sub": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sid": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pv": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "permiso": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Cuerpo de `POST /api/v1/interno/permisos-del-panel` (spec 061): los claims `sub`, `sid` y `pv` del token del panel y el permiso que la ruta de otro servicio exige. Sin campos de más."
+      },
+      "PanelPermissionCheckResponse": {
+        "required": [
+          "permitido"
+        ],
+        "type": "object",
+        "properties": {
+          "permitido": {
+            "type": "boolean"
+          }
+        },
+        "description": "Respuesta de la consulta de permiso: solo si se permite o no, sin motivo (no revela roles ni estado de la cuenta)."
+      },
       "PanelTotpRequest": {
         "type": "object",
         "properties": {
@@ -11405,6 +11643,9 @@
     },
     {
       "name": "InternalOpinionModerated"
+    },
+    {
+      "name": "InternalPanelPermission"
     },
     {
       "name": "Knock.Identity.Api"
