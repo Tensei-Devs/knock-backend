@@ -1,7 +1,7 @@
 # Spec 060 — Apelación de una persona suspendida
 
-> **Estado:** Borrador (agente) — **sin firmar: la prueba y la firma son de José** · **Repositorio:** knock-backend · **Rector:** `constitution.md`
-> **Jira:** por crear (KNOCK-266 paraguas) · **Responsable:** por asignar
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Jira:** KNOCK-124 (HU-048 · Apelar una sanción) · **Responsable:** José Julián Hernández Hernández
 > **Fuentes:** spec 059 (§15, decisión 3 de José del 2026-11-23: «la apelación de una persona suspendida se resuelve en una spec propia: ruta pública que prueba el control del número con el código SMS»), spec 043 (REP-03, R-13 a R-15 y R-21), spec 016 (R-02 y R-04 a R-08), spec 015, spec 033 (panel, doble factor), spec 053 (R-20, REP-05), `docs/referencia/DECISIONES.md` §5.
 > **Servicios:** Identidad (`Knock.Identity.Api`, módulos `Safety`, `Sesiones` y `Panel`) · **Colecciones:** `usuarios`, `reportes`, `panel_auditoria`, `outbox` (sin colecciones nuevas)
 > **Skills:** `security-core`, `auth-firebase-jwt`, `vertical-slice-api`, `events-outbox`
@@ -116,6 +116,6 @@ CA-01 a CA-13 con prueba; `python scripts/sdd_lint.py --trace 060` en OK; OpenAP
 - **Duda abierta (técnica):** las pruebas de integración con el emulador de Firebase solo corren en el CI (hoy dos pruebas de Identidad lo necesitan y fallan en local).
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ______ fecha: ______
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-23
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)
