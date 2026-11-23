@@ -29,7 +29,14 @@ public sealed partial class Spec034ContratoVivoTests
     [Fact]
     public async Task Identidad_Responde_Segun_Su_Contrato_CA_034_13()
     {
-        await using var identity = await IdentityApiFactory.CreateAsync();
+        // El panel cifra el secreto TOTP con llaves propias (PanelTotp:*): sin ellas el servicio de TOTP no se construye y las rutas del panel responden 500.
+        // Llave sintética al azar por ejecución; en Azure llega de Key Vault.
+        var panelKeys = new Dictionary<string, string?>
+        {
+            ["PanelTotp:Keys:1"] = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)),
+            ["PanelTotp:KeyVersion"] = "1",
+        };
+        await using var identity = await IdentityApiFactory.CreateAsync(panelKeys);
         using var client = identity.CreateClient();
 
         var failures = await CheckAsync("openapi.identity.v1.json", client);
