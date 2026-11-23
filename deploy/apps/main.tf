@@ -119,6 +119,9 @@ locals {
         # `WritesEnabled` solo se enciende aquí porque deploy da a todas las réplicas la misma llave de huella (ver secret_env).
         Avisos__Devices__ActiveEncryptionVersion = "1"
         Avisos__Devices__WritesEnabled           = "true"
+        # Push FCM (spec 037): apagado; el proyecto Firebase no es secreto.
+        Notificaciones__PushHabilitado    = "false"
+        Notificaciones__Fcm__ProjectId    = "knock-0"
       })
       secret_env = merge(local.redis_secret, {
         ConnectionStrings__KnockMongo = "mongo-messaging"
@@ -129,6 +132,8 @@ locals {
         # Llave AES-256 (Base64, 32 bytes) que cifra el token de cada dispositivo y llave HMAC (Base64, 32 bytes o más) de su huella de búsqueda; distintas entre sí y de las demás.
         Avisos__Devices__EncryptionKeys__1 = "avisos-devices-encryption-key"
         Avisos__Devices__IndexKey          = "avisos-devices-index-key"
+        # Cuenta de servicio de Firebase (JSON) para el push; solo se lee con `Notificaciones__PushHabilitado=true` (apagado por omisión).
+        Notificaciones__Fcm__ServiceAccount = "fcm-service-account"
       })
     }
     market = {

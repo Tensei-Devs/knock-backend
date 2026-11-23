@@ -54,7 +54,7 @@ Mensajería inserta `MensajeNuevo` en `outbox` dentro de la misma transacción q
 |---|---|---|---|
 | `MensajeNuevo` | 030 | Al guardar un mensaje enviado en una conversación | `conversacionId`, `destinatarioUsuarioId` |
 
-El despachador de avisos (spec 037) es el único consumidor previsto: deduplica por evento, recurso y persona, y agrupa los `mensaje_nuevo` en una ventana de 5 minutos. Mientras no esté activo (`Notificaciones:PushHabilitado = false`), el documento queda pendiente y no demuestra entrega.
+El despachador de avisos (spec 037) es el único consumidor previsto: deduplica por evento, recurso y persona, y agrupa los `mensaje_nuevo` en una ventana de 5 minutos. Mientras no esté activo (`Notificaciones:PushHabilitado = false`), el documento queda pendiente y no demuestra entrega. El cliente FCM real existe y se enciende con `Notificaciones__PushHabilitado=true` (lee `Notificaciones:Fcm:ProjectId` y el secreto `fcm-service-account`; sin ellos no arranca).
 
 ## Eventos de Identidad en el buzón de salida (specs 039, 043, 053, 054 y 059)
 
