@@ -1,6 +1,6 @@
 # Tareas 029 — Cancelar y vencer solicitudes
 
-> **Estado:** pendientes. En esta etapa **no se ejecutan**: se activan cuando la spec esté Aprobada y una persona lo indique.
+> **Estado:** en curso; conciliado con el código el 2026-11-23 (cada fila cita su evidencia: archivo o prueba). Lo que dice «pendiente» no tiene aún evidencia verificable.
 > **Responsable sugerido de las historias:** Guillermo (KNOCK-70 y KNOCK-71). Revisión de par: Erick.
 
 | Tarea | Qué se hace | Cubre | Depende de | En paralelo con | Responsable sugerido | Estado |

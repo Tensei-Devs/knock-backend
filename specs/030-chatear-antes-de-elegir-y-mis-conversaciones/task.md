@@ -1,6 +1,6 @@
 # Tareas 030 — Chatear antes de elegir y mis conversaciones
 
-> **Estado:** pendientes. En esta etapa **no se ejecutan**: se activan cuando la spec esté Aprobada y una persona lo indique.
+> **Estado:** en curso; conciliado con el código el 2026-11-23 (cada fila cita su evidencia: archivo o prueba). Lo que dice «pendiente» no tiene aún evidencia verificable.
 > **Responsables sugeridos:** Guillermo (KNOCK-72, chat y envío) y Erick (KNOCK-73, lista, contador y leído). Revisión de par cruzada entre ambos.
 
 | Tarea | Qué se hace | Cubre | Depende de | En paralelo con | Responsable sugerido | Estado |
@@ -13,8 +13,8 @@
 | T-06 | Envío de mensajes: validación, límite de 30, ocultamiento, moderación (031), transacción y buzón | R-08, R-10, R-11, R-13, R-14 · CA-01, CA-02, CA-05, CA-07 | T-02, T-03, T-04; interfaz de la 031 | T-07 | Guillermo | hecha (KNOCK-73): `MensajesController` (`POST /conversaciones/{id}/mensajes`), `EnvioDeMensajeService` (participante, permiso vigente vía `IPermisoDeConversacion`, conversación abierta, ocultamiento, moderación que falla cerrada con `ModeradorNoDisponible` por omisión, transacción mensaje + conversación + buzón en `MensajesStore`), política `conversaciones-mensajes` (30 por minuto, `message_limit`). Pruebas: `Spec030EnvioTests`, `Spec030LimiteTests`, `Spec030ModeracionTests`, `Spec030EnvioSeguridadTests`, `Spec030EnvioReglasTests`. Sin interfaz real de 031 el envío responde 503 `moderation_unavailable` |
 | T-07 | Lista, `no-leidas`, mensajes paginados y `leido` con contadores; `no-store` | R-16, R-17, R-18, R-19, R-20 · CA-10, CA-11, CA-12, CA-13, CA-16 | T-02, T-05 | T-06 | Erick | hecha (KNOCK-73): `GET /conversaciones`, `GET /conversaciones/no-leidas`, `GET /conversaciones/{id}/mensajes` (`LecturaController`) y `POST /conversaciones/{id}/leido`, con `no-store`, cursor opaco y contadores guardados. Pruebas: `Spec030ListaTests`, `Spec030NoLeidosTests`, `Spec030MensajesTests`, `Spec030ConversacionesSeguridadTests`. El aviso `noLeidos` sale por `INotificadorEnVivo` al grupo `usuario:{sub}`; la unión al grupo la hace T-08 |
 | T-08 | Hub: unión a `usuario:{sub}`, `UnirseAConversacion`/`SalirDeConversacion`, eventos `mensajeConversacion` y `noLeidos`; regresión de la 026 | R-14, R-15 · CA-01, CA-03, CA-12 | T-06, T-07; spec 026 fusionada | — | Guillermo | hecha (KNOCK-73): `ChatHub` une a `usuario:{sub}` y expone `UnirseAConversacion`/`SalirDeConversacion` (`AccesoAConversacionService`); `NotificadorEnVivo` emite `mensajeConversacion` y `noLeidos`. Prueba: `Spec030HubTests` |
-| T-09 | Rutas del gateway, seguridad negativa completa y registros sin datos | R-22 · CA-03, CA-18, CA-20 | T-05 a T-08 | T-10 | Erick | pendiente |
-| T-10 | `docs/endpoints.md`, `docs/events.md`, contrato de Mensajería (con autorización) y `Memoria.md` | R-14, R-15 | T-08 | T-09 | Erick | pendiente |
+| T-09 | Rutas del gateway, seguridad negativa completa y registros sin datos | R-22 · CA-03, CA-18, CA-20 | T-05 a T-08 | T-10 | Erick | parcial: rutas `mensajeria-conversaciones` en el gateway; seguridad negativa completa pendiente |
+| T-10 | `docs/endpoints.md`, `docs/events.md`, contrato de Mensajería (con autorización) y `Memoria.md` | R-14, R-15 | T-08 | T-09 | Erick | parcial: existe `docs/openapi.messaging.v1.json`; revisar filas de `docs/endpoints.md` y `docs/events.md` |
 
 **Qué bloquea:** T-01 (Mercado) bloquea T-04 y todo el envío; la spec 031 bloquea la fusión de T-06 (no su desarrollo); la 026 fusionada bloquea T-08. **Qué va en paralelo:** T-01, T-02 y T-03 desde el primer día; T-06 (Guillermo) y T-07 (Erick) a la vez.
 
