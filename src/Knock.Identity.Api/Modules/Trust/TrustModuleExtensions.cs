@@ -1,3 +1,5 @@
+using Azure.Core;
+using Azure.Identity;
 using Knock.Identity.Api.Hosting.Procesos.TareasProgramadas;
 using Knock.Identity.Api.Modules.Moderation.Services;
 using Knock.Identity.Api.Modules.Trust.Crypto;
@@ -36,13 +38,31 @@ public static class TrustModuleExtensions
         services.AddScoped<IManejadorDeTarea, BorrarFotosDeVerificacionHandler>();
         // Dependencias de infraestructura con valor por omisión que FALLA CERRADO (503): el cliente real de Blob y de Key Vault se registra antes de AddTrustModule() y las reemplaza.
         services.TryAddSingleton<IVerificationBlobStore, UnavailableVerificationBlobStore>();
-        services.TryAddSingleton<IVerificationKeyWrapper, UnavailableVerificationKeyWrapper>();
+        services.AddKeyVaultVerificationKeyWrapper();
         services.AddSingleton<CifradoDeVerificacion>();
         services.AddSingleton<FotoVerificacionStore>();
         services.TryAddSingleton<IVerificationEvents, PendingVerificationEvents>();
         // Reemplazan a los valores por omisión del panel (spec 053) sin importar el orden de registro.
         services.Replace(ServiceDescriptor.Singleton<IVerificationPhotoLinks, TrustVerificationPhotoLinks>());
         services.Replace(ServiceDescriptor.Singleton<IVerificationBlobPurger, TrustVerificationBlobPurger>());
+        return services;
+    }
+
+    /// <summary>
+    /// Con <c>Verificacion:KeyVault:Habilitado=false</c> (por omisión) queda <see cref="UnavailableVerificationKeyWrapper"/> (503, falla cerrado) sin tocar Azure; encendido, usa la
+    /// llave <c>curp-kek</c> de Key Vault con la identidad administrada (el <see cref="TokenCredential"/> registrado o <see cref="DefaultAzureCredential"/>). Un doble registrado antes gana.
+    /// </summary>
+    internal static IServiceCollection AddKeyVaultVerificationKeyWrapper(this IServiceCollection services)
+    {
+        services.AddOptions<KeyVaultVerificationOptions>().BindConfiguration(KeyVaultVerificationOptions.SectionName).ValidateOnStart();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<KeyVaultVerificationOptions>, KeyVaultVerificationOptionsValidator>());
+        services.TryAddSingleton<IVerificationKeyWrapper>(provider =>
+        {
+            var options = provider.GetRequiredService<IOptions<KeyVaultVerificationOptions>>().Value;
+            return options.Habilitado
+                ? KeyVaultVerificationKeyWrapper.Create(options, provider.GetService<TokenCredential>() ?? new DefaultAzureCredential())
+                : new UnavailableVerificationKeyWrapper();
+        });
         return services;
     }
 }

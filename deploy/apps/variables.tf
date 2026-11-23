@@ -115,6 +115,23 @@ variable "seed_demo" {
   default     = false
 }
 
+variable "enable_curp_keyvault" {
+  description = "Enciende la verificación real de CURP con Key Vault (`Verificacion:KeyVault:Habilitado`, spec 025 R-11) y da a Identidad el rol sobre la llave `curp-kek`. Apagado por omisión: Identidad falla cerrado (503) al guardar verificaciones."
+  type        = bool
+  default     = false
+}
+
+variable "curp_kek_version" {
+  description = "Versión de la llave `curp-kek` (32 caracteres hexadecimales) con la que se envuelve lo nuevo. Solo se lee con `enable_curp_keyvault = true`."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.curp_kek_version == "" || can(regex("^[0-9a-f]{32}$", var.curp_kek_version))
+    error_message = "curp_kek_version debe ser los 32 caracteres hexadecimales de la versión de la llave."
+  }
+}
+
 variable "enable_oleadas" {
   description = "Enciende el reparto por oleadas de solicitudes (`Oleadas:Habilitado`, spec 028) en Market. Sin esto no corre."
   type        = bool

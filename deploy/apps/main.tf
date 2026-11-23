@@ -84,6 +84,11 @@ locals {
         Perfil__HostsFoto__0 = local.images_host
         # HMAC de la CURP (spec 025, R-05): la versión vigente no es secreta y la llave sí.
         Verificacion__CurpHmac__ActiveVersion = "1"
+        # Llave maestra de la verificación en Key Vault (spec 025 R-11): apagada por omisión; ninguno de estos valores es secreto.
+        Verificacion__KeyVault__Habilitado = tostring(var.enable_curp_keyvault)
+        Verificacion__KeyVault__VaultUri   = trimsuffix(local.infra.key_vault_uri, "/")
+        Verificacion__KeyVault__KeyName    = "curp-kek"
+        Verificacion__KeyVault__KekVersion = var.curp_kek_version
         # Entrega de la bandeja de salida a Mensajería (spec 037 R-11 y spec 043 R-23): dirección interna del servicio; la clave va en `secret_env`.
         Services__Messaging__BaseUrl = local.cluster_address.messaging
       })
@@ -120,8 +125,8 @@ locals {
         Avisos__Devices__ActiveEncryptionVersion = "1"
         Avisos__Devices__WritesEnabled           = "true"
         # Push FCM (spec 037): apagado; el proyecto Firebase no es secreto.
-        Notificaciones__PushHabilitado    = "false"
-        Notificaciones__Fcm__ProjectId    = "knock-0"
+        Notificaciones__PushHabilitado = "false"
+        Notificaciones__Fcm__ProjectId = "knock-0"
       })
       secret_env = merge(local.redis_secret, {
         ConnectionStrings__KnockMongo = "mongo-messaging"
@@ -248,6 +253,15 @@ resource "azurerm_role_assignment" "market_media" {
   scope                = each.value
   role_definition_name = "Storage Blob Data Contributor"
   principal_id         = module.service["market"].identity_principal_id
+}
+
+# Identidad envuelve y desenvuelve con la llave `curp-kek` (spec 025 R-11), solo sobre esa llave y solo con el interruptor encendido.
+# En dev el rol ya se asignó a mano sobre todo el vault: bórralo o impórtalo antes de encender esto.
+resource "azurerm_role_assignment" "identity_curp_kek" {
+  count                = var.enable_curp_keyvault ? 1 : 0
+  scope                = "${local.infra.key_vault_id}/keys/curp-kek"
+  role_definition_name = "Key Vault Crypto Service Encryption User"
+  principal_id         = module.service["identity"].identity_principal_id
 }
 
 resource "azurerm_role_assignment" "identity_exports" {

@@ -80,3 +80,15 @@ resource "azurerm_cognitive_account_customer_managed_key" "openai" {
 
   depends_on = [azurerm_role_assignment.openai_cmk]
 }
+
+# Llave maestra de la verificación de identidad (spec 025, R-11): envuelve la llave de datos de cada verificación; no sale nunca del vault.
+# Detrás de `enable_curp_kek` (apagado). La llave `curp-kek` de dev ya existe, creada a mano: antes de encender esto en ese entorno impórtala
+# (`terraform import 'azurerm_key_vault_key.curp_kek[0]' <id de la llave sin versión>`) para no crear una versión nueva ni perder la KekVersion de las verificaciones guardadas.
+resource "azurerm_key_vault_key" "curp_kek" {
+  count        = var.enable_curp_kek ? 1 : 0
+  name         = "curp-kek"
+  key_vault_id = module.shared.key_vault_id
+  key_type     = "RSA"
+  key_size     = 2048
+  key_opts     = ["wrapKey", "unwrapKey"]
+}

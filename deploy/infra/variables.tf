@@ -56,6 +56,12 @@ variable "enable_azure_openai" {
   default     = false
 }
 
+variable "enable_curp_kek" {
+  description = "Declara en Terraform la llave maestra `curp-kek` de la verificación de identidad (spec 025). **Apagado por omisión.** En dev la llave ya existe: impórtala antes de encender (ver `main.tf`)."
+  type        = bool
+  default     = false
+}
+
 variable "azure_openai_model" {
   description = "Modelo del despliegue. Pon uno disponible en la región y suscripción (verifícalo con `az cognitiveservices model list`); no se inventa un valor por omisión que pueda no existir."
   type        = string
