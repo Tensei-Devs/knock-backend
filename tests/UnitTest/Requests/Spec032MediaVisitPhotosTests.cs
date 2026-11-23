@@ -25,6 +25,16 @@ public sealed class Spec032MediaVisitPhotosTests
     }
 
     [Fact]
+    public async Task AreReadyForAsync_AsksForTheJobUse_CA_050_49()
+    {
+        var media = new FakeMediaApi((_, _) => true);
+
+        await Adapter(media).AreReadyForAsync(_owner, [_photoA], CancellationToken.None);
+
+        media.Uses.Should().Equal("trabajo");
+    }
+
+    [Fact]
     public async Task AreReadyForAsync_OneNotReadyOrNotOwned_ReturnsFalse_CA_050_49()
     {
         var media = new FakeMediaApi((id, _) => id != Guid.ParseExact(_photoB, "N"));

@@ -5,13 +5,13 @@ using Microsoft.Extensions.Logging;
 namespace Knock.Market.Api.Modules.Requests.Services;
 
 /// <summary>
-/// Comprobación común de fotos privadas sobre <see cref="IMediaApi"/> (specs 020, 032 y 050), compartida por los adaptadores de solicitudes y de visitas. Solo pasan identificadores de
+/// Comprobación común de fotos privadas sobre <see cref="IMediaApi"/> (specs 020, 032 y 050), con el <c>uso</c> pedido (<c>solicitud</c> o <c>trabajo</c>), compartida por los adaptadores de solicitudes y de visitas. Solo pasan identificadores de
 /// archivo (<c>archivoId</c>, 32 hexadecimales) y el <c>sub</c> del dueño; nunca enlaces ni datos personales. Falla cerrado: un identificador que no sea de archivo, un archivo ajeno
-/// o no listo, o un fallo del módulo de archivos dan <c>false</c>.
+/// o no listo o de otro uso, o un fallo del módulo de archivos dan <c>false</c>.
 /// </summary>
 internal static partial class MediaPhotoCheck
 {
-    public static async Task<bool> AreReadyAsync(IMediaApi media, ILogger logger, string ownerId, IReadOnlyList<string> photoIds, CancellationToken cancellationToken)
+    public static async Task<bool> AreReadyAsync(IMediaApi media, ILogger logger, string use, string ownerId, IReadOnlyList<string> photoIds, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(ownerId) || photoIds.Count == 0)
         {
@@ -33,7 +33,7 @@ internal static partial class MediaPhotoCheck
         {
             foreach (var fileId in files)
             {
-                if (!await media.IsReadyAndOwnedByAsync(fileId, ownerId, cancellationToken))
+                if (!await media.IsReadyOwnedAndUsedForAsync(fileId, ownerId, use, cancellationToken))
                 {
                     return false;
                 }

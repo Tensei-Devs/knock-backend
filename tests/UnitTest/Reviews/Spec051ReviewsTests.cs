@@ -210,6 +210,11 @@ public sealed class Spec051ReviewsTests : IDisposable
     private sealed class FakeMedia : IMediaApi
     {
         public Task<bool> IsReadyAndOwnedByAsync(Guid fileId, string ownerId, CancellationToken cancellationToken) => Task.FromResult(true);
+
+        public Task<bool> IsReadyOwnedAndUsedForAsync(Guid fileId, string ownerId, string use, CancellationToken cancellationToken) => Task.FromResult(true);
+
+        public Task<IReadOnlyList<(Guid FileId, Uri Url, DateTimeOffset ExpiresAt)>> CreateReadLinksAsync(IReadOnlyList<Guid> fileIds, string use, string requesterSub, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<(Guid FileId, Uri Url, DateTimeOffset ExpiresAt)>>([]);
     }
 
     private sealed class FakeStore : IReviewStore

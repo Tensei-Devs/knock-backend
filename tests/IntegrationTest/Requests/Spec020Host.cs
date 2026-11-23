@@ -33,7 +33,7 @@ internal sealed class FakePhotos : IRequestPhotos
         return Task.FromResult(Ready && owned);
     }
 
-    public Task<IReadOnlyList<RequestPhoto>> ReadLinksAsync(IReadOnlyList<string> photoIds, CancellationToken cancellationToken) =>
+    public Task<IReadOnlyList<RequestPhoto>> ReadLinksAsync(string requesterSub, IReadOnlyList<string> photoIds, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<RequestPhoto>>([.. photoIds.Select(id => new RequestPhoto(id, "https://files.test/" + id + "?sig=ficticia", DateTimeOffset.UtcNow.AddMinutes(5)))]);
 }
 
