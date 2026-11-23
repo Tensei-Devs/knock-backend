@@ -9570,6 +9570,12 @@
           },
           "lugar": {
             "$ref": "#/components/schemas/AppointmentPlace"
+          },
+          "tecnicoUsuarioId": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         },
         "description": "Cita confirmada al elegir una cotización (spec 021, §5)."
@@ -11545,6 +11551,12 @@
               "null",
               "string"
             ]
+          },
+          "tecnicoUsuarioId": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         },
         "description": "Cotización dentro de la comparación (spec 021, §5). `Cubre` es el texto corto de lo que cubre según su tipo de precio y `Etiquetas` son marcas\ncalculadas por el servidor, por ejemplo la más barata o la más pronto. `Precio` es nulo en un rango (solo hay mínimo y máximo) y `MotivoRechazo` solo aparece en las rechazadas."
@@ -12746,6 +12758,12 @@
                 "$ref": "#/components/schemas/TechnicianProfileDetail"
               }
             ]
+          },
+          "tecnicoUsuarioId": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         },
         "description": "Perfil público de un técnico (spec 046, TEC-05, R-42). Sin sesión trae solo el resumen y TechnicianProfileDetail? TechnicianProfileResponse.Detalle va en `null`; con sesión\nsuma el detalle. Nunca trae teléfono, dirección del taller ni ubicación. `verificacion` es `ninguno`, `basica` o `completa` (spec 025);\n`calificacion` es el promedio con un decimal o `null`; `descripcionCorta` son hasta 140 caracteres de la descripción."
@@ -13354,6 +13372,12 @@
           "guardadoEn": {
             "type": "string",
             "format": "date-time"
+          },
+          "tecnicoUsuarioId": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         },
         "description": "Un técnico guardado como de confianza: solo datos públicos, nunca teléfono, WhatsApp ni dirección (spec 042, R-12)."
@@ -13882,6 +13906,12 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "tecnicoUsuarioId": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         },
         "description": "Vista de la visita (spec 022, R-02 y R-05). `Rol` es `cliente` o `tecnico` y decide qué campos vienen: `Tecnico`, `Codigo`,\n`CodigoVenceEn`, `MotivoCodigo`, `ReglaSeguridad` y `PuedeAvisar` solo en la del cliente; `Cliente` y `LlegadaEn` solo en la del técnico.\nEl código nunca llega al técnico: `Codigo` (cuatro dígitos) solo sale en domicilio, en `confirmada` o `en_curso`, sin usar, sin vencer y sin\nbloqueo; cuando falta, `MotivoCodigo` dice por qué (`usado`, `vencido`, `bloqueada` o `no_aplica`)."
