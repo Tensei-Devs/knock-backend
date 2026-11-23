@@ -91,3 +91,31 @@ run "redis_sin_sondas_http" {
     error_message = "Redis usa TCP: no lleva sondas HTTP."
   }
 }
+
+# Spec 034 T-01 (R-02, R-03; CA-02, CA-10): valores exactos de las sondas y gracia de 30 s; la vida nunca apunta a /health/ready.
+run "sondas_exactas_y_gracia_CA_034_02" {
+  command = plan
+
+  assert {
+    condition = (
+      azurerm_container_app.this.template[0].container[0].startup_probe[0].interval_seconds == 5
+      && azurerm_container_app.this.template[0].container[0].startup_probe[0].failure_count_threshold == 10
+      && azurerm_container_app.this.template[0].container[0].readiness_probe[0].interval_seconds == 10
+      && azurerm_container_app.this.template[0].container[0].readiness_probe[0].timeout == 3
+      && azurerm_container_app.this.template[0].container[0].readiness_probe[0].failure_count_threshold == 3
+      && azurerm_container_app.this.template[0].container[0].liveness_probe[0].interval_seconds == 10
+      && azurerm_container_app.this.template[0].container[0].liveness_probe[0].failure_count_threshold == 3
+    )
+    error_message = "Las sondas no coinciden con la spec 034 R-02."
+  }
+
+  assert {
+    condition     = azurerm_container_app.this.template[0].container[0].liveness_probe[0].path == "/health" && azurerm_container_app.this.template[0].container[0].readiness_probe[0].path == "/health/ready"
+    error_message = "La sonda de vida debe apuntar a /health y la de disponibilidad a /health/ready."
+  }
+
+  assert {
+    condition     = azurerm_container_app.this.template[0].termination_grace_period_seconds == 30
+    error_message = "El periodo de gracia debe ser de 30 s."
+  }
+}

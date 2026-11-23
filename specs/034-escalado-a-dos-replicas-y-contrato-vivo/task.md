@@ -5,10 +5,10 @@
 
 | Tarea | Qué se hace | Cubre | Depende de | ¿En paralelo? | Responsable sugerido | Estado |
 |---|---|---|---|---|---|---|
-| T-01 | Pruebas de Terraform de perfiles (`evaluacion` 2, `dev` 1, Redis 1) y de sondas; gracia de 30 s y sonda de vida en el módulo `service` | R-01, R-02, R-11 · CA-01, CA-02, CA-10 | — | Sí (con T-02, T-03 y frente B) | José Julián | pendiente |
-| T-02 | Apagado ordenado en gateway e Identidad, Mensajería y Mercado: disponibilidad en 503, drenado de 25 s, cierre del canal de tiempo real; pruebas | R-03 · CA-03, CA-04 | — | Sí | Alexis | pendiente |
+| T-01 | Pruebas de Terraform de perfiles (`evaluacion` 2, `dev` 1, Redis 1) y de sondas; gracia de 30 s y sonda de vida en el módulo `service` | R-01, R-02, R-11 · CA-01, CA-02, CA-10 | — | Sí (con T-02, T-03 y frente B) | José Julián | parcial: sondas exactas y gracia de 30 s con pruebas en el módulo `service`; falta la prueba de perfiles en `deploy/apps` (evaluacion 2, dev 1) y la regla de Front Door/WAF |
+| T-02 | Apagado ordenado en gateway e Identidad, Mensajería y Mercado: disponibilidad en 503, drenado de 25 s, cierre del canal de tiempo real; pruebas | R-03 · CA-03, CA-04 | — | Sí | Alexis | hecha en código: `AddKnockGracefulShutdown` (readiness 503 y drenado de 25 s) en los cuatro procesos; el cierre de conexiones de SignalR lo hace el host al apagar |
 | T-03 | `ci-deploy.yml`: `workflow_dispatch` con `image_tag` validado contra el registro y entorno `evaluacion` con aprobación | R-07, R-08 · CA-07, CA-08 | — | Sí | José Julián | pendiente |
-| T-04 | Script k6 de despliegue sin corte y consulta de reparto por instancia en `docs/OBSERVABILIDAD.md` | R-05, R-06 · CA-05, CA-06 | T-02 | Sí (con T-03) | Erick | pendiente |
+| T-04 | Script k6 de despliegue sin corte y consulta de reparto por instancia en `docs/OBSERVABILIDAD.md` | R-05, R-06 · CA-05, CA-06 | T-02 | Sí (con T-03) | Erick | parcial: script k6 y consulta KQL de instancias; falta ejecutarlo en un despliegue real |
 | T-05 | Ensayo de reversión, humo con dos réplicas (incluye CA-01 y CA-02 de la spec 006), evidencia y pasos en `deploy/README.md` | R-04, R-09, R-10 · CA-05, CA-06, CA-09 | T-01, T-03, T-04 y spec 035 desplegada | No (cierre del frente A) | José Julián | pendiente |
 | T-06 | Declarar en el contrato de cada servicio `ProblemDetails` completo, `X-Correlation-Id` y `Retry-After`; prueba sobre el contrato | R-14 · CA-15 | — | Sí (con T-07 y T-08) | Guillermo | pendiente |
 | T-07 | `export_openapi.py`: Mensajería, `--publico` (unión filtrada por rutas del gateway, conflictos) y comprobación de datos internos; pruebas | R-12, R-13, R-19 · CA-14, CA-18 | — | Sí | José Julián | pendiente |
