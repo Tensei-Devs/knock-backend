@@ -46,6 +46,7 @@ jobs:
       identity: ${{ steps.d.outputs.identity }}
       messaging: ${{ steps.d.outputs.messaging }}
       market: ${{ steps.d.outputs.market }}
+      docsonly: ${{ steps.d.outputs.docsonly }}
       spec: ${{ steps.d.outputs.spec }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -95,6 +96,15 @@ jobs:
             echo "messaging=$(hit "^src/Knock\.Messaging\.Api/|$SHARED" && echo true || echo false)"
             echo "market=$(hit "^src/Knock\.Market\.Api/|$SHARED" && echo true || echo false)"
           } >> "$GITHUB_OUTPUT"
+          # Solo documentos: ningún archivo cambiado fuera de docs/ (salvo docs/openapi*.json, que es contrato),
+          # specs/, *.md, db/README.md y Memoria.md. Con lista vacía o «__ALL__» NO es solo documentos (falla cerrado).
+          # Solo se salta el job «API — build, formato y pruebas»; contrato, SAST, Gitleaks y gobierno siguen.
+          DOCS_ONLY=false
+          if [ -n "$CHANGED" ] && [ "$CHANGED" != "__ALL__" ]             && ! grep -vE '^(docs/|specs/)|\.md$|^db/README\.md$|^Memoria\.md$' <<<"$CHANGED" | grep -q .             && ! grep -qE '^docs/openapi[^/]*\.json$' <<<"$CHANGED"; then
+            DOCS_ONLY=true
+            echo "::notice::PR solo de documentos: se omite el job API."
+          fi
+          echo "docsonly=$DOCS_ONLY" >> "$GITHUB_OUTPUT"
           if [ -n "$SPEC" ] && [ -n "$BASE_SHA" ] && ! grep -qE '^(src|tests)/' <<<"$CHANGED"; then
             echo "::notice::PR sin cambios de código ni pruebas: se omite la trazabilidad de $SPEC."
             SPEC=""
@@ -163,7 +173,7 @@ jobs:
   build-test:
     name: API — build, formato y pruebas
     needs: detect
-    if: needs.detect.outputs.api == 'true'
+    if: needs.detect.outputs.api == 'true' && needs.detect.outputs.docsonly != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
