@@ -18,6 +18,11 @@ output "key_vault_id" {
   value = module.shared.key_vault_id
 }
 
+output "curp_kek_key_id" {
+  description = "Identificador sin versión de la llave `curp-kek`; vacío con `enable_curp_kek = false`."
+  value       = one(azurerm_key_vault_key.curp_kek[*].versionless_id)
+}
+
 output "key_vault_uri" {
   value = module.shared.key_vault_uri
 }
