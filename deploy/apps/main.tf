@@ -237,6 +237,14 @@ resource "azurerm_role_assignment" "market_quarantine" {
 }
 
 # Identidad escribe las exportaciones de datos (spec 039, R-22) solo en `exportaciones` y firma el enlace de 24 horas con `Storage Blob Delegator`.
+# Flujo privado de fotos de solicitud (specs 058 y 062): Mercado escribe y lee solo en `cuarentena` y `archivos` (sin llaves; los enlaces de subida y de lectura son SAS de delegación de usuario).
+resource "azurerm_role_assignment" "market_media" {
+  for_each             = { cuarentena = local.infra.media_quarantine_container_id, archivos = local.infra.media_files_container_id }
+  scope                = each.value
+  role_definition_name = "Storage Blob Data Contributor"
+  principal_id         = module.service["market"].identity_principal_id
+}
+
 resource "azurerm_role_assignment" "identity_exports" {
   scope                = local.infra.exports_container_id
   role_definition_name = "Storage Blob Data Contributor"
