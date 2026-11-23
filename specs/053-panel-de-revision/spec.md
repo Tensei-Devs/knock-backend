@@ -298,7 +298,7 @@ Las pruebas citan el caso como `CA_053_NN` en el nombre (para `python scripts/sd
 
 ## 15. Riesgos y dudas abiertas
 - Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
-- Duda de lectura (2026-11-24): R-20 dice «prioridad alta» sin definir si cambia el orden de la cola. Se tomó la lectura más conservadora: la prioridad es un dato derivado y visible, y el orden sigue siendo por gravedad y antigüedad; una crítica contra un técnico (que sí se suspende) queda con prioridad `normal`. Si José quiere ordenar por prioridad, es una enmienda aparte.
+- Duda de lectura (2026-11-23): R-20 dice «prioridad alta» sin definir si cambia el orden de la cola. Se tomó la lectura más conservadora: la prioridad es un dato derivado y visible, y el orden sigue siendo por gravedad y antigüedad; una crítica contra un técnico (que sí se suspende) queda con prioridad `normal`. Si José quiere ordenar por prioridad, es una enmienda aparte.
 - Dependencias: el panel con doble factor y los permisos `verification:review` y `reports:resolve` (spec 033, H-4), la cuenta de almacenamiento privada de la spec 025 (H-2) y la moderación de la 031.
 
 ## Nota de enmienda (2026-11-23, decisión de José)
@@ -308,7 +308,7 @@ Las pruebas citan el caso como `CA_053_NN` en el nombre (para `python scripts/sd
 - **`ReporteDecidido` avisa a las dos partes** con un aviso de texto fijo (spec 037, enmienda del 2026-11-23): nunca lleva motivo, gravedad ni datos del reporte.
 - No se marcan firmas: la aprobación de abajo es la original.
 
-## Nota de enmienda (2026-11-24, decisión de José)
+## Nota de enmienda (2026-11-23, decisión de José)
 - **R-20, gravedad y prioridad por separado:** el reporte guarda la gravedad que asignó la moderación (`gravedad` y `decision.gravedad`); `critica` queda como `critica` aunque no se suspenda a un cliente y nunca se sobrescribe. La **prioridad** se deriva aparte y se guarda en el campo `prioridad` del reporte en la misma transacción de la decisión: `alta` cuando la gravedad es `critica` y la persona reportada no es técnica (la suspensión no aplica, spec 059, R-03); `normal` en cualquier otro caso. `POST /api/v1/admin/reportes/{id}/decision` responde además `prioridad` y `GET /api/v1/admin/reportes` la trae en los reportes ya decididos (por ejemplo en apelación); un reporte sin decidir no la trae. Caso nuevo CA-41. Sin índice nuevo (no se consulta por prioridad; el orden de la cola sigue siendo gravedad y antigüedad) y sin script en `db/`.
 - No se marcan firmas: la aprobación de abajo es la original.
 
