@@ -50,6 +50,12 @@ variable "alert_failed_requests_threshold" {
   default     = 10
 }
 
+variable "enable_content_safety" {
+  description = "Crea el recurso de Azure AI Content Safety de la moderación (spec 031) en el SKU gratuito F0. **Apagado por omisión.** Cableado de Market: `enable_content_safety` en `deploy/apps` (debe valer lo mismo)."
+  type        = bool
+  default     = false
+}
+
 variable "enable_azure_openai" {
   description = "Crea el recurso de Azure OpenAI del asistente (spec 052). **Apagado por omisión: cuesta por token.** Enciéndelo solo con permiso de José y con el tope de `azure_openai_capacity_k_tpm` revisado."
   type        = bool

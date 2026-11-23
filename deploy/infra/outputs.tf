@@ -71,6 +71,16 @@ output "public_images_base_url" {
   value = module.shared.public_images_base_url
 }
 
+output "content_safety_id" {
+  description = "Id del recurso de Content Safety; vacío con `enable_content_safety = false`."
+  value       = one(azurerm_cognitive_account.content_safety[*].id)
+}
+
+output "content_safety_endpoint" {
+  description = "Punto de conexión de Content Safety (https); vacío con `enable_content_safety = false`."
+  value       = one(azurerm_cognitive_account.content_safety[*].endpoint)
+}
+
 output "application_insights_connection_string" {
   value     = module.shared.application_insights_connection_string
   sensitive = true

@@ -12,6 +12,49 @@ module "shared" {
   alert_failed_requests_threshold = var.alert_failed_requests_threshold
 }
 
+# Azure AI Content Safety de la moderación (spec 031): SKU F0 (gratis, 5 000 textos y 5 000 imágenes al mes), detrás de `enable_content_safety` (apagado). Sin llaves: Market entra con su identidad
+# administrada (`Cognitive Services User`) y el cliente `ContentSafetyClient` ya existe. Cifrado con llave propia (CKV2_AZURE_22) igual que Azure OpenAI.
+resource "azurerm_cognitive_account" "content_safety" {
+  count                         = var.enable_content_safety ? 1 : 0
+  name                          = "cs-knock-${var.environment}-${var.name_suffix}"
+  location                      = var.location
+  resource_group_name           = var.resource_group_name
+  kind                          = "ContentSafety"
+  sku_name                      = "F0"
+  custom_subdomain_name         = "cs-knock-${var.environment}-${var.name_suffix}"
+  local_auth_enabled            = false
+  public_network_access_enabled = true
+  tags                          = { proyecto = "knock", entorno = var.environment }
+
+  identity {
+    type = "SystemAssigned"
+  }
+}
+
+resource "azurerm_key_vault_key" "content_safety" {
+  count        = var.enable_content_safety ? 1 : 0
+  name         = "cs-cmk-${var.environment}"
+  key_vault_id = module.shared.key_vault_id
+  key_type     = "RSA"
+  key_size     = 2048
+  key_opts     = ["wrapKey", "unwrapKey"]
+}
+
+resource "azurerm_role_assignment" "content_safety_cmk" {
+  count                = var.enable_content_safety ? 1 : 0
+  scope                = module.shared.key_vault_id
+  role_definition_name = "Key Vault Crypto Service Encryption User"
+  principal_id         = azurerm_cognitive_account.content_safety[0].identity[0].principal_id
+}
+
+resource "azurerm_cognitive_account_customer_managed_key" "content_safety" {
+  count                = var.enable_content_safety ? 1 : 0
+  cognitive_account_id = azurerm_cognitive_account.content_safety[0].id
+  key_vault_key_id     = azurerm_key_vault_key.content_safety[0].id
+
+  depends_on = [azurerm_role_assignment.content_safety_cmk]
+}
+
 # Azure OpenAI del asistente (spec 052): detrás de `enable_azure_openai` (apagado). Sin llaves: Market entra con su identidad administrada (`Cognitive Services OpenAI User`).
 resource "azurerm_cognitive_account" "openai" {
   count                         = var.enable_azure_openai ? 1 : 0
