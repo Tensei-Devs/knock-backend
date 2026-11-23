@@ -22,6 +22,7 @@ on:
     types: [completed]
   # Spec 034 R-07/R-08: reversión o despliegue manual de una imagen ya publicada (SHA completo).
   workflow_dispatch:
+    #checkov:skip=CKV_GHA_7: EXC-031 el image_tag solo lo usa el job redeploy (valida 40 hex y despliega una imagen ya publicada); no entra en ningún build
     inputs:
       image_tag:
         description: SHA completo (40 hexadecimales) de una imagen ya publicada en el registro
