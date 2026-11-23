@@ -111,6 +111,45 @@ public sealed class Spec053ReportesPanelTests
         (await factory.Database.GetCollection<BsonDocument>("panel_auditoria").CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().BeGreaterThan(0);
     }
 
+    [Theory]
+    [InlineData(false, "alta")]
+    [InlineData(true, "normal")]
+    public async Task DecidingCritical_KeepsTheAssignedSeverity_AndDerivesThePriorityApart_CA_053_41(bool technician, string priority)
+    {
+        using var factory = await IdentityApiFactory.CreateAsync();
+        var (_, reportedSub) = await PanelReportKit.SeedAccountAsync(factory.Users, technician);
+        var id = await SeedReportAsync(factory, reported: reportedSub);
+        var service = factory.Services.GetRequiredService<ReportReviewService>();
+
+        var result = await service.DecideAsync(Moderator(), id.ToString(), Decision("critica"), CancellationToken.None);
+
+        result.Gravedad.Should().Be("critica");
+        result.Prioridad.Should().Be(priority);
+        var report = await ReadReportAsync(factory, id);
+        report["gravedad"].AsString.Should().Be("critica", "la gravedad asignada nunca se sobrescribe");
+        report["decision"]["gravedad"].AsString.Should().Be("critica");
+        report["prioridad"].AsString.Should().Be(priority);
+    }
+
+    [Fact]
+    public async Task ThePriority_IsListedForAppealedReports_AndOmittedForUndecidedOnes_CA_053_41()
+    {
+        using var factory = await IdentityApiFactory.CreateAsync();
+        var (_, clientSub) = await PanelReportKit.SeedAccountAsync(factory.Users, technician: false);
+        var undecided = await SeedReportAsync(factory, "media", DateTime.UtcNow.AddHours(-2));
+        var id = await SeedReportAsync(factory, reported: clientSub);
+        var service = factory.Services.GetRequiredService<ReportReviewService>();
+        await service.DecideAsync(Moderator(), id.ToString(), Decision("critica"), CancellationToken.None);
+        await factory.Database.GetCollection<BsonDocument>("reportes").UpdateOneAsync(
+            Builders<BsonDocument>.Filter.Eq("_id", id),
+            Builders<BsonDocument>.Update.Set("estado", "en_apelacion"));
+
+        var page = await service.ListAsync(new ReportQueueQuery(), CancellationToken.None);
+
+        page.Items.Single(item => item.Id == id.ToString()).Should().Match<ReportQueueItem>(item => item.Gravedad == "critica" && item.Prioridad == "alta");
+        page.Items.Single(item => item.Id == undecided.ToString()).Prioridad.Should().BeNull();
+    }
+
     [Fact]
     public async Task EachPartyGetsOnlyItsRole_NeverTheOtherPartyId_CA_053_28()
     {
@@ -204,7 +243,7 @@ public sealed class Spec053ReportesPanelTests
         var store = factory.Services.GetRequiredService<IReportReviewStore>();
         var record = new ReportDecisionRecord(id, "alta", "ocultar_tecnico", "Motivo de prueba", _moderator, DateTime.UtcNow);
 
-        var attempt = () => store.DecideAsync(record, (_, _) => Task.CompletedTask, _ => throw new InvalidOperationException("audit down"), CancellationToken.None);
+        var attempt = () => store.DecideAsync(record, (_, _) => Task.FromResult("normal"), _ => throw new InvalidOperationException("audit down"), CancellationToken.None);
 
         await attempt.Should().ThrowAsync<InvalidOperationException>();
         var report = await ReadReportAsync(factory, id);

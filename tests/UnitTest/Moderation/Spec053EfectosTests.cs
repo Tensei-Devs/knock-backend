@@ -37,8 +37,10 @@ public sealed class Spec053EfectosTests
         world.Accounts.Account = new AccountForSuspension("activa", true);
         world.Accounts.Sessions = ["sid-1"];
 
-        var sessions = await effects.ApplyAsync(Session(), Decision("critica", "suspension_preventiva"), CancellationToken.None);
-        await effects.AfterCommitAsync(sessions, CancellationToken.None);
+        var applied = await effects.ApplyAsync(Session(), Decision("critica", "suspension_preventiva"), CancellationToken.None);
+        await effects.AfterCommitAsync(applied.SessionIds, CancellationToken.None);
+
+        applied.ReportedIsClient.Should().BeFalse("un técnico se suspende: su reporte no pasa a prioridad alta");
 
         world.Accounts.SuspendedWith.Should().Be(("preventiva", _report));
         world.Accounts.Cancelled.Should().ContainSingle().Which.Should().Be("sid-1");
@@ -52,9 +54,10 @@ public sealed class Spec053EfectosTests
         var (effects, world) = Build();
         world.Accounts.Account = new AccountForSuspension("activa", false);
 
-        var sessions = await effects.ApplyAsync(Session(), Decision("critica", "suspension_preventiva"), CancellationToken.None);
+        var applied = await effects.ApplyAsync(Session(), Decision("critica", "suspension_preventiva"), CancellationToken.None);
 
-        sessions.Should().BeEmpty();
+        applied.SessionIds.Should().BeEmpty();
+        applied.ReportedIsClient.Should().BeTrue("la prioridad alta se deriva de que la persona reportada no es técnica (spec 053, R-20)");
         world.Accounts.SuspendedWith.Should().BeNull();
         world.Store.Events.Should().OnlyContain(e => e.Tipo == "ReporteDecidido");
     }

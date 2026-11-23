@@ -18,6 +18,9 @@ internal enum ReportAction
     Hide,
 }
 
+/// <summary>Lo que dejó la acción: los <c>sid</c> por cancelar y si la persona reportada no es técnica (la suspensión no aplica a un cliente, spec 059, R-03), dato con el que se deriva la prioridad (spec 053, R-20).</summary>
+internal sealed record ReportActionResult(IReadOnlyList<string> SessionIds, bool ReportedIsClient);
+
 /// <summary>
 /// Lo que el módulo Safety ofrece a los demás módulos de Identidad sin que lean sus servicios ni almacenes (spec 059): aplicar la respuesta de la gravedad de un reporte dentro de la transacción
 /// de quien decide (spec 053, R-20) y cancelar después de confirmar las sesiones revocadas (spec 059, R-08).
@@ -25,7 +28,7 @@ internal enum ReportAction
 internal interface ISafetyApi
 {
     /// <summary>Aplica la acción y deja los avisos a las dos partes en la bandeja; devuelve los <c>sid</c> que <see cref="CancelSessionsAsync"/> debe cancelar tras confirmar.</summary>
-    Task<IReadOnlyList<string>> ApplyReportDecisionAsync(StoreTransaction transaction, ReportAction action, string reportId, string reporterId, string reportedId, string deciderSub, CancellationToken cancellationToken);
+    Task<ReportActionResult> ApplyReportDecisionAsync(StoreTransaction transaction, ReportAction action, string reportId, string reporterId, string reportedId, string deciderSub, CancellationToken cancellationToken);
 
     Task CancelSessionsAsync(IReadOnlyList<string> sessionIds, CancellationToken cancellationToken);
 }

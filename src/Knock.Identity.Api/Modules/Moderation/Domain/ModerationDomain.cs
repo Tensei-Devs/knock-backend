@@ -60,6 +60,19 @@ internal static class ReportSeverities
     };
 }
 
+/// <summary>
+/// Prioridad con la que se atiende un reporte decidido (spec 053, R-20, enmienda 2026-11-24). Se deriva aparte y NUNCA reemplaza la gravedad guardada: un reporte <c>critica</c> contra una persona que no es
+/// técnica (no se suspende) sigue siendo <c>critica</c> y se atiende con prioridad <c>alta</c>; en los demás casos es <c>normal</c>.
+/// </summary>
+internal static class ReportPriorities
+{
+    public const string High = "alta";
+    public const string Normal = "normal";
+
+    public static string For(string severity, bool reportedIsClient) =>
+        reportedIsClient && string.Equals(severity, ReportSeverities.Critical, StringComparison.Ordinal) ? High : Normal;
+}
+
 /// <summary>Valores de <c>decision.respuesta</c> de un reporte decidido.</summary>
 internal static class ReportResponses
 {

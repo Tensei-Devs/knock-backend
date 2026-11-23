@@ -28,7 +28,7 @@ internal sealed class ReportReviewService(
         var rows = await store.ListAsync(query.Gravedad, states, from, to, ReviewCursor.Parse(query.Cursor), query.Limite + 1, cancellationToken);
         var page = rows.Take(query.Limite).ToList();
         return new ReportQueuePage(
-            [.. page.Select(r => new ReportQueueItem(r.Id.ToString(), r.Reason, r.Text, r.Severity, r.State, r.CreatedAt))],
+            [.. page.Select(r => new ReportQueueItem(r.Id.ToString(), r.Reason, r.Text, r.Severity, r.State, r.CreatedAt, r.Priority))],
             rows.Count > query.Limite ? new ReviewCursor(page[^1].Rank, page[^1].CreatedAt, page[^1].Id).Encode() : null);
     }
 
@@ -48,9 +48,16 @@ internal sealed class ReportReviewService(
         var response = ReportSeverities.ResponseFor(severity);
         var now = VerificationReviewService.Truncate(clock.GetUtcNow().UtcDateTime);
         IReadOnlyList<string> sessionIds = [];
+        var priority = ReportPriorities.Normal;
         var result = await store.DecideAsync(
             new ReportDecisionRecord(objectId, severity, response, body.Motivo!.Trim(), actor.Sub, now),
-            async (session, decided) => sessionIds = await effects.ApplyAsync(session, new ReportDecisionApplied(id, severity, response, decided.ReporterId, decided.ReportedId, actor.Sub), cancellationToken),
+            async (session, decided) =>
+            {
+                var applied = await effects.ApplyAsync(session, new ReportDecisionApplied(id, severity, response, decided.ReporterId, decided.ReportedId, actor.Sub), cancellationToken);
+                sessionIds = applied.SessionIds;
+                priority = ReportPriorities.For(severity, applied.ReportedIsClient);
+                return priority;
+            },
             session => panel.RecordActionInTransactionAsync(session, ModerationAuditEvents.ReportDecided, severity, actor.Sub, id, cancellationToken),
             cancellationToken);
         if (result.Outcome == DecisionStoreOutcome.Decided)
@@ -60,7 +67,7 @@ internal sealed class ReportReviewService(
 
         return result.Outcome switch
         {
-            DecisionStoreOutcome.Decided => new ReportDecisionResult(id, "decidido", severity, response),
+            DecisionStoreOutcome.Decided => new ReportDecisionResult(id, "decidido", severity, response, priority),
             DecisionStoreOutcome.AlreadyDecided => throw new DomainException(DomainErrorKind.Conflict, "The report was already decided.", ModerationErrorCodes.ReportAlreadyDecidedCode),
             _ => throw new DomainException(DomainErrorKind.NotFound, "The report does not exist.", ModerationErrorCodes.ReportNotFoundCode),
         };
