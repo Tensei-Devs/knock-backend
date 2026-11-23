@@ -48,15 +48,5 @@ public sealed class Spec034ContratoTests
         from response in operation.Value.GetProperty("responses").EnumerateObject()
         select ($"{operation.Name.ToUpperInvariant()} {path.Name} {response.Name}", response.Name, response.Value);
 
-    private static JsonDocument Load(string fileName)
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Knock.slnx")))
-        {
-            directory = directory.Parent;
-        }
-
-        var root = directory?.FullName ?? throw new InvalidOperationException("Knock.slnx was not found above the test output directory.");
-        return JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "docs", fileName)));
-    }
+    private static JsonDocument Load(string fileName) => OpenApiDocs.Load(fileName);
 }

@@ -27,24 +27,9 @@ public sealed class Spec061OcultarOpinionTests
     private const string _reason = "Lenguaje ofensivo hacia el cliente";
     private static readonly byte[] _panelKey = RandomNumberGenerator.GetBytes(32);
 
-    private static async Task<(Spec020Host Host, FakePanelGate Gate)> StartAsync()
-    {
-        var gate = new FakePanelGate();
-        var host = await Spec020Host.StartAsync(
-            new Dictionary<string, string?> { [PanelAuthentication.KeyConfigurationKey] = Convert.ToBase64String(_panelKey) },
-            services => services.AddSingleton<IPanelPermissionGate>(gate));
-        return (host, gate);
-    }
+    private static Task<(Spec020Host Host, FakePanelGate Gate)> StartAsync() => PanelTestHost.StartAsync(_panelKey);
 
-    private static string PanelToken() =>
-        new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
-        {
-            Issuer = GatewayTestSupport.Issuer,
-            Audience = PanelAuthentication.DefaultAudience,
-            Claims = new Dictionary<string, object> { ["sub"] = Guid.NewGuid().ToString("D"), ["sid"] = "sesion-de-prueba", ["pv"] = "1" },
-            Expires = DateTime.UtcNow.AddMinutes(15),
-            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(_panelKey), SecurityAlgorithms.HmacSha256),
-        });
+    private static string PanelToken() => PanelTestHost.Token(_panelKey);
 
     private static async Task<HttpResponseMessage> PostAsync(Spec020Host host, string path, object? body = null, string? bearer = null)
     {
