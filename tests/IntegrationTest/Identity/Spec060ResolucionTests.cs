@@ -107,7 +107,8 @@ public sealed class Spec060ResolucionTests
         using var client = factory.CreateClient();
         var gradual = await Spec060ApelacionSuspensionTests.SeedSuspendedAsync(factory, client, Guid.NewGuid().ToString("D"), "gradual", DateTime.UtcNow.AddMinutes(-1));
         var critical = await Spec060ApelacionSuspensionTests.SeedSuspendedAsync(factory, client, Guid.NewGuid().ToString("D"), "preventiva");
-        var handler = factory.Services.GetServices<IManejadorDeTarea>().Single(h => h.Tipo == "VencerSuspension");
+        using var scope = factory.Services.CreateScope();
+        var handler = scope.ServiceProvider.GetServices<IManejadorDeTarea>().Single(h => h.Tipo == "VencerSuspension");
 
         await handler.HandleAsync(new TareaReservada(ObjectId.GenerateNewId(), "VencerSuspension", $"{gradual.Sub}:{gradual.ReportId}", "r", 0), CancellationToken.None);
         await handler.HandleAsync(new TareaReservada(ObjectId.GenerateNewId(), "VencerSuspension", $"{critical.Sub}:{critical.ReportId}", "r", 0), CancellationToken.None);
@@ -134,7 +135,10 @@ public sealed class Spec060ResolucionTests
         var task = await factory.Database.GetCollection<BsonDocument>("tareas_programadas").Find(new BsonDocument { ["tipo"] = "VencerSuspension", ["claveNegocio"] = $"{sub}:{reportId}" }).SingleAsync();
         task["programadaPara"].ToUniversalTime().Should().BeCloseTo(since.AddDays(7), TimeSpan.FromSeconds(1));
         await factory.Services.GetRequiredService<AccountSuspension>().SuspenderAsync(sub, ObjectId.GenerateNewId().ToString(), Guid.NewGuid().ToString("D"), "preventiva", CancellationToken.None);
-        (await UserAsync(factory, id))["suspension"].AsBsonDocument.Contains("venceEn").Should().BeFalse("ya estaba suspendida: nada cambia");
+        var after = (await UserAsync(factory, id))["suspension"].AsBsonDocument;
+        after["tipo"].AsString.Should().Be("gradual", "ya estaba suspendida: nada cambia");
+        after["reporteId"].AsObjectId.ToString().Should().Be(reportId);
+        after.Contains("venceEn").Should().BeTrue();
     }
 
     [Fact]

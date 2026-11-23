@@ -65,6 +65,9 @@ public sealed class Spec060ApelacionSuspensionTests
         }
 
         await factory.Users.UpdateOneAsync(new BsonDocument("_id", user["_id"]), new BsonDocument("$set", new BsonDocument { ["estado"] = "suspendida", ["suspension"] = suspension }));
+
+        // Como la suspensión real (spec 059, R-04): las sesiones abiertas quedan revocadas.
+        await factory.Sessions.UpdateManyAsync(new BsonDocument("usuarioId", user["_id"]), new BsonDocument("$set", new BsonDocument("revocada", true)));
         return new Person(user["_id"].AsObjectId, user["sub"].AsString, phone, reportId);
     }
 
