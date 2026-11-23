@@ -33,7 +33,7 @@ internal sealed class EntregaInternaOptions
 
 /// <summary>
 /// Entrega de la bandeja de salida por HTTP privado con token firmado (spec 037, R-11 y R-15). Entrega los eventos de bloqueo (spec 043, R-23) a <c>POST /api/v1/interno/bloqueos</c> de Mercado y de Mensajería,
-/// la suspensión y reactivación (spec 059) a <c>POST /api/v1/interno/eventos</c> de Mercado, <c>CuentaEliminada</c> (spec 039) a <c>POST /api/v1/interno/cuentas/{usuarioId}/eliminada</c> de Mercado y
+/// <c>ReporteDecidido</c> (spec 053, avisos de texto fijo de la 037) a <c>POST /api/v1/interno/avisos</c> de Mensajería con solo la persona y el reporte, la suspensión y reactivación (spec 059) a <c>POST /api/v1/interno/eventos</c> de Mercado, <c>CuentaEliminada</c> (spec 039) a <c>POST /api/v1/interno/cuentas/{usuarioId}/eliminada</c> de Mercado y
 /// <c>sesion_revocada</c> (spec 054) a <c>POST /api/v1/interno/avisos</c> de Mensajería; cualquier otro tipo, destino sin dirección o sin clave queda para reintento, igual que antes de existir esta entrega.
 /// 202 es entregado; 401 y 403, rechazado; red, 5xx y 429, reintentable. Nunca registra la carga ni el token.
 /// </summary>
@@ -46,6 +46,7 @@ internal sealed class EntregaInternaHttp(IHttpClientFactory clients, IOptions<En
     public const string MarketBlocksPermission = "bloqueos";
     public const string MarketEventsPermission = "eventos";
     public const string MarketAccountPermission = "cuenta";
+    public const string ReportDecidedNotice = "reporte_decidido";
     public const string BlocksPath = "api/v1/interno/bloqueos";
     public const string EventsPath = "api/v1/interno/eventos";
     public const string NoticesPath = "api/v1/interno/avisos";
@@ -103,6 +104,12 @@ internal sealed class EntregaInternaHttp(IHttpClientFactory clients, IOptions<En
             MarketAudience,
             [MarketAccountPermission],
             new Dictionary<string, object> { ["usuarioId"] = sub }),
+        ("ReporteDecidido", "messaging") when Text(evento, "usuarioId") is { } person && Text(evento, "reporteId") is { } report => new EntregaPlan(
+            NoticesPath,
+            new { eventoId = evento.Id, tipo = ReportDecidedNotice, destinatarioId = person, recurso = report },
+            MessagingAudience,
+            [ReportDecidedNotice],
+            null),
         ("sesion_revocada", "messaging") when Text(evento, "sid") is { } sid => new EntregaPlan(NoticesPath, new { eventoId = evento.Id, tipo = evento.Tipo, sid }, MessagingAudience, [evento.Tipo], null),
         _ => null,
     };

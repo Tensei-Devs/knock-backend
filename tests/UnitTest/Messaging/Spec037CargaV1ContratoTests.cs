@@ -21,6 +21,8 @@ public sealed class Spec037CargaV1ContratoTests
     [InlineData("solicitud_vencida", "cotizaciones")]
     [InlineData("cotizacion_vencida", "cotizaciones")]
     [InlineData("mensaje_nuevo", "mensajes")]
+    [InlineData("reporte_decidido", "sistema")]
+    [InlineData("opinion_oculta", "sistema")]
     public void Payload_SerializesToTheV1ContractShape_CA_037_04_CA_037_10(string evento, string tipo)
     {
         var aviso = Guid.NewGuid();
@@ -38,4 +40,15 @@ public sealed class Spec037CargaV1ContratoTests
         fields["recurso"].GetString().Should().Be(_resource);
         fields["aviso"].GetString().Should().Be(aviso.ToString("D"));
     }
+
+    [Theory]
+    [InlineData("reporte_decidido", null, true)]
+    [InlineData("reporte_decidido", "cliente", true)]
+    [InlineData("reporte_decidido", "tecnico", true)]
+    [InlineData("opinion_oculta", "tecnico", true)]
+    [InlineData("opinion_oculta", "cliente", false)]
+    [InlineData("opinion_oculta", null, false)]
+    [InlineData("solicitud_nueva", null, false)]
+    public void RoleRulesOfTheFixedNotices_CA_037_20(string tipo, string? rol, bool expected) =>
+        AvisoRules.RoleMatches(tipo, rol).Should().Be(expected);
 }

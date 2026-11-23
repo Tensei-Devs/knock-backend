@@ -23,6 +23,8 @@ internal static partial class AvisoRules
         ["cotizacion_nueva"] = "cotizaciones",
         ["cotizacion_aceptada"] = "visitas",
         ["visita_afectada"] = "visitas",
+        [ReportDecidedEvent] = "sistema",
+        [ReviewHiddenEvent] = "sistema",
         ["solicitud_cancelada"] = "cotizaciones",
         ["solicitud_vencida"] = "cotizaciones",
         ["cotizacion_vencida"] = "cotizaciones",
@@ -30,6 +32,12 @@ internal static partial class AvisoRules
     };
 
     public const string SessionRevokedEvent = "sesion_revocada";
+
+    /// <summary>Aviso de texto fijo a quien es parte de un reporte decidido (spec 053 R-20, enmienda de la 037 del 2026-11-23): nunca lleva gravedad, motivo ni datos del reporte; no distingue rol.</summary>
+    public const string ReportDecidedEvent = "reporte_decidido";
+
+    /// <summary>Aviso de texto fijo al técnico cuando una opinión suya se oculta (spec 061, R-07a): sin motivo ni datos de la opinión.</summary>
+    public const string ReviewHiddenEvent = "opinion_oculta";
 
     public const string ClientRole = "cliente";
 
@@ -43,6 +51,8 @@ internal static partial class AvisoRules
         ["cotizacion_nueva"] = ClientRole,
         ["cotizacion_aceptada"] = TechnicianRole,
         ["visita_afectada"] = ClientRole,
+        [ReportDecidedEvent] = null,
+        [ReviewHiddenEvent] = TechnicianRole,
         ["solicitud_cancelada"] = TechnicianRole,
         ["solicitud_vencida"] = ClientRole,
         ["cotizacion_vencida"] = TechnicianRole,
@@ -55,7 +65,8 @@ internal static partial class AvisoRules
 
     /// <summary>Si <paramref name="rol"/> corresponde a <paramref name="tipo"/> (R-11).</summary>
     public static bool RoleMatches(string tipo, string? rol) =>
-        _roleByEvent.TryGetValue(tipo, out var expected) && rol is ClientRole or TechnicianRole && (expected is null || expected == rol);
+        _roleByEvent.TryGetValue(tipo, out var expected)
+        && (rol is null ? tipo == ReportDecidedEvent : rol is ClientRole or TechnicianRole && (expected is null || expected == rol));
 
     /// <summary>Los campos que la carga v1 puede llevar y ningún otro (R-04).</summary>
     public static readonly IReadOnlyList<string> PayloadFields = ["v", "tipo", "evento", "recurso", "aviso", "conversacion"];

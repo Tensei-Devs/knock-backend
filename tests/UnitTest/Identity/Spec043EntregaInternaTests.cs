@@ -109,6 +109,20 @@ public sealed class Spec043EntregaInternaTests
     }
 
     [Fact]
+    public async Task ReportDecidedGoesToMessagingNoticesAsAFixedNoticeWithoutReportData_CA_037_20()
+    {
+        using var handler = new StubHandler(HttpStatusCode.Accepted);
+        var carga = new BsonDocument { ["eventoId"] = "d1", ["usuarioId"] = "u1", ["reporteId"] = "507f1f77bcf86cd799439011", ["rol"] = "reportado", ["accion"] = "Suspend" };
+
+        (await Delivery(handler).DeliverAsync(new OutboxReservado("ReporteDecidido:r:reportado:1", "ReporteDecidido", "messaging", carga, "r", 0), CancellationToken.None)).Should().Be(ResultadoDeEntrega.Aceptado);
+
+        handler.Requests[0].Uri.AbsolutePath.Should().Be("/api/v1/interno/avisos");
+        Claims(handler.Requests[0].Token).Should().Contain(("aud", "knock-notifications")).And.Contain(("permisos", "reporte_decidido"));
+        handler.Requests[0].Body.Should().Contain("\"tipo\":\"reporte_decidido\"").And.Contain("\"destinatarioId\":\"u1\"").And.Contain("\"recurso\":\"507f1f77bcf86cd799439011\"")
+            .And.NotContain("Suspend").And.NotContain("\"rol\"").And.NotContain("accion");
+    }
+
+    [Fact]
     public async Task NetworkFailureIsRetriable()
     {
         using var handler = new StubHandler(null);
