@@ -122,6 +122,8 @@ public sealed class Spec033GatewayTests
     [Theory]
     [InlineData("/api/v1/admin/reportes", "identidad")]
     [InlineData("/api/v1/admin/verificaciones", "identidad")]
+    [InlineData("/api/v1/admin/opiniones/507f1f77bcf86cd799439011/ocultar", "mercado")]
+    [InlineData("/api/v1/admin/opiniones/507f1f77bcf86cd799439011/mostrar", "mercado")]
     public async Task Las_Rutas_Admin_Van_Al_Servicio_Dueno_Y_Solo_Con_Token_Del_Panel_KNOCK_266(string path, string service)
     {
         await using var host = await StartAsync();

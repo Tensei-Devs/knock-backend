@@ -24,6 +24,9 @@ internal static class ModulesExtensions
         services.AddOptions<BandejaOptions>().BindConfiguration(BandejaOptions.SectionName).ValidateDataAnnotations().ValidateOnStart();
         services.AddHttpClient(EntregaReporteNoTerminado.ClientName).RemoveAllLoggers();
         services.AddScoped<IEntregaDeBandeja, EntregaReporteNoTerminado>();
+        services.AddHttpClient(EntregaOpinionModerada.IdentityClientName).RemoveAllLoggers();
+        services.AddHttpClient(EntregaOpinionModerada.MessagingClientName).RemoveAllLoggers();
+        services.AddScoped<IEntregaDeBandeja, EntregaOpinionModerada>();
         services.AddScoped<DespachadorDeBandeja>();
         services.AddHostedService<BandejaHostedService>();
         return services;

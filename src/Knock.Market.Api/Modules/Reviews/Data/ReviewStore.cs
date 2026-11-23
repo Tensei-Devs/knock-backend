@@ -1,3 +1,4 @@
+using Knock.Hosting.Concurrency;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Reviews.Domain;
 using Knock.Market.Api.Modules.Reviews.Dtos;
@@ -13,6 +14,17 @@ internal sealed record ReviewVisit(ObjectId Id, ObjectId RequestId, string Clien
 
 /// <summary>Una opinión guardada, con lo mínimo para decidir quién puede responderla (R-15).</summary>
 internal sealed record StoredReview(ObjectId Id, ObjectId TechnicianId, bool Answered);
+
+/// <summary>Qué pasó al ocultar o mostrar una opinión (spec 061): no existe, cambió o ya estaba así.</summary>
+internal enum ReviewModerationOutcome
+{
+    NotFound,
+    Changed,
+    Unchanged,
+}
+
+/// <summary>Resultado de <see cref="IReviewStore.SetHiddenAsync"/>; <c>TechnicianId</c> viene lleno si la opinión existe.</summary>
+internal sealed record ReviewModerationResult(ReviewModerationOutcome Outcome, ObjectId? TechnicianId);
 
 /// <summary>Opinión nueva ya validada y moderada. <c>Moderation</c> es el estado del comentario (R-17).</summary>
 internal sealed record NewReview(
@@ -43,6 +55,12 @@ internal interface IReviewStore
 
     /// <summary>Guarda la respuesta única del técnico; <see langword="false"/> si la opinión ya tenía respuesta.</summary>
     Task<bool> AnswerAsync(StoredReview review, string text, DateTime nowUtc, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Oculta o muestra una opinión sin borrarla (spec 061): guarda quién, cuándo y por qué, recalcula la reputación y escribe <c>OpinionModerada</c> en una transacción. Los turnos de la misma opinión se
+    /// serializan y quien entra después relee: repetir el mismo cambio no hace nada ni escribe otro evento.
+    /// </summary>
+    Task<ReviewModerationResult> SetHiddenAsync(ObjectId id, bool hidden, string? reason, string moderatorId, DateTime nowUtc, CancellationToken cancellationToken);
 
     Task<ReviewPage> ListAsync(ObjectId technicianId, (DateTime CreatedAtUtc, ObjectId Id)? cursor, int limit, CancellationToken cancellationToken);
 
@@ -177,6 +195,57 @@ internal sealed class ReviewStore(
 
             await AddEventAsync(transaction, ReviewRules.AnsweredEvent, review.Id.ToString(), null, review.TechnicianId, nowUtc, token);
             return true;
+        }, cancellationToken: cancellationToken);
+    }
+
+    public Task<ReviewModerationResult> SetHiddenAsync(ObjectId id, bool hidden, string? reason, string moderatorId, DateTime nowUtc, CancellationToken cancellationToken) =>
+        KeyedGate.RunAsync($"opinion:{id}", () => SetHiddenSerializedAsync(id, hidden, reason, moderatorId, nowUtc, cancellationToken), cancellationToken);
+
+    private async Task<ReviewModerationResult> SetHiddenSerializedAsync(ObjectId id, bool hidden, string? reason, string moderatorId, DateTime nowUtc, CancellationToken cancellationToken)
+    {
+        var filters = Builders<BsonDocument>.Filter;
+        using var session = await database.Client.StartSessionAsync(cancellationToken: cancellationToken);
+        return await session.WithTransactionAsync(async (transaction, token) =>
+        {
+            var current = await Reviews.Find(transaction, filters.Eq(_id, id), _find).FirstOrDefaultAsync(token);
+            if (current is null)
+            {
+                return new ReviewModerationResult(ReviewModerationOutcome.NotFound, null);
+            }
+
+            var technicianId = current[_technician].AsObjectId;
+            var update = Builders<BsonDocument>.Update;
+            var changed = await Reviews.UpdateOneAsync(
+                transaction,
+                filters.Eq(_id, id) & (hidden ? filters.Ne("oculta", true) : filters.Eq("oculta", true)),
+                hidden
+                    ? update.Set("oculta", true).Set("ocultaPor", moderatorId).Set("ocultaEn", nowUtc).Set("ocultaMotivo", reason)
+                    : update.Set("oculta", false).Unset("ocultaPor").Unset("ocultaEn").Unset("ocultaMotivo"),
+                cancellationToken: token);
+            if (changed.ModifiedCount != 1)
+            {
+                return new ReviewModerationResult(ReviewModerationOutcome.Unchanged, technicianId);
+            }
+
+            await RecalculateAsync(transaction, technicianId, token);
+            var owner = await Technicians.Find(transaction, filters.Eq(_id, technicianId), _find).Project(Builders<BsonDocument>.Projection.Include("usuarioId")).FirstOrDefaultAsync(token);
+            var data = new BsonDocument
+            {
+                { "opinionId", id.ToString() },
+                { _technician, technicianId.ToString() },
+                { "accion", hidden ? ReviewRules.HiddenAction : ReviewRules.ShownAction },
+                { "porId", moderatorId },
+            };
+            if (owner is not null && owner.TryGetValue("usuarioId", out var user) && user.IsString)
+            {
+                data.Add("tecnicoUsuarioId", user.AsString);
+            }
+
+            await database.GetCollection<BsonDocument>("outbox").InsertOneAsync(
+                transaction,
+                new BsonDocument { { _id, $"{ReviewRules.ModeratedEvent}:{id}:{nowUtc.Ticks}" }, { "tipo", ReviewRules.ModeratedEvent }, { "agregadoId", id.ToString() }, { "datos", data }, { "estado", "pendiente" }, { "intentos", 0 }, { _created, nowUtc } },
+                cancellationToken: token);
+            return new ReviewModerationResult(ReviewModerationOutcome.Changed, technicianId);
         }, cancellationToken: cancellationToken);
     }
 

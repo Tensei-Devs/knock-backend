@@ -8,7 +8,7 @@ namespace Knock.Identity.Api.Modules.Panel.Data;
 /// <c>panel_auditoria</c> (spec 033, §6, R-23): de solo inserción para el servicio. Esta clase no expone lectura, actualización ni borrado, y una prueba de
 /// arquitectura lo vigila. Los documentos vencen a los 365 días (índice TTL). Solo se escriben los campos de <see cref="PanelAuditEntry"/>.
 /// </summary>
-internal sealed class PanelAuditoriaStore([FromKeyedServices(DataExtensions.DatabaseKey)] IMongoDatabase database) : IPanelAuditoriaStore, IPanelAuditoriaEnTransaccion
+internal sealed class PanelAuditoriaStore([FromKeyedServices(DataExtensions.DatabaseKey)] IMongoDatabase database) : IPanelAuditoriaStore, IPanelAuditoriaEnTransaccion, IPanelAuditoriaUnica
 {
     public const string Collection = "panel_auditoria";
 
@@ -34,6 +34,21 @@ internal sealed class PanelAuditoriaStore([FromKeyedServices(DataExtensions.Data
 
     public Task InsertAsync(PanelAuditEntry entry, StoreTransaction transaction, CancellationToken cancellationToken) =>
         Entries.InsertOneAsync((IClientSessionHandle)transaction.Handle, ToDocument(entry), cancellationToken: cancellationToken);
+
+    public async Task<bool> InsertOnceAsync(PanelAuditEntry entry, string eventId, CancellationToken cancellationToken)
+    {
+        var document = ToDocument(entry);
+        document.InsertAt(0, new BsonElement("_id", eventId));
+        try
+        {
+            await Entries.InsertOneAsync(document, cancellationToken: cancellationToken);
+            return true;
+        }
+        catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            return false;
+        }
+    }
 
     private static BsonDocument ToDocument(PanelAuditEntry entry)
     {

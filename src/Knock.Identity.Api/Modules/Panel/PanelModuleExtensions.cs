@@ -23,6 +23,7 @@ public static class PanelModuleExtensions
         services.AddSingleton<IPanelActivacionesStore>(provider => provider.GetRequiredService<PanelActivacionesStore>());
         services.AddSingleton<PanelAuditoriaStore>();
         services.AddSingleton<IPanelAuditoriaStore>(provider => provider.GetRequiredService<PanelAuditoriaStore>());
+        services.AddSingleton<IPanelAuditoriaUnica>(provider => provider.GetRequiredService<PanelAuditoriaStore>());
         services.AddSingleton<IPanelAuditoriaEnTransaccion>(provider => provider.GetRequiredService<PanelAuditoriaStore>());
         services.AddSingleton<IPanelDesafios, RedisPanelDesafios>();
         services.AddSingleton<IPanelCuentaCache, RedisPanelCuentaCache>();
@@ -30,6 +31,7 @@ public static class PanelModuleExtensions
         services.AddHttpContextAccessor();
         services.AddSingleton<PanelIpHasher>();
         services.AddSingleton<AuditoriaPanel>();
+        services.AddSingleton<OpinionModeradaConsumer>();
         services.AddSingleton<IPanelApi, PanelApi>();
         services.AddSingleton(provider => PanelSettings.Create(provider.GetRequiredService<IConfiguration>(), provider.GetRequiredService<IHostEnvironment>()));
         services.AddOptions<PanelTotpOptions>().BindConfiguration(PanelTotpOptions.SectionName);

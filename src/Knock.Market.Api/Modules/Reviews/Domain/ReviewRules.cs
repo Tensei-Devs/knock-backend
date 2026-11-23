@@ -15,6 +15,13 @@ internal static class ReviewRules
     public const string PeriodClosedEvent = "PeriodoDeOpinionCerrado";
     public const string CloseOpinionTask = "CerrarPeriodoDeOpinion";
 
+    /// <summary>Evento de la bandeja al ocultar o mostrar una opinión desde el panel (spec 061, R-04): solo identificadores, nunca el texto ni el motivo.</summary>
+    public const string ModeratedEvent = "OpinionModerada";
+    public const string HiddenAction = "ocultada";
+    public const string ShownAction = "mostrada";
+    public const int MinModerationReason = 8;
+    public const int MaxModerationReason = 300;
+
     /// <summary>Estado de moderación del comentario: sin comentario o aprobado se publica; pendiente o rechazado no sale en la lista pública (R-17, D-04).</summary>
     public const string Published = "publicada";
     public const string Pending = "pendiente";
@@ -39,6 +46,10 @@ internal static class ReviewRules
     public static bool IsValidStars(int? value) => value is >= 1 and <= 5;
 
     public static bool IsValidText(string? text) => text is null || (text.Trim().Length <= MaxText && !text.Any(char.IsControl));
+
+    /// <summary>El motivo de ocultar mide de 8 a 300 caracteres sin controles (spec 061, R-01).</summary>
+    public static bool IsValidModerationReason(string? reason) =>
+        reason?.Trim().Length is >= MinModerationReason and <= MaxModerationReason && !reason.Any(char.IsControl);
 
     /// <summary>La respuesta del técnico es obligatoria y mide de 1 a 500 caracteres (R-15).</summary>
     public static bool IsValidAnswer(string? text) => text is not null && text.Trim().Length is >= 1 and <= MaxText && !text.Any(char.IsControl);

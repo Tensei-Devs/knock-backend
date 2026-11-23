@@ -146,6 +146,8 @@ locals {
         # Despachador de la bandeja de salida de Mercado (spec 053/054): entrega `ReporteNoTerminadoCreado` a Identidad. Apagado por omisión en el código; deploy lo enciende.
         Bandeja__Habilitada         = "true"
         Services__Identity__BaseUrl = local.cluster_address.identity
+        # Aviso `opinion_oculta` al técnico (spec 061, R-07a): dirección interna de Mensajería para entregar `OpinionModerada` a `POST /api/v1/interno/avisos`.
+        Services__Messaging__BaseUrl = local.cluster_address.messaging
         # Dirección base pública de las imágenes (spec 032, R-03); el módulo de imágenes la exige al arrancar.
         Imagenes__BaseUrlPublica = local.images_base_url
         # Cuentas de Blob de las imágenes (spec 032, R-02): la pública es la de la dirección base; la privada (cuarentena y archivos) sale de la infraestructura. Entran con la identidad administrada (Azure.Identity), sin llaves.
@@ -166,6 +168,8 @@ locals {
         Security__InternalTokens__IdentityKey = "interno-key-identity"
         # Firma los tokens de servicio de Mercado hacia Identidad (`iss` `knock-market`); Identidad la valida con el mismo secreto.
         Security__InternalTokens__MarketKey = "interno-key-market"
+        # Firma los tokens de servicio de Mercado hacia Mensajería (`iss` `knock-market`, `aud` `knock-notifications`; spec 061): Mensajería los valida con el mismo secreto (`avisos-key-market`).
+        Services__Messaging__InternalKey = "avisos-key-market"
         # Llave Base64 de la huella HMAC del `sub` en los enlaces privados de imágenes (spec 032): sin ella, emitir un enlace privado da 500.
         Imagenes__LlaveBusqueda = "imagenes-llave-busqueda"
         # Llave del token del panel (esquema PanelBearer de Mercado, spec 045 R-20): el mismo secreto que ya leen el gateway e Identity; sin ella las rutas /admin de Mercado no validan el token.

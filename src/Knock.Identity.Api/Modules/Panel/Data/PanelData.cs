@@ -63,6 +63,8 @@ internal static class PanelAuditValues
     public const string Deshabilitada = "deshabilitada";
     public const string Habilitada = "habilitada";
     public const string TotpReiniciado = "totp_reiniciado";
+    public const string OpinionOcultada = "opinion_ocultada";
+    public const string OpinionMostrada = "opinion_mostrada";
 }
 
 /// <summary>Resultado de consumir una invitación de activación (R-29).</summary>
@@ -147,6 +149,13 @@ internal sealed record ProtectedSecretForStore(byte[] Ciphertext, int KeyVersion
 }
 
 /// <summary><c>panel_auditoria</c>: de solo inserción para el servicio (R-23). No hay lectura, actualización ni borrado en el código.</summary>
+/// <summary>Escritura única por evento (spec 061, R-06): el identificador del evento entregado es el <c>_id</c> del registro.</summary>
+internal interface IPanelAuditoriaUnica
+{
+    /// <summary><see langword="false"/> si ya había un registro con ese <paramref name="eventId"/>.</summary>
+    Task<bool> InsertOnceAsync(PanelAuditEntry entry, string eventId, CancellationToken cancellationToken);
+}
+
 internal interface IPanelAuditoriaStore
 {
     Task InsertAsync(PanelAuditEntry entry, CancellationToken cancellationToken);

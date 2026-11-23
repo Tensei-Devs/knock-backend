@@ -2617,6 +2617,108 @@
         }
       }
     },
+    "/api/v{version}/interno/opiniones-moderadas": {
+      "post": {
+        "tags": [
+          "InternalOpinionModerated"
+        ],
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpinionModeratedEventBody"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpinionModeratedEventBody"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpinionModeratedEventBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v{version}/panel/activacion": {
       "post": {
         "tags": [
@@ -7237,6 +7339,56 @@
         },
         "description": "Cuerpo de `POST /api/v1/interno/reportes-no-terminados` (spec 053): `ReporteNoTerminadoCreado` que Mercado entrega desde su bandeja de salida (spec 050, R-32). Solo identificadores; el texto no\nviaja aquí, Identidad lo lee por la ruta interna de Mercado. Cualquier otro campo queda en Dictionary&lt;string, JsonElement&gt;? NotFinishedReportEventBody.Extra y el validador lo rechaza con 422."
       },
+      "OpinionModeratedEventBody": {
+        "required": [
+          "eventoId",
+          "tipo",
+          "opinionId",
+          "tecnicoId",
+          "accion",
+          "porId"
+        ],
+        "type": "object",
+        "properties": {
+          "eventoId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tipo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "opinionId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tecnicoId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "accion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "porId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Cuerpo de `POST /api/v1/interno/opiniones-moderadas` (spec 061): `OpinionModerada` que Mercado entrega desde su bandeja de salida. Solo identificadores: nunca el texto de la opinión ni el\nmotivo. Cualquier otro campo queda en Dictionary&lt;string, JsonElement&gt;? OpinionModeratedEventBody.Extra y el validador lo rechaza con 422."
+      },
       "PanelAccesoResponse": {
         "required": [
           "accessToken",
@@ -8345,6 +8497,9 @@
     },
     {
       "name": "InternalNotFinishedReports"
+    },
+    {
+      "name": "InternalOpinionModerated"
     },
     {
       "name": "Knock.Identity.Api"
