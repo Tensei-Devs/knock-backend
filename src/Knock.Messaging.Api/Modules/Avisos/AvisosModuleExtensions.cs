@@ -14,9 +14,28 @@ public static class AvisosModuleExtensions
         services.AddAvisosData();
         services.AddScoped<DispositivosService>();
         services.AddSingleton(provider => PushOptions.Read(provider.GetRequiredService<IConfiguration>()));
-        services.AddSingleton<IPushSender, NoOpPushSender>();
+        services.AddPushSender();
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<DespachadorDeAvisos>();
+        return services;
+    }
+
+    /// <summary>Con <c>Notificaciones:PushHabilitado=false</c> (por omisión) queda el <see cref="NoOpPushSender"/>; encendido, exige proyecto y cuenta de servicio de FCM o no arranca (falla cerrado).</summary>
+    internal static IServiceCollection AddPushSender(this IServiceCollection services)
+    {
+        services.AddSingleton<IPushSender>(provider =>
+        {
+            var configuration = provider.GetRequiredService<IConfiguration>();
+            if (!PushOptions.Read(configuration).Enabled)
+            {
+                return new NoOpPushSender();
+            }
+
+            var options = FcmOptions.Read(configuration);
+            var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+            var token = new FcmAccessToken(http, options, TimeProvider.System);
+            return new FcmPushSender(http, options, token, provider.GetRequiredService<ILogger<FcmPushSender>>());
+        });
         return services;
     }
 }
