@@ -18,7 +18,15 @@ namespace Knock.Messaging.Api.Modules.Conversaciones.Controllers.V1;
 [Route("api/v{version:apiVersion}/interno/eventos")]
 internal sealed class InternoEventosController(CierrePorEleccionService closing) : ControllerBase
 {
+    private const string _problemJson = "application/problem+json";
+
+    /// <summary>Recibe <c>CotizacionElegida</c> y responde 202, también si ya lo recibió. 401 con token inválido; 403 <c>service_not_allowed</c>; 422 con un cuerpo fuera del catálogo.</summary>
     [HttpPost]
+    [ProducesResponseType(StatusCodes.Status202Accepted)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, _problemJson)]
     public async Task<IActionResult> Post(EventoInterno body, CancellationToken cancellationToken)
     {
         if (!InternalNoticeAuthentication.PermissionsOf(User).Contains(body.Tipo!))

@@ -41,6 +41,7 @@ DEFAULT_SERVICE = "market"
 SERVICES: dict[str, tuple[str, str]] = {
     "market": ("Knock.Market.Api", "openapi.v1.json"),
     "identity": ("Knock.Identity.Api", "openapi.identity.v1.json"),
+    "messaging": ("Knock.Messaging.Api", "openapi.messaging.v1.json"),
 }
 # Cadena sintética: puerto 9 (descarte) en loopback, sin credenciales. La API solo la valida al arrancar; el cliente no conecta.
 UNREACHABLE_MONGO = "mongodb://127.0.0.1:9/?directConnection=true"
@@ -74,8 +75,20 @@ def identity_environment() -> dict[str, str]:
     }
 
 
+def messaging_environment() -> dict[str, str]:
+    """Configuración sintética para que Messaging arranque en Development: Redis hacia un destino que no responde y llave del JWT al azar."""
+    return {
+        "ConnectionStrings__KnockRedis": "127.0.0.1:6379,password=" + secrets.token_hex(16),
+        "Jwt__SigningKey": random_base64(),
+    }
+
+
 def service_environment(service: str) -> dict[str, str]:
-    return identity_environment() if service == "identity" else {"Busqueda__Cursor__Key": random_base64()}
+    if service == "identity":
+        return identity_environment()
+    if service == "messaging":
+        return messaging_environment()
+    return {"Busqueda__Cursor__Key": random_base64()}
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
