@@ -130,6 +130,7 @@ internal sealed class ConversacionesFactory(IReadOnlyDictionary<string, string?>
     {
         ArgumentNullException.ThrowIfNull(builder);
         builder.UseEnvironment("Production");
+        builder.UseSetting("ForwardedHeaders:KnownNetworks:0", "10.0.0.0/8"); // spec 035, R-09: fuera de Development hay que fijar las redes de confianza
         builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(settings));
         builder.ConfigureServices(services =>
         {

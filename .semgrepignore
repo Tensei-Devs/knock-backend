@@ -1,4 +1,5 @@
 # Semgrep: reemplaza los ignorados por defecto (que excluyen las pruebas). Las pruebas también se analizan.
+.semgrep/muestras/
 node_modules/
 bin/
 obj/
