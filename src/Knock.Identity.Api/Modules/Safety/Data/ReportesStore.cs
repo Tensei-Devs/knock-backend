@@ -1,3 +1,4 @@
+using Knock.Hosting.Concurrency;
 using Knock.Identity.Api.Hosting;
 using Knock.Identity.Api.Modules.Panel;
 using Knock.Identity.Api.Modules.Safety.Domain;
@@ -103,9 +104,17 @@ internal sealed class ReportesStore(
     /// Abre el reporte de «no terminado» de una visita (spec 053): un solo reporte por visita, aunque el evento llegue repetido o dos entregas corran a la vez (upsert por el campo <c>visitaNoTerminadaId</c>, con índice único y disperso).
     /// <see langword="true"/> si lo abrió ahora, <see langword="false"/> si ya existía.
     /// </summary>
-    public async Task<bool> OpenFromVisitAsync(NewReport report, CancellationToken cancellationToken)
+    public Task<bool> OpenFromVisitAsync(NewReport report, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(report);
+
+        // Dentro de la instancia, las entregas de la misma visita se turnan (KeyedGate): varios upsert a la vez sobre el índice único `visitaNoTerminadaId_1` se bloqueaban entre sí en
+        // documentdb-local (código 24 o 112) y respondían 500. Quien entra después encuentra el reporte y responde «ya existía». Entre instancias vale el índice único.
+        return KeyedGate.RunAsync(report.ReferenceId ?? string.Empty, () => OpenFromVisitSerializedAsync(report, cancellationToken), cancellationToken);
+    }
+
+    private async Task<bool> OpenFromVisitSerializedAsync(NewReport report, CancellationToken cancellationToken)
+    {
         var filters = Builders<BsonDocument>.Filter;
         try
         {
