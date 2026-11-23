@@ -1,6 +1,6 @@
 # Tareas 058 — Colección `archivos` de Media: registro de archivos privados en MongoDB y tope de subidas pendientes
 
-> **Estado:** pendientes. En esta etapa **no se ejecutan**: se activan cuando la spec esté Aprobada y una persona lo indique.
+> **Estado:** en curso; conciliado con el código el 2026-11-23 (cada fila cita su evidencia: archivo o prueba). Lo que dice «pendiente» no tiene aún evidencia verificable.
 > **Orden:** T-01 → T-02 → T-03 y T-04 (en paralelo entre sí, ambas dependen de T-02) → T-05 (después de T-03) → T-06 → T-07. Las decisiones D1 a D8 de la spec ya están contestadas (2026-11-20); T-08 es independiente y puede ir en paralelo con T-03 y T-04.
 
 | Tarea | Qué se hace | Cubre | Depende de | ¿En paralelo? | Responsable sugerido | Estado |
