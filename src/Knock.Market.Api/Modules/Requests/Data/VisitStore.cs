@@ -31,7 +31,8 @@ internal sealed record VisitRecord(
     DateTime? FinishedAtUtc = null,
     bool NotFinishedReported = false,
     string? FinalQuoteState = null,
-    bool? PhotoPermission = null)
+    bool? PhotoPermission = null,
+    string? WhoMissed = null)
 {
     public VisitState State => new(Estado, Modality, Day, Locked, CodeUsed, CodeExpiresAtUtc);
 }
@@ -246,7 +247,10 @@ internal sealed class VisitStore(
         d.TryGetValue("terminadaEn", out var finished) && finished.IsBsonDateTime ? finished.ToUniversalTime() : null,
         d.Contains("reporteNoTerminado"),
         FinalQuoteStateOf(d),
-        d.TryGetValue("permisoPublicarFotos", out var permission) && permission.IsBoolean ? permission.AsBoolean : null);
+        d.TryGetValue("permisoPublicarFotos", out var permission) && permission.IsBoolean ? permission.AsBoolean : null,
+        WhoMissedOf(d));
+
+    private static string? WhoMissedOf(BsonDocument d) => d.TryGetValue("quienFalto", out var missed) && missed.IsString ? missed.AsString : null;
 
     private static string? FinalQuoteStateOf(BsonDocument d) =>
         d.TryGetValue("cotizacionFinal", out var finalQuote) && finalQuote.IsBsonDocument && finalQuote.AsBsonDocument.TryGetValue("estado", out var state) && state.IsString ? state.AsString : null;
