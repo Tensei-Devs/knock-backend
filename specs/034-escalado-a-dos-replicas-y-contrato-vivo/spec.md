@@ -46,7 +46,7 @@ Dejar el entorno de evaluación (25 de noviembre a 5 de diciembre) corriendo con
 - **R-08:** La reversión vuelve a desplegar, con el mismo flujo y por Terraform, la etiqueta de imagen anterior (SHA completo del commit) anotada en `docs/VERSIONES_DESPLEGADAS.md`; solo se aceptan imágenes ya publicadas y escaneadas en el registro. `ci-deploy` acepta la entrada `image_tag` en `workflow_dispatch`, validada como 40 caracteres hexadecimales.
 - **R-09:** La reversión se ensaya al menos una vez antes del 24 de noviembre: desplegar una versión, revertir a la anterior y correr el humo. Se mide el tiempo desde la decisión hasta el humo en verde (meta: menos de 15 minutos) y la evidencia (fecha, versiones, duración, resultado del humo; sin direcciones ni identificadores de la suscripción) se agrega a `docs/evidencia/`.
 - **R-10:** El cambio a dos réplicas se aplica el 24 de noviembre y el regreso a una el 6 de diciembre, con los pasos manuales de la spec 005 documentados en `deploy/README.md`. El consumo adicional sale del crédito de estudiante (no es un servicio nuevo); antes de escalar, una persona revisa la alerta de presupuesto del ADR-006 y anota la estimación en `Memoria.md`.
-- **R-11:** No se crean recursos de Front Door, WAF ni CDN; el único punto público sigue siendo la entrada del gateway (spec 001). Una regla del análisis de Terraform falla si aparece uno.
+- **R-11:** No se crean recursos de Front Door, WAF ni CDN; el único punto público sigue siendo la entrada del gateway (spec 001). Una regla del análisis de Terraform falla si aparece uno. *(Ajustado por la enmienda del 2026-11-24: se permite Front Door Standard.)*
 
 **Contrato vivo**
 - **R-12:** Cada servicio con controllers REST exporta su contrato con `scripts/export_openapi.py`: Mercado en `docs/openapi.v1.json` (el nombre se conserva), Identidad en `docs/openapi.identity.v1.json` y Mensajería en `docs/openapi.messaging.v1.json` cuando tenga controllers REST (el canal de tiempo real queda fuera del OpenAPI, spec 026). Nunca se edita un contrato a mano.
@@ -68,7 +68,7 @@ Dejar el entorno de evaluación (25 de noviembre a 5 de diciembre) corriendo con
 - **CA-07:** Dado un `push` a la rama principal, cuando corre `ci-deploy`, entonces el paso de despliegue a evaluación espera la aprobación de una persona o no corre sin `workflow_dispatch`.
 - **CA-08:** Dado `workflow_dispatch` con un `image_tag` que no son 40 hexadecimales o que no existe en el registro, cuando corre, entonces falla antes de tocar Azure.
 - **CA-09:** Dado el ensayo de reversión, cuando se revierte a la versión anterior, entonces el humo pasa, la duración es menor a 15 minutos y la evidencia queda en `docs/evidencia/` sin datos de la suscripción.
-- **CA-10:** Dado el código de Terraform, cuando corre el análisis de infraestructura, entonces no existe ningún recurso de Front Door, WAF ni CDN y solo el gateway tiene entrada externa.
+- **CA-10:** Dado el código de Terraform, cuando corre el análisis de infraestructura, entonces no existe ningún recurso de Front Door, WAF ni CDN y solo el gateway tiene entrada externa. *(Ajustado por la enmienda del 2026-11-24: ver abajo.)*
 - **CA-11:** Dado un PR que cambia un endpoint sin regenerar los contratos, cuando corre el CI, entonces el check del contrato falla y nombra el archivo.
 - **CA-12:** Dado un PR que quita un campo obligatorio de una respuesta, cuando corre el CI sin la etiqueta `contrato-incompatible`, entonces falla; con la etiqueta, pasa y el resumen del PR lista el cambio.
 - **CA-13:** Dado un controller nuevo sin su operación en el contrato, o una respuesta que no coincide con su esquema, cuando corre `tests/ContractTest`, entonces falla y nombra la ruta.
@@ -91,7 +91,7 @@ Dejar el entorno de evaluación (25 de noviembre a 5 de diciembre) corriendo con
 | CA-07 | (comando) revisión de `ci-deploy.yml` con `actionlint` y ejecución real documentada |
 | CA-08 | (comando) `workflow_dispatch` con etiquetas inválidas en el entorno de evaluación |
 | CA-09 | (comando) ensayo de reversión con evidencia en `docs/evidencia/` |
-| CA-10 | (comando) `checkov -d deploy` con la regla de recursos prohibidos |
+| CA-10 | (comando) `checkov -d deploy` con la regla de recursos prohibidos (enmienda 2026-11-24: prohíbe el SKU Premium y los recursos WAF/CDN de pago distintos de Front Door Standard; el SKU Standard se fija con `terraform test` en `deploy/modules/edge/tests/edge.tftest.hcl`) |
 | CA-11 | `test_export_openapi.py::test_contrato_desactualizado_falla_CA_034_11` |
 | CA-12 | (comando) PR de prueba con un cambio incompatible, con y sin etiqueta |
 | CA-13 | `Spec034ContratoTests.Rutas_Y_Esquemas_Coinciden_CA_034_13` |
@@ -149,7 +149,7 @@ Sin colecciones ni llaves nuevas. Los artefactos son archivos:
 | Despliegue accidental o malicioso a evaluación | Entorno con aprobación o disparo manual | CA-07 |
 | Revertir a una imagen sin escanear o inventada | `image_tag` validado contra el registro, solo imágenes publicadas por el CI | CA-08 |
 | Sobrecosto por réplicas olvidadas | Fechas de subida y bajada, perfil `dev` por omisión y alerta de presupuesto | CA-01 |
-| Recursos de pago creados por error (Front Door, WAF) | Regla del análisis de Terraform | CA-10 |
+| Recursos de pago creados por error (SKU Premium, WAF o CDN de pago; Front Door Standard está permitido por ADR-007, enmienda 2026-11-24) | Regla del análisis de Terraform y prueba del SKU del módulo `edge` | CA-10 |
 | Revelar la topología interna (réplicas, hosts) | Sin nombre de réplica en respuestas; contrato público sin `servers` ni hosts internos | CA-05, CA-18 |
 | El frontend consume un contrato que no coincide con el servidor | Contrato generado del código, pruebas de contrato contra respuestas reales y regeneración obligatoria | CA-11, CA-13 |
 | Cambios incompatibles silenciosos | `oasdiff` bloquea salvo etiqueta explícita y visible | CA-12 |
@@ -237,3 +237,6 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
 - [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)
+
+## Enmiendas
+- **2026-11-24 (decisión de José: prevalece ADR-007, sin cambio de aprobación ni firmas):** R-11 y CA-10 se ajustan. Se permite Azure Front Door **Standard** (no Premium, sin WAF), como crea el módulo `deploy/modules/edge` (ADR-007). El límite de tasa se queda en la aplicación y **no** hay regla WAF; no se sube a Premium. La regla del análisis de Terraform ya no prohíbe Front Door: prohíbe el SKU Premium y los recursos WAF o CDN de pago distintos de Front Door Standard. La decisión 1 de la sección 14 y el alcance excluido (línea de Front Door y WAF) quedan superados en lo que contradigan esta nota.
