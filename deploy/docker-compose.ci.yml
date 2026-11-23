@@ -1,0 +1,113 @@
+# BUG-001: pila efímera del job «Smoke + DAST» de ci-pr.yml (gateway, Identidad, Mercado y Mensajería con documentdb-local, Redis y Azurite).
+# Solo se publica el 8080 del gateway; los servicios internos se comprueban con su propio healthcheck. Las credenciales salen de variables CI_*
+# que genera el job con `openssl rand` y enmascara (nunca se escriben aquí). Corre como Development solo dentro del runner, con valores sintéticos;
+# no existe ningún modo del código que debilite controles. Sin Azure ni servicios de pago. Se destruye con `down -v`.
+#   docker compose -f deploy/docker-compose.ci.yml up -d --build --wait
+x-servicio: &servicio
+  restart: "no"
+  depends_on:
+    documentdb: { condition: service_started }
+    redis: { condition: service_healthy }
+    azurite: { condition: service_started }
+  environment: &entorno
+    ASPNETCORE_ENVIRONMENT: Development
+    ConnectionStrings__KnockMongo: mongodb://${CI_DB_USER:-knock}:${CI_DB_PASSWORD:?CI_DB_PASSWORD is required}@documentdb:10260/?tls=true&tlsAllowInvalidCertificates=true
+    ConnectionStrings__KnockRedis: redis:6379,password=${CI_REDIS_PASSWORD:?CI_REDIS_PASSWORD is required}
+    # Cuenta propia del emulador con llave efímera del job (AZURITE_ACCOUNTS); sin llave literal.
+    ConnectionStrings__KnockBlob: DefaultEndpointsProtocol=http;AccountName=ciblob;AccountKey=${CI_BLOB_KEY:?CI_BLOB_KEY is required};BlobEndpoint=http://azurite:10000/ciblob;
+    Jwt__Issuer: knock-api
+    Jwt__Audience: knock-app
+    Jwt__SigningKey: ${CI_JWT_KEY:?CI_JWT_KEY is required}
+    RateLimiting__Global__PermitLimit: "100000"
+    RateLimiting__Ready__PermitLimit: "100000"
+
+services:
+  documentdb:
+    image: ghcr.io/microsoft/documentdb/documentdb-local@sha256:0fcf634531c1917ad0855ff9f4354aca0a5c5d8e435f08250568deb37eeb0ad5
+    command:
+      - --username
+      - ${CI_DB_USER:-knock}
+      - --password
+      - ${CI_DB_PASSWORD:?CI_DB_PASSWORD is required}
+
+  redis:
+    image: redis:7.2-alpine@sha256:2c933526722b4126a61d5c170f766dc159adf97682f0b1cbbc27b1666ba96d84
+    environment:
+      REDIS_PASSWORD: ${CI_REDIS_PASSWORD:?CI_REDIS_PASSWORD is required}
+      REDISCLI_AUTH: ${CI_REDIS_PASSWORD:?CI_REDIS_PASSWORD is required}
+    command:
+      - sh
+      - -c
+      - exec redis-server --requirepass "$$REDIS_PASSWORD" --save "" --appendonly no
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:3.37.0@sha256:830430c1da1a2d537e08f3e6764dd1f5ae00cf0346bcaf625b968ec3f0971fd5
+    environment:
+      AZURITE_ACCOUNTS: ciblob:${CI_BLOB_KEY:?CI_BLOB_KEY is required}
+    command: azurite-blob --blobHost 0.0.0.0 --skipApiVersionCheck
+
+  identity:
+    <<: *servicio
+    build: { context: .., dockerfile: src/Knock.Identity.Api/Dockerfile }
+    environment:
+      <<: *entorno
+      Firebase__ProjectId: knock-ci
+      Identity__PhoneProtection__EncryptionKeyVersion: "1"
+      Identity__PhoneProtection__HmacKeyVersion: "1"
+      Identity__PhoneProtection__EncryptionKeys__1: ${CI_KEY_A:?CI_KEY_A is required}
+      Identity__PhoneProtection__HmacKeys__1: ${CI_KEY_B:?CI_KEY_B is required}
+      Security__FieldEncryption__ActiveVersion: "1"
+      Security__FieldEncryption__Keys__1: ${CI_KEY_C:?CI_KEY_C is required}
+      Verificacion__CurpHmac__ActiveVersion: "1"
+      Verificacion__CurpHmac__Keys__1: ${CI_KEY_D:?CI_KEY_D is required}
+    healthcheck: &sonda
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /health/ready HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && head -n 1 <&3 | grep -q ' 200 '"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  market:
+    <<: *servicio
+    build: { context: .., dockerfile: src/Knock.Market.Api/Dockerfile }
+    environment:
+      <<: *entorno
+      Busqueda__Cursor__Key: ${CI_KEY_E:?CI_KEY_E is required}
+    healthcheck: *sonda
+
+  messaging:
+    <<: *servicio
+    build: { context: .., dockerfile: src/Knock.Messaging.Api/Dockerfile }
+    environment:
+      <<: *entorno
+      Chat__Habilitado: "true"
+      Services__Market__BaseUrl: http://market:8080/
+    healthcheck: *sonda
+
+  gateway:
+    build: { context: .., dockerfile: src/Knock.Gateway/Dockerfile }
+    restart: "no"
+    depends_on:
+      redis: { condition: service_healthy }
+      identity: { condition: service_healthy }
+      market: { condition: service_healthy }
+      messaging: { condition: service_healthy }
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__KnockRedis: redis:6379,password=${CI_REDIS_PASSWORD:?CI_REDIS_PASSWORD is required}
+      Jwt__Issuer: knock-api
+      Jwt__Audience: knock-app
+      Jwt__SigningKey: ${CI_JWT_KEY:?CI_JWT_KEY is required}
+      PanelJwt__SigningKey: ${CI_KEY_F:?CI_KEY_F is required}
+      RateLimiting__Ip__PermitLimit: "100000"
+      ReverseProxy__Clusters__identidad__Destinations__principal__Address: http://identity:8080/
+      ReverseProxy__Clusters__mercado__Destinations__principal__Address: http://market:8080/
+      ReverseProxy__Clusters__mensajeria__Destinations__principal__Address: http://messaging:8080/
+    healthcheck: *sonda
