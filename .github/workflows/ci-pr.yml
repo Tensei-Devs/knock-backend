@@ -24,7 +24,9 @@ permissions:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Solo los pull_request cancelan runs viejos del mismo PR; los push a ramas fijas (sprint-*, main, release, develop) terminan,
+  # porque cada merge cancelaba el run completo del push anterior. El group ya distingue PR (refs/pull/N/merge) de push (refs/heads/X).
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   DOTNET_NOLOGO: "true"
