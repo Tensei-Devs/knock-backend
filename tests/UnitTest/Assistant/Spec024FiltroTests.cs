@@ -354,18 +354,16 @@ public sealed class Spec024FiltroTests
             FiltroDatosPersonales.Censurar(text);
         }
 
-        // Se toma el mejor de varios lotes: mide el costo del filtro y no el ruido de otras pruebas que corren en paralelo.
-        const int runs = 20;
+        // Bajo carga (otras pruebas en paralelo) cualquier medida individual o promedio puede incluir descansos del planificador que no son costo del
+        // filtro. El costo real es el de la llamada sin interrupciones: se toma el MÍNIMO de muchas llamadas sueltas. Si el filtro costara más de 5 ms, ninguna llamada
+        // bajaría de ese umbral (el mínimo no oculta una regresión), y con 400 intentos al menos uno corre sin ser desalojado.
+        const int attempts = 400;
         var best = double.MaxValue;
-        for (var batch = 0; batch < 7; batch++)
+        for (var i = 0; i < attempts; i++)
         {
             var watch = Stopwatch.StartNew();
-            for (var i = 0; i < runs; i++)
-            {
-                FiltroDatosPersonales.Censurar(text);
-            }
-
-            best = Math.Min(best, watch.Elapsed.TotalMilliseconds / runs);
+            FiltroDatosPersonales.Censurar(text);
+            best = Math.Min(best, watch.Elapsed.TotalMilliseconds);
         }
 
         best.Should().BeLessThan(5);

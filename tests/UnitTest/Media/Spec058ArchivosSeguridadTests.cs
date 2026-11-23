@@ -75,7 +75,8 @@ public sealed class Spec058ArchivosSeguridadTests : IDisposable
         using var listener = new MeterListener();
         listener.InstrumentPublished = (instrument, meterListener) =>
         {
-            if (instrument.Meter.Name == MediaMetrics.MeterName)
+            // Cada MediaMetrics crea su propio Meter con el mismo nombre; se habilitan solo los instrumentos de ESTA instancia (por referencia).
+            if (ReferenceEquals(instrument, _metrics.FilesCreated) || ReferenceEquals(instrument, _metrics.UploadsRejectedByLimit))
             {
                 meterListener.EnableMeasurementEvents(instrument);
             }
