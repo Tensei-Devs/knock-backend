@@ -59,3 +59,24 @@ run "gateway_con_esquema_se_rechaza" {
   }
   expect_failures = [var.gateway_host]
 }
+
+# Spec 034 R-11 / CA-10: el SKU Premium (unos 330 USD al mes) se rechaza en la validación.
+run "sku_premium_se_rechaza" {
+  command = plan
+  variables {
+    sku_name = "Premium_AzureFrontDoor"
+  }
+  expect_failures = [var.sku_name]
+}
+
+run "sku_standard_explicito_es_valido" {
+  command = plan
+  variables {
+    sku_name = "Standard_AzureFrontDoor"
+  }
+
+  assert {
+    condition     = azurerm_cdn_frontdoor_profile.this.sku_name == "Standard_AzureFrontDoor"
+    error_message = "El SKU Standard explícito sigue siendo válido."
+  }
+}

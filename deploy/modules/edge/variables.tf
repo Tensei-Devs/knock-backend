@@ -47,13 +47,13 @@ variable "public_images_host" {
 }
 
 variable "sku_name" {
-  description = "Standard_AzureFrontDoor (unos 35 USD al mes de base) o Premium_AzureFrontDoor (unos 330 USD; no se necesita)."
+  description = "Solo Standard_AzureFrontDoor (unos 35 USD al mes de base). Premium (unos 330 USD) está prohibido por ADR-007 (enmienda 2026-11-24) y spec 034 R-11."
   type        = string
   default     = "Standard_AzureFrontDoor"
 
   validation {
-    condition     = contains(["Standard_AzureFrontDoor", "Premium_AzureFrontDoor"], var.sku_name)
-    error_message = "sku_name debe ser Standard_AzureFrontDoor o Premium_AzureFrontDoor."
+    condition     = var.sku_name == "Standard_AzureFrontDoor"
+    error_message = "sku_name debe ser Standard_AzureFrontDoor: el SKU Premium está prohibido por costo (ADR-007, spec 034 CA-10)."
   }
 }
 
