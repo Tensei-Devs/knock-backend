@@ -41,7 +41,7 @@ internal sealed class SuspensionAppealResolutionService(
         if (string.Equals(actorSub, report.ReportedId, StringComparison.OrdinalIgnoreCase)
             || (samePerson && await panel.AnotherAccountHasPermissionAsync(PanelApiPermissions.ReportsResolve, actorSub, cancellationToken)))
         {
-            throw new DomainException(DomainErrorKind.Forbidden, "The person who decided cannot review this appeal.", SafetyErrorCodes.SelfReviewCode);
+            throw new DomainException(DomainErrorKind.Forbidden, "The person who decided cannot review this appeal.", CommonErrorCodes.SelfReview);
         }
 
         var accept = decision == AppealDecisions.Accept;

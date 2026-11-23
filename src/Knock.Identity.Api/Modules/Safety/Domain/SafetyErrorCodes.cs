@@ -12,8 +12,6 @@ internal static class SafetyErrorCodes
     public const string AppealNotAllowedCode = "appeal_not_allowed";
     public const string CannotSuspendSelfCode = "cannot_suspend_self";
     public const string AccountNotSuspendedCode = "account_not_suspended";
-    public const string NotFoundCode = "not_found";
     public const string AppealAlreadyResolvedCode = "appeal_already_resolved";
     public const string AppealNotFoundCode = "appeal_not_found";
-    public const string SelfReviewCode = "self_review_not_allowed";
 }

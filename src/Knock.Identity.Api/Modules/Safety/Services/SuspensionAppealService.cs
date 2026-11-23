@@ -127,7 +127,7 @@ internal sealed partial class SuspensionAppealService(
 
     private static SuspensionAppealView View(StoredAppeal appeal) => new(appeal.State, appeal.CreatedAtUtc, appeal.ResolvedAtUtc);
 
-    private static DomainException NotFound() => new(DomainErrorKind.NotFound, "Not found.", SafetyErrorCodes.NotFoundCode);
+    private static DomainException NotFound() => new(DomainErrorKind.NotFound, "Not found.", CommonErrorCodes.NotFound);
 
     private static DateTime Millisecond(DateTime value) => value.AddTicks(-(value.Ticks % TimeSpan.TicksPerMillisecond));
 

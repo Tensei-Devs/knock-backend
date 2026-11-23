@@ -96,7 +96,6 @@ internal static class ModerationErrorCodes
     public const string ReportNotFoundCode = "report_not_found";
     public const string ReportAlreadyDecidedCode = "report_already_decided";
     public const string InvalidCursorCode = "invalid_review_cursor";
-    public const string SelfReviewCode = "self_review_not_allowed";
     public const string PhotosUnavailableCode = "photos_unavailable";
 }
 

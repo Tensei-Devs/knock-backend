@@ -41,7 +41,7 @@ internal sealed class ReportReviewService(
         var parties = await store.FindPartiesAsync(objectId, cancellationToken) ?? throw new DomainException(DomainErrorKind.NotFound, "The report does not exist.", ModerationErrorCodes.ReportNotFoundCode);
         if (string.Equals(actor.Sub, parties.ReportedId, StringComparison.OrdinalIgnoreCase) || string.Equals(actor.Sub, parties.ReporterId, StringComparison.OrdinalIgnoreCase))
         {
-            throw new DomainException(DomainErrorKind.Forbidden, "A moderator cannot decide a report about themselves.", ModerationErrorCodes.SelfReviewCode);
+            throw new DomainException(DomainErrorKind.Forbidden, "A moderator cannot decide a report about themselves.", CommonErrorCodes.SelfReview);
         }
 
         var severity = body.Gravedad!;

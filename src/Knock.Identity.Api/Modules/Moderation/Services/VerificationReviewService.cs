@@ -142,7 +142,7 @@ internal sealed partial class VerificationReviewService(
     {
         if (string.Equals(actor.Sub, verification.OwnerSub, StringComparison.OrdinalIgnoreCase))
         {
-            throw new DomainException(DomainErrorKind.Forbidden, "A person cannot review their own verification.", ModerationErrorCodes.SelfReviewCode);
+            throw new DomainException(DomainErrorKind.Forbidden, "A person cannot review their own verification.", CommonErrorCodes.SelfReview);
         }
     }
 

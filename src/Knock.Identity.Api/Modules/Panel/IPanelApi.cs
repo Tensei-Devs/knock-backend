@@ -1,5 +1,3 @@
-using MongoDB.Driver;
-
 namespace Knock.Identity.Api.Modules.Panel;
 
 /// <summary>Manija opaca de la transacción de MongoDB de un almacén: los servicios la pasan sin conocer el controlador de MongoDB (spec 003, CA-003-02); solo los almacenes la abren.</summary>
@@ -43,11 +41,7 @@ internal sealed class PanelApi(Services.AuditoriaPanel audit, Data.PanelSesiones
     {
         var store = accounts ?? throw new InvalidOperationException("The panel account store is not configured.");
         var roles = Domain.PanelRoles.All.Where(role => Domain.MapaDeRoles.PermisosDe(role).Contains(permission)).ToList();
-        var filter = Builders<MongoDB.Bson.BsonDocument>.Filter;
-        return await store.Accounts
-            .Find(filter.Ne(Data.PanelCuentasStore.SubField, excludedSubject) & filter.Eq(Data.PanelCuentasStore.StateField, Domain.PanelCuentaEstado.Activa) & filter.In(Data.PanelCuentasStore.RolesField, roles))
-            .Limit(1)
-            .AnyAsync(cancellationToken);
+        return await store.AnyActiveWithRoleAsync(roles, excludedSubject, cancellationToken);
     }
 
     public Task RecordActionAsync(string eventName, string result, string? subject, string? sessionId, string? permission, string? resourceId, CancellationToken cancellationToken) =>
