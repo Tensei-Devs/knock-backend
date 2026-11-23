@@ -341,3 +341,15 @@ excepciones:
     creada: 2026-11-20
     vence: 2027-02-18
     plan: mover estas piezas a Knock.Hosting en la etapa 3 (KNOCK-281), borrar las copias de Mensajería y de Market con sus marcadores y retirar esta excepción antes de vencer.
+  - id: EXC-031
+    herramienta: checkov
+    regla: CKV_GHA_7
+    alcance: solo el input image_tag de workflow_dispatch en .github/workflows/ci-deploy.yml (la supresión «#checkov:skip» está en esa línea); no se amplía
+    justificacion: >-
+      Spec 034 R-07/R-08 (KNOCK-266, PR #300): la reversión manual exige elegir el SHA de la imagen a desplegar, por lo que el workflow necesita un input. La regla pide que los inputs de workflow_dispatch estén vacíos porque asume que alteran el build.
+      Aquí no lo alteran: el valor solo lo lee el job redeploy (if: workflow_dispatch), que lo valida con ^[0-9a-f]{40}$ antes de iniciar sesión en Azure, exige que las cuatro imágenes ya existan en el registro y solo ejecuta az containerapp update; ningún job de build, escaneo o publicación usa el input.
+      El job corre con la aprobación del entorno evaluacion. Evidencia: el único hallazgo de Checkov en el run 45208009800 de sprint-05 (CKV_GHA_7, ci-deploy.yml líneas 26-32); con la supresión, Checkov local da 0 fallos y 1 omitido.
+    responsable: José Julián Hernández Hernández
+    creada: 2026-11-23
+    vence: 2027-02-18
+    plan: si se elimina la reversión manual por workflow_dispatch (o se mueve a un workflow aparte sin inputs), retirar la supresión y esta excepción antes de vencer.
