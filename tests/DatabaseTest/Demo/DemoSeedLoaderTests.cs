@@ -25,6 +25,7 @@ namespace Knock.DatabaseTest.Demo;
 
 public sealed class DemoSeedLoaderTests
 {
+    private static readonly string[] _uniqueFields = ["sub", "celularHash"];
     private static readonly string _path = Path.Combine(CatalogTestDatabase.SeedsDirectory, "demo", "identity", "usuarios.json");
 
     [Fact]
@@ -187,6 +188,30 @@ public sealed class DemoSeedLoaderTests
             await users.Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("celularHash"), new CreateIndexOptions { Unique = true }));
             await Task.WhenAll(seeder.SeedAsync(_path, CancellationToken.None), seeder.SeedAsync(_path, CancellationToken.None));
             Assert.Equal(10, await users.CountDocumentsAsync(Builders<BsonDocument>.Filter.Eq("demo", true)));
+        });
+    }
+
+    [Fact]
+    public async Task FiveConcurrentLoads_WithAllUniqueIndexes_KeepTenUsersAndVersions_CA_038_11()
+    {
+        await WithDatabase(async (database, seeder, _) =>
+        {
+            var users = database.GetCollection<BsonDocument>("usuarios");
+            foreach (var field in _uniqueFields)
+            {
+                await users.Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(
+                    Builders<BsonDocument>.IndexKeys.Ascending(field), new CreateIndexOptions { Unique = true }));
+            }
+
+            await Task.WhenAll(Enumerable.Range(0, 5).Select(_ => seeder.SeedAsync(_path, CancellationToken.None)));
+            var result = await users.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+            Assert.Equal(10, result.Count);
+            Assert.Equal(10, result.Select(user => user["celularHash"]).Distinct().Count());
+            Assert.Equal(10, result.Select(user => user["sub"]).Distinct().Count());
+            await seeder.SeedAsync(_path, CancellationToken.None);
+            var final = await users.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+            Assert.Equal(10, final.Count);
+            Assert.All(result, before => Assert.Equal(before["version"], Assert.Single(final, user => user["_id"] == before["_id"])["version"]));
         });
     }
 
