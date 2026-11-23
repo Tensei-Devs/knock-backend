@@ -119,7 +119,7 @@ public sealed class Spec037InternoAvisosSeguridadTests
         delete.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    private static Task<SecurityMessagingFactory> CreateHostAsync(string connectionString, string databaseName, byte[] marketKey) =>
+    internal static Task<SecurityMessagingFactory> CreateHostAsync(string connectionString, string databaseName, byte[] marketKey) =>
         SecurityMessagingFactory.CreateAsync(new Dictionary<string, string?>
         {
             ["ConnectionStrings:KnockMongo"] = connectionString,
@@ -128,7 +128,7 @@ public sealed class Spec037InternoAvisosSeguridadTests
             ["Security:InternalTokens:IdentityKey"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)),
         });
 
-    private static string Mint(string issuer, byte[] key, string permission, TimeSpan? lifetime = null)
+    internal static string Mint(string issuer, byte[] key, string permission, TimeSpan? lifetime = null)
     {
         var now = DateTime.UtcNow;
         var descriptor = new SecurityTokenDescriptor

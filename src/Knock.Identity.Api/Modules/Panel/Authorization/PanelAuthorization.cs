@@ -101,6 +101,10 @@ internal sealed class PermisoPanelHandler(
         context.Fail();
     }
 
+    /// <summary>Misma decisión que toma la petición local, pero para otro servicio (spec 061): <see langword="true"/> solo si la cuenta está activa, su versión coincide y sus roles vigentes dan el permiso. Falla cerrado.</summary>
+    public async Task<bool> IsAllowedAsync(string sub, string sid, int tokenVersion, string permission, CancellationToken cancellationToken) =>
+        await PanelInfra.GuardAsync(() => DecideAsync(sub, sid, tokenVersion, permission, null, null, cancellationToken)) is null;
+
     private async Task<PanelDenial?> DecideAsync(string sub, string sid, int tokenVersion, string permission, string? route, string? resource, CancellationToken cancellationToken)
     {
         var account = await ReadAccountAsync(sub, cancellationToken);
