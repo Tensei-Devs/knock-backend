@@ -26,8 +26,14 @@ internal sealed class SesionesApi(ISesionesStore store, PhoneProtector phones, I
     public Task<AccountForSuspension?> ReadAccountForSuspensionAsync(StoreTransaction transaction, string subject, CancellationToken cancellationToken) =>
         Suspension.ReadAsync(transaction, subject, cancellationToken);
 
-    public Task<IReadOnlyList<string>?> SuspendAccountAsync(StoreTransaction transaction, string subject, string expectedState, string type, string reportId, DateTime since, CancellationToken cancellationToken) =>
-        Suspension.SuspendAsync(transaction, subject, expectedState, type, MongoDB.Bson.ObjectId.Parse(reportId), since, cancellationToken);
+    public Task<IReadOnlyList<string>?> SuspendAccountAsync(StoreTransaction transaction, string subject, string expectedState, string type, string reportId, DateTime since, DateTime? expiresAt, CancellationToken cancellationToken) =>
+        Suspension.SuspendAsync(transaction, subject, expectedState, type, MongoDB.Bson.ObjectId.Parse(reportId), since, expiresAt, cancellationToken);
+
+    public Task<AppSuspension?> FindSuspensionByPhoneAsync(string phone, CancellationToken cancellationToken) =>
+        Suspension.FindSuspensionByPhoneHashAsync(phones.Hash(phone).Value, cancellationToken);
+
+    public Task<AppSuspension?> FindSuspensionBySubAsync(string subject, CancellationToken cancellationToken) =>
+        Suspension.FindSuspensionBySubAsync(subject, cancellationToken);
 
     public Task<bool> ReactivateAccountAsync(StoreTransaction transaction, string subject, CancellationToken cancellationToken) =>
         Suspension.ReactivateAsync(transaction, subject, cancellationToken);

@@ -1,10 +1,12 @@
 using System.Globalization;
 using Knock.Identity.Api.Common.Errors;
 using Knock.Identity.Api.Hosting.Procesos.Outbox;
+using Knock.Identity.Api.Hosting.Procesos.TareasProgramadas;
 using Knock.Identity.Api.Modules.Panel;
 using Knock.Identity.Api.Modules.Safety.Data;
 using Knock.Identity.Api.Modules.Safety.Domain;
 using Knock.Identity.Api.Modules.Sesiones;
+using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 
 namespace Knock.Identity.Api.Modules.Safety.Services;
@@ -25,8 +27,11 @@ internal sealed record SuspensionResult(SuspensionOutcome Outcome, IReadOnlyList
 /// condicionada, revoca las sesiones de la app y del panel, deja <c>CuentaSuspendida</c> y un <c>sesion_revocada</c> por sesión en la bandeja y escribe la auditoría; si algo falla no queda nada.
 /// La cancelación en Redis va después del commit con reintento y sin revertir (R-08). SEGURIDAD: eventos y auditoría llevan solo identificadores (R-18).
 /// </summary>
-internal sealed class AccountSuspension(ISuspensionStore store, ISesionesApi accounts, IPanelApi panel, TimeProvider clock, ILogger<AccountSuspension> logger)
+internal sealed class AccountSuspension(ISuspensionStore store, ISesionesApi accounts, IPanelApi panel, TimeProvider clock, ILogger<AccountSuspension> logger, IOptions<SuspensionOptions>? options = null)
 {
+    /// <summary>Quien levanta una suspensión gradual al vencer (spec 060, R-06a): no es una persona; la auditoría guarda este valor.</summary>
+    public const string SystemActor = "sistema";
+
     public const string AuditSuspended = "cuenta_suspendida";
     public const string AuditReactivated = "cuenta_reactivada";
     public const string EventSuspended = "CuentaSuspendida";
@@ -70,7 +75,8 @@ internal sealed class AccountSuspension(ISuspensionStore store, ISesionesApi acc
         }
 
         var now = Millisecond(clock.GetUtcNow().UtcDateTime);
-        var sessionIds = await accounts.SuspendAccountAsync(transaction, subject, account.State, type, reportId, now, cancellationToken);
+        var expiresAt = AccountSuspensionRules.ExpiresAt(type, now, options?.Value.DuracionGradualDias ?? SuspensionOptions.DefaultGradualDays);
+        var sessionIds = await accounts.SuspendAccountAsync(transaction, subject, account.State, type, reportId, now, expiresAt, cancellationToken);
         if (sessionIds is null)
         {
             // Otra decisión la suspendió entre la lectura y la escritura: un solo cambio y un solo evento (R-05).
@@ -78,6 +84,12 @@ internal sealed class AccountSuspension(ISuspensionStore store, ISesionesApi acc
         }
 
         await panel.RevokeSessionsInTransactionAsync(transaction, subject, cancellationToken);
+        if (expiresAt is { } due)
+        {
+            // La suspensión gradual vence sola (spec 060, R-06a): la tarea lleva solo identificadores y se confirma con la suspensión.
+            await store.ScheduleTaskAsync(transaction, CatalogoDeTareas.VencerSuspension, ExpiryKey(subject, reportId), due, now, cancellationToken);
+        }
+
         var suspendedId = OutboxReglas.BuildId(EventSuspended, reportId, 1);
         var events = new List<EventoDeOutbox>
         {
@@ -92,6 +104,9 @@ internal sealed class AccountSuspension(ISuspensionStore store, ISesionesApi acc
         await panel.RecordActionInTransactionAsync(transaction, AuditSuspended, PanelApiAuditValues.ResultAllowed, moderatorSub, reportId, cancellationToken);
         return new SuspensionResult(SuspensionOutcome.Suspended, sessionIds);
     }
+
+    /// <summary>Clave de negocio de la tarea de vencimiento: <c>{sub}:{reporteId}</c>.</summary>
+    public static string ExpiryKey(string subject, string reportId) => $"{subject}:{reportId}";
 
     /// <summary>Reactiva en su propia transacción (R-15). Rechaza una cuenta que no está suspendida con 409 <c>account_not_suspended</c>. No restaura sesiones.</summary>
     public Task ReactivarAsync(string subject, string reportId, string moderatorSub, CancellationToken cancellationToken) =>

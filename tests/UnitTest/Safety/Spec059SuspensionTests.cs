@@ -261,9 +261,17 @@ public sealed class Spec059SuspensionTests
             }
         }
 
+        public List<(string Type, string Key, DateTime Due)> Scheduled { get; } = [];
+
         public Task AddEventsAsync(StoreTransaction transaction, IReadOnlyList<EventoDeOutbox> events, DateTime now, CancellationToken cancellationToken)
         {
             _events.AddRange(events);
+            return Task.CompletedTask;
+        }
+
+        public Task ScheduleTaskAsync(StoreTransaction transaction, string type, string businessKey, DateTime due, DateTime now, CancellationToken cancellationToken)
+        {
+            Scheduled.Add((type, businessKey, due));
             return Task.CompletedTask;
         }
     }
@@ -295,6 +303,8 @@ public sealed class Spec059SuspensionTests
             PanelRevoked.Add(subject);
             return Task.CompletedTask;
         }
+
+        public Task<bool> AnotherAccountHasPermissionAsync(string permission, string excludedSubject, CancellationToken cancellationToken) => Task.FromResult(false);
     }
 
     internal sealed class FakeAccounts : ISesionesApi
@@ -309,6 +319,10 @@ public sealed class Spec059SuspensionTests
 
         public bool Reactivated { get; private set; }
 
+        public DateTime? ExpiresAt { get; private set; }
+
+        public AppSuspension? Suspension { get; set; }
+
         public int CancelFailures { get; set; }
 
         public int CancelAttempts { get; private set; }
@@ -319,10 +333,15 @@ public sealed class Spec059SuspensionTests
 
         public Task<string?> FindSubByPhoneAsync(string phone, CancellationToken cancellationToken) => Task.FromResult<string?>(null);
 
+        public Task<AppSuspension?> FindSuspensionByPhoneAsync(string phone, CancellationToken cancellationToken) => Task.FromResult(Suspension);
+
+        public Task<AppSuspension?> FindSuspensionBySubAsync(string subject, CancellationToken cancellationToken) => Task.FromResult(Suspension);
+
         public Task<AccountForSuspension?> ReadAccountForSuspensionAsync(StoreTransaction transaction, string subject, CancellationToken cancellationToken) => Task.FromResult(Account);
 
-        public Task<IReadOnlyList<string>?> SuspendAccountAsync(StoreTransaction transaction, string subject, string expectedState, string type, string reportId, DateTime since, CancellationToken cancellationToken)
+        public Task<IReadOnlyList<string>?> SuspendAccountAsync(StoreTransaction transaction, string subject, string expectedState, string type, string reportId, DateTime since, DateTime? expiresAt, CancellationToken cancellationToken)
         {
+            ExpiresAt = expiresAt;
             if (LoseRace)
             {
                 return Task.FromResult<IReadOnlyList<string>?>(null);

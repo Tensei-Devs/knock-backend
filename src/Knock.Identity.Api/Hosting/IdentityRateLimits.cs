@@ -26,6 +26,9 @@ internal static class IdentityRateLimits
     /// <summary>Spec 025 (R-19): confirmar una foto de verificación, 10 por hora por persona.</summary>
     public const string VerificationConfirmPolicy = "verificacion-confirmar";
 
+    /// <summary>Spec 060 (R-07): apelación de una persona suspendida, 20 por hora por IP; el límite de 5 por hora por número lo aplica el servicio.</summary>
+    public const string SuspensionAppealPolicy = "suspension-apelacion";
+
     /// <summary>
     /// Límite por IP: política global, estricta para <c>/api/v{n}/auth/*</c> y la sesión del panel (spec 033, R-27) y propia para <c>/health/ready</c>.
     /// </summary>
@@ -40,6 +43,7 @@ internal static class IdentityRateLimits
                 .PerSubject(PhoneChangeCheckPolicy, 3, TimeSpan.FromHours(1))
                 .PerSubject(PhoneChangeConfirmPolicy, 5, TimeSpan.FromHours(1))
                 .PerClient(AccessRecoveryPolicy, "recuperacion", 3, TimeSpan.FromHours(1))
+                .PerClient(SuspensionAppealPolicy, "suspension-apelacion", 20, TimeSpan.FromHours(1))
                 .PerSubject(ExportPolicy, 3, TimeSpan.FromHours(1))
                 .PerSubject(DeletionPolicy, 5, TimeSpan.FromHours(1))
                 .PerSubject(VerificationCreatePolicy, 3, TimeSpan.FromHours(1))

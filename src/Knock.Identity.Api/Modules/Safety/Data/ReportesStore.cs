@@ -21,7 +21,7 @@ internal interface IWarningCounter
     /// Las advertencias <b>decididas por un moderador y vigentes</b> contra esa persona, leídas dentro de la transacción de la decisión (así incluyen la que se está decidiendo). Un reporte abierto,
     /// en apelación o sin decidir nunca cuenta (R-17).
     /// </summary>
-    Task<int> CountDecidedWarningsAsync(StoreTransaction transaction, string reportedId, CancellationToken cancellationToken);
+    Task<int> CountDecidedWarningsAsync(StoreTransaction transaction, string reportedId, DateTime since, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -58,12 +58,12 @@ internal sealed class ReportesStore(
             ],
             cancellationToken);
 
-    public async Task<int> CountDecidedWarningsAsync(StoreTransaction transaction, string reportedId, CancellationToken cancellationToken)
+    public async Task<int> CountDecidedWarningsAsync(StoreTransaction transaction, string reportedId, DateTime since, CancellationToken cancellationToken)
     {
         var filters = Builders<BsonDocument>.Filter;
         var count = await Reports.CountDocumentsAsync(
             (IClientSessionHandle)transaction.Handle,
-            filters.Eq(_reportedField, reportedId) & filters.Eq(_stateField, "decidido") & filters.Eq(_decisionField + ".respuesta", "advertencia"),
+            filters.Eq(_reportedField, reportedId) & filters.Eq(_stateField, "decidido") & filters.Eq(_decisionField + ".respuesta", "advertencia") & filters.Gte(_decisionField + ".decididoEn", new BsonDateTime(since)),
             cancellationToken: cancellationToken);
         return (int)count;
     }

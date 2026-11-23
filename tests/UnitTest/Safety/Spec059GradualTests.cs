@@ -75,13 +75,26 @@ public sealed class Spec059GradualTests
         warnings.Calls.Should().Be(0);
     }
 
+    [Fact]
+    public async Task Una_Advertencia_Fuera_De_La_Ventana_No_Cuenta_CA_059_20()
+    {
+        var (effects, _, warnings) = Build(validWarnings: 2, threshold: 3);
+
+        await Warn(effects);
+
+        warnings.Since.Should().Be(new DateTime(2026, 11, 21, 12, 0, 0, DateTimeKind.Utc).AddDays(-90), "solo cuentan las advertencias decididas en los últimos 90 días");
+    }
+
     internal sealed class FakeWarnings(int count) : IWarningCounter
     {
         public int Calls { get; private set; }
 
-        public Task<int> CountDecidedWarningsAsync(StoreTransaction transaction, string reportedId, CancellationToken cancellationToken)
+        public DateTime? Since { get; private set; }
+
+        public Task<int> CountDecidedWarningsAsync(StoreTransaction transaction, string reportedId, DateTime since, CancellationToken cancellationToken)
         {
             Calls++;
+            Since = since;
             return Task.FromResult(count);
         }
     }
