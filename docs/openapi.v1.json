@@ -10764,6 +10764,7 @@
       },
       "ImagenConfirmadaResponse": {
         "required": [
+          "id",
           "url",
           "ancho",
           "alto",
@@ -10771,8 +10772,17 @@
         ],
         "type": "object",
         "properties": {
+          "id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "url": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "ancho": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
