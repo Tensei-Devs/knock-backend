@@ -14177,6 +14177,29 @@
               "null",
               "string"
             ]
+          },
+          "reprogramacionPendiente": {
+            "type": "boolean",
+            "default": false
+          },
+          "estadoCotizacionFinal": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "permisoFotos": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "terminadaEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         },
         "description": "Vista de la visita (spec 022, R-02 y R-05). `Rol` es `cliente` o `tecnico` y decide qué campos vienen: `Tecnico`, `Codigo`,\n`CodigoVenceEn`, `MotivoCodigo`, `ReglaSeguridad` y `PuedeAvisar` solo en la del cliente; `Cliente` y `LlegadaEn` solo en la del técnico.\nEl código nunca llega al técnico: `Codigo` (cuatro dígitos) solo sale en domicilio, en `confirmada` o `en_curso`, sin usar, sin vencer y sin\nbloqueo; cuando falta, `MotivoCodigo` dice por qué (`usado`, `vencido`, `bloqueada` o `no_aplica`)."
