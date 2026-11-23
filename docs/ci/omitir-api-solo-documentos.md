@@ -20,3 +20,15 @@ Falla cerrado: lista vacía, push a rama nueva (`__ALL__`) o cualquier archivo d
 | `db/050.js` | false |
 | `.github/workflows/ci-pr.yml`, `README.md` | false |
 | vacío o `__ALL__` | false |
+
+## Eventos sin base (corrección)
+Antes, sin `pull_request.base.sha` y sin `before` (disparo manual) o con `before` de ceros, el script comparaba `HEAD~1 HEAD`: si el último commit solo tocaba documentos, `docsonly=true` y el job API salía SKIPPED aun en un run manual (run 45229917141). Ahora esos casos fuerzan `CHANGED="__ALL__"` y el API corre completo. `pull_request` y el gate no cambian.
+
+| Evento (simulado con `git` falso) | CHANGED | docsonly |
+|---|---|---|
+| `workflow_dispatch` (último commit solo docs) | `__ALL__` | false |
+| push con `before` válido, solo docs/specs | lista | true |
+| push con `before` válido, incluye `src/` | lista | false |
+| `pull_request`, solo docs | lista | true |
+| push con `before` inalcanzable (diff falla) | `__ALL__` | false |
+| push con `before` de ceros (rama nueva) | `__ALL__` | false |
