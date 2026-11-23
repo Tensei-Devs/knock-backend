@@ -1,7 +1,8 @@
 # Matriz de límites de peticiones
 
-> TT-API-03 (KNOCK-37). Los valores salen de `src/Knock.Api/appsettings.json` (sección `RateLimiting`), sin secretos, y se afinan con el k6 de TT-QA-02.
-> Orden en el pipeline: `docs/MIDDLEWARES.md`. Implementación: `src/Knock.Api/Hosting/RateLimitingExtensions.cs`.
+> TT-API-03 (KNOCK-37). Los valores por IP salen del `appsettings.json` de cada proyecto (sección `RateLimiting`), sin secretos, y se afinan con el k6 de TT-QA-02.
+> Orden en el pipeline: `docs/MIDDLEWARES.md`. Implementación: `src/Knock.Hosting/RateLimiting/RateLimitingExtensions.cs`; políticas con nombre en `MarketRateLimits`, `IdentityRateLimits` y `MessagingRateLimits`; gateway en `src/Knock.Gateway/Hosting`.
+> La sección «Matriz por política (verificada contra el código)» del final es la lista completa y vigente; las secciones por spec son su historia.
 
 ## Políticas por IP
 
@@ -186,3 +187,63 @@ Políticas por `sub` del JWT de `MessagingRateLimits` (ventana fija; contador co
 ## Rutas internas (specs 037, 039, 043, 053 y 054)
 
 Ninguna ruta de `/api/v1/interno/*` tiene política de límite propia: no son políticas de `RateLimiting`, sino de **autorización** del token de servicio (`InternalHistory`, `InternalEvents`, `InternalBlocks`, `InternalAccount`, `InternalTechnicianHidden`, `InternalNotFinishedReport` en Mercado; `InternalNotices` en Mensajería). Las llama solo otro servicio de Knock, no pasan por el gateway y solo les aplica el límite global por IP de su servicio. Los nombres `InternalBlocks`, `InternalEvents`, `InternalNotices` y `AccountPolicy` de la lista de trabajo corresponden a esas políticas de autorización (`AccountPolicy` es la constante de `InternalAccount`); no hay un valor de peticiones por minuto que documentar.
+
+## Matriz por política (verificada contra el código, 2026-11-23, spec 035 T-09)
+
+Todas las políticas con nombre usan el contador compartido en Redis con respaldo por copia (`KnockRateLimitPolicies`). `PerSubject` limita por `sub` del JWT (sin `sub` no limita: la autenticación ya respondió) y `PerClient` por IP resuelta (spec 035: confianza solo en `ForwardedHeaders:KnownNetworks`, `ForwardLimit = 1`, el gateway reemplaza `X-Forwarded-For`). Cualquier ruta cuenta además en la política global por IP del servicio y en las del gateway. Los valores de `appsettings.json` son: Identidad y Mercado `Global` 100/min, `Auth` 10/min (estricta de `/api/v{n}/auth/*`; Identidad suma la sesión del panel) y `Ready` 60/min; Mensajería `Global` 100/min y `Ready` 60/min, sin `Auth`, y con los contadores globales en memoria por copia (`SharedGlobalCounters = false`). Gateway: `Ip` 100/min, `Auth` 10/min, `User` 120/min, `Search` 30/min y `Discard` 30/hora.
+
+**Identidad** (`IdentityRateLimits`)
+
+| Política | Controller | Límite | Clave |
+|---|---|---|---|
+| `cambio-numero-comprobar` | `MeCambioNumeroController` | 3 por hora | `sub` |
+| `cambio-numero-confirmar` | `MeCambioNumeroController` | 5 por hora | `sub` |
+| `recuperacion-acceso` | `AccessRecoveryController` | 3 por hora | IP |
+| `suspension-apelacion` | `SuspensionAppealController` | 20 por hora | IP |
+| `exportaciones` | `MeExportacionesController` | 3 por hora | `sub` |
+| `eliminacion` | `MeEliminacionController` | 5 por hora | `sub` |
+| `verificacion-crear` | `MeVerificacionController` | 3 por hora | `sub` |
+| `verificacion-confirmar` | `FotosVerificacionController` | 10 por hora | `sub` |
+
+**Mercado** (`MarketRateLimits`)
+
+| Política | Controller | Límite | Clave |
+|---|---|---|---|
+| `waitlist` | `ListaEsperaController` | 5 por hora | `sub` |
+| `solicitudes-crear` | `SolicitudesController` | 10 por hora | `sub` |
+| `solicitudes-cancelar` | `CancelacionController` | 10 por hora | `sub` |
+| `solicitudes-ampliar` | `AmpliarController` | 10 por hora | `sub` |
+| `cotizaciones-referencia` | `MarketReferenceController` | 30 por minuto | `sub` |
+| `quotes` | `CotizacionesController` | 3 por minuto | `sub` |
+| `cotizaciones-comparar` | `QuoteComparisonController` | 60 por minuto | `sub` |
+| `cotizaciones-elegir` | `ChooseQuoteController` | 10 por minuto | `sub` |
+| `visitas-llegada` | `ArrivalController` | 5 por minuto | `sub` |
+| `tecnicos-confianza` | `TrustedTechniciansController` | 30 por minuto | `sub` |
+| `tecnicos-servicios` | `ServiciosController` | 30 por minuto | `sub` |
+| `opiniones` | `OpinionesController` | 30 por minuto | `sub` |
+| `admin-catalogo` | `AdminCatalogController`, `AdminTradesController` | 60 por minuto | IP |
+| `admin-opiniones` | `AdminReviewsController` | 30 por minuto | IP |
+| `agenda-tecnico` | `VisitScheduleController` (agenda) | 60 por minuto | `sub` |
+| `visitas-cambios` | `VisitScheduleController` (reprogramar, responder, cancelar, ausente) | 20 por minuto | `sub` |
+| `visitas-cotizacion-final` | `FinalQuoteController` | 10 por minuto | `sub` |
+| `visitas-cotizacion-final-decision` | `FinalQuoteController` | 20 por minuto | `sub` |
+| `cotizaciones-ajuste-precio` | `FinalQuoteController` | 10 por minuto | `sub` |
+| `ajustes-decision` | `FinalQuoteController` | 20 por minuto | `sub` |
+| `tecnicos-registro` | `TecnicosController` y `TradeRequestsController` | 5 por hora | `sub` |
+| `tecnicos-mapa` | `MapaController` | 60 por minuto | IP |
+| `tecnicos-explorar` | `ExplorarController` | 60 por minuto | IP |
+| `asistente-ia` | `AsistenteController` (rutas que llaman al modelo) | 10 por minuto | `sub` |
+| `asistente-consulta` | `AsistenteController` (consultas) | 60 por minuto | `sub` |
+
+**Mensajería** (`MessagingRateLimits`)
+
+| Política | Controller | Límite | Clave |
+|---|---|---|---|
+| `conversaciones-crear` | `ConversacionesController` | 20 por hora | `sub` |
+| `conversaciones-mensajes` | `MensajesController` (con `code` propio `message_limit`) | 30 por minuto | `sub` |
+| `dispositivos` | `DispositivosController` | 30 por hora | `sub` |
+| `avisos-leer` | `AvisosController`, `MePreferenciasAvisosController` (lecturas) | 120 por minuto | `sub` |
+| `avisos-marcar` | `AvisosController` | 60 por minuto | `sub` |
+| `avisos-preferencias` | `MePreferenciasAvisosController` (escritura) | 20 por minuto | `sub` |
+
+**Humo de dos clientes (spec 035, CA-15).** Desde el entorno de evaluación, dos clientes con IP distinta agotan `/auth` por separado: el primero debe llegar a 429 sin afectar al segundo. El comando está en `tests/smoke/spec035-dos-clientes.sh` (no se corre contra Azure desde el repositorio).

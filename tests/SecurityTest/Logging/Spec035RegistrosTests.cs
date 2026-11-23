@@ -44,6 +44,20 @@ public sealed class Spec035RegistrosTests
     }
 
     [Fact]
+    public async Task Messaging_ProblemDetails_400_Sin_Consulta_CA_035_07()
+    {
+        using var factory = await SecurityMessagingFactory.CreateAsync();
+        await CheckProblemAndTraceAsync(factory, HttpMethod.Post, "/api/v1/sonda/infra/validar", "/api/v{version:apiVersion}/sonda/infra/validar", HttpStatusCode.BadRequest, "{", TokenForge.Valid());
+    }
+
+    [Fact]
+    public async Task Messaging_ProblemDetails_422_Sin_Consulta_CA_035_07()
+    {
+        using var factory = await SecurityMessagingFactory.CreateAsync();
+        await CheckProblemAndTraceAsync(factory, HttpMethod.Post, "/api/v1/sonda/infra/validar", "/api/v{version:apiVersion}/sonda/infra/validar", HttpStatusCode.UnprocessableEntity, """{"texto":""}""", TokenForge.Valid());
+    }
+
+    [Fact]
     public async Task Market_Error_500_Y_Registro_Sin_Consulta_CA_035_07()
     {
         using var factory = await SecurityMarketFactory.CreateAsync();
