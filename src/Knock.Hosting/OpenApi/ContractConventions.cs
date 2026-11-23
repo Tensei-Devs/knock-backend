@@ -12,6 +12,7 @@ public static class ContractConventions
 {
     private const string _correlationHeader = "X-Correlation-Id";
     private const string _retryHeader = "Retry-After";
+    private const string _problemJson = "application/problem+json";
 
     public static OpenApiOptions AddKnockContractConventions(this OpenApiOptions options)
     {
@@ -21,6 +22,7 @@ public static class ContractConventions
             DeclareProblemFields(document);
             foreach (var response in Responses(document))
             {
+                NormalizeErrorContent(response.Key, response.Value);
                 response.Value.Headers ??= new Dictionary<string, IOpenApiHeader>(StringComparer.OrdinalIgnoreCase);
                 response.Value.Headers[_correlationHeader] = Header("Identificador de correlación de la petición (se reenvía o se genera en el gateway).", JsonSchemaType.String);
                 if (response.Key is "429" or "503")
@@ -31,6 +33,21 @@ public static class ContractConventions
 
             return Task.CompletedTask;
         });
+    }
+
+    /// <summary>Cada error con cuerpo es <c>application/problem+json</c> (así responde el host); se declara una sola vez aquí y no atributo por atributo.</summary>
+    private static void NormalizeErrorContent(string code, OpenApiResponse response)
+    {
+        if (!int.TryParse(code, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var status)
+            || status < 400
+            || response.Content is not { Count: > 0 } content
+            || content.Keys.SequenceEqual([_problemJson], StringComparer.Ordinal))
+        {
+            return;
+        }
+
+        var media = content.TryGetValue(_problemJson, out var existing) ? existing : content.Values.First();
+        response.Content = new Dictionary<string, IOpenApiMediaType>(StringComparer.Ordinal) { [_problemJson] = media };
     }
 
     private static void DeclareProblemFields(OpenApiDocument document)

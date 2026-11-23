@@ -32,6 +32,7 @@ internal sealed class InternalAccountController(AccountDataService service) : Bu
     /// <summary>Cancela las solicitudes abiertas y retira las cotizaciones pendientes de la persona, avisando a la otra parte.</summary>
     [HttpPost("cancelaciones")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, ProblemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, ProblemJson)]
     public async Task<IActionResult> CancelOpen(string usuarioId, CancellationToken cancellationToken)
     {
@@ -48,6 +49,7 @@ internal sealed class InternalAccountController(AccountDataService service) : Bu
     [HttpGet("exportacion")]
     [Produces("application/json")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, ProblemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, ProblemJson)]
     public async Task<IActionResult> Export(string usuarioId, CancellationToken cancellationToken)
     {
@@ -62,6 +64,7 @@ internal sealed class InternalAccountController(AccountDataService service) : Bu
     /// <summary>Consume <c>CuentaEliminada</c>: responde 202 cuando Mercado ya cerró y anonimizó lo de la persona (repetirlo no cambia nada).</summary>
     [HttpPost("eliminada")]
     [ProducesResponseType(StatusCodes.Status202Accepted)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, ProblemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, ProblemJson)]
     public async Task<IActionResult> AccountDeleted(string usuarioId, CancellationToken cancellationToken)
     {
