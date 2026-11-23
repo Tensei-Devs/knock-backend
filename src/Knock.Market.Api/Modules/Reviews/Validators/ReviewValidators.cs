@@ -84,3 +84,12 @@ internal sealed class AnswerReviewBodyValidator : AbstractValidator<AnswerReview
 {
     public AnswerReviewBodyValidator() => RuleFor(x => x.Texto).Must(ReviewRules.IsValidAnswer).WithMessage(ReviewFormat.Invalid);
 }
+
+/// <summary>Spec 061 (R-01 y CA-06): <c>motivo</c> obligatorio de 8 a 300 caracteres; nunca se repite en el error.</summary>
+internal sealed class HideReviewBodyValidator : AbstractValidator<HideReviewBody>
+{
+    public HideReviewBodyValidator() =>
+        RuleFor(x => x.Motivo).Cascade(CascadeMode.Stop)
+            .NotEmpty().WithMessage("Required.")
+            .Must(ReviewRules.IsValidModerationReason).WithMessage(ReviewFormat.Invalid);
+}

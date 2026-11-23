@@ -23,6 +23,12 @@ internal sealed record AnswerReviewBody(string? Texto)
     public const int MaxBodyBytes = 2 * 1024;
 }
 
+/// <summary>Cuerpo de <c>POST /admin/opiniones/{id}/ocultar</c> (spec 061, R-01): solo el motivo; quien oculta sale del token del panel.</summary>
+internal sealed record HideReviewBody(string? Motivo)
+{
+    public const int MaxBodyBytes = 2 * 1024;
+}
+
 /// <summary>Respuesta del técnico a una opinión (R-15).</summary>
 internal sealed record ReviewAnswer(string Texto, DateTime Fecha);
 

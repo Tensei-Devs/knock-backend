@@ -47,6 +47,8 @@ internal static class PanelAuthentication
     public const string DefaultAudience = "knock-panel";
     public const string CatalogManagePermission = "catalog:manage";
     public const string MetricsReadPermission = "metrics:read";
+    public const string ReviewsModeratePermission = "reviews:moderate";
+    public const string ReviewsModeratePolicy = "panel-reviews-moderate";
     public const string CatalogManagePolicy = "panel-catalog-manage";
     public const string MetricsReadPolicy = "panel-metrics-read";
     public const string InsufficientPermissionCode = "insufficient_permission";
@@ -95,6 +97,7 @@ internal static class PanelAuthentication
         services.AddSingleton<IAuthorizationHandler, PanelPermissionHandler>();
         services.AddAuthorizationBuilder()
             .AddPolicy(CatalogManagePolicy, policy => policy.AddAuthenticationSchemes(Scheme).RequireAuthenticatedUser().AddRequirements(new PanelPermissionRequirement(CatalogManagePermission)))
+            .AddPolicy(ReviewsModeratePolicy, policy => policy.AddAuthenticationSchemes(Scheme).RequireAuthenticatedUser().AddRequirements(new PanelPermissionRequirement(ReviewsModeratePermission)))
             .AddPolicy(MetricsReadPolicy, policy => policy.AddAuthenticationSchemes(Scheme).RequireAuthenticatedUser().AddRequirements(new PanelPermissionRequirement(MetricsReadPermission)));
         return services;
     }

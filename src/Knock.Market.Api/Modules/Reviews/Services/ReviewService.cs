@@ -21,7 +21,7 @@ internal sealed class ReviewService(IReviewStore store, IContentModerator modera
     public static readonly TimeSpan CacheLifetime = TimeSpan.FromMinutes(1);
 
     /// <summary>Clave de la lista: solo lleva el técnico, la página y el límite; nunca datos de quien consulta (R-05).</summary>
-    public static string CacheKey(ObjectId technicianId, string? cursor, int limit) => $"opiniones:{technicianId}:{cursor}:{limit}";
+    public static string CacheKey(ObjectId technicianId, string? cursor, int limit) => $"opiniones:{technicianId}:{ReviewCacheGenerations.Current(technicianId)}:{cursor}:{limit}";
 
     public async Task<ReviewPage> ListAsync(string technicianId, string? cursor, int limit, CancellationToken cancellationToken)
     {

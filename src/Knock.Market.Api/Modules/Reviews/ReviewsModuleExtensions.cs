@@ -20,6 +20,7 @@ public static class ReviewsModuleExtensions
         services.AddMemoryCache();
         services.AddScoped<IReviewStore, ReviewStore>();
         services.AddScoped<ReviewService>();
+        services.AddScoped<ReviewModerationService>();
         services.AddScoped<IManejadorDeTarea, CerrarPeriodoDeOpinion>();
         return services;
     }

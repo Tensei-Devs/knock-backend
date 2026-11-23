@@ -28,6 +28,9 @@ internal static class MarketRateLimits
     /// <summary>Rutas de administración del panel (spec 045): 60 por minuto por IP; el token del panel no pasa por el esquema de la app, así que el sub aún no está disponible en el limitador.</summary>
     public const string AdminPolicy = "admin-catalogo";
 
+    /// <summary>Ocultar y mostrar opiniones desde el panel: 30 por minuto por IP (spec 061, R-08); como las demás rutas de <c>/admin</c> de Mercado, el token del panel aún no deja el <c>sub</c> al limitador.</summary>
+    public const string AdminReviewsPolicy = "admin-opiniones";
+
     /// <summary>Opiniones y reputación: 30 por minuto por persona (spec 051, R-20).</summary>
     public const string ReviewsPolicy = "opiniones";
 
@@ -75,6 +78,7 @@ internal static class MarketRateLimits
                 .PerSubject(ServicesPolicy, 30, TimeSpan.FromMinutes(1))
                 .PerSubject(ReviewsPolicy, 30, TimeSpan.FromMinutes(1))
                 .PerClient(AdminPolicy, AdminPolicy, 60, TimeSpan.FromMinutes(1))
+                .PerClient(AdminReviewsPolicy, AdminReviewsPolicy, 30, TimeSpan.FromMinutes(1))
                 .PerSubject(AgendaPolicy, 60, TimeSpan.FromMinutes(1))
                 .PerSubject(VisitChangePolicy, 20, TimeSpan.FromMinutes(1))
                 .PerSubject(FinalQuotePolicy, 10, TimeSpan.FromMinutes(1))

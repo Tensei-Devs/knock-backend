@@ -71,6 +71,19 @@ internal sealed partial class AuditoriaPanel(
         await InsertAsync(eventName, () => transactional.InsertAsync(entry, transaction, cancellationToken));
     }
 
+    /// <summary>
+    /// Escribe el evento una sola vez por <paramref name="eventId"/> (spec 061, R-06): el identificador del evento es el <c>_id</c> del registro. <see langword="false"/> si ya estaba escrito.
+    /// </summary>
+    /// <exception cref="DomainException">503 <c>audit_unavailable</c> si la escritura falla.</exception>
+    public async Task<bool> WriteOnceAsync(string eventId, string type, string eventName, string result, string? sub, string? permission, string? resourceId, CancellationToken cancellationToken)
+    {
+        var entry = BuildEntry(type, eventName, result, sub, null, permission, null, resourceId);
+        var once = store as IPanelAuditoriaUnica ?? throw new InvalidOperationException("The audit store does not support single writes.");
+        var written = false;
+        await InsertAsync(eventName, async () => written = await once.InsertOnceAsync(entry, eventId, cancellationToken));
+        return written;
+    }
+
     private PanelAuditEntry BuildEntry(string type, string eventName, string result, string? sub, string? sid, string? permission, string? route, string? resourceId)
     {
         var (ipHmac, correlationId) = RequestOrigin();

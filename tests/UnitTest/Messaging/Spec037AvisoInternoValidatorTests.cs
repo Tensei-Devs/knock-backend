@@ -18,6 +18,17 @@ public sealed class Spec037AvisoInternoValidatorTests
         _validator.Validate(new AvisoInterno("e2", "sesion_revocada", null, null, null, "sid-1")).IsValid.Should().BeTrue();
     }
 
+    [Fact]
+    public void ReviewHiddenNoticeFromMarket_IsAcceptedOnlyForTheTechnicianWithoutFreeText_CA_061_09a()
+    {
+        _validator.Validate(new AvisoInterno("OpinionModerada:o:1", "opinion_oculta", "tech-user", "tecnico", _resource, null)).IsValid.Should().BeTrue();
+        _validator.Validate(new AvisoInterno("OpinionModerada:o:1", "opinion_oculta", "tech-user", "cliente", _resource, null)).IsValid.Should().BeFalse();
+        _validator.Validate(new AvisoInterno("OpinionModerada:o:1", "opinion_oculta", "tech-user", "tecnico", _resource, null)
+        {
+            Extra = new Dictionary<string, System.Text.Json.JsonElement> { ["motivo"] = System.Text.Json.JsonElement.Parse("\"texto\"") },
+        }).IsValid.Should().BeFalse();
+    }
+
     [Theory]
     [InlineData("otro", "tecnico")]
     [InlineData("cotizacion_nueva", "tecnico")]

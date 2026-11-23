@@ -1,10 +1,4 @@
-using System.Net;
-using System.Net.Http.Json;
-using System.Security.Cryptography;
-using Knock.Market.Api.Hosting;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.JsonWebTokens;
-using Microsoft.IdentityModel.Tokens;
 
 namespace Knock.Market.Api.Common.Bandeja;
 
@@ -20,17 +14,15 @@ internal sealed class EntregaReporteNoTerminado(IHttpClientFactory clients, ICon
     public const string Path = "api/v1/interno/reportes-no-terminados";
     public const string KeyConfigurationKey = "Security:InternalTokens:MarketKey";
     public const string BaseUrlConfigurationKey = "Services:Identity:BaseUrl";
-    public const string Issuer = "knock-market";
     public const string Audience = "knock-identity";
     public const string Permission = "reporte-no-terminado-creado";
-    public static readonly TimeSpan TokenLifetime = TimeSpan.FromMinutes(1);
 
     public string Tipo => EventType;
 
     public async Task<ResultadoDeEntrega> DeliverAsync(MensajeReservado mensaje, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(mensaje);
-        if (!Uri.TryCreate(configuration[BaseUrlConfigurationKey], UriKind.Absolute, out var baseUri) || baseUri.Scheme is not ("http" or "https") || ReadKey() is not { } key)
+        if (EntregaServicio.ReadBaseUri(configuration, BaseUrlConfigurationKey) is not { } baseUri || EntregaServicio.ReadKey(configuration, KeyConfigurationKey) is not { } key)
         {
             return ResultadoDeEntrega.Reintentable;
         }
@@ -48,52 +40,6 @@ internal sealed class EntregaReporteNoTerminado(IHttpClientFactory clients, ICon
             clienteId = mensaje.Datos["clienteId"].AsString,
             tecnicoUsuarioId = mensaje.Datos["tecnicoUsuarioId"].AsString,
         };
-        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(baseUri, Path)) { Content = JsonContent.Create(body) };
-        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", IssueToken(key));
-        try
-        {
-            using var http = clients.CreateClient(ClientName);
-            http.Timeout = TimeSpan.FromSeconds(options.Value.TimeoutSeconds);
-            using var response = await http.SendAsync(request, cancellationToken);
-            return response.StatusCode switch
-            {
-                HttpStatusCode.Accepted => ResultadoDeEntrega.Aceptado,
-                HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden or HttpStatusCode.UnprocessableEntity => ResultadoDeEntrega.Rechazado,
-                _ => ResultadoDeEntrega.Reintentable,
-            };
-        }
-        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException && !cancellationToken.IsCancellationRequested)
-        {
-            // Red caída o tiempo agotado: el despachador reprograma el mensaje. Si cancela quien llama, la cancelación sigue su camino.
-            return ResultadoDeEntrega.Reintentable;
-        }
-    }
-
-    private byte[]? ReadKey()
-    {
-        var configured = configuration[KeyConfigurationKey];
-        try
-        {
-            return string.IsNullOrWhiteSpace(configured) || Convert.FromBase64String(configured) is not { Length: >= InternalServiceAuthentication.MinKeyBytes } key ? null : key;
-        }
-        catch (FormatException)
-        {
-            return null;
-        }
-    }
-
-    private string IssueToken(byte[] key)
-    {
-        var now = clock.GetUtcNow().UtcDateTime;
-        return new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
-        {
-            Issuer = Issuer,
-            Audience = Audience,
-            Claims = new Dictionary<string, object> { ["jti"] = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16)), ["permisos"] = new[] { Permission } },
-            IssuedAt = now,
-            NotBefore = now,
-            Expires = now + TokenLifetime,
-            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256),
-        });
+        return await EntregaServicio.PostAsync(clients, ClientName, TimeSpan.FromSeconds(options.Value.TimeoutSeconds), new Uri(baseUri, Path), EntregaServicio.IssueToken(key, Audience, Permission, clock), body, cancellationToken);
     }
 }

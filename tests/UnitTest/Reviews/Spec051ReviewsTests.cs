@@ -262,6 +262,9 @@ public sealed class Spec051ReviewsTests : IDisposable
             return Task.FromResult(new ReviewPage([], new ReviewSummary(null, 0, new Dictionary<string, int>()), null));
         }
 
+        public Task<ReviewModerationResult> SetHiddenAsync(ObjectId id, bool hidden, string? reason, string moderatorId, DateTime nowUtc, CancellationToken cancellationToken) =>
+            Task.FromResult(new ReviewModerationResult(ReviewModerationOutcome.Unchanged, null));
+
         public Task CloseOpinionPeriodAsync(ObjectId visitId, DateTime nowUtc, CancellationToken cancellationToken)
         {
             Closed.Add(visitId);
