@@ -85,7 +85,8 @@ internal sealed class VisitService(VisitStore visits, RequestsStore requests, Ch
             code is null ? null : VisitRules.SafetyRule(name),
             VisitRules.CanNotify(visit.Estado),
             false,
-            null);
+            null,
+            visit.TechnicianUserId);
     }
 
     private async Task<VisitResponse> BuildTechnicianViewAsync(VisitRecord visit, CancellationToken cancellationToken)

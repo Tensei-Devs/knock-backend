@@ -34,7 +34,7 @@ public sealed class Spec042ConfianzaTests
         var items = json.GetProperty("items").EnumerateArray().ToList();
         items.Select(i => i.GetProperty("nombre").GetString()).Should().Equal("Demo Dos", "Demo Uno");
         items[0].GetProperty("tecnicoId").GetString().Should().Be(second.Id.ToString());
-        items[0].EnumerateObject().Select(p => p.Name).Should().BeSubsetOf(["tecnicoId", "nombre", "fotoUrl", "nivelVerificacion", "guardadoEn"], "solo datos públicos");
+        items[0].EnumerateObject().Select(p => p.Name).Should().BeSubsetOf(["tecnicoId", "tecnicoUsuarioId", "nombre", "fotoUrl", "nivelVerificacion", "guardadoEn"], "solo datos públicos");
         json.TryGetProperty("nextCursor", out _).Should().BeFalse("no hay otra página");
     }
 

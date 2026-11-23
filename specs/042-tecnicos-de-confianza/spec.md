@@ -190,6 +190,8 @@ Las pruebas citan el caso como `CA_042_NN` en el nombre (para `python scripts/sd
 - **C-01:** Contactos de confianza (CON-01 a CON-03): antes se guardaban en el servidor (Excel) con un máximo de 5; ahora no se implementan, porque la spec 022 ya aprobada los resuelve en la app.
 - **C-02:** Máximo de contactos: se elimina junto con los contactos.
 
+- **Enmienda 2026-11-23 (decisión de José):** `GET` y `PUT /me/tecnicos-confianza` suman el campo opcional `tecnicoUsuarioId` (el `sub` del técnico) para abrir el chat. No se considera dato personal en las respuestas con sesión; sigue sin traer teléfono, WhatsApp ni dirección. La lista permitida de campos queda en `tecnicoId`, `tecnicoUsuarioId`, `nombre`, `fotoUrl`, `nivelVerificacion` y `guardadoEn`.
+
 ## 15. Riesgos y dudas abiertas
 - Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
 - Dependencia: «solicitud directa a un técnico de confianza» no entra en esta spec; la distribución de solicitudes es de la spec 028.

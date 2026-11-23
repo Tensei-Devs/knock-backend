@@ -93,6 +93,7 @@ public sealed class Spec021SeguridadTests
         var json = await Spec020Host.ReadAsync(response);
         json.GetProperty("tecnico").GetProperty("telefono").GetString().Should().Be(Spec021Host.TechnicianPhone);
         json.GetProperty("tecnico").GetProperty("whatsapp").GetString().Should().Be(Spec021Host.TechnicianWhatsApp);
+        json.GetProperty("tecnicoUsuarioId").GetString().Should().NotBeNullOrWhiteSpace();
         json.GetProperty("lugar").GetProperty("tipo").GetString().Should().Be("domicilio");
         json.GetProperty("lugar").GetProperty("direccion").GetString().Should().Be(Spec020Host.Address, "a domicilio es la dirección que escribió el cliente");
     }

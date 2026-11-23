@@ -50,6 +50,21 @@ public sealed class Spec046PerfilTests : IDisposable
     }
 
     [Fact]
+    public async Task Tecnico_Usuario_Id_Solo_Con_Sesion_Y_Nunca_En_Lista_CA_046_58()
+    {
+        var sub = Guid.NewGuid().ToString("D");
+        var record = Record() with { UsuarioId = sub };
+        var (service, _) = Create(record);
+
+        var summary = await service.GetAsync(record.Id, withDetail: false, CancellationToken.None);
+        var detail = await service.GetAsync(record.Id, withDetail: true, CancellationToken.None);
+
+        summary!.TecnicoUsuarioId.Should().BeNull();
+        detail!.TecnicoUsuarioId.Should().Be(sub);
+        TechnicianLookupService.ToResponse(record).TecnicoUsuarioId.Should().BeNull();
+    }
+
+    [Fact]
     public async Task Respuesta_Sin_Telefono_Direccion_Ni_Ubicacion_CA_046_58()
     {
         var record = Record();

@@ -19,7 +19,8 @@ internal sealed record ChosenVisit(
     int? Price,
     int Cap,
     ObjectId TechnicianId,
-    string? EncryptedClientAddress);
+    string? EncryptedClientAddress,
+    string? TechnicianUserId = null);
 
 internal sealed record ChooseResult(ChooseStatus Status, ChosenVisit? Visit = null);
 
@@ -250,7 +251,8 @@ internal sealed class ChoiceStore(
             price,
             chosen["tope"].ToInt32(),
             technicianId,
-            request.TryGetValue("direccionCifrada", out var address) && address.IsString ? address.AsString : null);
+            request.TryGetValue("direccionCifrada", out var address) && address.IsString ? address.AsString : null,
+            chosen.TryGetValue("tecnicoUsuarioId", out var technicianUser) && technicianUser.IsString ? technicianUser.AsString : null);
     }
 
     /// <summary>Un evento por cotización aceptada, uno de cotización elegida para Mensajería (spec 048, CA-21), uno por cada rechazada y uno de cita confirmada; solo identificadores y datos no personales (R-18).</summary>
