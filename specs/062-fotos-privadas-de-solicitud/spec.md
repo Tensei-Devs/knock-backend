@@ -1,7 +1,7 @@
 # Spec 062 — Flujo privado de fotos de solicitud
 
-> **Estado:** Borrador (agente) — **sin firmar: la prueba y la firma son de José** · **Repositorio:** knock-backend · **Rector:** `constitution.md`
-> **Jira:** por crear (KNOCK-266 paraguas; relacionadas KNOCK-59 y KNOCK-185) · **Responsable:** por asignar
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Jira:** KNOCK-271 (Seguimiento de KNOCK-208 · Spec 013, OI-3: enlaces firmados, endpoints de archivos, CDN y moderación real; relacionadas KNOCK-59 y KNOCK-185) · **Responsable:** Alexis Blas
 > **Fuentes:** spec 020 (R-04: las fotos de una solicitud son de 1 a 5 `archivoId` de 32 hexadecimales con `uso = solicitud`, en estado `listo`, del `sub` del token y en el contenedor **privado**), spec 032 (R-04 y CA-02: `POST /api/v1/imagenes/subidas` solo admite `perfil` y `trabajo`; `solicitud` responde 422), spec 058 (R-09, R-11 y §7: las rutas del flujo privado «todavía no están definidas en ninguna spec aprobada»), spec 013 (archivos y moderación, flujo privado), spec 031 (moderación), decisión de José del 2026-11-23 (noche): «las fotos de solicitud son obligatorias (1 a 5), el backend no cambia; el flujo de fotos PRIVADAS de solicitud es prioridad máxima de la Fase 4».
 > **Servicios:** Mercado (`Knock.Market.Api`, módulo `Media`; gateway) · **Colecciones:** `archivos` (spec 058, ya existe) · **Almacenamiento:** cuenta privada (`cuarentena/{blobKey}` y `archivos/{blobKey}/…`)
 > **Skills:** `security-core`, `vertical-slice-api`, `api-contract-openapi`
@@ -101,6 +101,6 @@ CA-01 a CA-10 con prueba; `python scripts/sdd_lint.py --trace 062` en OK; OpenAP
 - Las pruebas con Azurite corren en el CI; en local requieren Docker.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ______ fecha: ______
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-23
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

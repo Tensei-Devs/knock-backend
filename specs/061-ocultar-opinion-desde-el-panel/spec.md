@@ -1,7 +1,7 @@
 # Spec 061 — Ocultar una opinión desde el panel
 
-> **Estado:** Borrador (agente) — **sin firmar: la prueba y la firma son de José** · **Repositorio:** knock-backend · **Rector:** `constitution.md`
-> **Jira:** por crear (KNOCK-266 paraguas) · **Responsable:** por asignar
+> **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
+> **Jira:** KNOCK-133 (HU-071 · Moderar opiniones) · **Responsable:** José Julián Hernández Hernández
 > **Fuentes:** spec 051 (R-14, R-16 y R-17: «una opinión reportada se atiende por el panel y puede ocultarse sin borrarse»), spec 053 (panel de revisión, `reviews:moderate`), spec 045 (rutas `/admin` de Mercado con `PanelBearer`), spec 033 (panel, doble factor), spec 054 (bandeja de salida), decisión de José del 2026-11-23 («ocultar opinión (051): sí, spec y tarea nuevas en Fase 4, después de 053»).
 > **Servicios:** Mercado (`Knock.Market.Api`, módulo `Reviews`) e Identidad (auditoría del panel) · **Colecciones:** `opiniones` (campo `oculta`, ya existe), `tecnicos` (reputación), `panel_auditoria`
 > **Skills:** `security-core`, `events-outbox`, `vertical-slice-api`
@@ -103,6 +103,6 @@ CA-01 a CA-10 con prueba; `python scripts/sdd_lint.py --trace 061` en OK; OpenAP
 - **Duda abierta (alcance):** el reporte de una opinión por una persona (spec 043, `referencia.tipo = "opinion"`) y su cola en el panel no están definidos en esta spec.
 
 ## Aprobación
-- [ ] Revisor 1 — nombre: ______ fecha: ______
-- [ ] Sin conflicto con la constitución
+- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-23
+- [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)
