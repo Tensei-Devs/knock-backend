@@ -13,7 +13,7 @@
 | T-05 | `POST /api/v1/ajustes/{id}/decision` (AJU-02): DTO, validador, servicio, almacén, controlador y pruebas | R-10 a R-12 · CA-19 a CA-25 | T-01 | otras rutas | por asignar | parcial: código en `FinalQuoteController`, `FinalQuoteService`, `FinalQuoteStore` y `FinalQuoteValidators`; unitarias `Spec049FinalQuoteTests`; faltan pruebas CA_049_* de integración (el trazador reporta los 34 CA sin prueba) |
 | T-06 | Reglas de negocio específicas de la spec (estados, plazos y límites) | R-13 a R-17 · CA-26 a CA-30 | T-01 | otras rutas | por asignar | parcial: `FinalQuoteRules` con unitarias en `Spec049FinalQuoteTests`; faltan CA_049_26..30 con nombre de caso |
 | T-07 | Transversales: `sub` del token, registros sin datos personales, 429 y 413, sin `Idempotency-Key` | R-18 a R-21 · CA-31 a CA-34 | T-02 a T-06 | T-08 | por asignar | pendiente: sin pruebas transversales CA_049_31..34 |
-| T-08 | OpenAPI, `docs/endpoints.md` y `docs/rate-limit-matrix.md` | §5 | T-02 a T-06 | T-07 | por asignar | parcial: rutas en `docs/openapi.v1.json` y políticas en `MarketRateLimits`; sin filas en `docs/endpoints.md` ni ruta de gateway verificada |
+| T-08 | OpenAPI, `docs/endpoints.md` y `docs/rate-limit-matrix.md` | §5 | T-02 a T-06 | T-07 | por asignar | hecha: rutas en `docs/openapi.v1.json`, políticas en `MarketRateLimits` y su sección en `docs/rate-limit-matrix.md`, filas en `docs/endpoints.md` y rutas `mercado-visita-cotizacion-final*`, `mercado-visita-ajustes-pendientes` y `mercado-ajuste-decision` en `src/Knock.Gateway/appsettings.json` |
 | T-09 | Gates, `Memoria.md` y revisión de par | §12 | todas | — | por asignar | pendiente: gates y revisión de par |
 
 ## Definición de terminado
