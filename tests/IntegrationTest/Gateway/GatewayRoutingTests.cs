@@ -48,6 +48,12 @@ public sealed class GatewayRoutingTests : IAsyncLifetime, IDisposable
         { "POST", "/api/v1/cotizaciones/507f1f77bcf86cd799439011/ajuste-precio" },
         { "POST", "/api/v1/ajustes/507f1f77bcf86cd799439011/decision" },
         { "POST", "/api/v1/solicitudes/507f1f77bcf86cd799439011/cancelar" },
+        { "POST", "/api/v1/asistente/conversaciones" },
+        { "POST", "/api/v1/asistente/resumen-chat" },
+        { "POST", "/api/v1/asistente/borrador-cotizacion" },
+        { "GET", "/api/v1/asistente/rango-precio" },
+        { "GET", "/api/v1/asistente/bitacora/507f1f77bcf86cd799439011" },
+        { "PUT", "/api/v1/asistente/bitacora/507f1f77bcf86cd799439011" },
     };
 
     [Fact]
