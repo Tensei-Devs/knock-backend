@@ -34,6 +34,10 @@ output "exports_container_id" {
   value = module.shared.exports_container_id
 }
 
+output "storage_account_blob_endpoint" {
+  value = module.shared.storage_account_blob_endpoint
+}
+
 output "quarantine_container_id" {
   value = module.shared.quarantine_container_id
 }

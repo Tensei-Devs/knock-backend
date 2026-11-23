@@ -33,7 +33,9 @@ internal static class ProblemResponses
 
                 var environment = context.HttpContext.RequestServices.GetRequiredService<IHostEnvironment>();
                 var exception = context.HttpContext.Features.Get<IExceptionHandlerFeature>()?.Error;
-                if (exception is not null && environment.IsDevelopment())
+                // `Errores:ExponerDetalle` apaga el detalle y la traza aun en Development (el entorno de dev de Azure corre así: la respuesta llega a clientes reales por el gateway).
+                var exposeDetail = context.HttpContext.RequestServices.GetService<IConfiguration>()?.GetValue("Errores:ExponerDetalle", environment.IsDevelopment()) ?? environment.IsDevelopment();
+                if (exception is not null && exposeDetail)
                 {
                     context.ProblemDetails.Detail = exception.Message;
                     context.ProblemDetails.Extensions["stackTrace"] = exception.StackTrace;

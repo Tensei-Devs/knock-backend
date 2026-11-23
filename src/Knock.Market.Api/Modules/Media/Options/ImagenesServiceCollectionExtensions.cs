@@ -1,4 +1,5 @@
 using Azure.Core;
+using Azure.Identity;
 using Azure.Storage.Blobs;
 using Knock.Contracts.Moderation;
 using Knock.Market.Api.Hosting;
@@ -36,7 +37,7 @@ internal static class ImagenesServiceCollectionExtensions
 
     /// <summary>
     /// Clientes de Blob de las imágenes (spec 032, R-02): en Azure, una URL de servicio por cuenta (<c>Imagenes:CuentaPrivadaUrl</c> y <c>Imagenes:CuentaPublicaUrl</c>) y la
-    /// identidad administrada (un <see cref="TokenCredential"/> registrado; <c>DefaultAzureCredential</c> exige el paquete Azure.Identity, pendiente de validar); en local y en pruebas, la cadena de Azurite (<c>ConnectionStrings:KnockBlob</c>) para las dos cuentas.
+    /// identidad administrada (el <see cref="TokenCredential"/> registrado o, si no hay, <see cref="DefaultAzureCredential"/> de Azure.Identity); en local y en pruebas, la cadena de Azurite (<c>ConnectionStrings:KnockBlob</c>) para las dos cuentas.
     /// </summary>
     private static AlmacenBlob CrearAlmacen(IServiceProvider provider)
     {
@@ -46,8 +47,7 @@ internal static class ImagenesServiceCollectionExtensions
         var reloj = provider.GetRequiredService<TimeProvider>();
         if (!string.IsNullOrWhiteSpace(privada) && !string.IsNullOrWhiteSpace(publica))
         {
-            var credencial = provider.GetService<TokenCredential>()
-                ?? throw new InvalidOperationException("A TokenCredential (managed identity) must be registered to use Imagenes account URLs.");
+            var credencial = provider.GetService<TokenCredential>() ?? new DefaultAzureCredential();
             return new AlmacenBlob(new BlobServiceClient(new Uri(privada), credencial), new BlobServiceClient(new Uri(publica), credencial), reloj);
         }
 

@@ -71,3 +71,47 @@ variable "container_apps_subnet_cidr" {
   type        = string
   default     = "10.20.0.0/23"
 }
+
+variable "aspnetcore_environment" {
+  description = <<-EOT
+    Entorno de ASP.NET de los cuatro servicios. Los Dockerfile fijan `Production` y ese es el valor por omisión (evaluación y producción).
+    Solo el tfvars de dev lo pone en `Development` (decisión de José, camino A de moderación: con `Development` el chat puede operar sin moderación
+    y las llaves que faltan se generan al azar). Aun así, `Errores__ExponerDetalle=false` se manda siempre para que ninguna respuesta lleve mensajes ni trazas de excepciones.
+  EOT
+  type        = string
+  default     = "Production"
+
+  validation {
+    condition     = contains(["Production", "Development"], var.aspnetcore_environment)
+    error_message = "aspnetcore_environment solo puede ser Production o Development."
+  }
+}
+
+variable "resources" {
+  description = <<-EOT
+    CPU (vCPU) y memoria por servicio. El crédito de Azure es limitado y el gasto es sobre todo Container Apps, así que el valor por omisión es el mínimo
+    razonable: 0.25 vCPU y 0.5 GiB por servicio. Súbelos solo si un servicio se queda sin memoria. Combinaciones válidas de Container Apps: 0.25 vCPU con 0.5Gi, 0.5 con 1Gi, 0.75 con 1.5Gi, 1 con 2Gi.
+  EOT
+  type = map(object({
+    cpu    = number
+    memory = string
+  }))
+  default = {
+    gateway   = { cpu = 0.25, memory = "0.5Gi" }
+    identity  = { cpu = 0.25, memory = "0.5Gi" }
+    messaging = { cpu = 0.25, memory = "0.5Gi" }
+    market    = { cpu = 0.25, memory = "0.5Gi" }
+  }
+}
+
+variable "seed_demo" {
+  description = "Enciende la carga de datos de demostración (`Seed:Demo`) en Identity y Market. Apagado por omisión: solo se enciende si el humo de dev lo necesita (ver deploy/README.md)."
+  type        = bool
+  default     = false
+}
+
+variable "enable_oleadas" {
+  description = "Enciende el reparto por oleadas de solicitudes (`Oleadas:Habilitado`, spec 028) en Market. Sin esto no corre."
+  type        = bool
+  default     = true
+}

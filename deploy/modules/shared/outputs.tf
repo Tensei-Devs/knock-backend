@@ -30,6 +30,11 @@ output "storage_account_id" {
   value = azurerm_storage_account.files.id
 }
 
+# URL de servicio de la cuenta privada (cuarentena y archivos): la lee Market como `Imagenes:CuentaPrivadaUrl` y entra con identidad administrada, sin llaves.
+output "storage_account_blob_endpoint" {
+  value = azurerm_storage_account.files.primary_blob_endpoint
+}
+
 output "quarantine_container_id" {
   value = azurerm_storage_container.private["imagenes-cuarentena"].id
 }
