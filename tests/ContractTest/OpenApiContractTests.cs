@@ -23,17 +23,7 @@ public sealed class OpenApiContractTests
 
     private static readonly HashSet<string> _httpMethods = new(["get", "put", "post", "delete", "options", "head", "patch", "trace"], StringComparer.Ordinal);
 
-    private static JsonDocument Load(string fileName)
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Knock.slnx")))
-        {
-            directory = directory.Parent;
-        }
-
-        var root = directory?.FullName ?? throw new InvalidOperationException("Knock.slnx was not found above the test output directory.");
-        return JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "docs", fileName)));
-    }
+    private static JsonDocument Load(string fileName) => OpenApiDocs.Load(fileName);
 
     private static IEnumerable<(string Path, string Method, JsonElement Operation)> Operations(JsonElement root)
     {
