@@ -36,6 +36,12 @@ locals {
   kv           = { redis = "redis-password", redis_cs = "redis-connection-string" }
   redis_secret = { ConnectionStrings__KnockRedis = local.kv.redis_cs }
 
+  # Moderación con Content Safety (spec 031): solo con `enable_content_safety`; apagado no se define nada y Market falla cerrado como hoy. La credencial es la identidad administrada (rol abajo).
+  content_safety_env = var.enable_content_safety ? {
+    Moderacion__Habilitado              = "true"
+    Moderacion__ContentSafety__Endpoint = local.infra.content_safety_endpoint
+  } : {}
+
   # Imágenes públicas (spec 032, R-03): la dirección base sale de la infraestructura compartida; el host se pasa a las specs consumidoras (017: Perfil:HostsFoto).
   images_base_url = local.infra.public_images_base_url
   images_host     = split("/", local.infra.public_images_base_url)[2]
@@ -144,7 +150,7 @@ locals {
     market = {
       external = false
       # Cifrado de campos (specs 020 y 022; FieldCipher, sección Security:FieldEncryption): la versión vigente no es secreta y la llave sí.
-      env = merge(local.runtime, local.forwarded, local.seed_demo, {
+      env = merge(local.runtime, local.forwarded, local.seed_demo, local.content_safety_env, {
         Security__FieldEncryption__ActiveVersion = "1"
         # Reparto por oleadas (spec 028): sin este interruptor no corre.
         Oleadas__Habilitado = tostring(var.enable_oleadas)
@@ -278,6 +284,14 @@ resource "azurerm_role_assignment" "identity_exports_delegator" {
   scope                = local.infra.storage_account_id
   role_definition_name = "Storage Blob Delegator"
   principal_id         = module.service["identity"].identity_principal_id
+}
+
+# Mercado llama a Content Safety con su identidad administrada (spec 031): `Cognitive Services User` solo sobre ese recurso y solo con el interruptor encendido.
+resource "azurerm_role_assignment" "market_content_safety" {
+  count                = var.enable_content_safety ? 1 : 0
+  scope                = local.infra.content_safety_id
+  role_definition_name = "Cognitive Services User"
+  principal_id         = module.service["market"].identity_principal_id
 }
 
 resource "azurerm_role_assignment" "market_delegator" {

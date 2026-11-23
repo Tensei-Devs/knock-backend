@@ -1,3 +1,5 @@
+using Azure.Core;
+using Azure.Identity;
 using Knock.Contracts.Moderation;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Moderation.Data;
@@ -73,6 +75,8 @@ public static class ModerationModuleExtensions
     {
         services.AddKnockRedis();
         services.AddKnockMongoDatabase(MongoModule);
+        // Sin llave (la cuenta del recurso tiene `local_auth_enabled=false`): el cliente pide el token con la identidad administrada del servicio; un TokenCredential ya registrado (pruebas) gana.
+        services.TryAddSingleton<TokenCredential>(_ => new DefaultAzureCredential());
         services.AddHttpClient<IContentSafetyClient, ContentSafetyClient>((provider, http) =>
         {
             http.BaseAddress = new Uri(options.ContentSafety.Endpoint!, UriKind.Absolute);

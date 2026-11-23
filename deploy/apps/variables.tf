@@ -137,3 +137,9 @@ variable "enable_oleadas" {
   type        = bool
   default     = true
 }
+
+variable "enable_content_safety" {
+  description = "Enciende la moderación con Content Safety en Market (`Moderacion:Habilitado`, spec 031): da el endpoint del recurso y el rol `Cognitive Services User`. Debe valer lo mismo que `enable_content_safety` de `deploy/infra` (que crea el recurso). Apagado por omisión."
+  type        = bool
+  default     = false
+}
