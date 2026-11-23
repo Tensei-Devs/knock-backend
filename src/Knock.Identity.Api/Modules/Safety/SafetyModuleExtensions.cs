@@ -1,4 +1,5 @@
 using Knock.Contracts.Moderation;
+using Knock.Identity.Api.Modules.HomeAndCar.Services;
 using Knock.Identity.Api.Modules.Safety.Data;
 using Knock.Identity.Api.Modules.Safety.Domain;
 using Knock.Identity.Api.Modules.Safety.Services;
@@ -21,6 +22,19 @@ public static class SafetyModuleExtensions
         // Hasta que exista la moderación de la spec 031 en Identidad, un reporte no se guarda sin revisión (falla cerrado). Las pruebas la sustituyen.
         services.TryAddSingleton<IContentModerator, UnavailableContentModerator>();
         services.AddSingleton<ReportService>();
+        // Reporte de «no terminado» (spec 053): Identidad lee el texto por la ruta interna de Mercado (misma dirección y clave que el historial); sin ellas Mercado «no responde» y el evento se reintenta.
+        services.AddOptions<MarketHistoryOptions>().BindConfiguration(MarketHistoryOptions.SectionName).ValidateDataAnnotations();
+        services.AddHttpClient<IMarketNotFinishedReports, MarketNotFinishedReportClient>((provider, client) =>
+        {
+            var options = provider.GetRequiredService<IOptions<MarketHistoryOptions>>().Value;
+            if (Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out var baseAddress) && baseAddress.Scheme is "http" or "https")
+            {
+                client.BaseAddress = baseAddress;
+            }
+
+            client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+        });
+        services.AddScoped<NotFinishedReportConsumer>();
         services.AddOptions<SuspensionOptions>().BindConfiguration(SuspensionOptions.SectionName).ValidateOnStart();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<SuspensionOptions>, SuspensionOptionsValidator>());
         services.AddSingleton<ISuspensionStore, SuspensionStore>();

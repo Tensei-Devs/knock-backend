@@ -27,6 +27,10 @@ internal static class InternalServiceAuthentication
     public const string BlocksPolicy = "InternalBlocks";
     public const string BlocksPermission = "bloqueos";
     public const string EventsPermission = "eventos";
+    public const string TechnicianHiddenPolicy = "InternalTechnicianHidden";
+    public const string TechnicianHiddenPermission = "tecnico-ocultado";
+    public const string NotFinishedReportPolicy = "InternalNotFinishedReport";
+    public const string NotFinishedReportPermission = "reporte-no-terminado";
     public const string ServiceNotAllowedCode = "service_not_allowed";
 
     /// <summary>Un token de servicio dura 5 minutos como máximo (spec 037, R-11).</summary>
@@ -66,7 +70,9 @@ internal static class InternalServiceAuthentication
             .AddPolicy(
                 EventsPolicy,
                 policy => policy.AddAuthenticationSchemes(Scheme).RequireAuthenticatedUser().RequireClaim(PermissionsClaim, EventsPermission))
-            .AddPolicy(AccountPolicy, policy => policy.AddAuthenticationSchemes(Scheme).RequireAuthenticatedUser().RequireClaim(PermissionsClaim, AccountPermission));
+            .AddPolicy(AccountPolicy, policy => policy.AddAuthenticationSchemes(Scheme).RequireAuthenticatedUser().RequireClaim(PermissionsClaim, AccountPermission))
+            .AddPolicy(TechnicianHiddenPolicy, policy => policy.AddAuthenticationSchemes(Scheme).RequireAuthenticatedUser().RequireClaim(PermissionsClaim, TechnicianHiddenPermission))
+            .AddPolicy(NotFinishedReportPolicy, policy => policy.AddAuthenticationSchemes(Scheme).RequireAuthenticatedUser().RequireClaim(PermissionsClaim, NotFinishedReportPermission));
         return services;
     }
 

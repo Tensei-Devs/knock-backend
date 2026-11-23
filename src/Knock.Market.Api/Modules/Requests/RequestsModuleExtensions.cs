@@ -1,4 +1,5 @@
 using Knock.Contracts.Moderation;
+using Knock.Market.Api.Common.Bandeja;
 using Knock.Market.Api.Common.Crypto;
 using Knock.Market.Api.Common.TareasProgramadas;
 using Knock.Market.Api.Hosting;
@@ -76,6 +77,7 @@ public static class RequestsModuleExtensions
         services.AddScoped<ConversationPermissionStore>();
         services.AddScoped<ConversationPermissionService>();
         services.AddScoped<ChooseQuoteService>();
+        services.AddScoped<IBandejaStore>(provider => new BandejaStore(provider.GetRequiredKeyedService<IMongoDatabase>(ModuleKey)));
         services.AddScoped<VisitStore>();
         services.AddScoped<AccountEventStore>();
         services.AddScoped<AccountEventService>();
@@ -88,6 +90,7 @@ public static class RequestsModuleExtensions
         services.AddScoped<VisitCloseService>();
         // Fotos del trabajo terminado: adaptador sobre IMediaApi (spec 032); falla cerrado si el módulo de archivos no responde.
         services.TryAddScoped<IVisitPhotos, MediaVisitPhotos>();
+        services.AddScoped<NotFinishedReportReadService>();
         services.AddScoped<IManejadorDeTarea, VencerPropuestaDeReprogramacion>();
         services.AddScoped<FinalQuoteStore>();
         services.AddScoped<FinalQuoteService>();

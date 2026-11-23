@@ -1,7 +1,11 @@
-namespace Knock.Identity.Api.Hosting.Procesos;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
-/// <summary>Bucle de fondo con temporizador: cada tick corre un paso en su propio ámbito y un fallo no tumba el proceso (spec 054, R-14).</summary>
-internal abstract partial class ProcesoPeriodico(IServiceScopeFactory scopes, TimeProvider clock, ILogger logger, string nombre) : BackgroundService
+namespace Knock.Hosting.Procesos;
+
+/// <summary>Bucle de fondo con temporizador: cada tick corre un paso en su propio ámbito y un fallo no tumba el proceso (spec 054, R-14); lo comparten Identidad y Mercado.</summary>
+public abstract partial class ProcesoPeriodico(IServiceScopeFactory scopes, TimeProvider clock, ILogger logger, string nombre) : BackgroundService
 {
     protected abstract int IntervaloSegundos { get; }
 
