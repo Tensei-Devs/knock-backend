@@ -17,10 +17,13 @@ internal sealed record SubidaImagenResponse(
     [property: JsonPropertyName("venceEn")] DateTimeOffset VenceEn,
     [property: JsonPropertyName("confirmarAntesDe")] DateTimeOffset ConfirmarAntesDe);
 
-/// <summary>Respuesta 200 de la confirmación (R-12).</summary>
+/// <summary>
+/// Respuesta 200 de la confirmación (R-12). <c>Url</c> se declara como cadena no nula para no cambiar el contrato público (oasdiff: <c>response-property-became-nullable</c>); en una foto de solicitud (spec 062)
+/// el servicio pasa <see langword="null"/> y la propiedad se omite del JSON, y <c>Id</c> la sustituye.
+/// </summary>
 internal sealed record ImagenConfirmadaResponse(
     [property: JsonPropertyName("id"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Id,
-    [property: JsonPropertyName("url"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Url,
+    [property: JsonPropertyName("url"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string Url,
     [property: JsonPropertyName("ancho")] int Ancho,
     [property: JsonPropertyName("alto")] int Alto,
     [property: JsonPropertyName("bytes")] int Bytes);

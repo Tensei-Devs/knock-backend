@@ -76,7 +76,7 @@ internal sealed class ImagenesController(SubidaImagenService service) : Controll
             if (privada.Status != MediaOutcomeStatus.NotFound)
             {
                 return privada.Value is { } archivo
-                    ? Ok(new ImagenConfirmadaResponse(archivo.Id.ToString("N"), null, archivo.Width, archivo.Height, archivo.Bytes))
+                    ? Ok(new ImagenConfirmadaResponse(archivo.Id.ToString("N"), null!, archivo.Width, archivo.Height, archivo.Bytes))
                     : ProblemaPrivado(privada.Status, privada.Detail, privada.RetryAfterSeconds);
             }
         }
