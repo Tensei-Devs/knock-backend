@@ -42,6 +42,13 @@ locals {
     Moderacion__ContentSafety__Endpoint = local.infra.content_safety_endpoint
   } : {}
 
+  # Asistente con Azure OpenAI (spec 024): solo con `enable_azure_openai`; apagado no se define nada y el asistente responde con la plantilla como hoy. La credencial es la identidad administrada (rol abajo).
+  azure_openai_env = var.enable_azure_openai ? {
+    Asistente__Habilitado                    = "true"
+    Asistente__AzureOpenAI__Endpoint         = local.infra.azure_openai_endpoint
+    Asistente__AzureOpenAI__ModeloDespliegue = local.infra.azure_openai_deployment
+  } : {}
+
   # Imágenes públicas (spec 032, R-03): la dirección base sale de la infraestructura compartida; el host se pasa a las specs consumidoras (017: Perfil:HostsFoto).
   images_base_url = local.infra.public_images_base_url
   images_host     = split("/", local.infra.public_images_base_url)[2]
@@ -150,7 +157,7 @@ locals {
     market = {
       external = false
       # Cifrado de campos (specs 020 y 022; FieldCipher, sección Security:FieldEncryption): la versión vigente no es secreta y la llave sí.
-      env = merge(local.runtime, local.forwarded, local.seed_demo, local.content_safety_env, {
+      env = merge(local.runtime, local.forwarded, local.seed_demo, local.content_safety_env, local.azure_openai_env, {
         Security__FieldEncryption__ActiveVersion = "1"
         # Reparto por oleadas (spec 028): sin este interruptor no corre.
         Oleadas__Habilitado = tostring(var.enable_oleadas)
@@ -291,6 +298,14 @@ resource "azurerm_role_assignment" "market_content_safety" {
   count                = var.enable_content_safety ? 1 : 0
   scope                = local.infra.content_safety_id
   role_definition_name = "Cognitive Services User"
+  principal_id         = module.service["market"].identity_principal_id
+}
+
+# Mercado llama a Azure OpenAI con su identidad administrada (spec 024): `Cognitive Services OpenAI User` solo sobre esa cuenta y solo con el interruptor encendido.
+resource "azurerm_role_assignment" "market_azure_openai" {
+  count                = var.enable_azure_openai ? 1 : 0
+  scope                = local.infra.azure_openai_id
+  role_definition_name = "Cognitive Services OpenAI User"
   principal_id         = module.service["market"].identity_principal_id
 }
 

@@ -1,3 +1,5 @@
+using Azure.Core;
+using Azure.Identity;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Assistant.Data;
 using Knock.Market.Api.Modules.Assistant.Services;
@@ -53,6 +55,8 @@ public static class AssistantModuleExtensions
     private static void AddAzure(IServiceCollection services, AssistantOptions options)
     {
         services.AddKnockRedis();
+        // Sin llave (la cuenta tiene `local_auth_enabled=false`): el proveedor pide el token con la identidad administrada del servicio; un TokenCredential ya registrado (pruebas) gana.
+        services.TryAddSingleton<TokenCredential>(_ => new DefaultAzureCredential());
         services.AddHttpClient<IProveedorIa, ProveedorIa>(http =>
         {
             http.BaseAddress = new Uri(options.AzureOpenAI.Endpoint!, UriKind.Absolute);
