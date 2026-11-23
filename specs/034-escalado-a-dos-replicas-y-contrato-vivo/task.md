@@ -10,7 +10,7 @@
 | T-03 | `ci-deploy.yml`: `workflow_dispatch` con `image_tag` validado contra el registro y entorno `evaluacion` con aprobación | R-07, R-08 · CA-07, CA-08 | — | Sí | José Julián | pendiente |
 | T-04 | Script k6 de despliegue sin corte y consulta de reparto por instancia en `docs/OBSERVABILIDAD.md` | R-05, R-06 · CA-05, CA-06 | T-02 | Sí (con T-03) | Erick | pendiente |
 | T-05 | Ensayo de reversión, humo con dos réplicas (incluye CA-01 y CA-02 de la spec 006), evidencia y pasos en `deploy/README.md` | R-04, R-09, R-10 · CA-05, CA-06, CA-09 | T-01, T-03, T-04 y spec 035 desplegada | No (cierre del frente A) | José Julián | pendiente |
-| T-06 | Declarar en el contrato de cada servicio `ProblemDetails` completo, `X-Correlation-Id` y `Retry-After`; prueba sobre el contrato | R-14 · CA-15 | — | Sí (con T-07 y T-08) | Guillermo | pendiente |
+| T-06 | Declarar en el contrato de cada servicio `ProblemDetails` completo, `X-Correlation-Id` y `Retry-After`; prueba sobre el contrato | R-14 · CA-15 | — | Sí (con T-07 y T-08) | Guillermo | hecho (`ContractConventions`, `Spec034ContratoTests`) |
 | T-07 | `export_openapi.py`: Mensajería, `--publico` (unión filtrada por rutas del gateway, conflictos) y comprobación de datos internos; pruebas | R-12, R-13, R-19 · CA-14, CA-18 | — | Sí | José Julián | pendiente |
 | T-08 | `tests/ContractTest`: fábricas por servicio, lector del contrato, validador de esquemas y comprobación de rutas en ambos sentidos | R-16 · CA-13 | — | Sí | Guillermo | pendiente |
 | T-09 | `ci-pr.yml`: regenerar todos los contratos y `oasdiff` del público con la etiqueta `contrato-incompatible` | R-15 · CA-11, CA-12 | T-07 | Sí (con T-08) | José Julián | pendiente |
