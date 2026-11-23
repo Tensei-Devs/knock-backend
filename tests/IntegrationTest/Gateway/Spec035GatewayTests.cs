@@ -15,7 +15,7 @@ public sealed class Spec035GatewayTests
     public async Task Reenvia_Solo_Encabezados_Propios_CA_035_13()
     {
         await using var host = await GatewayHost.StartAsync(
-            new Dictionary<string, string?> { ["ForwardedHeaders:KnownNetworks:0"] = "127.0.0.0/8" },
+            new Dictionary<string, string?> { ["ForwardedHeaders:KnownNetworks:0"] = "10.0.0.0/16" },
             services =>
             {
                 services.AddSingleton<IRevokedSessions>(new NoRevokedSessions());
@@ -24,7 +24,7 @@ public sealed class Spec035GatewayTests
         using var request = new HttpRequestMessage(HttpMethod.Get, new Uri("/api/v1/colonias/en-punto", UriKind.Relative));
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", GatewayTestSupport.IssueToken());
         host.Client.DefaultRequestHeaders.Remove(GatewayRemoteIpStartupFilter.HeaderName);
-        request.Headers.TryAddWithoutValidation(GatewayRemoteIpStartupFilter.HeaderName, "127.0.0.1");
+        request.Headers.TryAddWithoutValidation(GatewayRemoteIpStartupFilter.HeaderName, "10.0.0.5");
         request.Headers.TryAddWithoutValidation("X-Forwarded-For", "198.51.100.7");
         request.Headers.TryAddWithoutValidation("X-Forwarded-Host", "evil.example");
         request.Headers.TryAddWithoutValidation("X-Forwarded-Prefix", "/evil");

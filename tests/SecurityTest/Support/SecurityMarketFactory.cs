@@ -122,7 +122,7 @@ internal sealed class SecurityMarketFactory(IReadOnlyDictionary<string, string?>
     {
         ArgumentNullException.ThrowIfNull(builder);
         builder.UseEnvironment(environment);
-        builder.UseSetting("ForwardedHeaders:KnownNetworks:0", "10.0.0.0/8"); // spec 035, R-09: fuera de Development hay que fijar las redes de confianza
+        builder.UseSetting("ForwardedHeaders:KnownNetworks:0", "10.0.0.0/16"); // spec 035, R-09: fuera de Development hay que fijar las redes de confianza
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
             SecurityHostConfiguration.Apply(configuration, _highLimit, settings);
