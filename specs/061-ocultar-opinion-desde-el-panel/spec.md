@@ -100,6 +100,7 @@ CA-01 a CA-10 con prueba; `python scripts/sdd_lint.py --trace 061` en OK; OpenAP
 
 ## 15. Riesgos y dudas abiertas
 - La duda del aviso al técnico quedó **decidida** (D-04).
+- **Puerta de permisos de Mercado (resuelta con lo ya firmado, sin decisión nueva):** la heredada `DenyAll` se reemplazó por una consulta a Identidad (`POST /api/v1/interno/permisos-del-panel`, token de servicio, permiso `panel-permiso`) que aplica la regla de la spec 033 R-21; falla cerrado. **A confirmar por José:** si prefiere que Identidad emita un claim de segundo factor (hoy no existe: el token del panel solo se emite tras el TOTP) y si la consulta debe llevar caché corta en Mercado (hoy no).
 - **Duda abierta (alcance):** el reporte de una opinión por una persona (spec 043, `referencia.tipo = "opinion"`) y su cola en el panel no están definidos en esta spec.
 
 ## Aprobación

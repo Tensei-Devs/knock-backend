@@ -43,7 +43,8 @@ public static class PanelModuleExtensions
         services.AddSingleton<AccesoPanelService>();
         services.AddSingleton<ActivacionPanelService>();
         services.AddSingleton<SesionPanelCicloService>();
-        services.AddSingleton<IAuthorizationHandler, PermisoPanelHandler>();
+        services.AddSingleton<PermisoPanelHandler>();
+        services.AddSingleton<IAuthorizationHandler>(provider => provider.GetRequiredService<PermisoPanelHandler>());
         services.AddSingleton<IAuthorizationPolicyProvider, PanelPolicyProvider>();
         services.AddSingleton<IAuthorizationMiddlewareResultHandler, PanelAuthorizationResultHandler>();
         services.AddAuthentication().AddJwtBearer(PanelBearer.Scheme, _ => { });
