@@ -7,6 +7,11 @@ namespace Knock.Market.Api.Modules.Reviews.Dtos;
 internal sealed record ReviewParts(int? Puntualidad, int? Calidad, int? PrecioJusto, int? Trato);
 
 /// <summary>Cuerpo de <c>POST /visitas/{id}/opinion</c> (OPI-02, R-07): ningún identificador de persona se acepta (R-18).</summary>
+/// <param name="Fotos">De 0 a 3 identificadores de archivo (<c>archivoId</c>, 32 hexadecimales), sin repetidos, moderadas; más de 3 responde 422 <c>errors.fotos</c>.</param>
+/// <param name="Calificacion">Entero de 1 a 5.</param>
+/// <param name="Partes">Cada parte de 1 a 5.</param>
+/// <param name="Comentario">Hasta 500 caracteres.</param>
+/// <param name="GuardarTecnicoConfianza">Opcional: suma al técnico a los de confianza.</param>
 internal sealed record CreateReviewBody(int? Calificacion, ReviewParts? Partes, string? Comentario, IReadOnlyList<string>? Fotos, bool? GuardarTecnicoConfianza)
 {
     public const int MaxBodyBytes = 4 * 1024;

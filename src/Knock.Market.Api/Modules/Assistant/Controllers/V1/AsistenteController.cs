@@ -42,6 +42,11 @@ internal sealed class AsistenteController(AsistenteService assistant, RangoPreci
     [ProducesResponseType<ResumenChatResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, _problemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status413PayloadTooLarge, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable, _problemJson)]
     public async Task<IActionResult> Summarize([FromBody] ConversacionBody body, CancellationToken cancellationToken) =>
         Respond(await assistant.SummarizeAsync(Subject(), body.ConversacionId!, cancellationToken));
 
@@ -52,6 +57,11 @@ internal sealed class AsistenteController(AsistenteService assistant, RangoPreci
     [ProducesResponseType<BorradorCotizacionResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, _problemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status413PayloadTooLarge, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable, _problemJson)]
     public async Task<IActionResult> DraftQuote([FromBody] ConversacionBody body, CancellationToken cancellationToken) =>
         Respond(await assistant.DraftQuoteAsync(Subject(), body.ConversacionId!, cancellationToken));
 
@@ -61,6 +71,9 @@ internal sealed class AsistenteController(AsistenteService assistant, RangoPreci
     [ProducesResponseType<RangoPrecioResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, _problemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable, _problemJson)]
     public async Task<IActionResult> PriceRange([FromQuery] RangoPrecioQuery query, CancellationToken cancellationToken) =>
         Respond(await prices.GetAsync(Subject(), query.Oficio!, query.TipoTrabajo!, cancellationToken));
 
@@ -71,6 +84,11 @@ internal sealed class AsistenteController(AsistenteService assistant, RangoPreci
     [ProducesResponseType<BitacoraResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<BitacoraResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status413PayloadTooLarge, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, _problemJson)]
     public async Task<IActionResult> SaveLog([FromRoute] SolicitudRoute route, [FromBody] BitacoraBody body, CancellationToken cancellationToken)
     {
         var outcome = await logs.SaveAsync(Subject(), route.SolicitudId!, body, cancellationToken);
@@ -82,6 +100,11 @@ internal sealed class AsistenteController(AsistenteService assistant, RangoPreci
     [EnableRateLimiting(MarketRateLimits.AssistantReadPolicy)]
     [ProducesResponseType<BitacoraResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, _problemJson)]
     public async Task<IActionResult> GetLog([FromRoute] SolicitudRoute route, CancellationToken cancellationToken) =>
         Respond(await logs.GetAsync(Subject(), route.SolicitudId!, cancellationToken));
 
