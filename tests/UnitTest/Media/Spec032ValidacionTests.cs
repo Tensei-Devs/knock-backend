@@ -21,7 +21,7 @@ public sealed class Spec032ValidacionTests
     [InlineData("trabajo", "image/jpeg", 5_242_881L, "tamanoBytes")]
     [InlineData("trabajo", "image/jpeg", 0L, "tamanoBytes")]
     [InlineData("trabajo", "image/svg+xml", 100L, "tipoContenido")]
-    [InlineData("solicitud", "image/jpeg", 100L, "proposito")]
+    [InlineData("documento", "image/jpeg", 100L, "proposito")]
     [InlineData(null, "image/jpeg", 100L, "proposito")]
     public void Rechaza_Cuerpo_Invalido_CA_032_02(string? proposito, string tipo, long tamano, string campo)
     {

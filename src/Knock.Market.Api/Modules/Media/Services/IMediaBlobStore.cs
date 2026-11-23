@@ -1,3 +1,4 @@
+using Knock.Market.Api.Modules.Media.Data;
 using Knock.Market.Api.Modules.Media.Domain;
 
 namespace Knock.Market.Api.Modules.Media.Services;
@@ -10,6 +11,9 @@ internal sealed record UploadedBlob(long SizeBytes, string ETag);
 /// </summary>
 internal interface IMediaBlobStore
 {
+    /// <summary>Signed write link (create and write, one blob, 5 minutes) for the quarantine blob of a pending file (spec 062, R-01). The client uploads straight to the private account.</summary>
+    Task<EnlaceSubida> CreateUploadLinkAsync(string quarantineBlob, string contentType, CancellationToken cancellationToken);
+
     /// <summary>Creates the containers if missing, always private (no anonymous access).</summary>
     Task EnsureContainersAsync(CancellationToken cancellationToken);
 

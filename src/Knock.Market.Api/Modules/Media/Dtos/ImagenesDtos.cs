@@ -19,7 +19,8 @@ internal sealed record SubidaImagenResponse(
 
 /// <summary>Respuesta 200 de la confirmación (R-12).</summary>
 internal sealed record ImagenConfirmadaResponse(
-    [property: JsonPropertyName("url")] string Url,
+    [property: JsonPropertyName("id"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Id,
+    [property: JsonPropertyName("url"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Url,
     [property: JsonPropertyName("ancho")] int Ancho,
     [property: JsonPropertyName("alto")] int Alto,
     [property: JsonPropertyName("bytes")] int Bytes);

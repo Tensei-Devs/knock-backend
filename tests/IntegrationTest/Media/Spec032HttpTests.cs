@@ -65,7 +65,7 @@ public sealed class Spec032HttpTests
     }
 
     [Theory]
-    [InlineData("""{"proposito":"solicitud","tipoContenido":"image/jpeg","tamanoBytes":10}""", "proposito")]
+    [InlineData("""{"proposito":"documento","tipoContenido":"image/jpeg","tamanoBytes":10}""", "proposito")]
     [InlineData("""{"proposito":"trabajo","tipoContenido":"image/svg+xml","tamanoBytes":10}""", "tipoContenido")]
     [InlineData("""{"proposito":"trabajo","tipoContenido":"image/png","tamanoBytes":5242881}""", "tamanoBytes")]
     public async Task Rechaza_Cuerpo_Invalido_CA_032_02(string cuerpo, string campo)

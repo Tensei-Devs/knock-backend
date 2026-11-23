@@ -197,6 +197,8 @@ public sealed class MediaServiceTests
 
         public Task EnsureContainersAsync(CancellationToken cancellationToken) => inner.EnsureContainersAsync(cancellationToken);
 
+        public Task<EnlaceSubida> CreateUploadLinkAsync(string quarantineBlob, string contentType, CancellationToken cancellationToken) => inner.CreateUploadLinkAsync(quarantineBlob, contentType, cancellationToken);
+
         public Task<UploadedBlob?> GetUploadedAsync(string quarantineBlob, CancellationToken cancellationToken) =>
             inner.GetUploadedAsync(quarantineBlob, cancellationToken);
 

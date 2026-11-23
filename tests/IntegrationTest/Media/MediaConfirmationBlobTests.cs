@@ -111,7 +111,7 @@ public class MediaConfirmationBlobTests
         var store = new MongoMediaFileStore(database, Options.Create(new MarketApi::Knock.Market.Api.Hosting.KnockMongoOptions()));
         var service = new MediaService(
             store,
-            new AzureMediaBlobStore(blobs, configured),
+            new AzureMediaBlobStore(blobs, new EnlaceSubidaNoDisponible(), configured),
             processor,
             new FakeModerator(outcome),
             TimeProvider.System);

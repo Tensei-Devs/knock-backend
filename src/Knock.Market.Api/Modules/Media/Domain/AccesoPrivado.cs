@@ -23,6 +23,11 @@ internal sealed record BlobPrivado(string Contenedor, string Nombre)
     /// <summary>Contenedor de las fotos privadas ya confirmadas (<c>Media:FilesContainer</c>, por omisión <c>archivos</c>); solo se enlaza su versión reducida (spec 020, spec 058).</summary>
     public const string ContenedorArchivos = "archivos";
 
+    /// <summary>Contenedor de cuarentena del flujo privado (<c>Media:QuarantineContainer</c>, por omisión <c>cuarentena</c>) y el de las imágenes públicas: los únicos donde se firman subidas.</summary>
+    public const string ContenedorCuarentena = "cuarentena";
+
+    public static readonly IReadOnlySet<string> ContenedoresDeCuarentena = new HashSet<string>(StringComparer.Ordinal) { ContenedorCuarentena, Options.ImagenesOptions.ContenedorCuarentena };
+
     public static readonly IReadOnlySet<string> ContenedoresPermitidos = new HashSet<string>(StringComparer.Ordinal) { ContenedorVerificaciones, ContenedorArchivos };
 }
 

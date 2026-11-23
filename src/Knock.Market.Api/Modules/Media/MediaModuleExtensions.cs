@@ -24,13 +24,7 @@ public static class MediaModuleExtensions
             .BindConfiguration(MediaOptions.SectionName)
             .ValidateDataAnnotations()
             .ValidateOnStart();
-        services.AddSingleton(provider =>
-        {
-            var connectionString = provider.GetRequiredService<IConfiguration>().GetConnectionString(MediaOptions.ConnectionStringName);
-            return string.IsNullOrWhiteSpace(connectionString)
-                ? throw new InvalidOperationException($"ConnectionStrings:{MediaOptions.ConnectionStringName} is not configured.")
-                : new BlobServiceClient(connectionString);
-        });
+        services.AddSingleton(ImagenesServiceCollectionExtensions.CrearClientePrivado);
         services.AddKnockMongoDatabase(ArchivosMongo.ModuleKey);
         services.AddSingleton<IMediaFileStore, MongoMediaFileStore>();
         services.AddSingleton<IMediaBlobStore, AzureMediaBlobStore>();
