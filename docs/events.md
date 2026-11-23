@@ -55,3 +55,41 @@ Mensajería inserta `MensajeNuevo` en `outbox` dentro de la misma transacción q
 | `MensajeNuevo` | 030 | Al guardar un mensaje enviado en una conversación | `conversacionId`, `destinatarioUsuarioId` |
 
 El despachador de avisos (spec 037) es el único consumidor previsto: deduplica por evento, recurso y persona, y agrupa los `mensaje_nuevo` en una ventana de 5 minutos. Mientras no esté activo (`Notificaciones:PushHabilitado = false`), el documento queda pendiente y no demuestra entrega.
+
+## Eventos de Identidad en el buzón de salida (specs 039, 043, 053, 054 y 059)
+
+Identidad escribe cada evento en su `outbox` con `_id` determinista `{tipo}:{recursoId}:{version}` (`OutboxReglas.BuildId`), un `destino` (`market`, `messaging` o `identity`) y una carga solo de identificadores (`OutboxReglas.Validate` rechaza campos como nombre, teléfono, dirección, texto, correo o CURP). El procesador de la bandeja (spec 054) los entrega por las rutas internas de cada servicio (`docs/endpoints.md`, filas `/api/v1/interno/*`) con un token de servicio de 5 minutos; 202 también si ya los recibió. Los tipos permitidos salen de `OutboxReglas.Tipos`.
+
+| Evento | Spec | Destino | Cuándo | Carga | Consumidor |
+|---|---|---|---|---|---|
+| `CuentaSuspendida` | 059 | market | Al suspender de forma preventiva la cuenta por un reporte de gravedad alta | `eventoId`, `usuarioId`, `reporteId`, `desde` (`_id` `CuentaSuspendida:{reporteId}:1`) | `POST /api/v1/interno/eventos` de Mercado: el perfil del técnico pasa a `suspendido` y cada cita próxima genera el aviso `visita_afectada` al cliente |
+| `CuentaReactivada` | 059 | market | Al levantar la suspensión | `eventoId`, `usuarioId`, `desde` (`_id` `CuentaReactivada:{reporteId}:1`) | `POST /api/v1/interno/eventos` de Mercado: el perfil vuelve a `activo` |
+| `CuentaEliminada` | 039 | market | Al vencer el plazo de gracia de la eliminación (tarea `EliminarCuenta`, 7 días) | `sub` (`_id` `CuentaEliminada:{sub}:1`) | `POST /api/v1/interno/cuentas/{usuarioId}/eliminada` de Mercado: cancela visitas confirmadas y anonimiza opiniones |
+| `sesion_revocada` | 037 | messaging | Al revocar una sesión (cambio de número, suspensión) | `sid` (`_id` `sesion_revocada:{sid}:1`) | `POST /api/v1/interno/avisos` de Mensajería: borra los dispositivos de esa sesión |
+| `BloqueoCreado` | 043 | market y messaging (un evento por destino) | Al bloquear a una persona | `eventoId`, `bloqueaId`, `bloqueadoId`, `ocurridoEn` (`_id` `BloqueoCreado:{bloqueoId}:{destino}:1`) | `POST /api/v1/interno/bloqueos` de cada servicio: mantiene su proyección `bloqueos` |
+| `BloqueoEliminado` | 043 | market y messaging | Al quitar el bloqueo | igual que `BloqueoCreado` | igual; repetirlo no cambia nada |
+| `ReporteDecidido` | 053 | messaging | Al decidir un reporte en el panel; uno por cada parte, sin datos de la otra | `eventoId`, `usuarioId`, `reporteId`, `rol`, `accion` | Sin consumidor en Mensajería en las ramas revisadas (el aviso a la persona queda pendiente) |
+| `TecnicoOcultado` | 053 | market | Al decidir con gravedad alta que oculta al técnico | `eventoId`, `usuarioId`, `reporteId` | `POST /api/v1/interno/tecnicos-ocultados` de Mercado: el técnico deja de aparecer en búsqueda y perfil público |
+
+Dónde existe cada uno: `sesion_revocada`, `CuentaEliminada`, `BloqueoCreado` y `BloqueoEliminado` (PR #264) están en sprint-05 con sus consumidores en Mercado y Mensajería. `CuentaSuspendida` y `CuentaReactivada` se escriben en sprint-05 (`AccountSuspension`), pero su consumidor `/interno/eventos` de Mercado, `visita_afectada` y los consumidores de `/interno/cuentas/...` están en el PR #272 de integración de Identidad, sin fusionar. `ReporteDecidido` y `TecnicoOcultado` (y el consumidor de `TecnicoOcultado` en Mercado) esperan al PR de Identidad de B (spec 053), sin fusionar.
+
+`visita_afectada` no es un evento de la bandeja sino un tipo de aviso (rol `cliente`, recurso de `visitas`): Mercado lo entrega a `POST /api/v1/interno/avisos` por cada cita próxima del técnico suspendido (PR #272, sin fusionar).
+
+## Eventos de Mercado: elección, permiso de fotos y reporte (specs 048, 050, 053 y 054)
+
+Mismo formato que los eventos de Mercado de arriba (`_id` `{tipo}:{agregadoId}`, `estado = pendiente`, `datos` solo con identificadores).
+
+| Evento | Spec | Cuándo | `datos` | Consumidor |
+|---|---|---|---|---|
+| `CotizacionElegida` | 048 | Al elegir la cotización, además de `CotizacionAceptada` y `CotizacionRechazada` | `solicitudId`, `cotizacionId`, `tecnicoUsuarioId` | `POST /api/v1/interno/eventos` de Mensajería (permiso `CotizacionElegida`): cierra las demás conversaciones de la solicitud sin borrar mensajes. Se escribe en sprint-05 |
+| `PermisoFotosCambiado` | 050 | Al cambiar el permiso del cliente de publicar las fotos del trabajo (`PUT /api/v1/visitas/{id}/permiso-fotos`; `_id` `PermisoFotosCambiado:{visitaId}:{ticks}`) | `visitaId`, `solicitudId`, `clienteId`, `tecnicoUsuarioId`, `permiso` | Quien publica o retira las fotos del trabajo (consumidor pendiente). En sprint-05 |
+| `ReporteNoTerminadoCreado` | 050, 053 | Al reportar el cliente que la visita no se terminó (`POST /api/v1/visitas/{id}/no-terminado`) | `visitaId`, `solicitudId`, `clienteId`, `tecnicoUsuarioId`; el texto no viaja | `POST /api/v1/interno/reportes-no-terminados` de Identidad: lee el texto en `GET /api/v1/interno/visitas/{visitaId}/reporte-no-terminado` y abre el reporte en la cola del panel. El evento se escribe en sprint-05; el despachador y el consumidor están en el PR de Identidad de B (spec 053), sin fusionar |
+
+## Tareas programadas de vencimiento (specs 029 y 050)
+
+Viven en `tareas_programadas` de Mercado (mismo formato que las de reparto de arriba):
+
+| Tipo | Cuándo se programa | Efecto |
+|---|---|---|
+| `VencerSolicitud` (spec 029, R-09) | Al crear la solicitud, para su `venceEn` (el catálogo de Identidad la lista con 48 h) | Vence la solicitud de su clave de negocio; sin efectos si ya tiene cita, está cancelada o ya venció. El manejador está en sprint-05 |
+| `CerrarPeriodoDeOpinion` (spec 054) | Al terminar la visita (`POST /api/v1/visitas/{id}/terminar`), 30 días después | Cierra el plazo de opinar; una visita ya calificada lo cierra igual, sin efecto. Se programa en sprint-05; el manejador `CerrarPeriodoDeOpinion` está en el PR #265 |
