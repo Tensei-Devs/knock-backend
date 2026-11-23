@@ -5,15 +5,15 @@
 
 | Tarea | Qué se hace | Cubre | Depende de | ¿En paralelo? | Responsable sugerido | Estado |
 |---|---|---|---|---|---|---|
-| T-01 | Prueba de registros por proyecto: host con todo en `Verbose`, receptor en memoria, petición con consulta, llamada saliente y reenvío del gateway (falla hoy) | R-08 · CA-01 a CA-04 | — | Sí (con T-03, T-04 y T-06) | Guillermo | pendiente |
-| T-02 | Filtro de fuentes en `LoggingExtensions` de los cuatro proyectos y limpieza de anulaciones en `appsettings*.json` | R-01, R-02, R-03, R-05 · CA-01 a CA-05 | T-01 | No | Guillermo | pendiente |
+| T-01 | Prueba de registros por proyecto: host con todo en `Verbose`, receptor en memoria, petición con consulta, llamada saliente y reenvío del gateway (falla hoy) | R-08 · CA-01 a CA-04 | — | Sí (con T-03, T-04 y T-06) | Guillermo | hecha (Spec035RegistrosTests y Spec035GatewayRegistrosTests) |
+| T-02 | Filtro de fuentes en `LoggingExtensions` de los cuatro proyectos y limpieza de anulaciones en `appsettings*.json` | R-01, R-02, R-03, R-05 · CA-01 a CA-05 | T-01 | No | Guillermo | hecha (filtro de fuentes en los cuatro LoggingExtensions) |
 | T-03 | Regla de redacción de consultas en `TelemetryRedactor` (cuatro copias) con pruebas unitarias y de tiempo | R-04 · CA-06 | — | Sí | Erick | hecha (PR #121) |
-| T-04 | `instance` de ProblemDetails sin consulta, regla de Semgrep contra `UseHttpLogging` (la agrega una persona) y prueba de trazas sin consulta | R-06, R-07 · CA-07, CA-08, CA-16 | — | Sí | Alexis | parcial: HTTP y traza exportada en los cuatro hosts; 500 y registro probados en Mercado; falta 400/422 con ProblemDetails en Mensajería y regla Semgrep de una persona |
-| T-05 | Integrar el frente A y actualizar `docs/OBSERVABILIDAD.md` | R-01 a R-08 | T-02, T-03, T-04 | No (cierre del frente A) | Guillermo | pendiente |
-| T-06 | Validación al arrancar de `KnownNetworks` y `KnownProxies` (vacío fuera de `Development`, redes privadas, prefijo mínimo) en los cuatro proyectos | R-09, R-10, R-12 · CA-09, CA-10, CA-12 | — | Sí (con T-01) | José Julián | pendiente |
-| T-07 | Transformación de YARP en el gateway y encabezados reenviados en Mensajería | R-13 · CA-13 | T-06 | Sí (con T-08) | José Julián | pendiente |
-| T-08 | Terraform: validación de `container_apps_subnet_cidr` y variable para los cuatro componentes; `terraform test` | R-11 · CA-14 | — | Sí | José Julián | pendiente |
-| T-09 | Prueba de dos clientes con Redis real, humo en el entorno de evaluación, `docs/rate-limit-matrix.md` y `Memoria.md` | R-14, R-15 · CA-11, CA-15 | T-05, T-07, T-08 | No (cierre) | José Julián | pendiente |
+| T-04 | `instance` de ProblemDetails sin consulta, regla de Semgrep contra `UseHttpLogging` (la agrega una persona) y prueba de trazas sin consulta | R-06, R-07 · CA-07, CA-08, CA-16 | — | Sí | Alexis | parcial: HTTP y traza exportada en los cuatro hosts; 500 y registro probados en Mercado; regla Semgrep knock-sin-http-logging agregada; falta 400/422 con ProblemDetails en Mensajería |
+| T-05 | Integrar el frente A y actualizar `docs/OBSERVABILIDAD.md` | R-01 a R-08 | T-02, T-03, T-04 | No (cierre del frente A) | Guillermo | hecha (docs/OBSERVABILIDAD.md) |
+| T-06 | Validación al arrancar de `KnownNetworks` y `KnownProxies` (vacío fuera de `Development`, redes privadas, prefijo mínimo) en los cuatro proyectos | R-09, R-10, R-12 · CA-09, CA-10, CA-12 | — | Sí (con T-01) | José Julián | hecha (ForwardedHeadersValidator; Spec035ConfianzaTests) |
+| T-07 | Transformación de YARP en el gateway y encabezados reenviados en Mensajería | R-13 · CA-13 | T-06 | Sí (con T-08) | José Julián | hecha (ForwardedHeadersTransform; Spec035GatewayTests) |
+| T-08 | Terraform: validación de `container_apps_subnet_cidr` y variable para los cuatro componentes; `terraform test` | R-11 · CA-14 | — | Sí | José Julián | hecha (validacion en deploy/apps y modules/shared; encabezados_reenviados.tftest.hcl) |
+| T-09 | Prueba de dos clientes con Redis real, humo en el entorno de evaluación, `docs/rate-limit-matrix.md` y `Memoria.md` | R-14, R-15 · CA-11, CA-15 | T-05, T-07, T-08 | No (cierre) | José Julián | parcial: prueba de dos clientes con Redis hecha (Spec035LimitesTests); falta el humo en evaluacion (CA-15), docs/rate-limit-matrix.md y Memoria |
 
 ## Definición de terminado
 - Los criterios de aceptación de `spec.md` están cubiertos por pruebas o comandos en verde.

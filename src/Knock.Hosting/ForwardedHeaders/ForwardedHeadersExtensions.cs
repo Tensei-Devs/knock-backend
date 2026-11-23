@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using ForwardedHeaderFlags = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders;
 
 namespace Knock.Hosting.ForwardedHeaders;
@@ -18,7 +19,7 @@ public static class ForwardedHeadersExtensions
     /// </summary>
     public static IServiceCollection AddKnockForwardedHeaders(this IServiceCollection services)
     {
-        services.AddOptions<ForwardedHeadersOptions>().Configure<IConfiguration>((options, configuration) =>
+        services.AddOptions<ForwardedHeadersOptions>().Configure<IConfiguration, IHostEnvironment>((options, configuration, environment) =>
         {
             options.ForwardLimit = 1;
             options.KnownProxies.Clear();
@@ -37,6 +38,8 @@ public static class ForwardedHeadersExtensions
                     ? parsed
                     : throw new InvalidOperationException($"{SectionName}:KnownNetworks has an entry that is not a CIDR network."));
             }
+
+            ForwardedHeadersValidator.Validate(options, environment);
 
             // El middleware confía en TODOS los remitentes cuando no hay proxies ni redes: sin configuración se deshabilita el reenvío.
             // Con proxies de confianza también se lee X-Forwarded-Proto (sin él `IsHttps` sería siempre falso detrás del ingress y HSTS no

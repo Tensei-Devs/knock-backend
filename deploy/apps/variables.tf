@@ -70,6 +70,11 @@ variable "container_apps_subnet_cidr" {
   EOT
   type        = string
   default     = "10.20.0.0/23"
+
+  validation {
+    condition     = can(cidrnetmask(var.container_apps_subnet_cidr)) && can(regex("^(10\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.|192\\.168\\.)", var.container_apps_subnet_cidr)) && try(tonumber(split("/", var.container_apps_subnet_cidr)[1]) >= 16, false)
+    error_message = "container_apps_subnet_cidr debe ser una red IPv4 privada (10/8, 172.16/12 o 192.168/16) con prefijo /16 o más estrecho (spec 035, R-10)."
+  }
 }
 
 variable "aspnetcore_environment" {

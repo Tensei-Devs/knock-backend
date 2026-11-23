@@ -83,6 +83,7 @@ public sealed class Spec006ForwardedHeadersTests
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(values).Build();
         using var provider = new ServiceCollection()
             .AddSingleton<IConfiguration>(configuration)
+            .AddSingleton<Microsoft.Extensions.Hosting.IHostEnvironment>(new Microsoft.Extensions.Hosting.Internal.HostingEnvironment { EnvironmentName = "Development" })
             .AddKnockForwardedHeaders()
             .BuildServiceProvider();
         return provider.GetRequiredService<IOptions<ForwardedHeadersOptions>>().Value;
