@@ -40,11 +40,14 @@ public sealed class GatewayRoutingTests : IAsyncLifetime, IDisposable
         { "POST", "/api/v1/visitas/507f1f77bcf86cd799439011/reprogramar/respuesta" },
         { "POST", "/api/v1/visitas/507f1f77bcf86cd799439011/cancelar" },
         { "POST", "/api/v1/visitas/507f1f77bcf86cd799439011/cliente-ausente" },
+        { "POST", "/api/v1/visitas/507f1f77bcf86cd799439011/tecnico-ausente" },
         { "POST", "/api/v1/visitas/507f1f77bcf86cd799439011/terminar" },
         { "POST", "/api/v1/visitas/507f1f77bcf86cd799439011/no-terminado" },
         { "PUT", "/api/v1/visitas/507f1f77bcf86cd799439011/permiso-fotos" },
         { "POST", "/api/v1/visitas/507f1f77bcf86cd799439011/cotizacion-final" },
         { "POST", "/api/v1/visitas/507f1f77bcf86cd799439011/cotizacion-final/decision" },
+        { "GET", "/api/v1/visitas/507f1f77bcf86cd799439011/cotizacion-final" },
+        { "GET", "/api/v1/visitas/507f1f77bcf86cd799439011/ajustes-pendientes" },
         { "POST", "/api/v1/cotizaciones/507f1f77bcf86cd799439011/ajuste-precio" },
         { "POST", "/api/v1/ajustes/507f1f77bcf86cd799439011/decision" },
         { "POST", "/api/v1/solicitudes/507f1f77bcf86cd799439011/cancelar" },
@@ -298,6 +301,20 @@ public sealed class GatewayRoutingTests : IAsyncLifetime, IDisposable
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         _correlationSeen.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData("PUT", "/api/v1/visitas/507f1f77bcf86cd799439011/tecnico-ausente")]
+    [InlineData("GET", "/api/v1/visitas/507f1f77bcf86cd799439011/tecnico-ausente")]
+    [InlineData("POST", "/api/v1/visitas/507f1f77bcf86cd799439011/ajustes-pendientes")]
+    [InlineData("DELETE", "/api/v1/visitas/507f1f77bcf86cd799439011/ajustes-pendientes")]
+    public async Task VisitRoute_WithAnotherMethod_IsNotForwarded_CA_063_10(string method, string path)
+    {
+        using var request = new HttpRequestMessage(new HttpMethod(method), new Uri(path, UriKind.Relative));
+        using var response = await _client!.SendAsync(request);
+
+        response.StatusCode.Should().BeOneOf(HttpStatusCode.NotFound, HttpStatusCode.MethodNotAllowed);
+        _requestsSeen.Should().BeEmpty();
     }
 
     [Fact]

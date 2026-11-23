@@ -101,3 +101,6 @@ CA-01 a CA-11 con prueba; `python scripts/sdd_lint.py --trace 063` en OK; OpenAP
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-23
 - [x] Sin conflicto con la constitución
 - **Estados:** Aprobada
+
+## Enmiendas
+- **2026-11-24 (nota, sin cambio de aprobación ni decisiones):** el encabezado y la sección de implementación decían que el gateway ya enruta `/api/v1/visitas/{**resto}`. Es falso: las rutas de `visitas` se declaran una por una, con método y política, en `src/Knock.Gateway/appsettings.json`. Se agregan `mercado-visita-cotizacion-final-lectura` (`GET /api/v1/visitas/{id}/cotizacion-final`) y `mercado-visita-ajustes-pendientes` (`GET /api/v1/visitas/{id}/ajustes-pendientes`), con la política `default`, el CORS `knock` y las mismas reglas que sus vecinas.

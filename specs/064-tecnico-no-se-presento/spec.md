@@ -97,3 +97,6 @@ CA-01 a CA-09 con prueba; `python scripts/sdd_lint.py --trace 064` en OK; OpenAP
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-23
 - [x] Sin conflicto con la constitución
 - **Estados:** Aprobada
+
+## Enmiendas
+- **2026-11-24 (nota, sin cambio de aprobación ni decisiones):** el encabezado y la sección de implementación decían que el gateway ya enruta `/api/v1/visitas/{**resto}` y que no hacía falta gateway nuevo. Es falso: las rutas de `visitas` se declaran una por una, con método y política, en `src/Knock.Gateway/appsettings.json`. Se agrega `mercado-visita-tecnico-ausente` (`POST /api/v1/visitas/{id}/tecnico-ausente`), con la política `default`, el CORS `knock` y las mismas reglas que `mercado-visita-cliente-ausente`.
