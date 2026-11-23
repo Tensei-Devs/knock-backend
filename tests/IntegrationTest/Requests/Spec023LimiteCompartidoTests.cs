@@ -1,6 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using AwesomeAssertions;
+using Knock.IntegrationTest.Support;
+using Microsoft.Extensions.DependencyInjection;
+using MongoDB.Bson;
+using MongoDB.Driver;
+using StackExchange.Redis;
 using Xunit;
 
 namespace Knock.IntegrationTest.Requests;
@@ -11,10 +16,11 @@ public sealed class Spec023LimiteCompartidoTests
     [Fact]
     public async Task Limite_De_Lista_De_Espera_Se_Comparte_Entre_Replicas_CA_023_11()
     {
-        var (replicaA, _) = await WaitlistHttp.CreateAsync();
-        var (replicaB, _) = await WaitlistHttp.CreateAsync();
-        using var hostA = replicaA;
-        using var hostB = replicaB;
+        // El host de pruebas lee la cadena de Redis después de registrar los servicios, así que sin esta conexión cada réplica limitaría por su cuenta.
+        var redis = await RedisTestFixture.SharedAsync();
+        using var connection = await ConnectionMultiplexer.ConnectAsync(redis.ConnectionString);
+        using var replicaA = await CreateReplicaAsync(connection);
+        using var replicaB = await CreateReplicaAsync(connection);
         var subject = Guid.NewGuid().ToString("D");
         using var clientA = WaitlistHttp.SignedIn(replicaA, subject);
         using var clientB = WaitlistHttp.SignedIn(replicaB, subject);
@@ -39,5 +45,13 @@ public sealed class Spec023LimiteCompartidoTests
         using var otherPerson = WaitlistHttp.SignedIn(replicaB);
         using var other = await otherPerson.PostAsJsonAsync(WaitlistHttp.Route, new { cp = "92009" });
         other.StatusCode.Should().Be(HttpStatusCode.Created, "el límite es por persona");
+    }
+
+    private static async Task<MarketApiFactory> CreateReplicaAsync(IConnectionMultiplexer connection)
+    {
+        var factory = await MarketApiFactory.CreateAsync(configureServices: services => services.AddSingleton(connection));
+        await factory.Database.GetCollection<BsonDocument>("listas_espera").Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(
+            Builders<BsonDocument>.IndexKeys.Ascending("usuarioId").Ascending("cp"), new CreateIndexOptions { Unique = true }));
+        return factory;
     }
 }

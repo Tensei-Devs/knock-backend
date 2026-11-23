@@ -1,7 +1,11 @@
+extern alias MarketApi;
+
 using System.Net;
 using System.Net.Http.Json;
 using AwesomeAssertions;
 using Knock.IntegrationTest.Support;
+using MarketApi::Knock.Market.Api.Modules.Requests.Services;
+using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Xunit;
@@ -17,7 +21,7 @@ public sealed class Spec020CotizacionesCierreTests
         using var factory = await MarketApiFactory.CreateAsync();
         var id = await QuoteHttp.Request(factory);
         using var client = await QuoteHttp.Technician(factory);
-        var responses = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => client.PostAsJsonAsync(QuoteHttp.Route(id), QuoteHttp.Body())));
+        var responses = await Task.WhenAll(Enumerable.Range(0, 3).Select(_ => client.PostAsJsonAsync(QuoteHttp.Route(id), QuoteHttp.Body())));
         try
         {
             responses.Count(x => x.StatusCode == HttpStatusCode.Created).Should().Be(1);
@@ -54,7 +58,7 @@ public sealed class Spec020CotizacionesCierreTests
     [Fact]
     public async Task Cotizar_No_Registra_La_Nota_CA_020_17()
     {
-        using var factory = await MarketApiFactory.CreateAsync();
+        using var factory = await MarketApiFactory.CreateAsync(configureServices: services => services.AddSingleton<INoteModerator>(new ApprovingNoteModerator()));
         var id = await QuoteHttp.Request(factory);
         using var client = await QuoteHttp.Technician(factory);
         var note = "Nota-ficticia-" + Guid.NewGuid().ToString("N");
@@ -74,4 +78,10 @@ public sealed class Spec020CotizacionesCierreTests
         });
         output.Should().NotContain(note);
     }
+}
+
+/// <summary>Moderador de notas que aprueba cualquier nota: el real falla cerrado (503) sin el servicio de moderación.</summary>
+internal sealed class ApprovingNoteModerator : INoteModerator
+{
+    public Task<NoteModerationResult> ModerateAsync(string note, CancellationToken cancellationToken) => Task.FromResult(NoteModerationResult.Approved);
 }

@@ -1,11 +1,18 @@
+extern alias MarketApi;
+
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using AwesomeAssertions;
 using Knock.IntegrationTest.Requests;
 using Knock.IntegrationTest.Support;
+using MarketApi::Knock.Market.Api.Modules.Catalog.Data;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using StackExchange.Redis;
 using Xunit;
 
 namespace Knock.IntegrationTest.Catalog;
@@ -70,6 +77,7 @@ public sealed class Spec027BusquedaCierreTests
     {
         using var factory = await MarketApiFactory.CreateAsync();
         var colonia = await SeedAsync(factory);
+        await InsertTechnicianAsync(factory, colonia, "Taller Uno", "plo"); // crea el índice 2dsphere que exige $geoNear
         using var client = WaitlistHttp.SignedIn(factory);
         var body = await SearchAsync(client, "luz agua", colonia);
         var interpretation = body.GetProperty("interpretacion");
@@ -123,7 +131,12 @@ public sealed class Spec027BusquedaCierreTests
     [Fact]
     public async Task Segunda_Busqueda_Se_Sirve_De_La_Cache_De_30_Segundos_CA_027_15()
     {
-        using var factory = await MarketApiFactory.CreateAsync();
+        // El host de pruebas lee la cadena de Redis después de registrar los servicios y por eso queda sin caché; se le da la caché real sobre una base de Redis propia
+        // (la generación de la caché de búsqueda es global por base y otras pruebas la invalidan).
+        var redis = await RedisTestFixture.SharedAsync();
+        using var connection = await ConnectionMultiplexer.ConnectAsync(redis.ConnectionString + ",defaultDatabase=13");
+        using var factory = await MarketApiFactory.CreateAsync(configureServices: services => services.AddSingleton<ISearchResponseCache>(
+            new RedisCatalogCache(connection, Options.Create(new CatalogCacheOptions()), NullLogger<RedisCatalogCache>.Instance)));
         var colonia = await SeedAsync(factory);
         await InsertTechnicianAsync(factory, colonia, "Taller Uno", "plo");
         using var client = WaitlistHttp.SignedIn(factory);
