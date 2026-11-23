@@ -29,7 +29,9 @@ internal sealed record VisitRecord(
     int Reschedules = 0,
     RescheduleProposal? Proposal = null,
     DateTime? FinishedAtUtc = null,
-    bool NotFinishedReported = false)
+    bool NotFinishedReported = false,
+    string? FinalQuoteState = null,
+    bool? PhotoPermission = null)
 {
     public VisitState State => new(Estado, Modality, Day, Locked, CodeUsed, CodeExpiresAtUtc);
 }
@@ -242,7 +244,12 @@ internal sealed class VisitStore(
         d.GetValue("reprogramaciones", 0).ToInt32(),
         d.TryGetValue("propuestaReprogramacion", out var proposal) && proposal.IsBsonDocument ? ToProposal(proposal.AsBsonDocument) : null,
         d.TryGetValue("terminadaEn", out var finished) && finished.IsBsonDateTime ? finished.ToUniversalTime() : null,
-        d.Contains("reporteNoTerminado"));
+        d.Contains("reporteNoTerminado"),
+        FinalQuoteStateOf(d),
+        d.TryGetValue("permisoPublicarFotos", out var permission) && permission.IsBoolean ? permission.AsBoolean : null);
+
+    private static string? FinalQuoteStateOf(BsonDocument d) =>
+        d.TryGetValue("cotizacionFinal", out var finalQuote) && finalQuote.IsBsonDocument && finalQuote.AsBsonDocument.TryGetValue("estado", out var state) && state.IsString ? state.AsString : null;
 
     private static RescheduleProposal ToProposal(BsonDocument d) => new(d["fechaHora"].ToUniversalTime(), d["propuestaPor"].AsString, d["venceEn"].ToUniversalTime());
 }

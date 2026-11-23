@@ -36,7 +36,11 @@ internal sealed record VisitResponse(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? PuedeAvisar,
     bool PuedeLlegar,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] DateTimeOffset? LlegadaEn,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? TecnicoUsuarioId = null);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? TecnicoUsuarioId = null,
+    bool ReprogramacionPendiente = false,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? EstadoCotizacionFinal = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? PermisoFotos = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] DateTimeOffset? TerminadaEn = null);
 
 /// <summary>Cuerpo de <c>POST /visitas/{id}/llegada</c>: <c>Codigo</c> son exactamente cuatro dígitos ASCII, con los ceros a la izquierda.</summary>
 internal sealed record ArrivalBody(string? Codigo)
