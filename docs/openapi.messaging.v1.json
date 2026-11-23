@@ -1601,7 +1601,7 @@
         "tags": [
           "Dispositivos"
         ],
-        "summary": "Registra el token de notificaciones del dispositivo (spec 037, R-01): 201 la primera vez, 200 si ya estaba. 409 si otra persona lo registró a la vez; 503 con el envío de avisos apagado; 20 por hora por persona.",
+        "summary": "Registra el token de notificaciones del dispositivo (spec 037, R-01): 201 la primera vez, 200 si ya estaba. 409 `device_conflict` si otra persona lo registró a la vez; 503 `devices_unavailable` con el registro de dispositivos apagado (sin llaves de cifrado); 20 por hora por persona.",
         "parameters": [
           {
             "name": "version",

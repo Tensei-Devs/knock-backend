@@ -84,7 +84,9 @@ public sealed class Spec037DeviceAvailabilityTests
 
         anonymous.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         authenticated.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
-        (await authenticated.Content.ReadAsStringAsync()).Should().NotContain("synthetic-token");
+        var body = await authenticated.Content.ReadAsStringAsync();
+        body.Should().NotContain("synthetic-token");
+        body.Should().Contain("\"code\":\"devices_unavailable\"", "el 503 de dispositivos lleva su code propio (spec 037, enmienda del 2026-11-23)");
         health.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 }

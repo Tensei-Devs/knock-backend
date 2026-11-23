@@ -46,11 +46,11 @@ Que el teléfono de cada persona reciba un aviso de Knock cuando pasa algo en su
 
 | Método y ruta | Quién | Cuerpo | Respuesta | Errores |
 |---|---|---|---|---|
-| `POST /api/v1/dispositivos` | persona con sesión | `{ identificador, plataforma }` | `201` primera vez; `200` si el token ya estaba registrado para esa persona | `400`, `401`, `422`, `429` |
-| `DELETE /api/v1/dispositivos/{id}` | dueño | — | `204` | `401`, `429` |
+| `POST /api/v1/dispositivos` | persona con sesión | `{ identificador, plataforma }` | `201` primera vez; `200` si el token ya estaba registrado para esa persona | `400`, `401`, `409 device_conflict`, `422`, `429`, `503 devices_unavailable` |
+| `DELETE /api/v1/dispositivos/{id}` | dueño | — | `204` | `401`, `429`, `503 devices_unavailable` |
 | `POST /api/v1/interno/avisos` | servicio emisor (ruta interna, fuera del gateway) | `{ eventoId, tipo, destinatarioId, rol, recurso? }` o `{ eventoId, tipo: "sesion_revocada", sid }` | `202` (también si ya se recibió ese `eventoId`) | `401`, `403 service_not_allowed`, `422`, `429` |
 
-**Códigos de error:** solo la ruta interna tiene códigos propios (`service_not_allowed`, 403); los errores de campo (por ejemplo, una `plataforma` fuera de la lista) salen como 422 con `errors`, el cuerpo ilegible como 400, y 401 y 429 como en la convención de la spec 002 (R-08 a R-12).
+**Códigos de error:** `service_not_allowed` (403) en la ruta interna; en `/dispositivos`, `device_conflict` (409, otra persona registró el mismo token a la vez) y `devices_unavailable` (503, el registro está apagado porque faltan las llaves de cifrado de `Avisos:Devices`; enmienda del 2026-11-23); los errores de campo (por ejemplo, una `plataforma` fuera de la lista) salen como 422 con `errors`, el cuerpo ilegible como 400, y 401 y 429 como en la convención de la spec 002 (R-08 a R-12).
 
 **Eventos que despacha** (frontend 024 §4.2): `solicitud_nueva`, `solicitud_sin_tecnicos`, `cotizacion_nueva`, `cotizacion_aceptada`, `solicitud_cancelada`, `solicitud_vencida`, `cotizacion_vencida`, `mensaje_nuevo`. Cada uno con su `tipo` y su `recurso` según esa tabla.
 

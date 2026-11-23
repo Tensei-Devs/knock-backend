@@ -17,9 +17,12 @@ namespace Knock.Messaging.Api.Modules.Avisos.Controllers;
 [Route("api/v{version:apiVersion}/dispositivos")]
 internal sealed class DispositivosController(DispositivosService service) : ControllerBase
 {
+    public const string DevicesUnavailableCode = "devices_unavailable";
+    public const string DeviceConflictCode = "device_conflict";
+
     private const string _problemJson = "application/problem+json";
 
-    /// <summary>Registra el token de notificaciones del dispositivo (spec 037, R-01): 201 la primera vez, 200 si ya estaba. 409 si otra persona lo registró a la vez; 503 con el envío de avisos apagado; 20 por hora por persona.</summary>
+    /// <summary>Registra el token de notificaciones del dispositivo (spec 037, R-01): 201 la primera vez, 200 si ya estaba. 409 `device_conflict` si otra persona lo registró a la vez; 503 `devices_unavailable` con el registro de dispositivos apagado (sin llaves de cifrado); 20 por hora por persona.</summary>
     [HttpPost]
     [ProducesResponseType<IdDispositivo>(StatusCodes.Status201Created)]
     [ProducesResponseType<IdDispositivo>(StatusCodes.Status200OK)]
@@ -33,7 +36,7 @@ internal sealed class DispositivosController(DispositivosService service) : Cont
     {
         if (!service.Available)
         {
-            return StatusCode(StatusCodes.Status503ServiceUnavailable);
+            return Unavailable();
         }
 
         var result = await service.RegisterAsync(User.FindFirst("sub")!.Value, User.FindFirst("sid")!.Value, body.Plataforma!, body.Identificador!, cancellationToken);
@@ -41,7 +44,7 @@ internal sealed class DispositivosController(DispositivosService service) : Cont
         {
             DeviceRegistrationStatus.Created => Created(new Uri($"{Request.Path}/{result.Id}", UriKind.Relative), new IdDispositivo(result.Id!)),
             DeviceRegistrationStatus.Existing => Ok(new IdDispositivo(result.Id!)),
-            _ => Conflict(),
+            _ => Problem(statusCode: StatusCodes.Status409Conflict, title: "Conflict", extensions: new Dictionary<string, object?> { ["code"] = DeviceConflictCode }),
         };
     }
 
@@ -55,11 +58,14 @@ internal sealed class DispositivosController(DispositivosService service) : Cont
     {
         if (!service.Available)
         {
-            return StatusCode(StatusCodes.Status503ServiceUnavailable);
+            return Unavailable();
         }
 
         // R-02: 204 también si el dispositivo ya no existe o es de otra persona (no se revela cuál de los dos).
         await service.DeleteAsync(User.FindFirst("sub")!.Value, id, cancellationToken);
         return NoContent();
     }
+
+    private ObjectResult Unavailable() =>
+        Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Service Unavailable", extensions: new Dictionary<string, object?> { ["code"] = DevicesUnavailableCode });
 }
