@@ -9,6 +9,7 @@
 | T-03 | `AdminReviewsController` (`ocultar` y `mostrar`) con `PanelBearer`, `reviews:moderate` y límite `admin-opiniones` | R-03, R-08 · CA-05, CA-07 | T-02 | pendiente |
 | T-04 | Evento `OpinionModerada` en la bandeja de Mercado y su entrega a `POST /api/v1/interno/eventos` (permiso `opinion-moderada`) | R-04 | T-02 | pendiente |
 | T-05 | Consumidor en Identidad: `opinion_ocultada` y `opinion_mostrada` en `panel_auditoria`, idempotente por `eventoId` y sin texto | R-06, R-07 · CA-09 | T-04 | pendiente |
+| T-05a | Aviso al técnico: tipo `opinion_oculta` de texto fijo en el catálogo de avisos de la spec 037 (enmienda), entrega a `POST /api/v1/interno/avisos` y prueba de que no lleva motivo ni datos de la opinión | R-07a · CA-09a | T-04 | pendiente |
 | T-06 | Rutas en el gateway dentro de `/api/v1/admin/**` y prueba de enrutamiento | §5 | T-03 | pendiente |
 | T-07 | Pruebas de seguridad negativa (sin token, sin permiso, sin doble factor) | CA-05, CA-06 | T-03 | pendiente |
 | T-08 | OpenAPI de Mercado regenerado, `docs/endpoints.md`, `docs/rate-limit-matrix.md`, `docs/events.md` y `Memoria.md` | §12 | T-06 | pendiente |

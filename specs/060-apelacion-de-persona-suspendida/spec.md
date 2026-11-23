@@ -28,8 +28,10 @@ Que una persona suspendida (spec 059) pueda apelar de verdad. Hoy REP-03 (spec 0
 - **R-02:** La persona se identifica por la huella HMAC de su número (spec 015). Si no hay cuenta con ese número, o la cuenta no está `suspendida`, o no hay una apelación posible, la respuesta es **la misma 404 `not_found` en los tres casos** (no revela si el número existe ni su estado).
 - **R-03:** Cuerpo `{ texto }` con 8 a 500 caracteres (igual que spec 043 R-21). Un valor inválido responde 422 con `errors.texto` sin repetirlo; un cuerpo ilegible, 400.
 - **R-04:** La apelación es **una sola vez por decisión** (spec 043). Repetirla con el mismo `texto` responde 200 con la misma apelación (idempotente); con otro `texto`, 409 `appeal_not_allowed`.
+- **R-04a:** **Una apelación abierta a la vez por suspensión.** Si la apelación se rechaza, **no se puede abrir otra sobre la misma suspensión** (409 `appeal_not_allowed`); una suspensión nueva (otra decisión) permite una apelación nueva.
 - **R-05:** La apelación se asigna con prioridad a una persona del panel distinta de la que decidió; si no hay otra con el permiso, la revisa quien lo tenga y queda marcada «misma persona» (spec 043 R-21). Mientras está pendiente (`en_apelacion`) **la suspensión se mantiene** (spec 059 R-14).
 - **R-06:** Resolver la apelación desde el panel exige `reports:resolve` y doble factor y deja un registro en `panel_auditoria` (`apelacion_aceptada` o `apelacion_rechazada`, con quién resolvió y el reporte; nunca el texto). **Aceptar** ejecuta `Reactivar(usuarioId, reporteId)` (spec 059 R-15) en la misma transacción; **rechazar** deja la cuenta suspendida y cierra la apelación.
+- **R-06a:** **Vigencia de la suspensión.** La suspensión **gradual** (spec 059 R-16: 3 advertencias vigentes en 90 días) dura **7 días** y vence sola (`suspension.venceEn`; una tarea programada la reactiva con `Reactivar`); la apelación aceptada puede levantarla antes. La suspensión **crítica** (decisión de un moderador, spec 059 R-04) **no vence**: solo se levanta por una apelación resuelta y aceptada en el panel.
 - **R-07:** Límites: 5 intentos por hora por huella de número y 20 por hora por IP (política `suspension-apelacion` en `IdentityRateLimits`); 429 `rate_limited` con `Retry-After`. Cuerpo máximo de 2 KiB (413 `payload_too_large`).
 - **R-08:** Ningún dato de quien reportó ni el texto del reporte aparece en las respuestas, registros ni auditoría (spec 043 R-22). El `idToken`, el número y el texto de la apelación nunca se registran.
 - **R-09:** `GET /api/v1/suspension/apelacion` devuelve `{ estado, presentadaEn, resueltaEn? }` y nunca el texto del moderador ni la identidad de quien resolvió.
@@ -44,6 +46,8 @@ Que una persona suspendida (spec 059) pueda apelar de verdad. Hoy REP-03 (spec 0
 - **CA-06:** Dada una apelación pendiente, cuando se consulta la cuenta, entonces sigue `suspendida` (spec 059 CA-19).
 - **CA-07:** Dada una apelación aceptada desde el panel con permiso y doble factor, cuando se resuelve, entonces la cuenta queda `activa` (sin sesiones restauradas), se emite `CuentaReactivada`, hay registros `apelacion_aceptada` y `cuenta_reactivada` y la persona puede iniciar sesión de nuevo.
 - **CA-08:** Dada una apelación rechazada, cuando se resuelve, entonces la cuenta sigue `suspendida`, la apelación queda `rechazada` y no se puede apelar de nuevo la misma decisión.
+- **CA-08a:** Dada una apelación rechazada, cuando la persona intenta apelar otra vez la misma suspensión, entonces 409 `appeal_not_allowed`; dada una apelación pendiente, la segunda llamada con otro texto también 409 (una abierta a la vez).
+- **CA-08b:** Dada una suspensión gradual, cuando pasan 7 días sin apelación aceptada, entonces la tarea programada la reactiva (`CuentaReactivada`, registro `cuenta_reactivada`); dada una suspensión crítica, cuando pasan 7 días o más, entonces sigue suspendida.
 - **CA-09:** Dada una persona del panel sin `reports:resolve` o sin doble factor, cuando intenta resolver, entonces 403 y no cambia nada.
 - **CA-10:** Dado un solo moderador con permiso, que decidió el reporte, cuando llega la apelación, entonces la revisa él mismo y queda marcada «misma persona».
 - **CA-11:** Dadas 6 apelaciones en una hora con el mismo número, cuando llega la sexta, entonces 429 con `Retry-After`; dadas 21 desde la misma IP, 429.
@@ -55,7 +59,7 @@ Que una persona suspendida (spec 059) pueda apelar de verdad. Hoy REP-03 (spec 0
 | Criterio | Prueba prevista |
 |---|---|
 | CA-01, CA-02, CA-03, CA-04, CA-05 | `IntegrationTest/Spec060ApelacionSuspensionTests` (con el emulador de Firebase, como las specs 015 y 016) |
-| CA-06, CA-07, CA-08, CA-10 | `IntegrationTest/Spec060ResolucionTests` |
+| CA-06, CA-07, CA-08, CA-08a, CA-08b, CA-10 | `IntegrationTest/Spec060ResolucionTests` |
 | CA-09 | `SecurityTest/Spec060ResolucionSeguridadTests` |
 | CA-11, CA-12, CA-13 | `SecurityTest/Spec060ApelacionSeguridadTests` y `UnitTest/Spec060RegistrosTests` |
 
@@ -99,18 +103,17 @@ CA-01 a CA-13 con prueba; `python scripts/sdd_lint.py --trace 060` en OK; OpenAP
 ## 13. Decisiones
 - **D-01:** la apelación pública vive en una ruta nueva (`/suspension/apelacion`) y no relaja `REP-03`, para que ninguna ruta autenticada acepte a una persona suspendida.
 - **D-02:** la prueba de control del número es el `idToken` de Firebase reciente y **no emite sesión** (decisión de José del 2026-11-23: «prueba el control del número con el código SMS»).
-- **D-03:** valores de la regla gradual de la spec 059: 3 advertencias vigentes en 90 días y suspensión de 7 días; «se levanta solo por apelación en el panel» (decisión de José del 2026-11-23).
+- **D-03:** valores de la regla gradual de la spec 059: 3 advertencias vigentes en 90 días y suspensión de 7 días (decisión de José del 2026-11-23).
+- **D-04 (DECIDIDO, José, 2026-11-23 noche):** la suspensión gradual vence sola a los 7 días y la apelación puede levantarla antes; la crítica no vence y solo la levanta una apelación resuelta en el panel. Una apelación abierta a la vez por suspensión; si se rechaza, no se abre otra sobre la misma suspensión.
 
 ## 14. Decisiones tomadas sin consulta
 1. **`auth_time` de 10 minutos.** Alternativa: 5 o 30 minutos.
 2. **404 uniforme en lugar de 403 para «no suspendida».** Evita enumerar números a costa de un mensaje menos claro para quien se equivoca de número.
 3. **Sin push de resultado** (la persona no tiene dispositivos): se consulta con `GET` o al iniciar sesión.
-4. **Interpretación de «suspensión de 7 días… se levanta solo por apelación»** (D-03): la suspensión gradual dura 7 días y **antes de ese plazo solo se levanta por apelación aceptada**; al cumplirse el plazo vence sola. Alternativa: no vence nunca y solo la levanta una apelación.
 
 ## 15. Riesgos y dudas abiertas
-- **Duda 1 (para José):** la interpretación 4 de §14 (¿la suspensión gradual vence sola a los 7 días?).
-- **Duda 2:** pruebas de integración con el emulador de Firebase solo corren en el CI (hoy dos pruebas de Identidad lo necesitan y fallan en local).
-- **Duda 3:** el número máximo de apelaciones simultáneas en la cola del panel para una sola persona (hoy una por decisión).
+- Las dudas de vigencia y de tope de apelaciones quedaron **decididas** (D-04).
+- **Duda abierta (técnica):** las pruebas de integración con el emulador de Firebase solo corren en el CI (hoy dos pruebas de Identidad lo necesitan y fallan en local).
 
 ## Aprobación
 - [ ] Revisor 1 — nombre: ______ fecha: ______
