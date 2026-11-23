@@ -57,6 +57,43 @@ public sealed class Spec037InternoAvisosSeguridadTests
     }
 
     [Fact]
+    public async Task InternalNotices_SameCredentialTwice_IsAcceptedWithoutDuplicatingTheNotice_CA_056_10()
+    {
+        var fixture = await DocumentDbFixture.SharedAsync();
+        var name = "s056_rep_" + Convert.ToHexString(RandomNumberGenerator.GetBytes(8));
+        var marketKey = RandomNumberGenerator.GetBytes(32);
+        using var mongo = new MongoClient(fixture.ConnectionString);
+        try
+        {
+            var settings = new Dictionary<string, string?>
+            {
+                ["ConnectionStrings:KnockMongo"] = fixture.ConnectionString,
+                ["Mongo:Databases:Messaging"] = name,
+                ["Security:InternalTokens:MarketKey"] = Convert.ToBase64String(marketKey),
+                ["Security:InternalTokens:IdentityKey"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)),
+            };
+            await using var host = await SecurityMessagingFactory.CreateAsync(settings);
+            using var client = host.CreateClient();
+            var body = new { eventoId = Guid.NewGuid().ToString("N"), tipo = "solicitud_nueva", destinatarioId = Guid.NewGuid().ToString("D"), rol = "tecnico", recurso = ObjectId.GenerateNewId().ToString() };
+            var credential = Mint("knock-market", marketKey, "solicitud_nueva");
+            var notices = mongo.GetDatabase(name).GetCollection<BsonDocument>("notifications.enviados");
+
+            using var first = await SecureHttp.PostJsonAsync(client, _path, body, credential);
+            var afterFirst = await notices.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty);
+            using var second = await SecureHttp.PostJsonAsync(client, _path, body, credential);
+            var afterSecond = await notices.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty);
+
+            first.StatusCode.Should().Be(HttpStatusCode.Accepted);
+            second.StatusCode.Should().Be(first.StatusCode, "la segunda presentación de la misma credencial se acepta (sin jti guardado)");
+            afterSecond.Should().Be(afterFirst, "el receptor es idempotente por eventoId: un solo efecto");
+        }
+        finally
+        {
+            await mongo.DropDatabaseAsync(name);
+        }
+    }
+
+    [Fact]
     public async Task InternalNotices_RejectsExtraFieldsAndWrongRoleWithoutEchoingValues()
     {
         var marketKey = RandomNumberGenerator.GetBytes(32);

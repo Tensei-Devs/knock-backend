@@ -1,9 +1,8 @@
 using System.Globalization;
-using Knock.Identity.Api.Modules.HomeAndCar.Services;
+using Knock.Hosting.Security;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.IdentityModel.JsonWebTokens;
-using Microsoft.IdentityModel.Tokens;
 
 namespace Knock.Identity.Api.Hosting;
 
@@ -21,30 +20,31 @@ internal sealed class InternalServiceTokenAttribute(string permission) : Attribu
     public const string Issuer = "knock-market";
     public const string Audience = "knock-identity";
     public const string ServiceNotAllowedCode = "internal_token_not_allowed";
-    public const int MaxLifetimeSeconds = 300;
+    public const int MaxLifetimeSeconds = ServiceCredential.MaxLifetimeSeconds;
+
+    private static readonly ServiceCredentialSettings _settings = new()
+    {
+        Scheme = nameof(InternalServiceTokenAttribute),
+        Audience = Audience,
+        IssuerKeyConfigurationKeys = new Dictionary<string, string> { [Issuer] = KeyConfigurationKey },
+        WriteProblem = (context, status, title, code) => ProblemResponses.WriteAsync(context, status, title, code),
+        UnauthorizedCode = "unauthorized",
+    };
 
     public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
         var http = context.HttpContext;
         var header = http.Request.Headers.Authorization.ToString();
-        var key = MarketHistoryClient.ReadKey(http.RequestServices.GetRequiredService<IConfiguration>()[KeyConfigurationKey]);
-        if (key is null || !header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        if (!header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
         {
             context.Result = await Problem(http, StatusCodes.Status401Unauthorized);
             return;
         }
 
-        var result = await new JsonWebTokenHandler().ValidateTokenAsync(header["Bearer ".Length..].Trim(), new TokenValidationParameters
-        {
-            ValidIssuer = Issuer,
-            ValidAudience = Audience,
-            IssuerSigningKey = new SymmetricSecurityKey(key),
-            ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
-            RequireSignedTokens = true,
-            RequireExpirationTime = true,
-            ClockSkew = TimeSpan.Zero,
-        });
+        // La validación de la credencial es la única de Knock.Hosting (spec 056, T-02); aquí solo se dicen el emisor, el destinatario y su clave.
+        var parameters = ServiceCredential.CreateValidationParameters(_settings, http.RequestServices.GetRequiredService<IConfiguration>(), http.RequestServices.GetService<TimeProvider>());
+        var result = await new JsonWebTokenHandler().ValidateTokenAsync(header["Bearer ".Length..].Trim(), parameters);
         if (!result.IsValid || !IsBounded(result.Claims))
         {
             context.Result = await Problem(http, StatusCodes.Status401Unauthorized);
@@ -58,10 +58,7 @@ internal sealed class InternalServiceTokenAttribute(string permission) : Attribu
     }
 
     private static bool IsBounded(IDictionary<string, object> claims) =>
-        claims.TryGetValue("jti", out var jti) && jti is string { Length: > 0 }
-        && long.TryParse(Text(claims, "iat"), NumberStyles.None, CultureInfo.InvariantCulture, out var issued)
-        && long.TryParse(Text(claims, "exp"), NumberStyles.None, CultureInfo.InvariantCulture, out var expires)
-        && expires > issued && expires - issued <= MaxLifetimeSeconds;
+        ServiceCredential.HasBoundedLifetime(claims.TryGetValue("jti", out var jti) ? jti as string : null, Text(claims, "iat"), Text(claims, "exp"));
 
     private static string? Text(IDictionary<string, object> claims, string name) => claims.TryGetValue(name, out var value) ? Convert.ToString(value, CultureInfo.InvariantCulture) : null;
 
