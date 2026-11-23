@@ -8,7 +8,7 @@ using MongoDB.Driver;
 namespace Knock.Identity.Api.Modules.Moderation.Data;
 
 /// <summary>Un reporte en la cola: motivo y texto, nunca las personas ni sus datos (spec 053, R-19).</summary>
-internal sealed record QueuedReport(ObjectId Id, string Reason, string Text, string? Severity, string State, DateTime CreatedAt, int Rank);
+internal sealed record QueuedReport(ObjectId Id, string Reason, string Text, string? Severity, string State, DateTime CreatedAt, int Rank, string? Priority = null);
 
 /// <summary>Las dos partes del reporte decidido. Solo las usa el servicio para avisar a cada una sin revelar a la otra y para impedir que el moderador decida un reporte que lo involucra.</summary>
 internal sealed record DecidedReportParties(string ReporterId, string ReportedId, string Reason);
@@ -31,12 +31,12 @@ internal interface IReportReviewStore
     Task<DecidedReportParties?> FindPartiesAsync(ObjectId id, CancellationToken cancellationToken);
 
     /// <summary>
-    /// En una sola transacción: guarda la decisión de un reporte <c>abierto</c> o <c>en_apelacion</c>, ejecuta <paramref name="applyEffects"/> (la respuesta de la gravedad) y la auditoría
+    /// En una sola transacción: guarda la decisión de un reporte <c>abierto</c> o <c>en_apelacion</c>, ejecuta <paramref name="applyEffects"/> (la respuesta de la gravedad; devuelve la prioridad derivada, que se guarda aparte sin tocar la gravedad) y la auditoría
     /// <paramref name="writeAudit"/>; si cualquiera falla no queda nada (R-22).
     /// </summary>
     Task<ReportDecisionStoreResult> DecideAsync(
         ReportDecisionRecord decision,
-        Func<StoreTransaction, DecidedReportParties, Task> applyEffects,
+        Func<StoreTransaction, DecidedReportParties, Task<string>> applyEffects,
         Func<StoreTransaction, Task> writeAudit,
         CancellationToken cancellationToken);
 }
@@ -55,6 +55,7 @@ internal sealed class ReportReviewStore(
     private const string _createdField = "creadoEn";
     private const string _severityField = "gravedad";
     private const string _rankField = "orden";
+    private const string _priorityField = "prioridad";
 
     private static readonly string[] _pendingStates = ["abierto", "en_apelacion"];
     private static readonly FilterDefinitionBuilder<BsonDocument> _filter = Builders<BsonDocument>.Filter;
@@ -100,7 +101,7 @@ internal sealed class ReportReviewStore(
         var documents = await pipeline
             .Sort(Builders<BsonDocument>.Sort.Ascending(_rankField).Ascending(_createdField).Ascending(_idField))
             .Limit(take)
-            .Project(Builders<BsonDocument>.Projection.Include("motivo").Include("descripcion").Include(_severityField).Include(_stateField).Include(_createdField).Include(_rankField))
+            .Project(Builders<BsonDocument>.Projection.Include("motivo").Include("descripcion").Include(_severityField).Include(_stateField).Include(_createdField).Include(_rankField).Include(_priorityField))
             .ToListAsync(cancellationToken);
         return [.. documents.Select(d => new QueuedReport(
             d[_idField].AsObjectId,
@@ -109,7 +110,8 @@ internal sealed class ReportReviewStore(
             d.TryGetValue(_severityField, out var s) && s.IsString ? s.AsString : null,
             d[_stateField].AsString,
             d[_createdField].ToUniversalTime(),
-            d[_rankField].ToInt32()))];
+            d[_rankField].ToInt32(),
+            d.TryGetValue(_priorityField, out var p) && p.IsString ? p.AsString : null))];
     }
 
     public async Task<DecidedReportParties?> FindPartiesAsync(ObjectId id, CancellationToken cancellationToken)
@@ -121,7 +123,7 @@ internal sealed class ReportReviewStore(
 
     public async Task<ReportDecisionStoreResult> DecideAsync(
         ReportDecisionRecord decision,
-        Func<StoreTransaction, DecidedReportParties, Task> applyEffects,
+        Func<StoreTransaction, DecidedReportParties, Task<string>> applyEffects,
         Func<StoreTransaction, Task> writeAudit,
         CancellationToken cancellationToken)
     {
@@ -150,7 +152,7 @@ internal sealed class ReportReviewStore(
 
     private async Task<ReportDecisionStoreResult> DecideInTransactionAsync(
         ReportDecisionRecord decision,
-        Func<StoreTransaction, DecidedReportParties, Task> applyEffects,
+        Func<StoreTransaction, DecidedReportParties, Task<string>> applyEffects,
         Func<StoreTransaction, Task> writeAudit,
         CancellationToken cancellationToken)
     {
@@ -184,7 +186,10 @@ internal sealed class ReportReviewStore(
                 }
 
                 var parties = new DecidedReportParties(matched["reportaId"].AsString, matched["reportadoId"].AsString, matched["motivo"].AsString);
-                await applyEffects(new StoreTransaction(transaction), parties);
+                var priority = await applyEffects(new StoreTransaction(transaction), parties);
+
+                // La prioridad se deriva aparte: `gravedad` y `decision.gravedad` quedan como las asignó el moderador (spec 053, R-20).
+                await Reports.UpdateOneAsync(transaction, _filter.Eq(_idField, decision.Id), Builders<BsonDocument>.Update.Set(_priorityField, priority), cancellationToken: token);
                 await writeAudit(new StoreTransaction(transaction));
                 return new ReportDecisionStoreResult(DecisionStoreOutcome.Decided, parties);
             },

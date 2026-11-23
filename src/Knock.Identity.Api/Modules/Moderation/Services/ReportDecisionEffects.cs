@@ -7,7 +7,7 @@ namespace Knock.Identity.Api.Modules.Moderation.Services;
 /// <summary>La respuesta de la gravedad (spec 053, R-20): traduce la respuesta derivada a la acción de Safety, que la aplica con la suspensión de la spec 059 y los avisos de la 054.</summary>
 internal sealed class ReportDecisionEffects(ISafetyApi safety) : IReportDecisionEffects
 {
-    public Task<IReadOnlyList<string>> ApplyAsync(StoreTransaction transaction, ReportDecisionApplied decision, CancellationToken cancellationToken)
+    public Task<ReportActionResult> ApplyAsync(StoreTransaction transaction, ReportDecisionApplied decision, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(decision);
         var action = decision.Response switch

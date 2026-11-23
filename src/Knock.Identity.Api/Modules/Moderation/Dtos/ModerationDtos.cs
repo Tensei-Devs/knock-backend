@@ -85,7 +85,8 @@ internal sealed record ReportQueueItem(
     string Descripcion,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Gravedad,
     string Estado,
-    DateTime CreadoEn);
+    DateTime CreadoEn,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Prioridad = null);
 
 internal sealed record ReportQueuePage(
     IReadOnlyList<ReportQueueItem> Items,
@@ -101,4 +102,4 @@ internal sealed class ReportDecisionBody
     public string? Motivo { get; set; }
 }
 
-internal sealed record ReportDecisionResult(string Id, string Estado, string Gravedad, string Respuesta);
+internal sealed record ReportDecisionResult(string Id, string Estado, string Gravedad, string Respuesta, string Prioridad);

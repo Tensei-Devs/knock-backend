@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Knock.Identity.Api.Modules.Moderation.Services;
 using Knock.Identity.Api.Modules.Panel;
+using Knock.Identity.Api.Modules.Safety;
 using Knock.Identity.Api.Modules.Safety.Data;
 using Knock.Identity.Api.Modules.Safety.Domain;
 using Knock.Identity.Api.Modules.Safety.Services;
@@ -26,7 +27,7 @@ public sealed class Spec059GradualTests
         return (new ReportDecisionEffects(safety), world, warnings);
     }
 
-    private static Task<IReadOnlyList<string>> Warn(ReportDecisionEffects effects) =>
+    private static Task<ReportActionResult> Warn(ReportDecisionEffects effects) =>
         effects.ApplyAsync(new StoreTransaction(new object()), new ReportDecisionApplied(_report, "media", "advertencia", "reporter-sub", _reported, _moderator), CancellationToken.None);
 
     [Fact]

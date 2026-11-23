@@ -8,6 +8,7 @@ using Knock.Identity.Api.Modules.Moderation.Validators;
 using Knock.Identity.Api.Modules.Panel;
 using Knock.Identity.Api.Modules.Panel.Data;
 using Knock.Identity.Api.Modules.Panel.Services;
+using Knock.Identity.Api.Modules.Safety;
 using Knock.Identity.Api.Modules.Trust;
 using Knock.UnitTest.Identity;
 using Knock.UnitTest.Panel;
@@ -120,7 +121,9 @@ public class Spec053Tests
 
         public Task<DecidedReportParties?> FindPartiesAsync(ObjectId id, CancellationToken cancellationToken) => Task.FromResult(Parties);
 
-        public async Task<ReportDecisionStoreResult> DecideAsync(ReportDecisionRecord decision, Func<StoreTransaction, DecidedReportParties, Task> applyEffects, Func<StoreTransaction, Task> writeAudit, CancellationToken cancellationToken)
+        public string? Priority { get; private set; }
+
+        public async Task<ReportDecisionStoreResult> DecideAsync(ReportDecisionRecord decision, Func<StoreTransaction, DecidedReportParties, Task<string>> applyEffects, Func<StoreTransaction, Task> writeAudit, CancellationToken cancellationToken)
         {
             if (Outcome != DecisionStoreOutcome.Decided)
             {
@@ -128,7 +131,7 @@ public class Spec053Tests
             }
 
             Decided = decision;
-            await applyEffects(Session(), Parties!);
+            Priority = await applyEffects(Session(), Parties!);
             await writeAudit(Session());
             return new ReportDecisionStoreResult(Outcome, Parties);
         }
@@ -138,10 +141,12 @@ public class Spec053Tests
     {
         public ReportDecisionApplied? Applied { get; private set; }
 
-        public Task<IReadOnlyList<string>> ApplyAsync(StoreTransaction transaction, ReportDecisionApplied decision, CancellationToken cancellationToken)
+        public bool ReportedIsClient { get; set; }
+
+        public Task<ReportActionResult> ApplyAsync(StoreTransaction transaction, ReportDecisionApplied decision, CancellationToken cancellationToken)
         {
             Applied = decision;
-            return Task.FromResult<IReadOnlyList<string>>([]);
+            return Task.FromResult(new ReportActionResult([], ReportedIsClient));
         }
 
         public Task AfterCommitAsync(IReadOnlyList<string> sessionIds, CancellationToken cancellationToken) => Task.CompletedTask;
@@ -352,6 +357,34 @@ public class Spec053Tests
         (await act.Should().ThrowAsync<DomainException>()).Which.Kind.Should().Be(DomainErrorKind.Forbidden);
         store.Decided.Should().BeNull();
     }
+
+    [Theory]
+    [InlineData("critica", true, "alta")]
+    [InlineData("critica", false, "normal")]
+    [InlineData("alta", true, "normal")]
+    [InlineData("media", true, "normal")]
+    [InlineData("baja", false, "normal")]
+    public async Task La_Prioridad_Se_Deriva_Aparte_Y_La_Gravedad_Asignada_No_Se_Sobrescribe_CA_053_41(string severity, bool reportedIsClient, string priority)
+    {
+        var store = new FakeReports();
+        var clock = new PanelClock(new DateTimeOffset(2026, 11, 21, 12, 0, 0, TimeSpan.Zero));
+        var service = new ReportReviewService(store, new RecordingEffects { ReportedIsClient = reportedIsClient }, new PanelApi(new AuditoriaPanel(new FakeAudit(), new PanelIpHasher(PhoneProtectionTestKeys.Keys()), new NoHttpContext(), clock, NullLogger<AuditoriaPanel>.Instance)), clock);
+
+        var result = await service.DecideAsync(_verifier, _id, new ReportDecisionBody { Gravedad = severity, Motivo = "motivo suficiente" }, CancellationToken.None);
+
+        result.Prioridad.Should().Be(priority);
+        result.Gravedad.Should().Be(severity);
+        store.Priority.Should().Be(priority);
+        store.Decided!.Severity.Should().Be(severity, "la gravedad asignada por la moderación no se cambia por la prioridad");
+    }
+
+    [Theory]
+    [InlineData("critica", true, "alta")]
+    [InlineData("critica", false, "normal")]
+    [InlineData("alta", true, "normal")]
+    [InlineData("baja", true, "normal")]
+    public void La_Regla_De_Prioridad_Solo_Sube_Una_Critica_Contra_Un_Cliente_CA_053_41(string severity, bool reportedIsClient, string expected) =>
+        ReportPriorities.For(severity, reportedIsClient).Should().Be(expected);
 
     [Fact]
     public async Task Reporte_Inexistente_O_Ya_Decidido_Responde_404_O_409_CA_053_29()

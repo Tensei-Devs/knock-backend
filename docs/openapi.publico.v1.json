@@ -25102,7 +25102,8 @@
           "id",
           "estado",
           "gravedad",
-          "respuesta"
+          "respuesta",
+          "prioridad"
         ],
         "type": "object",
         "properties": {
@@ -25116,6 +25117,9 @@
             "type": "string"
           },
           "respuesta": {
+            "type": "string"
+          },
+          "prioridad": {
             "type": "string"
           }
         }
@@ -25174,6 +25178,12 @@
           "creadoEn": {
             "type": "string",
             "format": "date-time"
+          },
+          "prioridad": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         },
         "description": "Una fila de la cola de reportes: motivo y texto, nunca teléfono ni dirección (R-19)."

@@ -16,13 +16,16 @@ internal sealed class SafetyApi(AccountSuspension suspension, ISuspensionStore s
     public const string NoticeEvent = "ReporteDecidido";
     public const string HideEvent = "TecnicoOcultado";
 
-    public async Task<IReadOnlyList<string>> ApplyReportDecisionAsync(StoreTransaction transaction, ReportAction action, string reportId, string reporterId, string reportedId, string deciderSub, CancellationToken cancellationToken)
+    public async Task<ReportActionResult> ApplyReportDecisionAsync(StoreTransaction transaction, ReportAction action, string reportId, string reporterId, string reportedId, string deciderSub, CancellationToken cancellationToken)
     {
         IReadOnlyList<string> sessionIds = [];
+        var reportedIsClient = false;
         var events = new List<EventoDeOutbox>();
         if (action == ReportAction.Suspend)
         {
-            sessionIds = (await suspension.ApplySuspensionAsync(transaction, reportedId, reportId, deciderSub, "preventiva", cancellationToken)).SessionIds;
+            var suspended = await suspension.ApplySuspensionAsync(transaction, reportedId, reportId, deciderSub, "preventiva", cancellationToken);
+            sessionIds = suspended.SessionIds;
+            reportedIsClient = suspended.Outcome == SuspensionOutcome.NotTechnician;
         }
         else if (action == ReportAction.Warn)
         {
@@ -37,7 +40,7 @@ internal sealed class SafetyApi(AccountSuspension suspension, ISuspensionStore s
         events.Add(Notice(reportId, reporterId, "reportante", action));
         events.Add(Notice(reportId, reportedId, "reportado", action));
         await store.AddEventsAsync(transaction, events, clock.GetUtcNow().UtcDateTime, cancellationToken);
-        return sessionIds;
+        return new ReportActionResult(sessionIds, reportedIsClient);
     }
 
     // Regla gradual (spec 059, R-16): apagada sin umbral configurado. Cuenta las advertencias decididas y vigentes, incluida la de esta misma transacción, y al llegar al umbral suspende como en R-04.

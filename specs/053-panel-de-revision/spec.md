@@ -95,6 +95,7 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 - **CA-38:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
 - **CA-39:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
 - **CA-40:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
+- **CA-41:** Dado un reporte decidido `critica` contra una persona que no es técnica, cuando se consulta la decisión o la cola, entonces la gravedad sigue siendo `critica` (nunca se sobrescribe) y la prioridad derivada es `alta`; en cualquier otro caso la prioridad es `normal` y un reporte sin decidir no trae prioridad.
 
 **4.1 Criterio → prueba prevista**
 
@@ -140,6 +141,7 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 | CA-38 | `Spec053Tests.Criterio38_CA_053_38` |
 | CA-39 | `Spec053Tests.Criterio39_CA_053_39` |
 | CA-40 | `Spec053Tests.Criterio40_CA_053_40` |
+| CA-41 | `Spec053Tests.La_Prioridad_Se_Deriva_Aparte_Y_La_Gravedad_Asignada_No_Se_Sobrescribe_CA_053_41` y `Spec053ReportesPanelTests.DecidingCritical_KeepsTheAssignedSeverity_AndDerivesThePriorityApart_CA_053_41` |
 
 ## 5. Contrato
 | ID | Método y ruta | Quién | Entrada | Respuestas |
@@ -296,6 +298,7 @@ Las pruebas citan el caso como `CA_053_NN` en el nombre (para `python scripts/sd
 
 ## 15. Riesgos y dudas abiertas
 - Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
+- Duda de lectura (2026-11-23): R-20 dice «prioridad alta» sin definir si cambia el orden de la cola. Se tomó la lectura más conservadora: la prioridad es un dato derivado y visible, y el orden sigue siendo por gravedad y antigüedad; una crítica contra un técnico (que sí se suspende) queda con prioridad `normal`. Si José quiere ordenar por prioridad, es una enmienda aparte.
 - Dependencias: el panel con doble factor y los permisos `verification:review` y `reports:resolve` (spec 033, H-4), la cuenta de almacenamiento privada de la spec 025 (H-2) y la moderación de la 031.
 
 ## Nota de enmienda (2026-11-23, decisión de José)
@@ -303,6 +306,10 @@ Las pruebas citan el caso como `CA_053_NN` en el nombre (para `python scripts/sd
 - **REP-05, decisiones simultáneas:** la segunda decisión sobre el mismo reporte responde 409 `report_already_decided` (turno por reporte, `DecisionTurns`), nunca 500. Caso nuevo CA-REP05-409: `Spec053Tests` (ya cubierto por la prueba de «ya decidido»).
 - **Apelación de una persona suspendida (spec 060):** un reporte en apelación de suspensión no se decide por REP-05 sino por `POST /api/v1/admin/apelaciones/{id}/resolucion`; REP-05 responde 409 `report_already_decided`.
 - **`ReporteDecidido` avisa a las dos partes** con un aviso de texto fijo (spec 037, enmienda del 2026-11-23): nunca lleva motivo, gravedad ni datos del reporte.
+- No se marcan firmas: la aprobación de abajo es la original.
+
+## Nota de enmienda (2026-11-23, decisión de José)
+- **R-20, gravedad y prioridad por separado:** el reporte guarda la gravedad que asignó la moderación (`gravedad` y `decision.gravedad`); `critica` queda como `critica` aunque no se suspenda a un cliente y nunca se sobrescribe. La **prioridad** se deriva aparte y se guarda en el campo `prioridad` del reporte en la misma transacción de la decisión: `alta` cuando la gravedad es `critica` y la persona reportada no es técnica (la suspensión no aplica, spec 059, R-03); `normal` en cualquier otro caso. `POST /api/v1/admin/reportes/{id}/decision` responde además `prioridad` y `GET /api/v1/admin/reportes` la trae en los reportes ya decididos (por ejemplo en apelación); un reporte sin decidir no la trae. Caso nuevo CA-41. Sin índice nuevo (no se consulta por prioridad; el orden de la cola sigue siendo gravedad y antigüedad) y sin script en `db/`.
 - No se marcan firmas: la aprobación de abajo es la original.
 
 ## Aprobación

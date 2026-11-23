@@ -3,6 +3,7 @@ using Knock.Identity.Api.Modules.Moderation.Data;
 using Knock.Identity.Api.Modules.Moderation.Domain;
 using Knock.Identity.Api.Modules.Moderation.Dtos;
 using Knock.Identity.Api.Modules.Panel;
+using Knock.Identity.Api.Modules.Safety;
 using MongoDB.Bson;
 
 namespace Knock.Identity.Api.Modules.Moderation.Services;
@@ -80,7 +81,7 @@ internal sealed record ReportDecisionApplied(string ReportId, string Severity, s
 /// </summary>
 internal interface IReportDecisionEffects
 {
-    Task<IReadOnlyList<string>> ApplyAsync(StoreTransaction transaction, ReportDecisionApplied decision, CancellationToken cancellationToken);
+    Task<ReportActionResult> ApplyAsync(StoreTransaction transaction, ReportDecisionApplied decision, CancellationToken cancellationToken);
 
     Task AfterCommitAsync(IReadOnlyList<string> sessionIds, CancellationToken cancellationToken);
 }
@@ -88,7 +89,7 @@ internal interface IReportDecisionEffects
 /// <summary>Sin efectos: la decisión se guarda y se audita sin más. Lo usan las pruebas que no ejercen la respuesta de la gravedad.</summary>
 internal sealed class NoReportDecisionEffects : IReportDecisionEffects
 {
-    public Task<IReadOnlyList<string>> ApplyAsync(StoreTransaction transaction, ReportDecisionApplied decision, CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<string>>([]);
+    public Task<ReportActionResult> ApplyAsync(StoreTransaction transaction, ReportDecisionApplied decision, CancellationToken cancellationToken) => Task.FromResult(new ReportActionResult([], false));
 
     public Task AfterCommitAsync(IReadOnlyList<string> sessionIds, CancellationToken cancellationToken) => Task.CompletedTask;
 }
