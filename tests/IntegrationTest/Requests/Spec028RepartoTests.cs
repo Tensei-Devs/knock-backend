@@ -91,6 +91,36 @@ public sealed class Spec028RepartoTests
     }
 
     [Fact]
+    public async Task EventsAndTasks_CarryNoPersonalData_CA_028_17()
+    {
+        var clock = new TestClock();
+        await using var host = await StartAsync(clock, true);
+        var technicianIds = new List<string>();
+        for (var i = 0; i < 6; i++)
+        {
+            var technician = Technician(host, clock, i);
+            technicianIds.Add(technician["usuarioId"].AsString);
+            await host.Database.GetCollection<BsonDocument>("tecnicos").InsertOneAsync(technician);
+        }
+        await CreateAsync(host);
+        await RunAsync(host);
+        var stored = (await Outbox(host).Find(FilterDefinition<BsonDocument>.Empty).ToListAsync())
+            .Concat(await Tasks(host).Find(FilterDefinition<BsonDocument>.Empty).ToListAsync())
+            .Select(x => x.ToJson())
+            .ToList();
+        stored.Should().NotBeEmpty();
+        var forbidden = new List<string> { Spec020Host.Description, Spec020Host.Address, host.ClientSub };
+        forbidden.AddRange(technicianIds);
+        foreach (var document in stored)
+        {
+            foreach (var value in forbidden)
+            {
+                document.Should().NotContain(value);
+            }
+        }
+    }
+
+    [Fact]
     public async Task CancelledRequest_IsNotDistributed_CA_028_09()
     {
         var clock = new TestClock();
