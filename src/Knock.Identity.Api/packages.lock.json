@@ -525,6 +525,7 @@
         "type": "Project",
         "dependencies": {
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[11.0.0, )",
+          "Microsoft.AspNetCore.OpenApi": "[11.0.0, )",
           "OpenTelemetry.Extensions.Hosting": "[1.21.0, )",
           "Serilog.AspNetCore": "[10.0.0, )",
           "StackExchange.Redis": "[2.13.23, )"

@@ -1,4 +1,5 @@
 // jscpd:ignore-start -- EXC-015
+using Knock.Hosting.OpenApi;
 using Knock.Identity.Api.Modules.Panel;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
@@ -11,6 +12,7 @@ internal static class OpenApiExtensions
     {
         services.AddOpenApi("v1", options =>
         {
+            options.AddKnockContractConventions();
             options.AddOperationTransformer((operation, context, _) =>
             {
                 var description = context.Description;
