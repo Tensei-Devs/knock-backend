@@ -20,7 +20,7 @@ public sealed class Spec035LimitesTests
         await using var host = await GatewayHost.StartAsync(new Dictionary<string, string?>
         {
             ["ConnectionStrings:KnockRedis"] = redis.ConnectionString,
-            ["ForwardedHeaders:KnownNetworks:0"] = "127.0.0.0/8",
+            ["ForwardedHeaders:KnownNetworks:0"] = "10.0.0.0/16",
             ["RateLimiting:Ip:PermitLimit"] = "3",
             ["RateLimiting:Ip:Window"] = "00:01:00",
             ["RateLimiting:Auth:PermitLimit"] = "1000",
@@ -47,7 +47,7 @@ public sealed class Spec035LimitesTests
     private static async Task<HttpStatusCode> GetAsync(HttpClient client, string forwardedFor, string? spoofed = null)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, _publicUri);
-        request.Headers.TryAddWithoutValidation(GatewayRemoteIpStartupFilter.HeaderName, "127.0.0.1");
+        request.Headers.TryAddWithoutValidation(GatewayRemoteIpStartupFilter.HeaderName, "10.0.0.5");
         request.Headers.TryAddWithoutValidation("X-Forwarded-For", spoofed is null ? forwardedFor : $"{spoofed}, {forwardedFor}");
         using var response = await client.SendAsync(request);
         return response.StatusCode;

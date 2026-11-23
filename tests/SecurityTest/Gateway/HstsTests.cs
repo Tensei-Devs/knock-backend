@@ -40,7 +40,7 @@ public sealed class HstsTests
             builder.UseEnvironment(environment);
             builder.UseSetting("Jwt:SigningKey", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
             builder.UseSetting("ConnectionStrings:KnockRedis", "127.0.0.1:6390,password=Kn0ck" + Convert.ToHexString(RandomNumberGenerator.GetBytes(12)));
-            builder.UseSetting("ForwardedHeaders:KnownNetworks:0", "10.0.0.0/8");
+            builder.UseSetting("ForwardedHeaders:KnownNetworks:0", "10.0.0.0/16");
             foreach (var (key, value) in settings)
             {
                 builder.UseSetting(key, value);
