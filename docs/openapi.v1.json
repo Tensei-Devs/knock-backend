@@ -367,6 +367,78 @@
         }
       }
     },
+    "/api/v{version}/interno/tecnicos-ocultados": {
+      "post": {
+        "tags": [
+          "InternalTechnicianHidden"
+        ],
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TechnicianHiddenEventBody"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TechnicianHiddenEventBody"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TechnicianHiddenEventBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v{version}/mapa/tecnicos": {
       "get": {
         "tags": [
@@ -4919,6 +4991,93 @@
           },
           "422": {
             "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v{version}/interno/visitas/{visitaId}/reporte-no-terminado": {
+      "get": {
+        "tags": [
+          "InternalNotFinishedReport"
+        ],
+        "parameters": [
+          {
+            "name": "visitaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFinishedReportResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFinishedReportResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFinishedReportResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -11009,6 +11168,35 @@
         },
         "description": "Cuerpo de `POST /visitas/{id}/no-terminado` (spec 050, R-29): texto de 8 a 500 caracteres."
       },
+      "NotFinishedReportResponse": {
+        "required": [
+          "visitaId",
+          "clienteId",
+          "tecnicoUsuarioId",
+          "texto",
+          "creadoEn"
+        ],
+        "type": "object",
+        "properties": {
+          "visitaId": {
+            "type": "string"
+          },
+          "clienteId": {
+            "type": "string"
+          },
+          "tecnicoUsuarioId": {
+            "type": "string"
+          },
+          "texto": {
+            "type": "string"
+          },
+          "creadoEn": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "description": "Respuesta de `GET /api/v1/interno/visitas/{visitaId}/reporte-no-terminado` (spec 053): lo que Identidad necesita para abrir el reporte en la cola del panel. El texto lo escribió el\ncliente en el reporte de «no terminado» (spec 050, R-29); nunca lleva teléfono ni dirección."
+      },
       "NotFinishedResponse": {
         "required": [
           "visitaId",
@@ -12359,6 +12547,30 @@
           }
         },
         "description": "Una sugerencia de TEC-03: `tipo` es `oficio` (con su `clave`) o `negocio` (con el `id` del técnico). Los servicios con precio\n(spec 047) se suman cuando exista su colección."
+      },
+      "TechnicianHiddenEventBody": {
+        "type": "object",
+        "properties": {
+          "eventoId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "usuarioId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reporteId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Cuerpo de `POST /api/v1/interno/tecnicos-ocultados` (spec 053, R-20): el evento `TecnicoOcultado` con solo identificadores, sin texto del reporte ni datos de la persona."
       },
       "TechnicianListResponse": {
         "required": [
@@ -13963,6 +14175,12 @@
     },
     {
       "name": "InternalHistory"
+    },
+    {
+      "name": "InternalNotFinishedReport"
+    },
+    {
+      "name": "InternalTechnicianHidden"
     },
     {
       "name": "ListaEspera"

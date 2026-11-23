@@ -1790,6 +1790,108 @@
         }
       }
     },
+    "/api/v{version}/interno/reportes-no-terminados": {
+      "post": {
+        "tags": [
+          "InternalNotFinishedReports"
+        ],
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotFinishedReportEventBody"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotFinishedReportEventBody"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotFinishedReportEventBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v{version}/reportes": {
       "post": {
         "tags": [
@@ -6714,6 +6816,49 @@
         },
         "description": "Un elemento de la persona (spec 041, §5). Nunca lleva el identificador de la persona."
       },
+      "NotFinishedReportEventBody": {
+        "required": [
+          "eventoId",
+          "tipo",
+          "visitaId",
+          "clienteId",
+          "tecnicoUsuarioId"
+        ],
+        "type": "object",
+        "properties": {
+          "eventoId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tipo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "visitaId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "clienteId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tecnicoUsuarioId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Cuerpo de `POST /api/v1/interno/reportes-no-terminados` (spec 053): `ReporteNoTerminadoCreado` que Mercado entrega desde su bandeja de salida (spec 050, R-32). Solo identificadores; el texto no\nviaja aquí, Identidad lo lee por la ruta interna de Mercado. Cualquier otro campo queda en Dictionary&lt;string, JsonElement&gt;? NotFinishedReportEventBody.Extra y el validador lo rechaza con 422."
+      },
       "PanelAccesoResponse": {
         "required": [
           "accessToken",
@@ -7779,6 +7924,9 @@
     },
     {
       "name": "FotosVerificacion"
+    },
+    {
+      "name": "InternalNotFinishedReports"
     },
     {
       "name": "Knock.Identity.Api"
