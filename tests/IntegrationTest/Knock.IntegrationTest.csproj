@@ -28,6 +28,10 @@
   <ItemGroup>
     <!-- documentdb-local compartido con DatabaseTest: un solo archivo, sin duplicar la imagen fijada por digest. -->
     <Compile Include="..\DatabaseTest\Support\DocumentDbFixture.cs" Link="Support\DocumentDbFixture.cs" />
+    <!-- Lector y validador de contrato de ContractTest (spec 034, R-16): se comparten por enlace, sin duplicar. -->
+    <Compile Include="..\ContractTest\Support\ContractReader.cs" Link="Contract\Support\ContractReader.cs" />
+    <Compile Include="..\ContractTest\Support\SchemaValidator.cs" Link="Contract\Support\SchemaValidator.cs" />
+    <Compile Include="..\ContractTest\OpenApiDocs.cs" Link="Contract\Support\OpenApiDocs.cs" />
   </ItemGroup>
 
   <ItemGroup>
