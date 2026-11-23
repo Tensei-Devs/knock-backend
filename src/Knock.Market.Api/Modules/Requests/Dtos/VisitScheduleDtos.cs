@@ -49,6 +49,9 @@ internal sealed record CancelVisitResponse(string VisitaId, string Estado, bool 
 /// <summary>Ausencia del cliente registrada (200): la visita queda <c>no_presentado</c> y no hay penalización.</summary>
 internal sealed record ClientAbsentResponse(string VisitaId, string Estado, string QuienFalto);
 
+/// <summary>Resultado de <c>POST /visitas/{id}/tecnico-ausente</c> (spec 064, R-04): <c>quienFalto</c> es siempre <c>tecnico</c>.</summary>
+internal sealed record TechnicianAbsentResponse(string VisitaId, string Estado, string QuienFalto);
+
 /// <summary>Cuerpo de <c>POST /visitas/{id}/terminar</c> (spec 050, R-28): qué hizo, recomendación opcional y de 1 a 5 fotos privadas del técnico.</summary>
 /// <param name="Descripcion">De 8 a 500 caracteres.</param>
 /// <param name="Recomendacion">Opcional, hasta 300 caracteres.</param>

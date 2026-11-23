@@ -19,6 +19,7 @@ Mercado escribe cada evento en `outbox` en la misma transacción que el cambio d
 | `VisitaEnCurso` | 022 | Al confirmar la llegada con el código correcto | `visitaId`, `solicitudId`, `clienteId`, `tecnicoUsuarioId` |
 | `VisitaBloqueada` | 022 | Al tercer intento fallido (Identidad abre un reporte de gravedad alta) | `visitaId`, `solicitudId`, `clienteId`, `tecnicoUsuarioId` |
 | `VisitaCerrada` | 022 | Al pasar la visita a `cancelada`, `terminada`, `no_presentado` o bloqueada | `visitaId`, `motivo` (`cancelada`, `terminada`, `no_presentado`, `bloqueada`) |
+| `TecnicoNoSePresento` | 064 | Cuando el cliente dueño reporta que el técnico no llegó (visita `confirmada`, de 15 minutos a 2 horas después de la cita) y la visita pasa a `no_presentado` con `quienFalto = tecnico`; una sola vez por visita (`_id` `TecnicoNoSePresento:{visitaId}`) | `visitaId`, `solicitudId`, `clienteId`, `tecnicoUsuarioId` |
 | `AvisoConfianzaPreparado` | 022 | Cada vez que el cliente prepara el aviso (`_id` `{visitaId}:{n}`) | `visitaId`, `solicitudId`, `clienteId`, `tecnicoUsuarioId` |
 | `SolicitudEnviadaATecnico` | 028 | Por cada envío de una oleada | `solicitudId`, `tecnicoId`, `oleada` |
 | `SolicitudSinTecnicos` | 028 | Al completar la última oleada sin envíos anteriores | `solicitudId` |

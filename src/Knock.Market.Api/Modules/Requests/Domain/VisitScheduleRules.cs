@@ -21,6 +21,7 @@ internal static class VisitScheduleRules
     public const string Cancelled = "cancelada";
     public const string NoShow = "no_presentado";
     public const string ClientAbsent = "cliente";
+    public const string TechnicianAbsent = "tecnico";
     public const string ProposedByClient = "cliente";
     public const string ProposedByTechnician = "tecnico";
     public const string ProposalExpiryTask = "VencerPropuestaDeReprogramacion";
@@ -90,6 +91,17 @@ internal static class VisitScheduleRules
     /// <summary>Ventana del cliente ausente: desde 15 minutos después de la cita y hasta 2 horas después (R-27).</summary>
     public static bool IsInAbsenceWindow(DateTime nowUtc, DateTime appointmentUtc) =>
         nowUtc >= appointmentUtc + AbsenceOpensAfter && nowUtc <= appointmentUtc + AbsenceClosesAfter;
+
+    /// <summary>
+    /// El cliente puede reportar que el técnico no llegó (spec 064, R-02): la visita sigue <c>confirmada</c> (sin llegada del técnico) y está en la ventana de la cita, la misma del cliente
+    /// ausente (15 minutos a 2 horas después).
+    /// </summary>
+    public static bool CanReportTechnicianAbsent(string visitState, DateTime nowUtc, DateTime appointmentUtc) =>
+        visitState == VisitRules.Confirmed && IsInAbsenceWindow(nowUtc, appointmentUtc);
+
+    /// <summary>La visita ya quedó marcada por el técnico ausente (spec 064, R-03): repetir el reporte es idempotente.</summary>
+    public static bool IsTechnicianAbsentRecorded(string visitState, string? whoMissed) =>
+        visitState == NoShow && whoMissed == TechnicianAbsent;
 
     /// <summary>El motivo escrito por la persona mide de 8 a 300 caracteres sin contar espacios de los extremos (R-26).</summary>
     public static bool IsValidReason(string? reason) => reason?.Trim().Length is >= MinReasonLength and <= MaxReasonLength;

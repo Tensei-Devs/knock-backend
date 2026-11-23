@@ -53,6 +53,14 @@ internal sealed class VisitScheduleController(VisitScheduleService service, Visi
     public async Task<IActionResult> ClientAbsent(string id, CancellationToken cancellationToken) =>
         Reply(await service.ClientAbsentAsync(Subject(), id, cancellationToken), VisitScheduleErrorCodes.OutsideArrivalWindowCode, "id");
 
+    /// <summary>VIS-12 (spec 064): el cliente dueño reporta que el técnico no llegó, dentro de la ventana de la cita. Sin cuerpo; repetirlo es idempotente.</summary>
+    [HttpPost("visitas/{id}/tecnico-ausente")]
+    [RequestSizeLimit(RescheduleBody.MaxBodyBytes)]
+    [EnableRateLimiting(MarketRateLimits.VisitChangePolicy)]
+    [ProducesResponseType<TechnicianAbsentResponse>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> TechnicianAbsent(VisitRoute route, CancellationToken cancellationToken) =>
+        Reply(await service.TechnicianAbsentAsync(Subject(), route.Id!, cancellationToken), VisitScheduleErrorCodes.OutsideArrivalWindowCode, "id");
+
     /// <summary>VIS-09: el técnico termina la visita en curso con descripción y fotos; no hay confirmación del cliente.</summary>
     [HttpPost("visitas/{id}/terminar")]
     [RequestSizeLimit(RescheduleBody.MaxBodyBytes)]

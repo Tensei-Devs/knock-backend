@@ -232,6 +232,35 @@ internal sealed class VisitScheduleStore(
         }, false, cancellationToken);
     }
 
+    /// <summary>
+    /// El cliente dueño marca la visita <c>confirmada</c> como <c>no_presentado</c> con <c>quienFalto = tecnico</c> (spec 064, R-03), sin penalización, y escribe <c>TecnicoNoSePresento</c>
+    /// (solo identificadores) en la misma transacción. <see langword="false"/> si la visita ya no estaba <c>confirmada</c> o no es de ese cliente.
+    /// </summary>
+    public Task<bool> MarkTechnicianAbsentAsync(VisitRecord visit, DateTime nowUtc, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(visit);
+        return MarketTransactions.RunAsync(database, async (transaction, token) =>
+        {
+            var filter = Builders<BsonDocument>.Filter;
+            var changed = await Visits.UpdateOneAsync(
+                transaction,
+                filter.Eq("_id", visit.Id) & filter.Eq("clienteId", visit.ClientId) & filter.Eq(_stateField, VisitRules.Confirmed),
+                Builders<BsonDocument>.Update
+                    .Set(_stateField, VisitScheduleRules.NoShow)
+                    .Set("quienFalto", VisitScheduleRules.TechnicianAbsent)
+                    .Unset(_proposalField)
+                    .Set(_updatedField, nowUtc),
+                cancellationToken: token);
+            if (changed.MatchedCount != 1)
+            {
+                return false;
+            }
+
+            await outbox.AddAsync(transaction, OutboxMessage.Create("TecnicoNoSePresento", visit.Id.ToString(), VisitStore.Identifiers(visit), nowUtc), token);
+            return true;
+        }, false, cancellationToken);
+    }
+
     private static FilterDefinition<BsonDocument> Pending(VisitRecord visit, string responderRole, DateTime nowUtc)
     {
         var filter = Builders<BsonDocument>.Filter;

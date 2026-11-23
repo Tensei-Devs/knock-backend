@@ -1,3 +1,4 @@
+using Knock.Hosting.Concurrency;
 using Knock.Market.Api.Common.TareasProgramadas;
 using Knock.Market.Api.Modules.Requests.Data;
 using Knock.Market.Api.Modules.Requests.Domain;
@@ -162,6 +163,44 @@ internal sealed class VisitScheduleService(VisitScheduleStore store, VisitStore 
         return await store.MarkClientAbsentAsync(visit, now, cancellationToken)
             ? new(VisitScheduleStatus.Done, new ClientAbsentResponse(visit.Id.ToString(), VisitScheduleRules.NoShow, VisitScheduleRules.ClientAbsent))
             : new(VisitScheduleStatus.OutsideArrivalWindow);
+    }
+
+    /// <summary>
+    /// VIS-12 (spec 064): el cliente dueño reporta que el técnico no llegó, desde 15 minutos después de la cita y hasta 2 horas después. Repetirlo con la visita ya marcada así responde
+    /// igual sin otro evento. Las llamadas de la misma visita se turnan (<see cref="KeyedGate"/>) y la visita se relee dentro del turno.
+    /// </summary>
+    public async Task<VisitScheduleOutcome<TechnicianAbsentResponse>> TechnicianAbsentAsync(string sub, string id, CancellationToken cancellationToken)
+    {
+        var (visit, role) = await ResolveAsync(sub, id, cancellationToken);
+        if (visit is null || role != VisitRole.Client)
+        {
+            return new(VisitScheduleStatus.NotFound);
+        }
+
+        return await KeyedGate.RunAsync($"tecnico-ausente:{visit.Id}", () => TechnicianAbsentSerializedAsync(visit.Id, sub, cancellationToken), cancellationToken);
+    }
+
+    private async Task<VisitScheduleOutcome<TechnicianAbsentResponse>> TechnicianAbsentSerializedAsync(ObjectId visitId, string sub, CancellationToken cancellationToken)
+    {
+        var visit = await visits.FindAsync(visitId, cancellationToken);
+        if (visit is null || VisitAccess.RoleOf(sub, visit.ClientId, visit.TechnicianUserId) != VisitRole.Client)
+        {
+            return new(VisitScheduleStatus.NotFound);
+        }
+
+        var done = new VisitScheduleOutcome<TechnicianAbsentResponse>(VisitScheduleStatus.Done, new TechnicianAbsentResponse(visit.Id.ToString(), VisitScheduleRules.NoShow, VisitScheduleRules.TechnicianAbsent));
+        if (VisitScheduleRules.IsTechnicianAbsentRecorded(visit.Estado, visit.WhoMissed))
+        {
+            return done;
+        }
+
+        var now = clock.GetUtcNow().UtcDateTime;
+        if (!VisitScheduleRules.CanReportTechnicianAbsent(visit.Estado, now, VisitScheduleRules.AppointmentUtc(visit.Day, visit.Time)))
+        {
+            return new(VisitScheduleStatus.OutsideArrivalWindow);
+        }
+
+        return await store.MarkTechnicianAbsentAsync(visit, now, cancellationToken) ? done : new(VisitScheduleStatus.OutsideArrivalWindow);
     }
 
     private async Task<(VisitRecord? Visit, VisitRole Role)> ResolveAsync(string sub, string id, CancellationToken cancellationToken)

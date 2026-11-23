@@ -137,7 +137,7 @@ Políticas por `sub` del JWT (ventana fija; el contador vive en Redis compartido
 | Política | Rutas | Límite | Ventana | Clave |
 |---|---|---|---|---|
 | `agenda-tecnico` | `GET /api/v1/agenda` | 60 peticiones | 1 minuto | `sub` |
-| `visitas-cambios` | `POST /api/v1/visitas/{id}/reprogramar`, `.../reprogramar/respuesta`, `.../cancelar`, `.../cliente-ausente`, `.../terminar`, `.../no-terminado` y `PUT .../permiso-fotos` (una sola política de 7 rutas) | 20 peticiones | 1 minuto | `sub` |
+| `visitas-cambios` | `POST /api/v1/visitas/{id}/reprogramar`, `.../reprogramar/respuesta`, `.../cancelar`, `.../cliente-ausente`, `.../tecnico-ausente`, `.../terminar`, `.../no-terminado` y `PUT .../permiso-fotos` (una sola política de 8 rutas) | 20 peticiones | 1 minuto | `sub` |
 | `visitas-cotizacion-final` | `POST /api/v1/visitas/{id}/cotizacion-final` | 10 peticiones | 1 minuto | `sub` |
 | `visitas-cotizacion-final-decision` | `POST /api/v1/visitas/{id}/cotizacion-final/decision` | 20 peticiones | 1 minuto | `sub` |
 | `cotizaciones-ajuste-precio` | `POST /api/v1/cotizaciones/{id}/ajuste-precio` | 10 peticiones | 1 minuto | `sub` |
