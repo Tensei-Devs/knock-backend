@@ -1,3 +1,4 @@
+using Knock.Hosting.Concurrency;
 using Knock.Messaging.Api.Modules.Avisos.Domain;
 using Knock.Messaging.Api.Modules.Avisos.Services;
 using MongoDB.Bson;
@@ -12,7 +13,18 @@ internal sealed class DeviceStore(IMongoDatabase database, TokenProtection prote
 {
     private readonly IMongoCollection<BsonDocument> _devices = database.GetCollection<BsonDocument>("notifications.dispositivos");
 
-    public async Task<DeviceRegistration> RegisterAsync(
+    /// <summary>
+    /// Registra el token. Dentro de la instancia, los registros del mismo token se turnan (<see cref="KeyedGate"/>): varios <c>insert</c> a la vez sobre el índice único de <c>tokenHuella</c> se bloqueaban
+    /// entre sí en documentdb-local (código 24 o 112) y agotaban los reintentos como «Device registration is temporarily unavailable». Entre instancias siguen valiendo el índice único y el reintento.
+    /// </summary>
+    public Task<DeviceRegistration> RegisterAsync(
+        string person, string session, string platform, string token, DateTime now, CancellationToken cancellationToken) =>
+        KeyedGate.RunAsync(
+            protection.Fingerprint(token),
+            () => RegisterSerializedAsync(person, session, platform, token, now, cancellationToken),
+            cancellationToken);
+
+    private async Task<DeviceRegistration> RegisterSerializedAsync(
         string person, string session, string platform, string token, DateTime now, CancellationToken cancellationToken)
     {
         var fingerprint = protection.Fingerprint(token);
