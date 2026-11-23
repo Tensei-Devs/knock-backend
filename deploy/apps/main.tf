@@ -113,6 +113,10 @@ locals {
       env = merge(local.runtime, local.forwarded, {
         Chat__Habilitado          = "true"
         Services__Market__BaseUrl = local.cluster_address.market
+        # Cifrado y huella de los tokens de dispositivo (spec 037, R-03): sin versión activa y llaves, `POST /api/v1/dispositivos` responde 503.
+        # `WritesEnabled` solo se enciende aquí porque deploy da a todas las réplicas la misma llave de huella (ver secret_env).
+        Avisos__Devices__ActiveEncryptionVersion = "1"
+        Avisos__Devices__WritesEnabled           = "true"
       })
       secret_env = merge(local.redis_secret, {
         ConnectionStrings__KnockMongo = "mongo-messaging"
@@ -120,6 +124,9 @@ locals {
         # Validan los tokens de servicio de Mercado y de Identidad en `/api/v1/interno/*` (spec 037 R-11): una clave por emisor, nunca `jwt-signing-key`.
         Security__InternalTokens__MarketKey   = "avisos-key-market"
         Security__InternalTokens__IdentityKey = "avisos-key-identity"
+        # Llave AES-256 (Base64, 32 bytes) que cifra el token de cada dispositivo y llave HMAC (Base64, 32 bytes o más) de su huella de búsqueda; distintas entre sí y de las demás.
+        Avisos__Devices__EncryptionKeys__1 = "avisos-devices-encryption-key"
+        Avisos__Devices__IndexKey          = "avisos-devices-index-key"
       })
     }
     market = {
