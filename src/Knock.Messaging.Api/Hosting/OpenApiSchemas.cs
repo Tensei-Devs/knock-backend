@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Knock.Hosting.OpenApi;
 using Knock.Messaging.Api.Modules.Conversaciones.Dtos;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
@@ -12,7 +13,7 @@ internal static class OpenApiSchemas
     private static readonly string[] _closureReasons = ["request_cancelled", "request_expired", "other_quote_chosen", "dismissed", "service_finished"];
 
     public static IServiceCollection AddKnockOpenApi(this IServiceCollection services) =>
-        services.AddOpenApi(options => options.AddSchemaTransformer((schema, context, _) =>
+        services.AddOpenApi(options => options.AddKnockContractConventions().AddSchemaTransformer((schema, context, _) =>
         {
             var type = context.JsonTypeInfo.Type;
             if (type == typeof(ConversacionView) || type == typeof(ConversacionItem))
