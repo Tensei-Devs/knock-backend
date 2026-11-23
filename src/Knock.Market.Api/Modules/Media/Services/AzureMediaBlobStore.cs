@@ -9,9 +9,9 @@ namespace Knock.Market.Api.Modules.Media.Services;
 
 /// <summary>
 /// Azure Blob access for quarantine and final containers. Client bytes are only ever read from quarantine;
-/// the final container holds re-encoded images. SAS generation is OI-3.
+/// the final container holds re-encoded images. Upload links come from <see cref="IEnlaceSubidaFirmado"/> (spec 062).
 /// </summary>
-internal sealed class AzureMediaBlobStore(BlobServiceClient blobs, IOptions<MediaOptions> options) : IMediaBlobStore
+internal sealed class AzureMediaBlobStore(BlobServiceClient blobs, IEnlaceSubidaFirmado links, IOptions<MediaOptions> options) : IMediaBlobStore
 {
     private readonly BlobContainerClient _quarantine = blobs.GetBlobContainerClient(options.Value.QuarantineContainer);
     private readonly BlobContainerClient _files = blobs.GetBlobContainerClient(options.Value.FilesContainer);
@@ -24,9 +24,24 @@ internal sealed class AzureMediaBlobStore(BlobServiceClient blobs, IOptions<Medi
             return;
         }
 
-        await _quarantine.CreateIfNotExistsAsync(PublicAccessType.None, cancellationToken: cancellationToken);
-        await _files.CreateIfNotExistsAsync(PublicAccessType.None, cancellationToken: cancellationToken);
+        try
+        {
+            await _quarantine.CreateIfNotExistsAsync(PublicAccessType.None, cancellationToken: cancellationToken);
+            await _files.CreateIfNotExistsAsync(PublicAccessType.None, cancellationToken: cancellationToken);
+        }
+        catch (RequestFailedException ex) when (ex.Status == 403)
+        {
+            // In Azure the identity of the service writes blobs but cannot create containers: Terraform creates them (spec 062, R-01). Missing ones fail on first use as storage unavailable.
+        }
+
         _containersReady = true;
+    }
+
+    public Task<EnlaceSubida> CreateUploadLinkAsync(string quarantineBlob, string contentType, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(quarantineBlob);
+        ArgumentException.ThrowIfNullOrEmpty(contentType);
+        return links.CrearEnlaceSubidaAsync(options.Value.QuarantineContainer, quarantineBlob, contentType, cancellationToken);
     }
 
     public async Task<UploadedBlob?> GetUploadedAsync(string quarantineBlob, CancellationToken cancellationToken)

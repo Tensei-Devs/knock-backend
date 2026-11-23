@@ -39,6 +39,14 @@ output "quarantine_container_id" {
   value = azurerm_storage_container.private["imagenes-cuarentena"].id
 }
 
+output "media_quarantine_container_id" {
+  value = azurerm_storage_container.private["cuarentena"].id
+}
+
+output "media_files_container_id" {
+  value = azurerm_storage_container.private["archivos"].id
+}
+
 output "exports_container_id" {
   value = azurerm_storage_container.private["exportaciones"].id
 }

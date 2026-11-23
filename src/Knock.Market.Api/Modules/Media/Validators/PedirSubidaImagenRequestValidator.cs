@@ -10,7 +10,7 @@ internal sealed class PedirSubidaImagenRequestValidator : AbstractValidator<Pedi
     public PedirSubidaImagenRequestValidator()
     {
         RuleFor(x => x.Proposito).Cascade(CascadeMode.Stop).NotEmpty()
-            .Must(p => PropositoImagenExtensions.Parse(p) is not null).WithMessage("Must be perfil or trabajo.")
+            .Must(p => p == PropositoImagenExtensions.Solicitud || PropositoImagenExtensions.Parse(p) is not null).WithMessage("Must be perfil, trabajo or solicitud.")
             .OverridePropertyName("proposito");
         RuleFor(x => x.TipoContenido).Cascade(CascadeMode.Stop).NotEmpty()
             .Must(t => MediaRules.IsAllowedContentType(t!)).WithMessage("Must be image/jpeg, image/png or image/webp.")

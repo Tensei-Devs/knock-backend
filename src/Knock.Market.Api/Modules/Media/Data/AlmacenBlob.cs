@@ -31,6 +31,19 @@ internal interface IAlmacenBlob
     Task BorrarCuarentenaAsync(string nombreBlob, CancellationToken cancellationToken);
 }
 
+/// <summary>Emisión de SAS de escritura de un solo blob de un contenedor de cuarentena de la cuenta privada (spec 032, R-05; spec 062, R-01).</summary>
+internal interface IEnlaceSubidaFirmado
+{
+    Task<EnlaceSubida> CrearEnlaceSubidaAsync(string contenedor, string nombreBlob, string tipoContenido, CancellationToken cancellationToken);
+}
+
+/// <summary>Sustituto cuando el almacén registrado no firma subidas (por ejemplo, un doble de pruebas): cualquier uso responde «almacenamiento no disponible».</summary>
+internal sealed class EnlaceSubidaNoDisponible : IEnlaceSubidaFirmado
+{
+    public Task<EnlaceSubida> CrearEnlaceSubidaAsync(string contenedor, string nombreBlob, string tipoContenido, CancellationToken cancellationToken) =>
+        throw new IOException("Blob storage is unavailable.");
+}
+
 /// <summary>Emisión de SAS de lectura para blobs de la cuenta privada (spec 032, R-16).</summary>
 internal interface IAlmacenLectura
 {
@@ -42,7 +55,7 @@ internal interface IAlmacenLectura
 /// Usa dos clientes: el de la cuenta privada (cuarentena y llave de delegación) y el de la cuenta pública (publicación).
 /// Las SAS son siempre de delegación de usuario, firmadas con la identidad administrada del servicio; nunca de llave de cuenta (R-02).
 /// </summary>
-internal sealed class AlmacenBlob(BlobServiceClient privado, BlobServiceClient publico, TimeProvider reloj) : IAlmacenBlob, IAlmacenLectura, IDisposable
+internal sealed class AlmacenBlob(BlobServiceClient privado, BlobServiceClient publico, TimeProvider reloj) : IAlmacenBlob, IAlmacenLectura, IEnlaceSubidaFirmado, IDisposable
 {
     /// <summary>Vigencia de una SAS de subida o de lectura (R-05, R-16).</summary>
     internal static readonly TimeSpan VigenciaSas = TimeSpan.FromMinutes(5);
@@ -67,15 +80,27 @@ internal sealed class AlmacenBlob(BlobServiceClient privado, BlobServiceClient p
 
     /// <summary>Emite la SAS <c>cw</c> de un solo blob de cuarentena, solo HTTPS, que vence a los 5 minutos (R-05, CA-01).</summary>
     public Task<EnlaceSubida> CrearEnlaceSubidaAsync(string nombreBlob, string tipoContenido, CancellationToken cancellationToken) =>
-        Proteger(() => CrearEnlaceSubidaCore(nombreBlob, tipoContenido, cancellationToken));
+        Proteger(() => CrearEnlaceSubidaCore(_cuarentena, nombreBlob, tipoContenido, cancellationToken));
 
-    private async Task<EnlaceSubida> CrearEnlaceSubidaCore(string nombreBlob, string tipoContenido, CancellationToken cancellationToken)
+    /// <summary>
+    /// Igual que el anterior para el contenedor de cuarentena del flujo privado (<c>cuarentena</c>, spec 062): solo acepta contenedores de cuarentena, nunca uno de archivos
+    /// finales, de verificaciones ni de la cuenta pública.
+    /// </summary>
+    public Task<EnlaceSubida> CrearEnlaceSubidaAsync(string contenedor, string nombreBlob, string tipoContenido, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(contenedor);
+        return BlobPrivado.ContenedoresDeCuarentena.Contains(contenedor)
+            ? Proteger(() => CrearEnlaceSubidaCore(privado.GetBlobContainerClient(contenedor), nombreBlob, tipoContenido, cancellationToken))
+            : throw new ArgumentException("The container is not a quarantine container.", nameof(contenedor));
+    }
+
+    private async Task<EnlaceSubida> CrearEnlaceSubidaCore(BlobContainerClient contenedor, string nombreBlob, string tipoContenido, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(nombreBlob);
         ArgumentException.ThrowIfNullOrWhiteSpace(tipoContenido);
         var ahora = reloj.GetUtcNow();
         var llave = await ObtenerLlaveAsync(ahora, cancellationToken);
-        var url = FirmarBlob(_cuarentena.GetBlobClient(nombreBlob), llave, BlobSasPermissions.Create | BlobSasPermissions.Write, ahora);
+        var url = FirmarBlob(contenedor.GetBlobClient(nombreBlob), llave, BlobSasPermissions.Create | BlobSasPermissions.Write, ahora);
         var encabezados = new Dictionary<string, string>
         {
             ["x-ms-blob-type"] = "BlockBlob",

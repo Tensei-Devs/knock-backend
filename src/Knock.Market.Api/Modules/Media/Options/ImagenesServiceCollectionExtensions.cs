@@ -28,6 +28,7 @@ internal static class ImagenesServiceCollectionExtensions
         services.TryAddSingleton<ProcesadorImagen>(provider => new ProcesadorImagen(provider.GetRequiredService<ImageProcessor>()));
         services.AddLimitesImagen();
         services.TryAddSingleton<IAlmacenLectura>(provider => (AlmacenBlob)provider.GetRequiredService<IAlmacenBlob>());
+        services.TryAddSingleton<IEnlaceSubidaFirmado>(provider => provider.GetRequiredService<IAlmacenBlob>() as IEnlaceSubidaFirmado ?? new EnlaceSubidaNoDisponible());
         services.TryAddSingleton<IAccesosPrivadosStore, AccesosPrivadosStore>();
         services.TryAddSingleton<IHuellaSub, HuellaSubHmac>();
         services.TryAddSingleton<IEnlacesPrivados, EnlacesPrivados>();
@@ -47,8 +48,7 @@ internal static class ImagenesServiceCollectionExtensions
         var reloj = provider.GetRequiredService<TimeProvider>();
         if (!string.IsNullOrWhiteSpace(privada) && !string.IsNullOrWhiteSpace(publica))
         {
-            var credencial = provider.GetService<TokenCredential>() ?? new DefaultAzureCredential();
-            return new AlmacenBlob(new BlobServiceClient(new Uri(privada), credencial), new BlobServiceClient(new Uri(publica), credencial), reloj);
+            return new AlmacenBlob(CrearClientePrivado(provider), new BlobServiceClient(new Uri(publica), CredencialAzure(provider)), reloj);
         }
 
         var conexion = configuration.GetConnectionString(MediaOptions.ConnectionStringName);
@@ -60,4 +60,25 @@ internal static class ImagenesServiceCollectionExtensions
         var servicio = new BlobServiceClient(conexion);
         return new AlmacenBlob(servicio, servicio, reloj);
     }
+
+    /// <summary>
+    /// Cliente de la cuenta privada de Blob (cuarentena, archivos y verificaciones) del módulo <c>Media</c> completo: en Azure, la URL de <c>Imagenes:CuentaPrivadaUrl</c> con la identidad administrada
+    /// (sin llaves); en local y en pruebas, <c>ConnectionStrings:KnockBlob</c> (Azurite). Sin ninguna de las dos lanza al primer uso.
+    /// </summary>
+    internal static BlobServiceClient CrearClientePrivado(IServiceProvider provider)
+    {
+        var configuration = provider.GetRequiredService<IConfiguration>();
+        var privada = configuration[$"{ImagenesOptions.SectionName}:CuentaPrivadaUrl"];
+        if (!string.IsNullOrWhiteSpace(privada))
+        {
+            return new BlobServiceClient(new Uri(privada), CredencialAzure(provider));
+        }
+
+        var conexion = configuration.GetConnectionString(MediaOptions.ConnectionStringName);
+        return string.IsNullOrWhiteSpace(conexion)
+            ? throw new InvalidOperationException($"{ImagenesOptions.SectionName}:CuentaPrivadaUrl or ConnectionStrings:{MediaOptions.ConnectionStringName} must be configured.")
+            : new BlobServiceClient(conexion);
+    }
+
+    private static TokenCredential CredencialAzure(IServiceProvider provider) => provider.GetService<TokenCredential>() ?? new DefaultAzureCredential();
 }

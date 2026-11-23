@@ -10764,6 +10764,7 @@
       },
       "ImagenConfirmadaResponse": {
         "required": [
+          "id",
           "url",
           "ancho",
           "alto",
@@ -10771,6 +10772,12 @@
         ],
         "type": "object",
         "properties": {
+          "id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "url": {
             "type": "string"
           },
@@ -10799,7 +10806,7 @@
             "format": "int32"
           }
         },
-        "description": "Respuesta 200 de la confirmación (R-12)."
+        "description": "Respuesta 200 de la confirmación (R-12). `Url` se declara como cadena no nula para no cambiar el contrato público (oasdiff: `response-property-became-nullable`); en una foto de solicitud (spec 062)\nel servicio pasa `null` y la propiedad se omite del JSON, y `Id` la sustituye."
       },
       "InboxItem": {
         "required": [

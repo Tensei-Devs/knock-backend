@@ -221,7 +221,9 @@ resource "azurerm_storage_container" "private" {
   #checkov:skip=CKV2_AZURE_21: EXC-013 el registro de lecturas necesita un diagnóstico con costo; los contenedores son privados
   # `imagenes-cuarentena` (spec 032, R-01): bytes tal como los subió la app; nunca en la cuenta pública.
   # `exportaciones` (spec 039, R-22): el ZIP con los datos de una persona; solo se entrega con un enlace firmado de 24 horas y se borra a los 7 días.
-  for_each              = toset(["imagenes", "respaldos", "imagenes-cuarentena", "exportaciones"])
+  # `cuarentena` y `archivos` (specs 058 y 062): el flujo privado de fotos de solicitud. Las subidas llegan a `cuarentena`, se limpian y se mueven a `archivos`; la identidad de Mercado
+  # no puede crear contenedores, así que los crea Terraform.
+  for_each              = toset(["imagenes", "respaldos", "imagenes-cuarentena", "exportaciones", "cuarentena", "archivos"])
   name                  = each.value
   storage_account_id    = azurerm_storage_account.files.id
   container_access_type = "private"
@@ -238,6 +240,23 @@ resource "azurerm_storage_management_policy" "quarantine" {
     filters {
       blob_types   = ["blockBlob"]
       prefix_match = ["imagenes-cuarentena/"]
+    }
+
+    actions {
+      base_blob {
+        delete_after_days_since_creation_greater_than = 1
+      }
+    }
+  }
+
+  # Ciclo de vida de 1 día de la cuarentena del flujo privado de fotos (spec 062, R-01): una subida sin confirmar no se queda en el almacenamiento.
+  rule {
+    name    = "borrar-cuarentena-de-archivos"
+    enabled = true
+
+    filters {
+      blob_types   = ["blockBlob"]
+      prefix_match = ["cuarentena/"]
     }
 
     actions {

@@ -8,8 +8,11 @@ namespace Knock.Market.Api.Modules.Media.Services;
 /// <summary>Upload ticket: the pending file id. The signed upload link is OI-3.</summary>
 internal sealed record UploadTicket(Guid Id);
 
+/// <summary>Pending file with its signed upload link (spec 062, R-01): the id (<c>archivoId</c>), the link and the time limit to confirm.</summary>
+internal sealed record IssuedUpload(Guid Id, EnlaceSubida Link, DateTimeOffset ConfirmBefore);
+
 /// <summary>Confirmed file: final state and dimensions (no URLs until OI-3).</summary>
-internal sealed record ConfirmedFile(Guid Id, string State, int Width, int Height);
+internal sealed record ConfirmedFile(Guid Id, string State, int Width, int Height, int Bytes = 0);
 
 /// <summary>
 /// Upload, confirmation and ownership of private photos. The client uploads to quarantine with the OI-3 signed link;
@@ -49,6 +52,36 @@ internal sealed class MediaService(
 
         metrics?.FilesCreated.Add(1);
         return MediaOutcome<UploadTicket>.Ok(new UploadTicket(file.Id));
+    }
+
+    /// <summary>
+    /// Creates the pending file and issues its signed upload link to the private quarantine (spec 062, R-01 and R-03). A storage failure after the file was created leaves a pending
+    /// document that expires by itself (30 minutes) and counts toward the cap only until then.
+    /// </summary>
+    public async Task<MediaOutcome<IssuedUpload>> RequestUploadAsync(
+        string ownerId, string usage, string contentType, long sizeBytes, CancellationToken cancellationToken)
+    {
+        var created = await CreateUploadAsync(ownerId, usage, contentType, sizeBytes, cancellationToken);
+        if (created.Status != MediaOutcomeStatus.Success)
+        {
+            return new MediaOutcome<IssuedUpload>(created.Status, Detail: created.Detail, RetryAfterSeconds: created.RetryAfterSeconds);
+        }
+
+        var stored = await store.FindAsync(created.Value!.Id, cancellationToken);
+        if (stored is null)
+        {
+            return MediaOutcome<IssuedUpload>.Unavailable();
+        }
+
+        try
+        {
+            var link = await blobs.CreateUploadLinkAsync(stored.File.QuarantineBlob, contentType, cancellationToken);
+            return MediaOutcome<IssuedUpload>.Ok(new IssuedUpload(stored.File.Id, link, stored.File.CreatedAt + MediaRules.ConfirmationWindow));
+        }
+        catch (IOException)
+        {
+            return MediaOutcome<IssuedUpload>.Unavailable();
+        }
     }
 
     /// <summary>Seconds until the oldest valid pending file stops counting, between 1 and the confirmation window (1 800 s) (spec 058, R-11).</summary>
@@ -170,7 +203,7 @@ internal sealed class MediaService(
         await blobs.UploadFileAsync(ready.ReducedBlob!, image.Reduced, image.Format, cancellationToken);
         await blobs.DeleteQuarantineAsync(ready.QuarantineBlob, cancellationToken);
         return await store.TryReplaceAsync(ready, stored.Version, cancellationToken)
-            ? MediaOutcome<ConfirmedFile>.Ok(new ConfirmedFile(ready.Id, ready.State.ToContractValue(), image.Width, image.Height))
+            ? MediaOutcome<ConfirmedFile>.Ok(new ConfirmedFile(ready.Id, ready.State.ToContractValue(), image.Width, image.Height, image.Original.Length))
             : MediaOutcome<ConfirmedFile>.Conflict("The file was confirmed by another request.");
     }
 }
