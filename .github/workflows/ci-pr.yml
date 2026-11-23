@@ -60,6 +60,7 @@ jobs:
           HEAD_REF: ${{ github.head_ref }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           EVENT_BEFORE: ${{ github.event.before }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           {
             echo "api=$([ -f Knock.slnx ] && echo true || echo false)"
@@ -80,10 +81,13 @@ jobs:
           if [ -z "$BASE_SHA" ]; then
             # Push: `before` cubre todos los commits del push, no solo el último. `before` de ceros =
             # rama nueva: no hay base y se considera que cambió todo.
-            if [ -n "$EVENT_BEFORE" ] && [ "$EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+              # Disparo manual: no hay `before` ni base; se corre todo (sin esto caía a HEAD~1 y podía omitir el API).
+              CHANGED="__ALL__"
+            elif [ -n "$EVENT_BEFORE" ] && [ "$EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
               CHANGED=$(git diff --name-only "$EVENT_BEFORE" HEAD 2>/dev/null || echo "__ALL__")
             else
-              CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "__ALL__")
+              CHANGED="__ALL__"
             fi
           fi
           # Cambios por servicio (KNOCK-202): solo se construye lo afectado. Un cambio en los
