@@ -73,21 +73,21 @@ public sealed class Spec064TecnicoAusenteSeguridadTests
         await using var host = await Spec020Host.StartAsync();
         var visit = await host.ConfirmedVisitAsync();
         await Spec064TecnicoAusenteTests.SetAppointmentAsync(host, visit.VisitId, minutesAgo: 20);
-        var statuses = new List<HttpStatusCode>();
-        HttpResponseMessage? last = null;
 
-        for (var i = 0; i < 21; i++)
+        var responses = await Task.WhenAll(Enumerable.Range(0, 21).Select(_ => Spec064TecnicoAusenteTests.ReportAsync(host, visit.VisitId, host.ClientSub)));
+
+        try
         {
-            last?.Dispose();
-            last = await Spec064TecnicoAusenteTests.ReportAsync(host, visit.VisitId, host.ClientSub);
-            statuses.Add(last.StatusCode);
+            responses.Count(r => r.StatusCode == HttpStatusCode.OK).Should().Be(20);
+            var limited = responses.Where(r => r.StatusCode == HttpStatusCode.TooManyRequests).Should().ContainSingle().Subject;
+            limited.Headers.RetryAfter.Should().NotBeNull();
         }
-
-        using (last)
+        finally
         {
-            statuses.Take(20).Should().OnlyContain(s => s == HttpStatusCode.OK);
-            statuses[20].Should().Be(HttpStatusCode.TooManyRequests);
-            last!.Headers.RetryAfter.Should().NotBeNull();
+            foreach (var response in responses)
+            {
+                response.Dispose();
+            }
         }
     }
 }
