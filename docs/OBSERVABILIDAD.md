@@ -99,3 +99,16 @@ Las hace el líder con el recurso creado. La evidencia (capturas y consulta KQL,
 4. Esperar de 2 a 5 minutos y buscar en Application Insights con las dos consultas de arriba. Deben aparecer la petición fallida, su excepción y su log, sin query ni datos personales.
 
 **Caso 16 (V2).** Con la API como en el paso 2, repetir la petición del paso 3 más de 5 veces en menos de 5 minutos (y más del 2 % del tráfico de esa ventana). La alerta de 5xx debe dispararse y llegar al correo del grupo de acciones. La de latencia se revisa en el portal (regla creada y su consulta).
+
+## Reparto entre réplicas (spec 034, R-06)
+
+Con dos réplicas por componente, `tests/perf/spec034-deploy-sin-corte.js` marca cada petición con `X-Correlation-Id = <RUN_ID>-<vu>-<iteración>` (`RUN_ID` se fija con la variable `RUN_ID`). Después se cuentan las instancias distintas por componente; deben ser 2 en cada uno:
+
+```kusto
+// <RUN_ID> es el prefijo del correlation id de la corrida
+requests
+| where tostring(customDimensions["knock.correlation_id"]) startswith "<RUN_ID>"
+| summarize instancias = dcount(cloud_RoleInstance) by cloud_RoleName
+```
+
+Ninguna respuesta incluye el nombre de la réplica ni del contenedor: el conteo se hace solo en Application Insights.

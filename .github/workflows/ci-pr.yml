@@ -363,20 +363,29 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Contrato base vs PR
+      # Spec 034 R-15 / CA-12: oasdiff compara cada contrato de servicio con el de la rama destino. Un cambio incompatible falla,
+      # salvo con la etiqueta `contrato-incompatible`: entonces pasa y la lista de cambios queda en el resumen del PR.
+      - name: Contratos base vs PR (oasdiff)
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: |
-          git show "$BASE_SHA:docs/openapi.v1.json" > base.json 2>/dev/null || { echo "Contrato nuevo: nada que comparar"; exit 0; }
-          [ -f docs/openapi.v1.json ] || exit 0
-          docker run --rm -v "$PWD":/w -w /w tufin/oasdiff breaking base.json docs/openapi.v1.json --fail-on ERR
-      - name: Contrato de Identity base vs PR
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          git show "$BASE_SHA:docs/openapi.identity.v1.json" > base.identity.json 2>/dev/null || { echo "Contrato de Identity nuevo: nada que comparar"; exit 0; }
-          [ -f docs/openapi.identity.v1.json ] || exit 0
-          docker run --rm -v "$PWD":/w -w /w tufin/oasdiff breaking base.identity.json docs/openapi.identity.v1.json --fail-on ERR
+          permitido=false
+          if echo "$PR_LABELS" | grep -q '"contrato-incompatible"'; then permitido=true; fi
+          malos=0
+          for f in openapi.v1.json openapi.identity.v1.json openapi.messaging.v1.json; do
+            [ -f "docs/$f" ] || continue
+            git show "$BASE_SHA:docs/$f" > "base.$f" 2>/dev/null || { echo "docs/$f es nuevo: nada que comparar"; continue; }
+            if ! docker run --rm -v "$PWD":/w -w /w tufin/oasdiff breaking "base.$f" "docs/$f" --fail-on ERR > "diff.$f.txt"; then
+              malos=1
+              { echo "### Cambios incompatibles en docs/$f"; echo '```'; cat "diff.$f.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+              cat "diff.$f.txt"
+            fi
+          done
+          if [ "$malos" = 1 ] && [ "$permitido" != true ]; then
+            echo "::error::Cambio incompatible en el contrato. Si es intencional, el PR necesita la etiqueta contrato-incompatible."; exit 1
+          fi
+          if [ "$malos" = 1 ]; then echo "::warning::Cambios incompatibles aceptados por la etiqueta contrato-incompatible (ver el resumen)."; fi
 
   iac:
     name: IaC, Dockerfile y workflows (Checkov)

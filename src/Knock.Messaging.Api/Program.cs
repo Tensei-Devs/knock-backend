@@ -1,5 +1,6 @@
 using Knock.Contracts.Correlation;
 using Knock.Hosting.ForwardedHeaders;
+using Knock.Hosting.Lifecycle;
 using Knock.Messaging.Api.Hosting;
 using Knock.Messaging.Api.Modules.Avisos;
 using Knock.Messaging.Api.Modules.Bloqueos;
@@ -9,6 +10,8 @@ using Knock.Messaging.Api.Modules.Notices;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+// Spec 034 R-03: apagado ordenado (readiness en 503 y drenado de 25 s).
+builder.Services.AddKnockGracefulShutdown();
 
 // BUG-003: Kestrel agrega «Server: Kestrel» al final de la respuesta, después de cualquier middleware; solo se apaga aquí.
 builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);

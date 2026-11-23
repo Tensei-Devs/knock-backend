@@ -74,6 +74,8 @@ resource "azurerm_container_app" "this" {
   template {
     min_replicas = var.min_replicas
     max_replicas = var.max_replicas
+    # Spec 034 R-03: 30 s de gracia; la aplicación drena en 25 s (HostOptions.ShutdownTimeout).
+    termination_grace_period_seconds = 30
 
     container {
       name    = var.name
@@ -139,6 +141,10 @@ resource "azurerm_container_app" "this" {
           transport = "HTTP"
           path      = liveness_probe.value
           port      = var.target_port
+          # Spec 034 R-02: vida en /health (nunca /health/ready) cada 10 s y 3 fallos para reiniciar.
+          interval_seconds        = 10
+          timeout                 = 3
+          failure_count_threshold = 3
         }
       }
     }
