@@ -3,8 +3,6 @@ using System.Security.Cryptography;
 using AwesomeAssertions;
 using Knock.IntegrationTest.Support;
 using Knock.SecurityTest.Support;
-using Microsoft.IdentityModel.JsonWebTokens;
-using Microsoft.IdentityModel.Tokens;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Xunit;
@@ -20,30 +18,6 @@ public sealed class Spec061AvisoTecnicoTests
     private const string _path = "/api/v1/interno/avisos";
     private const string _type = "opinion_oculta";
 
-    private static string Mint(byte[] key, string permission)
-    {
-        var now = DateTime.UtcNow;
-        return new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
-        {
-            Issuer = "knock-market",
-            Audience = "knock-notifications",
-            IssuedAt = now,
-            NotBefore = now,
-            Expires = now.AddMinutes(4),
-            Claims = new Dictionary<string, object> { ["permisos"] = permission, ["jti"] = Guid.NewGuid().ToString("N") },
-            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256),
-        });
-    }
-
-    private static Task<SecurityMessagingFactory> CreateHostAsync(string connectionString, string databaseName, byte[] marketKey) =>
-        SecurityMessagingFactory.CreateAsync(new Dictionary<string, string?>
-        {
-            ["ConnectionStrings:KnockMongo"] = connectionString,
-            ["Mongo:Databases:Messaging"] = databaseName,
-            ["Security:InternalTokens:MarketKey"] = Convert.ToBase64String(marketKey),
-            ["Security:InternalTokens:IdentityKey"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)),
-        });
-
     [Fact]
     public async Task Aviso_Al_Tecnico_Se_Acepta_Una_Sola_Vez_Y_No_Guarda_Opinion_Ni_Motivo_CA_061_09a()
     {
@@ -53,11 +27,11 @@ public sealed class Spec061AvisoTecnicoTests
         using var mongo = new MongoClient(fixture.ConnectionString);
         try
         {
-            await using var host = await CreateHostAsync(fixture.ConnectionString, name, marketKey);
+            await using var host = await Spec037InternoAvisosSeguridadTests.CreateHostAsync(fixture.ConnectionString, name, marketKey);
             using var client = host.CreateClient();
             var opinion = ObjectId.GenerateNewId().ToString();
             var body = new { eventoId = "OpinionModerada:" + opinion + ":1", tipo = _type, destinatarioId = Guid.NewGuid().ToString("D"), rol = "tecnico", recurso = opinion };
-            var credential = Mint(marketKey, _type);
+            var credential = Spec037InternoAvisosSeguridadTests.Mint("knock-market", marketKey, _type);
             var notices = mongo.GetDatabase(name).GetCollection<BsonDocument>("notifications.enviados");
 
             using var first = await SecureHttp.PostJsonAsync(client, _path, body, credential);
@@ -87,7 +61,7 @@ public sealed class Spec061AvisoTecnicoTests
         using var client = host.CreateClient();
         var opinion = ObjectId.GenerateNewId().ToString();
         var reason = "motivo-" + Convert.ToHexString(RandomNumberGenerator.GetBytes(12));
-        var credential = Mint(marketKey, _type);
+        var credential = Spec037InternoAvisosSeguridadTests.Mint("knock-market", marketKey, _type);
         static string Id() => "OpinionModerada:" + Guid.NewGuid().ToString("N");
 
         using var withReason = await SecureHttp.PostJsonAsync(
@@ -97,7 +71,7 @@ public sealed class Spec061AvisoTecnicoTests
         using var clientRole = await SecureHttp.PostJsonAsync(
             client, _path, new { eventoId = Id(), tipo = _type, destinatarioId = Guid.NewGuid().ToString("D"), rol = "cliente", recurso = opinion }, credential);
         using var otherPermission = await SecureHttp.PostJsonAsync(
-            client, _path, new { eventoId = Id(), tipo = _type, destinatarioId = Guid.NewGuid().ToString("D"), rol = "tecnico", recurso = opinion }, Mint(marketKey, "solicitud_nueva"));
+            client, _path, new { eventoId = Id(), tipo = _type, destinatarioId = Guid.NewGuid().ToString("D"), rol = "tecnico", recurso = opinion }, Spec037InternoAvisosSeguridadTests.Mint("knock-market", marketKey, "solicitud_nueva"));
 
         withReason.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
         withText.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
