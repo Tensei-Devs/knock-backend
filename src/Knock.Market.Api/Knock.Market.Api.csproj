@@ -31,6 +31,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Knock.UnitTest" />
     <InternalsVisibleTo Include="Knock.IntegrationTest" />
+    <InternalsVisibleTo Include="Knock.ContractTest" />
     <InternalsVisibleTo Include="Knock.SecurityTest" />
     <InternalsVisibleTo Include="Knock.DatabaseTest" />
   </ItemGroup>
