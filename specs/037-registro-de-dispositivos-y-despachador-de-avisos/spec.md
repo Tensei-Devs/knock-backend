@@ -89,6 +89,7 @@ Que el teléfono de cada persona reciba un aviso de Knock cuando pasa algo en su
 - **CA-17:** Dado el límite por persona de 30 por hora, cuando llegan 31 avisos para la misma persona dentro de la hora, entonces el 31 no se envía y queda `limitado`, y otra persona no se ve afectada. (R-12)
 - **CA-18:** Dado un dispositivo registrado con el `sid` de una sesión, cuando esa sesión termina por cierre, cierre remoto, expulsión o reuso del token, entonces el dispositivo se borra y no recibe avisos; y dado un teléfono compartido donde la persona B inicia sesión después de la A, entonces el registro de A no sobrevive. (R-01, R-02, R-13)
 - **CA-19:** Dados dos eventos distintos sobre el mismo recurso (la segunda cotización de una solicitud) y uno de ellos entregado dos veces, cuando se procesan, entonces se envían dos avisos y no tres. (R-06)
+- **CA-20:** *(Enmienda del 2026-11-23.)* Dado un reporte decidido en el panel, cuando Identidad entrega `ReporteDecidido` a `POST /api/v1/interno/avisos`, entonces cada parte recibe un aviso `reporte_decidido` de texto fijo (categoría `sistema`, sin rol) cuyo cuerpo y carga no contienen la gravedad, la acción, el motivo ni datos de la otra parte; y dado el tipo `opinion_oculta` (spec 061, solo rol `tecnico`), un rol distinto responde 422. (R-04, R-11)
 
 ## 7. Pruebas
 
@@ -136,6 +137,12 @@ Que el teléfono de cada persona reciba un aviso de Knock cuando pasa algo en su
 | CA-17 | `Spec037DespachoTests.Limite_Por_Persona_CA_037_17` |
 | CA-18 | `Spec037DispositivosTests.Sesion_Terminada_Borra_Dispositivo_CA_037_18` |
 | CA-19 | `Spec037DespachoTests.Eventos_Distintos_Mismo_Recurso_CA_037_19` |
+| CA-20 | `Spec043EntregaInternaTests.ReportDecidedGoesToMessagingNoticesAsAFixedNoticeWithoutReportData_CA_037_20` y `Spec037CargaV1ContratoTests.RoleRulesOfTheFixedNotices_CA_037_20` |
+
+## Nota de enmienda (2026-11-23, decisión de José)
+- **Catálogo de tipos:** se agregan `reporte_decidido` (aviso a cada parte de un reporte decidido en el panel, spec 053 R-20; categoría `sistema`, sin rol: Identidad no distingue cliente de técnico) y `opinion_oculta` (spec 061, R-07a; categoría `sistema`, rol `tecnico`). Ambos son de **texto fijo**: ni el cuerpo interno ni la carga v1 llevan gravedad, acción, motivo ni datos del reporte o de la opinión; el texto que ve la persona lo pone la app según el campo `evento`.
+- **Emisor:** Identidad entrega `ReporteDecidido` con el permiso `reporte_decidido`; Mercado entregará `opinion_oculta` con su propio permiso cuando se implemente la spec 061.
+- Caso nuevo CA-20. No se marcan firmas: la aprobación de abajo es la original.
 
 ## Aprobación
 

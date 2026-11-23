@@ -169,6 +169,7 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 | VER-05 | 404 | `verification_not_found` | la verificación o el caso no existe |
 | VER-05 | 409 | `verification_already_decided` | ya tiene una decisión o no está en revisión |
 | REP-05 | 404 | `report_not_found` | el reporte no existe |
+| REP-05 | 409 | `report_already_decided` | el reporte ya está decidido, o dos decisiones simultáneas: la que llega después recibe 409 y no 500 (enmienda 2026-11-23) |
 
 
 **Códigos de error:** los de forma salen como 422 con `errors` por campo y los de sesión y límite como 401 y 429; los conflictos de negocio llevan un código en inglés y snake_case que se fija al implementar y se agrega al catálogo.
@@ -296,6 +297,13 @@ Las pruebas citan el caso como `CA_053_NN` en el nombre (para `python scripts/sd
 ## 15. Riesgos y dudas abiertas
 - Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
 - Dependencias: el panel con doble factor y los permisos `verification:review` y `reports:resolve` (spec 033, H-4), la cuenta de almacenamiento privada de la spec 025 (H-2) y la moderación de la 031.
+
+## Nota de enmienda (2026-11-23, decisión de José)
+- **R-20, reportes contra un cliente:** un reporte decidido `critica` contra una persona que no es técnica **no suspende la cuenta** (spec 059, R-03: `Suspender` responde «no es técnico» y no cambia nada); la decisión se registra, se avisa a las dos partes y el reporte se atiende con prioridad alta. El código ya lo hace así (`AccountSuspension`, resultado `NotTechnician`).
+- **REP-05, decisiones simultáneas:** la segunda decisión sobre el mismo reporte responde 409 `report_already_decided` (turno por reporte, `DecisionTurns`), nunca 500. Caso nuevo CA-REP05-409: `Spec053Tests` (ya cubierto por la prueba de «ya decidido»).
+- **Apelación de una persona suspendida (spec 060):** un reporte en apelación de suspensión no se decide por REP-05 sino por `POST /api/v1/admin/apelaciones/{id}/resolucion`; REP-05 responde 409 `report_already_decided`.
+- **`ReporteDecidido` avisa a las dos partes** con un aviso de texto fijo (spec 037, enmienda del 2026-11-23): nunca lleva motivo, gravedad ni datos del reporte.
+- No se marcan firmas: la aprobación de abajo es la original.
 
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
