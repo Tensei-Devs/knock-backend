@@ -29425,6 +29425,9 @@
       "name": "InternalOpinionModerated"
     },
     {
+      "name": "InternalPanelPermission"
+    },
+    {
       "name": "InternalTechnicianHidden"
     },
     {
