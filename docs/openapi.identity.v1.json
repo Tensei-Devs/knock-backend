@@ -3852,10 +3852,26 @@
         },
         "responses": {
           "202": {
-            "description": "Accepted"
+            "description": "Accepted",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3866,6 +3882,14 @@
           },
           "403": {
             "description": "Forbidden",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3876,6 +3900,14 @@
           },
           "413": {
             "description": "Payload Too Large",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3886,6 +3918,14 @@
           },
           "422": {
             "description": "Unprocessable Entity",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3896,6 +3936,20 @@
           },
           "429": {
             "description": "Too Many Requests",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Segundos que el cliente debe esperar antes de reintentar.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3906,6 +3960,20 @@
           },
           "503": {
             "description": "Service Unavailable",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Segundos que el cliente debe esperar antes de reintentar.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
             "content": {
               "application/problem+json": {
                 "schema": {
