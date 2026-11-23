@@ -1,4 +1,5 @@
 using Knock.Identity.Api.Hosting.Procesos.Outbox;
+using Knock.Identity.Api.Hosting.Procesos.TareasProgramadas;
 using Knock.Identity.Api.Modules.Panel;
 using MongoDB.Driver;
 
@@ -12,11 +13,17 @@ internal interface ISuspensionStore
 
     /// <summary>Escribe los eventos en la bandeja dentro de la transacción; repetir un <c>_id</c> no duplica (spec 054, R-02).</summary>
     Task AddEventsAsync(StoreTransaction transaction, IReadOnlyList<EventoDeOutbox> events, DateTime now, CancellationToken cancellationToken);
+
+    /// <summary>Programa una tarea (spec 054) dentro de la transacción; repetir tipo y clave no duplica (spec 060, R-06a).</summary>
+    Task ScheduleTaskAsync(StoreTransaction transaction, string type, string businessKey, DateTime due, DateTime now, CancellationToken cancellationToken);
 }
 
 /// <summary>Transacción y bandeja de salida de la suspensión. No es dueño de ninguna colección de negocio: las cuentas, las sesiones y la auditoría se tocan por las interfaces de sus módulos.</summary>
-internal sealed class SuspensionStore(IMongoClient client, IOutboxStore outbox) : ISuspensionStore
+internal sealed class SuspensionStore(IMongoClient client, IOutboxStore outbox, ITareasProgramadasStore tasks) : ISuspensionStore
 {
+    public Task ScheduleTaskAsync(StoreTransaction transaction, string type, string businessKey, DateTime due, DateTime now, CancellationToken cancellationToken) =>
+        tasks.ScheduleAsync((IClientSessionHandle)transaction.Handle, type, businessKey, due, now, cancellationToken);
+
     public async Task<T> RunAsync<T>(Func<StoreTransaction, Task<T>> work, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(work);

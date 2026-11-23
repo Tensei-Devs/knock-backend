@@ -48,7 +48,11 @@ internal interface ISesionesSuspensionStore
 {
     Task<AccountForSuspension?> ReadAsync(StoreTransaction transaction, string sub, CancellationToken cancellationToken);
 
-    Task<IReadOnlyList<string>?> SuspendAsync(StoreTransaction transaction, string sub, string expectedState, string type, ObjectId reportId, DateTime since, CancellationToken cancellationToken);
+    Task<IReadOnlyList<string>?> SuspendAsync(StoreTransaction transaction, string sub, string expectedState, string type, ObjectId reportId, DateTime since, DateTime? expiresAt, CancellationToken cancellationToken);
+
+    Task<AppSuspension?> FindSuspensionByPhoneHashAsync(byte[] phoneHash, CancellationToken cancellationToken);
+
+    Task<AppSuspension?> FindSuspensionBySubAsync(string sub, CancellationToken cancellationToken);
 
     Task<bool> ReactivateAsync(StoreTransaction transaction, string sub, CancellationToken cancellationToken);
 }

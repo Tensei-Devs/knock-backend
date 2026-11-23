@@ -230,6 +230,8 @@ public sealed class Spec057PurgaTests
         }
 
         public Task RevokeSessionsInTransactionAsync(StoreTransaction transaction, string subject, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task<bool> AnotherAccountHasPermissionAsync(string permission, string excludedSubject, CancellationToken cancellationToken) => Task.FromResult(false);
     }
 
     private sealed class FakeTasksStore : ITareasProgramadasStore

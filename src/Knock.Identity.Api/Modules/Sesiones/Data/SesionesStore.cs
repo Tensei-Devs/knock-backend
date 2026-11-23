@@ -396,15 +396,21 @@ internal sealed class SesionesStore(
     /// Un solo <c>findOneAndUpdate</c> condicionado al estado leído: de dos suspensiones simultáneas solo una cambia la cuenta (spec 059, R-05); la otra pierde con un conflicto de escritura o
     /// ve el estado nuevo y devuelve <see langword="null"/>. Las sesiones se revocan en la misma transacción (R-04 c).
     /// </summary>
-    public async Task<IReadOnlyList<string>?> SuspendAsync(StoreTransaction transaction, string sub, string expectedState, string type, ObjectId reportId, DateTime since, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<string>?> SuspendAsync(StoreTransaction transaction, string sub, string expectedState, string type, ObjectId reportId, DateTime since, DateTime? expiresAt, CancellationToken cancellationToken)
     {
         var handle = (IClientSessionHandle)transaction.Handle;
+        var suspension = new BsonDocument { ["tipo"] = type, ["reporteId"] = reportId, ["desde"] = new BsonDateTime(since) };
+        if (expiresAt is { } expires)
+        {
+            suspension["venceEn"] = new BsonDateTime(expires);
+        }
+
         var updated = await Users.FindOneAndUpdateAsync(
             handle,
             _filter.Eq(SubField, sub) & _filter.Eq(StateField, expectedState),
             Builders<BsonDocument>.Update
                 .Set(StateField, AccountState.Suspended)
-                .Set("suspension", new BsonDocument { ["tipo"] = type, ["reporteId"] = reportId, ["desde"] = new BsonDateTime(since) }),
+                .Set("suspension", suspension),
             new FindOneAndUpdateOptions<BsonDocument> { ReturnDocument = ReturnDocument.After, Projection = Builders<BsonDocument>.Projection.Include(IdField) },
             cancellationToken);
         if (updated is null)
@@ -423,6 +429,30 @@ internal sealed class SesionesStore(
         }
 
         return [.. ids.Select(id => id.ToString())];
+    }
+
+    public Task<AppSuspension?> FindSuspensionByPhoneHashAsync(byte[] phoneHash, CancellationToken cancellationToken) =>
+        FindSuspensionAsync(_filter.Eq(PhoneHashField, new BsonBinaryData(phoneHash)), cancellationToken);
+
+    public Task<AppSuspension?> FindSuspensionBySubAsync(string sub, CancellationToken cancellationToken) =>
+        FindSuspensionAsync(_filter.Eq(SubField, sub), cancellationToken);
+
+    private async Task<AppSuspension?> FindSuspensionAsync(FilterDefinition<BsonDocument> filter, CancellationToken cancellationToken)
+    {
+        var document = await Users.Find(filter & _filter.Eq(StateField, AccountState.Suspended))
+            .Project(Builders<BsonDocument>.Projection.Include(SubField).Include("suspension")).Limit(1).FirstOrDefaultAsync(cancellationToken);
+        if (document is null || !document.TryGetValue("suspension", out var value) || value is not BsonDocument suspension
+            || !suspension.TryGetValue("reporteId", out var report) || !report.IsObjectId || !suspension.TryGetValue("tipo", out var type) || !type.IsString)
+        {
+            return null;
+        }
+
+        return new AppSuspension(
+            document[SubField].AsString,
+            type.AsString,
+            report.AsObjectId.ToString(),
+            suspension.TryGetValue("desde", out var since) && since.IsValidDateTime ? since.ToUniversalTime() : DateTime.MinValue,
+            suspension.TryGetValue("venceEn", out var expires) && expires.IsValidDateTime ? expires.ToUniversalTime() : null);
     }
 
     public async Task<bool> ReactivateAsync(StoreTransaction transaction, string sub, CancellationToken cancellationToken)

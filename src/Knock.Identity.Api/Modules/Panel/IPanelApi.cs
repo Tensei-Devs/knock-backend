@@ -30,10 +30,20 @@ public interface IPanelApi
 
     /// <summary>Revoca las sesiones abiertas de la cuenta del panel de ese <c>sub</c> dentro de la transacción de quien llama; no hace nada si no tiene cuenta del panel (spec 059, R-04 d).</summary>
     Task RevokeSessionsInTransactionAsync(StoreTransaction transaction, string subject, CancellationToken cancellationToken);
+
+    /// <summary>Si hay otra cuenta del panel activa, distinta de <paramref name="excludedSubject"/>, con ese permiso (spec 060, R-05: quien decidió solo revisa su propia apelación si no hay otra persona).</summary>
+    Task<bool> AnotherAccountHasPermissionAsync(string permission, string excludedSubject, CancellationToken cancellationToken);
 }
 
-internal sealed class PanelApi(Services.AuditoriaPanel audit, Data.PanelSesionesStore? sessions = null) : IPanelApi
+internal sealed class PanelApi(Services.AuditoriaPanel audit, Data.PanelSesionesStore? sessions = null, Data.PanelCuentasStore? accounts = null) : IPanelApi
 {
+    public async Task<bool> AnotherAccountHasPermissionAsync(string permission, string excludedSubject, CancellationToken cancellationToken)
+    {
+        var store = accounts ?? throw new InvalidOperationException("The panel account store is not configured.");
+        var roles = Domain.PanelRoles.All.Where(role => Domain.MapaDeRoles.PermisosDe(role).Contains(permission)).ToList();
+        return await store.AnyActiveWithRoleAsync(roles, excludedSubject, cancellationToken);
+    }
+
     public Task RecordActionAsync(string eventName, string result, string? subject, string? sessionId, string? permission, string? resourceId, CancellationToken cancellationToken) =>
         audit.WriteAsync(Data.PanelAuditValues.TipoAccion, eventName, result, subject, sessionId, permission, null, resourceId, cancellationToken);
 

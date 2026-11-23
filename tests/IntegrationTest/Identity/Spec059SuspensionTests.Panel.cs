@@ -179,7 +179,7 @@ public sealed partial class Spec059SuspensionTests
     [Fact]
     public async Task Without_The_Threshold_Any_Number_Of_Warnings_Never_Suspends_CA_059_13()
     {
-        await using var factory = await HostAsync();
+        await using var factory = await HostAsync(new Dictionary<string, string?> { ["Suspension:UmbralAdvertencias"] = string.Empty });
         using var client = factory.CreateClient();
         var (_, token) = await StartPanelAsync(factory);
         var (id, sub) = await SeedAccountAsync(factory, technician: true);

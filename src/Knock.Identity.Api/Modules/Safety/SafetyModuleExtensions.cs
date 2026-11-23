@@ -1,4 +1,5 @@
 using Knock.Contracts.Moderation;
+using Knock.Identity.Api.Hosting.Procesos.TareasProgramadas;
 using Knock.Identity.Api.Modules.HomeAndCar.Services;
 using Knock.Identity.Api.Modules.Safety.Data;
 using Knock.Identity.Api.Modules.Safety.Domain;
@@ -40,6 +41,12 @@ public static class SafetyModuleExtensions
         services.AddSingleton<ISuspensionStore, SuspensionStore>();
         services.AddSingleton<AccountSuspension>();
         services.AddSingleton<ISafetyApi, SafetyApi>();
+        // Apelación de una persona suspendida (spec 060) y vencimiento de la suspensión gradual.
+        services.AddSingleton<SuspensionAppealStore>();
+        services.AddSingleton<SuspensionAppealLimiter>();
+        services.AddSingleton<SuspensionAppealService>();
+        services.AddSingleton<SuspensionAppealResolutionService>();
+        services.AddSingleton<IManejadorDeTarea, VencerSuspensionHandler>();
         return services;
     }
 }

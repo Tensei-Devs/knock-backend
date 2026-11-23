@@ -113,7 +113,7 @@ internal sealed partial class AddressService(
                 // La búsqueda filtra por las direcciones de la cuenta del token: una dirección ajena no existe aquí (R-14).
                 if (existing.FirstOrDefault(address => address.Id == id) is not { } current)
                 {
-                    return AddressChanges.Reject(AddressRejections.NotFound);
+                    return AddressChanges.Reject(CommonErrorCodes.NotFound);
                 }
 
                 var (changed, open) = cipher.Edit(current, edit);
@@ -159,7 +159,7 @@ internal sealed partial class AddressService(
     private static AddressResult Rejected(string rejection) => rejection switch
     {
         AddressRejections.NoAccount => new AddressResult(AddressOutcome.NoAccount),
-        AddressRejections.NotFound => throw new DomainException(DomainErrorKind.NotFound, "The address does not exist."),
+        CommonErrorCodes.NotFound => throw new DomainException(DomainErrorKind.NotFound, "The address does not exist."),
         AddressRejections.LimitReached => throw new DomainException(DomainErrorKind.Conflict, "The person reached the address limit.", AddressRejections.LimitReached),
         AddressRejections.Duplicate => throw new DomainException(DomainErrorKind.Conflict, "The person already has this address.", AddressRejections.Duplicate),
         AddressRejections.PrincipalRequired => new AddressResult(AddressOutcome.PrincipalRequired),

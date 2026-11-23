@@ -158,7 +158,8 @@ internal sealed class ReportReviewStore(
         return await session.WithTransactionAsync(
             async (transaction, token) =>
             {
-                var pending = _filter.Eq(_idField, decision.Id) & _filter.In(_stateField, _pendingStates);
+                // Una apelación de suspensión (spec 060) se resuelve por /admin/apelaciones/{id}/resolucion, no con una decisión nueva de la gravedad.
+                var pending = _filter.Eq(_idField, decision.Id) & _filter.In(_stateField, _pendingStates) & _filter.Ne("apelacion.origen", "suspension");
                 var update = Builders<BsonDocument>.Update
                     .Set(_severityField, decision.Severity)
                     .Set(_stateField, "decidido")

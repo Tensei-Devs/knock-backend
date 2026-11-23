@@ -54,6 +54,12 @@ internal sealed class EntregaInternaHttp(IHttpClientFactory clients, IOptions<En
     public async Task<ResultadoDeEntrega> DeliverAsync(OutboxReservado evento, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(evento);
+        if (evento.Tipo == "ApelacionResuelta")
+        {
+            // Solo para auditoría (spec 060, R-10): no tiene servicio destino ni push; queda en la bandeja como entregado.
+            return ResultadoDeEntrega.Aceptado;
+        }
+
         if (Plan(evento) is not { } plan || !TryAim(evento.Destino, out var target))
         {
             return ResultadoDeEntrega.Reintentable;

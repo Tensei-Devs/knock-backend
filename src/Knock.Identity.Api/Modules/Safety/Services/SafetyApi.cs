@@ -44,7 +44,7 @@ internal sealed class SafetyApi(AccountSuspension suspension, ISuspensionStore s
     private async Task<IReadOnlyList<string>> ApplyGradualAsync(StoreTransaction transaction, string reportId, string reportedId, string deciderSub, CancellationToken cancellationToken)
     {
         var threshold = options.Value.UmbralAdvertencias;
-        if (threshold is null || !AccountSuspensionRules.ShouldApplyGradual(await warnings.CountDecidedWarningsAsync(transaction, reportedId, cancellationToken), threshold))
+        if (threshold is null || !AccountSuspensionRules.ShouldApplyGradual(await warnings.CountDecidedWarningsAsync(transaction, reportedId, clock.GetUtcNow().UtcDateTime.AddDays(-options.Value.VigenciaAdvertenciasDias), cancellationToken), threshold))
         {
             return [];
         }

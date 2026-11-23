@@ -11,4 +11,10 @@ internal static class CommonErrorCodes
 
     /// <summary>Otra cuenta ya tiene esa CURP en revisión o verificada (409): Trust al crear y Moderation al aprobar devuelven el mismo código.</summary>
     public const string CurpDuplicate = "curp_duplicate";
+
+    /// <summary>Respuesta uniforme «no existe» (404) que no distingue el motivo: direcciones (spec 040) y apelación de una persona suspendida (spec 060, R-02).</summary>
+    public const string NotFound = "not_found";
+
+    /// <summary>La persona que revisa es parte del caso (verificación, reporte o apelación): 403.</summary>
+    public const string SelfReview = "self_review_not_allowed";
 }

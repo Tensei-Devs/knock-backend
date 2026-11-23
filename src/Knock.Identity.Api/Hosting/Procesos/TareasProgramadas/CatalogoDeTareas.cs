@@ -7,6 +7,9 @@ internal static class CatalogoDeTareas
 {
     public const string VencerPropuestaDeReprogramacion = "VencerPropuestaDeReprogramacion";
 
+    /// <summary>Spec 060, R-06a: levanta sola la suspensión gradual a los 7 días (el plazo real lo fija <c>Suspension:DuracionGradualDias</c> al programarla).</summary>
+    public const string VencerSuspension = "VencerSuspension";
+
     private static readonly TimeSpan _dosHoras = TimeSpan.FromHours(2);
     private static readonly TimeSpan _veinticuatroHoras = TimeSpan.FromHours(24);
 
@@ -20,6 +23,7 @@ internal static class CatalogoDeTareas
         ["EliminarCuenta"] = TimeSpan.FromDays(7),
         ["PrepararExportacion"] = TimeSpan.Zero,
         ["VencerRecuperacion"] = TimeSpan.FromDays(7),
+        [VencerSuspension] = TimeSpan.FromDays(7),
         ["VencerCotizacionFinal"] = TimeSpan.FromHours(48),
         ["VencerAjuste"] = _veinticuatroHoras,
         [VencerPropuestaDeReprogramacion] = _veinticuatroHoras,

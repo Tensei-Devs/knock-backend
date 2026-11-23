@@ -29,10 +29,11 @@ public sealed class Spec054Tests
     [InlineData("VencerPropuestaDeReprogramacion", 24 * 3600)]
     [InlineData("CerrarPeriodoDeOpinion", 30 * 86400)]
     [InlineData("CerrarReporteDeNoTerminado", 7 * 86400)]
+    [InlineData("VencerSuspension", 7 * 86400)]
     public void Plazo_De_Cada_Tipo_CA_054_13(string tipo, int seconds)
     {
         CatalogoDeTareas.ProgramadaPara(tipo, _now).Should().Be(_now.AddSeconds(seconds));
-        CatalogoDeTareas.Tipos.Should().HaveCount(13);
+        CatalogoDeTareas.Tipos.Should().HaveCount(14);
     }
 
     [Fact]

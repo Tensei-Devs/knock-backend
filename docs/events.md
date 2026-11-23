@@ -68,6 +68,7 @@ Identidad escribe cada evento en su `outbox` con `_id` determinista `{tipo}:{rec
 | `sesion_revocada` | 037 | messaging | Al revocar una sesión (cambio de número, suspensión) | `sid` (`_id` `sesion_revocada:{sid}:1`) | `POST /api/v1/interno/avisos` de Mensajería: borra los dispositivos de esa sesión |
 | `BloqueoCreado` | 043 | market y messaging (un evento por destino) | Al bloquear a una persona | `eventoId`, `bloqueaId`, `bloqueadoId`, `ocurridoEn` (`_id` `BloqueoCreado:{bloqueoId}:{destino}:1`) | `POST /api/v1/interno/bloqueos` de cada servicio: mantiene su proyección `bloqueos` |
 | `BloqueoEliminado` | 043 | market y messaging | Al quitar el bloqueo | igual que `BloqueoCreado` | igual; repetirlo no cambia nada |
+| `ApelacionResuelta` | 060 | identity | Al resolver desde el panel la apelación de una persona suspendida | `eventoId`, `reporteId`, `decision` (`_id` `ApelacionResuelta:{reporteId}:1`) | Solo auditoría: la entrega interna la da por aceptada sin llamar a ningún servicio; la persona no tiene dispositivos y no recibe push |
 | `ReporteDecidido` | 053 | messaging | Al decidir un reporte en el panel; uno por cada parte, sin datos de la otra | `eventoId`, `usuarioId`, `reporteId`, `rol`, `accion` | Sin consumidor en Mensajería en las ramas revisadas (el aviso a la persona queda pendiente) |
 | `TecnicoOcultado` | 053 | market | Al decidir con gravedad alta que oculta al técnico | `eventoId`, `usuarioId`, `reporteId` | `POST /api/v1/interno/tecnicos-ocultados` de Mercado: el técnico deja de aparecer en búsqueda y perfil público |
 

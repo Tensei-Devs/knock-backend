@@ -8,6 +8,9 @@ public sealed record AppAccount(string Sub, bool IsSuspended);
 /// <summary>Estado y rol de una cuenta leídos dentro de una transacción para decidir si se suspende (spec 059, R-03, R-06).</summary>
 public sealed record AccountForSuspension(string State, bool IsTechnician);
 
+/// <summary>Una suspensión vigente tal como la ven los demás módulos (spec 060): de quién es, de qué tipo, qué reporte la causó, desde cuándo y, si es gradual, cuándo vence. Nunca lleva datos personales.</summary>
+public sealed record AppSuspension(string Sub, string Type, string ReportId, DateTime Since, DateTime? ExpiresAt);
+
 /// <summary>
 /// Lo que el módulo de sesiones ofrece a los demás módulos de Identidad sin que lean su colección ni su dominio (spec 002): buscar una cuenta de la app
 /// por su <c>sub</c> o por su celular. El celular solo se usa para buscar por su HMAC y nunca se devuelve.
@@ -27,7 +30,13 @@ public interface ISesionesApi
     /// Suspende la cuenta con una operación condicionada a que siga en <paramref name="expectedState"/>, escribe <c>usuarios.suspension</c> y revoca todas sus sesiones, en la
     /// misma transacción de quien llama (spec 059, R-04 a, b, c). Devuelve los <c>sid</c> revocados, o <see langword="null"/> si el estado ya cambió y no se tocó nada.
     /// </summary>
-    Task<IReadOnlyList<string>?> SuspendAccountAsync(StoreTransaction transaction, string subject, string expectedState, string type, string reportId, DateTime since, CancellationToken cancellationToken);
+    Task<IReadOnlyList<string>?> SuspendAccountAsync(StoreTransaction transaction, string subject, string expectedState, string type, string reportId, DateTime since, DateTime? expiresAt, CancellationToken cancellationToken);
+
+    /// <summary>La suspensión vigente de la cuenta con ese celular E.164 (+52), o <see langword="null"/> si no hay cuenta o no está suspendida (spec 060, R-02). El celular solo se usa para buscar por su HMAC.</summary>
+    Task<AppSuspension?> FindSuspensionByPhoneAsync(string phone, CancellationToken cancellationToken);
+
+    /// <summary>La suspensión vigente de la cuenta de ese <c>sub</c>, o <see langword="null"/> si no existe o no está suspendida (spec 060, T-03a).</summary>
+    Task<AppSuspension?> FindSuspensionBySubAsync(string subject, CancellationToken cancellationToken);
 
     /// <summary>Cambia <c>suspendida</c> a <c>activa</c> y borra <c>usuarios.suspension</c> dentro de la transacción; <see langword="false"/> si no estaba suspendida. No restaura sesiones (spec 059, R-15).</summary>
     Task<bool> ReactivateAccountAsync(StoreTransaction transaction, string subject, CancellationToken cancellationToken);
