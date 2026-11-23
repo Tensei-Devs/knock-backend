@@ -100,6 +100,8 @@ locals {
         Services__Market__InternalKey = "interno-key-identity"
         # Token de servicio de Identidad hacia Mensajería (avisos y bloqueos): Identidad lo firma con `avisos-key-identity` y Mensajería lo valida con la misma.
         Services__Messaging__InternalKey = "avisos-key-identity"
+        # Valida los tokens de servicio de Mercado en `POST /api/v1/interno/reportes-no-terminados` (spec 053): Mercado los firma con la misma llave.
+        Security__InternalTokens__MarketKey = "interno-key-market"
         # Panel interno (spec 033): llave de firma del token del panel (la misma que lee el gateway) y llave AES-256 versionada del secreto TOTP; ninguna es la de la app.
         PanelJwt__SigningKey = "panel-jwt-signing-key"
         PanelTotp__Keys__1   = "panel-totp-key"
@@ -136,6 +138,9 @@ locals {
         Security__FieldEncryption__ActiveVersion = "1"
         # Reparto por oleadas (spec 028): sin este interruptor no corre.
         Oleadas__Habilitado = tostring(var.enable_oleadas)
+        # Despachador de la bandeja de salida de Mercado (spec 053/054): entrega `ReporteNoTerminadoCreado` a Identidad. Apagado por omisión en el código; deploy lo enciende.
+        Bandeja__Habilitada         = "true"
+        Services__Identity__BaseUrl = local.cluster_address.identity
         # Dirección base pública de las imágenes (spec 032, R-03); el módulo de imágenes la exige al arrancar.
         Imagenes__BaseUrlPublica = local.images_base_url
         # Cuentas de Blob de las imágenes (spec 032, R-02): la pública es la de la dirección base; la privada (cuarentena y archivos) sale de la infraestructura. Entran con la identidad administrada (Azure.Identity), sin llaves.
@@ -154,6 +159,8 @@ locals {
         Busqueda__Cursor__Key = "search-cursor-key"
         # Valida los tokens de servicio de Identidad (ruta interna de historial, spec 041); mismo secreto que lee Identidad.
         Security__InternalTokens__IdentityKey = "interno-key-identity"
+        # Firma los tokens de servicio de Mercado hacia Identidad (`iss` `knock-market`); Identidad la valida con el mismo secreto.
+        Security__InternalTokens__MarketKey = "interno-key-market"
         # Llave Base64 de la huella HMAC del `sub` en los enlaces privados de imágenes (spec 032): sin ella, emitir un enlace privado da 500.
         Imagenes__LlaveBusqueda = "imagenes-llave-busqueda"
         # Llave del token del panel (esquema PanelBearer de Mercado, spec 045 R-20): el mismo secreto que ya leen el gateway e Identity; sin ella las rutas /admin de Mercado no validan el token.
