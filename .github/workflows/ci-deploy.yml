@@ -20,6 +20,13 @@ on:
     workflows: [ci-pr]
     branches: [main]
     types: [completed]
+  # Spec 034 R-07/R-08: reversión o despliegue manual de una imagen ya publicada (SHA completo).
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: SHA completo (40 hexadecimales) de una imagen ya publicada en el registro
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -242,3 +249,46 @@ jobs:
             echo "Intento ${i}: todavía no responde; reintento en 15 s."; sleep 15
           done
           echo "::error::La prueba de humo no respondió en 5 minutos"; exit 1
+
+  # Spec 034 R-07/R-08: solo por disparo manual y con aprobación del entorno `evaluacion` (si el plan la ofrece).
+  # El image_tag se valida (40 hex) ANTES de iniciar sesión en Azure; después se exige que las cuatro imágenes existan en ACR.
+  redeploy:
+    name: Reversión o despliegue manual (image_tag)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: evaluacion
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      IMAGE_TAG: ${{ inputs.image_tag }}
+    steps:
+      - name: Validar image_tag (antes de tocar Azure)
+        run: |
+          set -euo pipefail
+          if ! [[ "$IMAGE_TAG" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::image_tag debe ser un SHA de 40 caracteres hexadecimales en minúscula"; exit 1
+          fi
+      - name: Login en Azure (OIDC)
+        uses: Azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Exigir que las cuatro imágenes existan en el registro
+        run: |
+          set -euo pipefail
+          for svc in gateway identity messaging market; do
+            if ! az acr repository show --name "${ACR_NAME}" --image "knock-$svc:${IMAGE_TAG}" --output none 2>/dev/null; then
+              echo "::error::knock-$svc:${IMAGE_TAG} no existe en ${ACR_NAME}: no se despliega nada"; exit 1
+            fi
+          done
+      - name: Desplegar la etiqueta en los cuatro servicios
+        run: |
+          set -euo pipefail
+          az config set extension.use_dynamic_install=yes_without_prompt --only-show-errors
+          for svc in gateway identity messaging market; do
+            az containerapp update --name "knock-$svc" --resource-group "$RESOURCE_GROUP"               --image "${ACR_REGISTRY}/knock-$svc:${IMAGE_TAG}" --output none
+            echo "::notice::knock-$svc desplegado con la imagen ${IMAGE_TAG}"
+          done
