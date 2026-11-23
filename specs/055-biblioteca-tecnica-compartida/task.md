@@ -24,7 +24,7 @@
 |---|---|---|---|
 | T-12 | Mover `SharedRateLimiter`, `RedisRequestCounter` y `RateLimitingExtensions`; borrar las copias | R-08 · CA-11 | hecha (`src/Knock.Hosting/RateLimiting`; PR #257) |
 | T-13 | Retirar EXC-025 y la parte de rate limiting de EXC-021 | R-13 · CA-11 | hecha para EXC-025 (no existe en `security/exceptions.yaml`); EXC-021 sigue por las demás piezas |
-| T-14 | `HostingLibraryBoundaryTests.Servicios_Sin_Copias_De_La_Etapa_2_CA_055_11` | CA-11 | pendiente de verificar (no la encontré en la clase) |
+| T-14 | `HostingLibraryBoundaryTests.Servicios_Sin_Copias_De_La_Etapa_2_CA_055_11` | CA-11 | hecha: `HostingLibraryBoundaryTests.Servicios_Sin_Copias_De_La_Etapa_2_CA_055_11` en `tests/ArchitectureTest` |
 | — | `KeyedGate` (turnos por clave con relectura) agregado a `Knock.Hosting.Concurrency` por las auditorías de concurrencia (#270) | R-04 | **hecho sin estar en el catálogo de §3.2:** requiere la enmienda de R-04 (cambiar la spec con dos aprobaciones y entrada en `Memoria.md`) |
 
 ## Etapa 3 — KNOCK-281
