@@ -25,6 +25,7 @@ internal static partial class AvisoRules
         ["visita_afectada"] = "visitas",
         [ReportDecidedEvent] = "sistema",
         [ReviewHiddenEvent] = "sistema",
+        [TechnicianAbsentEvent] = "visitas",
         ["solicitud_cancelada"] = "cotizaciones",
         ["solicitud_vencida"] = "cotizaciones",
         ["cotizacion_vencida"] = "cotizaciones",
@@ -38,6 +39,12 @@ internal static partial class AvisoRules
 
     /// <summary>Aviso de texto fijo al técnico cuando una opinión suya se oculta (spec 061, R-07a): sin motivo ni datos de la opinión.</summary>
     public const string ReviewHiddenEvent = "opinion_oculta";
+
+    /// <summary>Aviso de texto fijo al técnico cuando el cliente reporta que no llegó a su visita (spec 064, R-07, R-08 y D-01): sin nombre ni datos del cliente ni de la visita, sin acusar y sin penalización.</summary>
+    public const string TechnicianAbsentEvent = "tecnico_no_se_presento";
+
+    /// <summary>Texto fijo que la app muestra para <see cref="TechnicianAbsentEvent"/> (spec 064, D-01). La carga v1 no lo transporta: la app lo elige por el campo <c>evento</c> (spec 037, R-05).</summary>
+    public const string TechnicianAbsentText = "El cliente reportó que no llegaste a tu visita. Si crees que es un error, contacta a soporte.";
 
     public const string ClientRole = "cliente";
 
@@ -53,6 +60,7 @@ internal static partial class AvisoRules
         ["visita_afectada"] = ClientRole,
         [ReportDecidedEvent] = null,
         [ReviewHiddenEvent] = TechnicianRole,
+        [TechnicianAbsentEvent] = TechnicianRole,
         ["solicitud_cancelada"] = TechnicianRole,
         ["solicitud_vencida"] = ClientRole,
         ["cotizacion_vencida"] = TechnicianRole,

@@ -141,6 +141,28 @@ public sealed class Spec037DespachoIntegrationTests
         world.Sender.Calls.Select(call => call.Payload["aviso"]).Distinct().Count().Should().Be(1000);
     }
 
+    [Fact]
+    public async Task Dispatch_TechnicianAbsentNotice_ReachesOnlyTheTechnicianOnceEvenIfRepeated_CA_064_08()
+    {
+        await using var world = await World.StartAsync();
+        var technician = World.NewPerson();
+        var other = World.NewPerson();
+        var technicianToken = await world.RegisterDeviceAsync(technician);
+        await world.RegisterDeviceAsync(other);
+        var evento = World.Event("tecnico_no_se_presento", technician);
+
+        var first = await world.Dispatcher.DispatchAsync(evento, CancellationToken.None);
+        var repeated = await world.Dispatcher.DispatchAsync(evento, CancellationToken.None);
+
+        first.Should().Be(DispatchOutcome.Sent);
+        repeated.Should().Be(DispatchOutcome.Duplicate);
+        var call = world.Sender.Calls.Single();
+        call.Token.Should().Be(technicianToken, "solo el técnico recibe el aviso");
+        call.Payload["tipo"].Should().Be("visitas");
+        call.Payload["evento"].Should().Be("tecnico_no_se_presento");
+        call.Payload.Keys.Should().BeSubsetOf(["v", "tipo", "evento", "recurso", "aviso"]);
+    }
+
     private sealed class FakeSender : IPushSender
     {
         private readonly ConcurrentQueue<(string Token, IReadOnlyDictionary<string, string> Payload)> _calls = new();

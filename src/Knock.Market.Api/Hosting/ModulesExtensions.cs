@@ -27,6 +27,7 @@ internal static class ModulesExtensions
         services.AddHttpClient(EntregaOpinionModerada.IdentityClientName).RemoveAllLoggers();
         services.AddHttpClient(EntregaOpinionModerada.MessagingClientName).RemoveAllLoggers();
         services.AddScoped<IEntregaDeBandeja, EntregaOpinionModerada>();
+        services.AddScoped<IEntregaDeBandeja, EntregaTecnicoNoSePresento>();
         services.AddScoped<DespachadorDeBandeja>();
         services.AddHostedService<BandejaHostedService>();
         return services;
