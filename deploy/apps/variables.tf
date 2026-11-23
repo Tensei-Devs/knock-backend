@@ -143,3 +143,9 @@ variable "enable_content_safety" {
   type        = bool
   default     = false
 }
+
+variable "enable_azure_openai" {
+  description = "Enciende el asistente con Azure OpenAI en Market (`Asistente:Habilitado`, spec 024): da el endpoint y el despliegue de la cuenta y el rol `Cognitive Services OpenAI User`. Debe valer lo mismo que `enable_azure_openai` de `deploy/infra` (que crea la cuenta; cuesta por token). Apagado por omisión."
+  type        = bool
+  default     = false
+}

@@ -81,6 +81,21 @@ output "content_safety_endpoint" {
   value       = one(azurerm_cognitive_account.content_safety[*].endpoint)
 }
 
+output "azure_openai_id" {
+  description = "Id de la cuenta de Azure OpenAI; vacío con `enable_azure_openai = false`."
+  value       = one(azurerm_cognitive_account.openai[*].id)
+}
+
+output "azure_openai_endpoint" {
+  description = "Punto de conexión (https) de Azure OpenAI; vacío con `enable_azure_openai = false`."
+  value       = one(azurerm_cognitive_account.openai[*].endpoint)
+}
+
+output "azure_openai_deployment" {
+  description = "Nombre del despliegue del asistente (`Asistente:AzureOpenAI:ModeloDespliegue`); vacío con `enable_azure_openai = false`."
+  value       = one(azurerm_cognitive_deployment.assistant[*].name)
+}
+
 output "application_insights_connection_string" {
   value     = module.shared.application_insights_connection_string
   sensitive = true
