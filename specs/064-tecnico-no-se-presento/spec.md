@@ -1,7 +1,7 @@
 # Spec 064 — El técnico no se presentó
 
 > **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
-> **Jira:** KNOCK-266 (Seguimiento de las specs 021 y 050) · **Responsable:** por asignar
+> **Jira:** KNOCK-266 (Seguimiento de las specs 021 y 050) · **Responsable:** Guillermo Rangel
 > **Fuentes:** spec 021 (§ fuera de alcance: «Reprogramar, cancelar y "no se presentó" (HU-034, HU-041)»; estado `no_presentado` ya existe), spec 050 (R-13 y R-27: «cliente ausente», la ruta simétrica que sí existe) y la app (acción «El técnico no llegó»).
 > **Servicios:** Mercado (`Knock.Market.Api`, módulo `Requests`; gateway: `/api/v1/visitas/{**resto}` ya enruta) · **Colecciones:** `visitas`, buzón de eventos, sin colecciones nuevas
 > **Skills:** `security-core`, `vertical-slice-api`, `events-outbox`

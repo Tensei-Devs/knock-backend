@@ -1,7 +1,7 @@
 # Spec 063 — Lectura de la cotización final y de los ajustes de precio pendientes
 
 > **Estado:** Aprobada · **Repositorio:** knock-backend · **Rector:** `constitution.md`
-> **Jira:** KNOCK-266 (Seguimiento de la spec 049) · **Responsable:** por asignar
+> **Jira:** KNOCK-266 (Seguimiento de la spec 049) · **Responsable:** Guillermo Rangel
 > **Fuentes:** spec 049 (rutas de **escritura** COT-06, COT-07, AJU-01 y AJU-02, que ya existen), spec 050 (la visita y su cierre) y la app (pantallas de la visita y de «Pedir ajuste»), que hoy no puede leer lo que escribe.
 > **Servicios:** Mercado (`Knock.Market.Api`, módulo `Requests`; gateway: `/api/v1/visitas/{**resto}` ya enruta) · **Colecciones:** `visitas` (campo `cotizacionFinal`) y `ajustes_precio`, sin cambios
 > **Skills:** `security-core`, `vertical-slice-api`, `api-contract-openapi`
