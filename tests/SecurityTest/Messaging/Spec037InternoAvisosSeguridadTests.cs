@@ -25,14 +25,7 @@ public sealed class Spec037InternoAvisosSeguridadTests
         using var mongo = new MongoClient(fixture.ConnectionString);
         try
         {
-            var settings = new Dictionary<string, string?>
-            {
-                ["ConnectionStrings:KnockMongo"] = fixture.ConnectionString,
-                ["Mongo:Databases:Messaging"] = name,
-                ["Security:InternalTokens:MarketKey"] = Convert.ToBase64String(marketKey),
-                ["Security:InternalTokens:IdentityKey"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)),
-            };
-            await using var host = await SecurityMessagingFactory.CreateAsync(settings);
+            await using var host = await CreateHostAsync(fixture.ConnectionString, name, marketKey);
             using var client = host.CreateClient();
             var person = Guid.NewGuid().ToString("D");
             var body = new { eventoId = Guid.NewGuid().ToString("N"), tipo = "solicitud_nueva", destinatarioId = person, rol = "tecnico", recurso = ObjectId.GenerateNewId().ToString() };
@@ -65,14 +58,7 @@ public sealed class Spec037InternoAvisosSeguridadTests
         using var mongo = new MongoClient(fixture.ConnectionString);
         try
         {
-            var settings = new Dictionary<string, string?>
-            {
-                ["ConnectionStrings:KnockMongo"] = fixture.ConnectionString,
-                ["Mongo:Databases:Messaging"] = name,
-                ["Security:InternalTokens:MarketKey"] = Convert.ToBase64String(marketKey),
-                ["Security:InternalTokens:IdentityKey"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)),
-            };
-            await using var host = await SecurityMessagingFactory.CreateAsync(settings);
+            await using var host = await CreateHostAsync(fixture.ConnectionString, name, marketKey);
             using var client = host.CreateClient();
             var body = new { eventoId = Guid.NewGuid().ToString("N"), tipo = "solicitud_nueva", destinatarioId = Guid.NewGuid().ToString("D"), rol = "tecnico", recurso = ObjectId.GenerateNewId().ToString() };
             var credential = Mint("knock-market", marketKey, "solicitud_nueva");
@@ -132,6 +118,15 @@ public sealed class Spec037InternoAvisosSeguridadTests
         register.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         delete.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
+
+    private static Task<SecurityMessagingFactory> CreateHostAsync(string connectionString, string databaseName, byte[] marketKey) =>
+        SecurityMessagingFactory.CreateAsync(new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:KnockMongo"] = connectionString,
+            ["Mongo:Databases:Messaging"] = databaseName,
+            ["Security:InternalTokens:MarketKey"] = Convert.ToBase64String(marketKey),
+            ["Security:InternalTokens:IdentityKey"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)),
+        });
 
     private static string Mint(string issuer, byte[] key, string permission, TimeSpan? lifetime = null)
     {

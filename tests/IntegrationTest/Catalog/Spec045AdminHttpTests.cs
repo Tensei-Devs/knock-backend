@@ -41,24 +41,9 @@ public sealed class Spec045AdminHttpTests
     private const string _espera = "/api/v1/admin/lista-espera";
     private static readonly byte[] _panelKey = RandomNumberGenerator.GetBytes(32);
 
-    private static async Task<(Spec020Host Host, FakePanelGate Gate)> StartAsync()
-    {
-        var gate = new FakePanelGate();
-        var host = await Spec020Host.StartAsync(
-            new Dictionary<string, string?> { [PanelAuthentication.KeyConfigurationKey] = Convert.ToBase64String(_panelKey) },
-            services => services.AddSingleton<IPanelPermissionGate>(gate));
-        return (host, gate);
-    }
+    private static Task<(Spec020Host Host, FakePanelGate Gate)> StartAsync() => PanelTestHost.StartAsync(_panelKey);
 
-    private static string PanelToken(string? audience = PanelAuthentication.DefaultAudience, byte[]? key = null) =>
-        new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
-        {
-            Issuer = GatewayTestSupport.Issuer,
-            Audience = audience,
-            Claims = new Dictionary<string, object> { ["sub"] = Guid.NewGuid().ToString("D"), ["sid"] = "sesion-de-prueba", ["pv"] = "1" },
-            Expires = DateTime.UtcNow.AddMinutes(15),
-            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key ?? _panelKey), SecurityAlgorithms.HmacSha256),
-        });
+    private static string PanelToken(string? audience = PanelAuthentication.DefaultAudience, byte[]? key = null) => PanelTestHost.Token(key ?? _panelKey, audience);
 
     private static async Task<HttpResponseMessage> GetAsync(Spec020Host host, string path, string? bearer)
     {
