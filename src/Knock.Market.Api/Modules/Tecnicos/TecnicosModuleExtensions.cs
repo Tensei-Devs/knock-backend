@@ -43,6 +43,8 @@ public static class TecnicosModuleExtensions
         services.AddScoped<IWorkPhotoReader, WorkPhotoStore>();
         services.AddScoped<TechnicianWorkPhotoService>();
         services.AddScoped<ServiceService>();
+        services.AddScoped<TechnicianAccountStore>();
+        services.AddScoped<ITecnicosApi, TecnicosApi>();
         return services;
     }
 }

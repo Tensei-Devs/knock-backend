@@ -47,11 +47,17 @@ internal sealed class ReportReviewService(
         var severity = body.Gravedad!;
         var response = ReportSeverities.ResponseFor(severity);
         var now = VerificationReviewService.Truncate(clock.GetUtcNow().UtcDateTime);
+        IReadOnlyList<string> sessionIds = [];
         var result = await store.DecideAsync(
             new ReportDecisionRecord(objectId, severity, response, body.Motivo!.Trim(), actor.Sub, now),
-            (session, decided) => effects.ApplyAsync(session, new ReportDecisionApplied(id, severity, response, decided.ReporterId, decided.ReportedId, actor.Sub), cancellationToken),
+            async (session, decided) => sessionIds = await effects.ApplyAsync(session, new ReportDecisionApplied(id, severity, response, decided.ReporterId, decided.ReportedId, actor.Sub), cancellationToken),
             session => panel.RecordActionInTransactionAsync(session, ModerationAuditEvents.ReportDecided, severity, actor.Sub, id, cancellationToken),
             cancellationToken);
+        if (result.Outcome == DecisionStoreOutcome.Decided)
+        {
+            await effects.AfterCommitAsync(sessionIds, cancellationToken);
+        }
+
         return result.Outcome switch
         {
             DecisionStoreOutcome.Decided => new ReportDecisionResult(id, "decidido", severity, response),

@@ -74,19 +74,21 @@ internal sealed class NoAccessRecoveryReviews : IAccessRecoveryReviews
 internal sealed record ReportDecisionApplied(string ReportId, string Severity, string Response, string ReporterId, string ReportedId, string DeciderSub);
 
 /// <summary>
-/// La respuesta de la gravedad (spec 053, R-20): suspensión preventiva (spec 059: <c>AccountSuspension.Suspender</c>), ocultar al técnico, advertencia o mediación, y los avisos a las dos partes
-/// sin datos de la otra (specs 054 y 037). Se ejecuta DENTRO de la transacción de la decisión: si falla no queda nada.
+/// La respuesta de la gravedad (spec 053, R-20): suspensión preventiva (spec 059), ocultar al técnico, advertencia o mediación, y los avisos a las dos partes sin datos de la otra (specs 054 y 037).
+/// <see cref="ApplyAsync"/> corre DENTRO de la transacción de la decisión: si falla no queda nada. Devuelve los <c>sid</c> que hay que cancelar en Redis y
+/// <see cref="AfterCommitAsync"/> lo hace después de confirmar (spec 059, R-08).
 /// </summary>
 internal interface IReportDecisionEffects
 {
-    Task ApplyAsync(StoreTransaction transaction, ReportDecisionApplied decision, CancellationToken cancellationToken);
+    Task<IReadOnlyList<string>> ApplyAsync(StoreTransaction transaction, ReportDecisionApplied decision, CancellationToken cancellationToken);
+
+    Task AfterCommitAsync(IReadOnlyList<string> sessionIds, CancellationToken cancellationToken);
 }
 
-/// <summary>
-/// Hasta que lleguen la bandeja de salida (spec 054), el aviso (spec 037) y la suspensión (spec 059) la decisión se guarda y se audita sin más efectos: no hay nada que revertir
-/// y los otros carriles solo reemplazan este registro.
-/// </summary>
+/// <summary>Sin efectos: la decisión se guarda y se audita sin más. Lo usan las pruebas que no ejercen la respuesta de la gravedad.</summary>
 internal sealed class NoReportDecisionEffects : IReportDecisionEffects
 {
-    public Task ApplyAsync(StoreTransaction transaction, ReportDecisionApplied decision, CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task<IReadOnlyList<string>> ApplyAsync(StoreTransaction transaction, ReportDecisionApplied decision, CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<string>>([]);
+
+    public Task AfterCommitAsync(IReadOnlyList<string> sessionIds, CancellationToken cancellationToken) => Task.CompletedTask;
 }

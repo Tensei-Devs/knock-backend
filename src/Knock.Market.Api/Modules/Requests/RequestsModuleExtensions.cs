@@ -77,6 +77,8 @@ public static class RequestsModuleExtensions
         services.AddScoped<ConversationPermissionService>();
         services.AddScoped<ChooseQuoteService>();
         services.AddScoped<VisitStore>();
+        services.AddScoped<AccountEventStore>();
+        services.AddScoped<AccountEventService>();
         services.AddScoped<VisitService>();
         services.AddScoped<ArrivalService>();
         services.AddScoped<TrustNoticeService>();
@@ -93,6 +95,14 @@ public static class RequestsModuleExtensions
         services.AddScoped<IManejadorDeTarea, VencerAjuste>();
         services.AddScoped<TechnicianAccessStore>();
         services.AddScoped<IRequestsApi, RequestsApi>();
+        return services.AddAccountDataAndDemoServices();
+    }
+
+    private static IServiceCollection AddAccountDataAndDemoServices(this IServiceCollection services)
+    {
+        services.AddScoped<AccountDataStore>();
+        services.TryAddScoped<IOpinionAnonymizer, NoOpinionsToAnonymize>();
+        services.AddScoped<AccountDataService>();
         services.AddScoped<DemoTechnicianStore>();
         services.AddScoped<DemoTechnicianSeeder>();
         services.AddScoped<DemoRequestStore>();

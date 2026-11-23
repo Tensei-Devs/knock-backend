@@ -209,7 +209,7 @@ public sealed class Spec059SuspensionTests
         return true;
     }
 
-    private sealed class World
+    internal sealed class World
     {
         public World()
         {
@@ -228,7 +228,7 @@ public sealed class Spec059SuspensionTests
         public AccountSuspension Service { get; }
     }
 
-    private sealed class FakeClock : TimeProvider
+    internal sealed class FakeClock : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => new(2026, 11, 21, 12, 0, 0, TimeSpan.Zero);
 
@@ -237,7 +237,7 @@ public sealed class Spec059SuspensionTests
     }
 
     /// <summary>Transacción simulada: si el trabajo lanza, descarta los eventos y los registros como haría MongoDB.</summary>
-    private sealed class FakeStore(FakePanel panel) : ISuspensionStore
+    internal sealed class FakeStore(FakePanel panel) : ISuspensionStore
     {
         private readonly List<EventoDeOutbox> _events = [];
 
@@ -268,7 +268,7 @@ public sealed class Spec059SuspensionTests
         }
     }
 
-    private sealed class FakePanel : IPanelApi
+    internal sealed class FakePanel : IPanelApi
     {
         public List<(string Event, string Subject, string Resource)> Records { get; } = [];
 
@@ -297,7 +297,7 @@ public sealed class Spec059SuspensionTests
         }
     }
 
-    private sealed class FakeAccounts : ISesionesApi
+    internal sealed class FakeAccounts : ISesionesApi
     {
         public AccountForSuspension? Account { get; set; }
 

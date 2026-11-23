@@ -19,6 +19,12 @@ public sealed class Spec052PuertosRealesTests
             Asked = userId;
             return Task.FromResult(has);
         }
+
+        public string ModuleName => "Tecnicos";
+
+        public Task<string?> ExportProfileJsonAsync(string accountSub, CancellationToken cancellationToken) => Task.FromResult<string?>(null);
+
+        public Task AnonymizeProfileAsync(string accountSub, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
     private sealed class FakeRequestsApi((bool Participates, DateTime? ClosedAtUtc) access) : IRequestsApi

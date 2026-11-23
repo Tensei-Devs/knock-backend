@@ -17,6 +17,7 @@ public static class SafetyModuleExtensions
         services.AddSingleton<BloqueosStore>();
         services.AddSingleton<BlockService>();
         services.AddSingleton<ReportesStore>();
+        services.AddSingleton<IWarningCounter>(provider => provider.GetRequiredService<ReportesStore>());
         // Hasta que exista la moderación de la spec 031 en Identidad, un reporte no se guarda sin revisión (falla cerrado). Las pruebas la sustituyen.
         services.TryAddSingleton<IContentModerator, UnavailableContentModerator>();
         services.AddSingleton<ReportService>();
@@ -24,6 +25,7 @@ public static class SafetyModuleExtensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<SuspensionOptions>, SuspensionOptionsValidator>());
         services.AddSingleton<ISuspensionStore, SuspensionStore>();
         services.AddSingleton<AccountSuspension>();
+        services.AddSingleton<ISafetyApi, SafetyApi>();
         return services;
     }
 }

@@ -1,7 +1,9 @@
 using Knock.Identity.Api.Hosting.Procesos.TareasProgramadas;
+using Knock.Identity.Api.Modules.Moderation.Services;
 using Knock.Identity.Api.Modules.Trust.Crypto;
 using Knock.Identity.Api.Modules.Trust.Data;
 using Knock.Identity.Api.Modules.Trust.Services;
+using Knock.Identity.Api.Modules.Trust.Storage;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
@@ -32,6 +34,15 @@ public static class TrustModuleExtensions
         services.AddHostedService<DemoVerificationStartup>();
         services.AddScoped<IManejadorDeTarea, AvisarAlVerificadorHandler>();
         services.AddScoped<IManejadorDeTarea, BorrarFotosDeVerificacionHandler>();
+        // Dependencias de infraestructura con valor por omisión que FALLA CERRADO (503): el cliente real de Blob y de Key Vault se registra antes de AddTrustModule() y las reemplaza.
+        services.TryAddSingleton<IVerificationBlobStore, UnavailableVerificationBlobStore>();
+        services.TryAddSingleton<IVerificationKeyWrapper, UnavailableVerificationKeyWrapper>();
+        services.AddSingleton<CifradoDeVerificacion>();
+        services.AddSingleton<FotoVerificacionStore>();
+        services.TryAddSingleton<IVerificationEvents, PendingVerificationEvents>();
+        // Reemplazan a los valores por omisión del panel (spec 053) sin importar el orden de registro.
+        services.Replace(ServiceDescriptor.Singleton<IVerificationPhotoLinks, TrustVerificationPhotoLinks>());
+        services.Replace(ServiceDescriptor.Singleton<IVerificationBlobPurger, TrustVerificationBlobPurger>());
         return services;
     }
 }
