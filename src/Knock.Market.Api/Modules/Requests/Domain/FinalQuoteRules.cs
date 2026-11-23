@@ -52,4 +52,15 @@ internal static class FinalQuoteRules
     public static DateTime FinalQuoteExpiresAt(DateTime nowUtc) => nowUtc + FinalQuoteValidity;
 
     public static DateTime AdjustmentExpiresAt(DateTime nowUtc) => nowUtc + AdjustmentValidity;
+
+    /// <summary>
+    /// Estado que se informa al leer la cotización final (spec 063, R-02): una <c>enviada</c> cuyo vencimiento ya pasó se informa <c>vencida</c> aunque el ejecutor aún no la haya
+    /// marcado. Se calcula, no se escribe. El instante exacto del vencimiento ya cuenta como vencido, igual que el filtro de la decisión.
+    /// </summary>
+    public static string EffectiveState(string storedState, DateTime expiresAtUtc, DateTime nowUtc) =>
+        storedState == Sent && expiresAtUtc <= nowUtc ? Expired : storedState;
+
+    /// <summary>Si un ajuste <c>pendiente</c> sigue vigente al leer (spec 063, R-05): uno con el vencimiento pasado se trata como vencido y no se lista.</summary>
+    public static bool IsAdjustmentLive(string storedState, DateTime expiresAtUtc, DateTime nowUtc) =>
+        storedState == Pending && expiresAtUtc > nowUtc;
 }

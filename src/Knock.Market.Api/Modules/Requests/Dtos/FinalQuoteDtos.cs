@@ -26,3 +26,19 @@ internal sealed record AdjustmentResponse(string Id, string CotizacionId, string
 
 /// <summary>Resultado de decidir un ajuste: <c>topeNuevo</c> solo si se aprobó.</summary>
 internal sealed record AdjustmentDecisionResponse(string Id, string Estado, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? TopeNuevo);
+
+/// <summary>Ruta de las lecturas de la visita: el identificador (spec 063, R-06). Un valor que no es <c>ObjectId</c> responde 422 sin repetirlo.</summary>
+internal sealed class VisitRoute
+{
+    [Microsoft.AspNetCore.Mvc.FromRoute(Name = "id")]
+    public string? Id { get; set; }
+}
+
+/// <summary>Cotización final de la visita tal como la lee el cliente o el técnico (spec 063, R-02): sin identificadores de personas. <c>decididaEn</c> solo si ya se decidió.</summary>
+internal sealed record FinalQuoteReadResponse(string VisitaId, int Precio, string Descripcion, string Estado, DateTimeOffset VenceEn, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] DateTimeOffset? DecididaEn);
+
+/// <summary>Un ajuste de precio pendiente y vigente (spec 063, R-04).</summary>
+internal sealed record PendingAdjustmentItem(string Id, string CotizacionId, int MontoNuevo, string Motivo, string Estado, DateTimeOffset VenceEn);
+
+/// <summary>Ajustes pendientes de la visita; vacío si no hay (spec 063, R-04).</summary>
+internal sealed record PendingAdjustmentsResponse(IReadOnlyList<PendingAdjustmentItem> Items);

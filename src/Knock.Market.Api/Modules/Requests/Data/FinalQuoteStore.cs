@@ -10,6 +10,12 @@ internal sealed record QuoteForAdjustment(ObjectId Id, ObjectId RequestId, strin
 /// <summary>Ajuste de precio tal como se guarda (spec 049, §6).</summary>
 internal sealed record AdjustmentRecord(ObjectId Id, ObjectId QuoteId, ObjectId VisitId, string ClientId, string TechnicianUserId, int NewAmount, string State, DateTime ExpiresAtUtc);
 
+/// <summary>Cotización final embebida en la visita, tal como se guarda (spec 049, §6), para su lectura (spec 063).</summary>
+internal sealed record FinalQuoteRead(int Price, string Description, string State, DateTime ExpiresAtUtc, DateTime? DecidedAtUtc);
+
+/// <summary>Ajuste pendiente tal como se lista (spec 063, R-04).</summary>
+internal sealed record PendingAdjustmentRead(ObjectId Id, ObjectId QuoteId, int NewAmount, string Reason, string State, DateTime ExpiresAtUtc);
+
 /// <summary>
 /// Cotización final de la visita y ajustes de precio (spec 049): cada cambio de estado es una actualización condicionada, escrita junto con su evento del buzón y, si
 /// corresponde, con la tarea de vencimiento, en la misma transacción. Los eventos solo llevan identificadores (R-17). Único punto del módulo con acceso a MongoDB para estas operaciones.
@@ -28,6 +34,35 @@ internal sealed class FinalQuoteStore([FromKeyedServices(RequestsModuleExtension
     private IMongoCollection<BsonDocument> Quotes => database.GetCollection<BsonDocument>(RequestsStore.QuotesCollection);
 
     private IMongoCollection<BsonDocument> Adjustments => database.GetCollection<BsonDocument>(AdjustmentsCollection);
+
+    /// <summary>La cotización final guardada en la visita, o <see langword="null"/> si la visita no la tiene (spec 063, R-01). Solo lee.</summary>
+    public async Task<FinalQuoteRead?> FindFinalQuoteAsync(ObjectId visitId, CancellationToken cancellationToken)
+    {
+        var found = await Visits.Find(Builders<BsonDocument>.Filter.Eq("_id", visitId)).Project(Builders<BsonDocument>.Projection.Include("cotizacionFinal")).FirstOrDefaultAsync(cancellationToken);
+        if (found is null || !found.TryGetValue("cotizacionFinal", out var value) || !value.IsBsonDocument)
+        {
+            return null;
+        }
+
+        var d = value.AsBsonDocument;
+        return new FinalQuoteRead(
+            d["precio"].ToInt32(),
+            d["descripcion"].AsString,
+            d["estado"].AsString,
+            d["venceEn"].ToUniversalTime(),
+            d.TryGetValue("decididaEn", out var decided) && decided.IsValidDateTime ? decided.ToUniversalTime() : null);
+    }
+
+    /// <summary>Los ajustes <c>pendiente</c> y vigentes de la visita, del que vence antes al que vence después (spec 063, R-04 y R-05). Solo lee.</summary>
+    public async Task<IReadOnlyList<PendingAdjustmentRead>> ListPendingAdjustmentsAsync(ObjectId visitId, DateTime nowUtc, CancellationToken cancellationToken)
+    {
+        var filter = Builders<BsonDocument>.Filter;
+        var found = await Adjustments
+            .Find(filter.Eq("visitaId", visitId) & filter.Eq(_stateField, FinalQuoteRules.Pending) & filter.Gt("venceEn", nowUtc))
+            .Sort(Builders<BsonDocument>.Sort.Ascending("venceEn"))
+            .ToListAsync(cancellationToken);
+        return [.. found.Select(d => new PendingAdjustmentRead(d["_id"].AsObjectId, d["cotizacionId"].AsObjectId, d["montoNuevo"].ToInt32(), d["motivo"].AsString, d[_stateField].AsString, d["venceEn"].ToUniversalTime()))];
+    }
 
     public async Task<string?> QuoteTypeAsync(ObjectId quoteId, CancellationToken cancellationToken)
     {

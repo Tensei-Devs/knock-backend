@@ -48,6 +48,18 @@ internal sealed class FinalQuoteController(FinalQuoteService service) : Document
     public async Task<IActionResult> DecideAdjustment(string id, [FromBody] DecisionBody body, CancellationToken cancellationToken) =>
         Reply(await service.DecideAdjustmentAsync(Subject(), id, body.Decision!, cancellationToken), StatusCodes.Status200OK, FinalQuoteErrorCodes.AdjustmentAlreadyDecidedCode);
 
+    /// <summary>Lectura de la cotización final (spec 063): el cliente dueño y el técnico de la visita; cualquier otra persona recibe el mismo 404.</summary>
+    [HttpGet("visitas/{id}/cotizacion-final")]
+    [ProducesResponseType<FinalQuoteReadResponse>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ReadFinalQuote(VisitRoute route, CancellationToken cancellationToken) =>
+        await service.ReadFinalQuoteAsync(Subject(), route.Id!, cancellationToken) is { } quote ? Ok(quote) : NotFound();
+
+    /// <summary>Lectura de los ajustes pendientes y vigentes de la visita (spec 063); sin ajustes responde 200 con la lista vacía.</summary>
+    [HttpGet("visitas/{id}/ajustes-pendientes")]
+    [ProducesResponseType<PendingAdjustmentsResponse>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ReadPendingAdjustments(VisitRoute route, CancellationToken cancellationToken) =>
+        await service.ReadPendingAdjustmentsAsync(Subject(), route.Id!, cancellationToken) is { } adjustments ? Ok(adjustments) : NotFound();
+
     private IActionResult Reply<T>(FinalQuoteOutcome<T> outcome, int successStatus, string conflictCode)
         where T : class =>
         outcome.Status == FinalQuoteStatus.Done ? StatusCode(successStatus, outcome.Value) : Failure(outcome.Status, conflictCode);
