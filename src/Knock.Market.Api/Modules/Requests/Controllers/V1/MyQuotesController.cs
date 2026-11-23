@@ -19,6 +19,7 @@ internal sealed class MyQuotesController(MyQuotesService service) : ControllerBa
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests)]
     public async Task<IActionResult> List([FromQuery] MyQuotesQuery query, CancellationToken cancellationToken)
     {
         var subject = User.FindFirst("sub")?.Value;

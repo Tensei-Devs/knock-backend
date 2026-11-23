@@ -50,6 +50,9 @@ internal sealed record CancelVisitResponse(string VisitaId, string Estado, bool 
 internal sealed record ClientAbsentResponse(string VisitaId, string Estado, string QuienFalto);
 
 /// <summary>Cuerpo de <c>POST /visitas/{id}/terminar</c> (spec 050, R-28): qué hizo, recomendación opcional y de 1 a 5 fotos privadas del técnico.</summary>
+/// <param name="Descripcion">De 8 a 500 caracteres.</param>
+/// <param name="Recomendacion">Opcional, hasta 300 caracteres.</param>
+/// <param name="Fotos">De 1 a 5 identificadores de archivo (<c>archivoId</c>, 32 hexadecimales), sin repetidos; sin foto o con más de 5 responde 422 <c>errors.fotos</c>.</param>
 internal sealed record FinishVisitBody(string? Descripcion, string? Recomendacion, IReadOnlyList<string>? Fotos);
 
 /// <summary>Visita terminada (200). No hay confirmación del cliente.</summary>
