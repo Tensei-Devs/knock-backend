@@ -1,5 +1,5 @@
+using Knock.Hosting.Security;
 using Knock.Market.Api.Common.Errors;
-using Knock.Market.Api.Common.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
@@ -25,20 +25,7 @@ internal static class AuthenticationExtensions
             {
                 // jscpd:ignore-start -- EXC-028
                 options.MapInboundClaims = false;
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuer = true,
-                    ValidIssuer = settings.Issuer,
-                    ValidateAudience = true,
-                    ValidAudience = settings.Audience,
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = settings.SigningKey,
-                    RequireSignedTokens = true,
-                    ValidateLifetime = true,
-                    RequireExpirationTime = true,
-                    ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
-                    ClockSkew = TimeSpan.Zero,
-                };
+                options.TokenValidationParameters = settings.ToValidationParameters();
                 // jscpd:ignore-end
                 options.Events = new JwtBearerEvents
                 {

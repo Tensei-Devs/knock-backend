@@ -6,6 +6,8 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text.Json;
 using AwesomeAssertions;
+using Knock.Hosting.Logging;
+using Knock.Hosting.Observability;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -58,24 +60,36 @@ public sealed class Spec011ObservabilityTests
         ["identity"] = new(
             "Knock.Identity.Api",
             "knock-identity",
-            (services, configuration, environment) => IdentityHosting.ObservabilityExtensions.AddKnockObservability(
-                IdentityHosting.LoggingExtensions.AddKnockLogging(services, configuration), configuration, environment),
+            (services, configuration, environment) => ObservabilityExtensions.AddKnockObservability(
+                LoggingExtensions.AddKnockLogging(services, configuration, typeof(IdentityHosting.KnockApplicationExtensions).Assembly),
+                configuration,
+                environment,
+                typeof(IdentityHosting.KnockApplicationExtensions).Assembly,
+                "knock-api"),
             Knock.Hosting.Logging.TelemetryRedactor.Redact,
             Knock.Hosting.Logging.TelemetryRedactor.RedactAttribute,
             Knock.Hosting.Logging.TelemetryRedactor.Placeholder),
         ["messaging"] = new(
             "Knock.Messaging.Api",
             "knock-messaging",
-            (services, configuration, environment) => MessagingHosting.ObservabilityExtensions.AddKnockObservability(
-                MessagingHosting.LoggingExtensions.AddKnockLogging(services, configuration), configuration, environment),
+            (services, configuration, environment) => ObservabilityExtensions.AddKnockObservability(
+                LoggingExtensions.AddKnockLogging(services, configuration, typeof(MessagingHosting.ChatHostingExtensions).Assembly),
+                configuration,
+                environment,
+                typeof(MessagingHosting.ChatHostingExtensions).Assembly,
+                "knock-api"),
             Knock.Hosting.Logging.TelemetryRedactor.Redact,
             Knock.Hosting.Logging.TelemetryRedactor.RedactAttribute,
             Knock.Hosting.Logging.TelemetryRedactor.Placeholder),
         ["gateway"] = new(
             "Knock.Gateway",
             "knock-gateway",
-            (services, configuration, environment) => GatewayHosting.ObservabilityExtensions.AddKnockObservability(
-                GatewayHosting.LoggingExtensions.AddKnockLogging(services, configuration), configuration, environment),
+            (services, configuration, environment) => ObservabilityExtensions.AddKnockObservability(
+                LoggingExtensions.AddKnockLogging(services, configuration, typeof(GatewayHosting.CorsExtensions).Assembly),
+                configuration,
+                environment,
+                typeof(GatewayHosting.CorsExtensions).Assembly,
+                "knock-api"),
             Knock.Hosting.Logging.TelemetryRedactor.Redact,
             Knock.Hosting.Logging.TelemetryRedactor.RedactAttribute,
             Knock.Hosting.Logging.TelemetryRedactor.Placeholder),
@@ -84,7 +98,7 @@ public sealed class Spec011ObservabilityTests
     public static TheoryData<string> Services() => [.. _services.Keys];
 
     /// <summary>
-    /// Copias de <c>TelemetryRedactor</c> (EXC-007) con las entradas de la prueba de tiempo de Market
+    /// Copias de <c>TelemetryRedactor</c> con las entradas de la prueba de tiempo de Market
     /// (<c>TelemetryRedactorTests.Redact_LongAdversarialInput_TakesUnderOneMillisecondPer4KB_TC_TT_OBS_01_12</c>), que ya cubre a Market; se
     /// repite para las copias de Identity, Messaging y Gateway.
     /// </summary>

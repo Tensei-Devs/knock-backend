@@ -33,14 +33,14 @@ Definir y especificar los endpoints COT-06, COT-07, AJU-01, AJU-02 del Excel de 
 - **R-05:** Entrada de `POST /api/v1/visitas/{id}/cotizacion-final/decision`: Ruta: id. Cuerpo: decision. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400.
 - **R-06:** Estados de `POST /api/v1/visitas/{id}/cotizacion-final/decision`: 409 `final_quote_already_decided`. Los códigos de negocio van en inglés y en snake_case.
 - **R-07:** `POST /api/v1/cotizaciones/{id}/ajuste-precio` (crear): El técnico propone un cambio sobre el tope, con motivo. Lo puede llamar: cuenta con perfil de técnico. Responde 201 cuando sale bien.
-- **R-08:** Entrada de `POST /api/v1/cotizaciones/{id}/ajuste-precio`: Ruta: id. Cuerpo: montoNuevo, motivo. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400. Reglas: `montoNuevo`: Mayor que el tope en al menos 100 pesos; `motivo`: De 10 a 300 caracteres (antes decía 8: enmienda 2026-11-23, borrador sin firmar). Moderado.
+- **R-08:** Entrada de `POST /api/v1/cotizaciones/{id}/ajuste-precio`: Ruta: id. Cuerpo: montoNuevo, motivo. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400. Reglas: `montoNuevo`: Mayor que el tope en al menos 100 pesos; `motivo`: De 10 a 300 caracteres (antes decía 8: enmienda 2026-11-23, aprobada por José Julián Hernández Hernández el 2026-11-24). Moderado.
 - **R-09:** Estados de `POST /api/v1/cotizaciones/{id}/ajuste-precio`: 409 `adjustment_not_allowed`. Los códigos de negocio van en inglés y en snake_case.
 - **R-10:** `POST /api/v1/ajustes/{id}/decision` (actualizar (acción)): El cliente aprueba o rechaza. Lo puede llamar: persona con sesión que sea dueña del recurso. Responde 200 cuando sale bien.
 - **R-11:** Entrada de `POST /api/v1/ajustes/{id}/decision`: Ruta: id. Cuerpo: decision. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400.
 - **R-12:** Estados de `POST /api/v1/ajustes/{id}/decision`: 404; 409 `adjustment_already_decided`. Los códigos de negocio van en inglés y en snake_case.
 - **R-13:** **Cotización final (COT-06).** Solo la envía el técnico de la visita, una vez terminada la revisión previa y **una sola** por visita. `precio` es un entero positivo en pesos (sin tope de negocio) y `descripcion` tiene de 8 a 500 caracteres. El cliente la ve para aprobarla o rechazarla.
 - **R-14:** **Decisión sobre la cotización final (COT-07).** `decision` es `aprueba` o `rechaza` y es definitiva. Si aprueba, el trabajo sigue con ese precio; si rechaza, la visita queda `terminada` con `resultado = solo_visita` y la cotización final `rechazada`: el cobro de la visita lo define la historia de cobro posterior (spec 020, decisión 8) y esta spec solo registra el resultado. Tiene vigencia de 48 horas (tarea `VencerCotizacionFinal`, spec 054): sin respuesta queda rechazada por vencimiento.
-- **R-15:** **Ajuste de precio (AJU-01).** El técnico propone un `montoNuevo` mayor que el tope de la cotización con un `motivo` de 10 a 300 caracteres *(enmienda 2026-11-23, borrador sin firmar: antes decía 8)*; solo puede haber un ajuste pendiente por cotización, y el cálculo del tope y su aprobación son los de la spec 020 (`CotizacionTopeCalculator`).
+- **R-15:** **Ajuste de precio (AJU-01).** El técnico propone un `montoNuevo` mayor que el tope de la cotización con un `motivo` de 10 a 300 caracteres *(enmienda 2026-11-23, aprobada por José Julián Hernández Hernández el 2026-11-24: antes decía 8)*; solo puede haber un ajuste pendiente por cotización, y el cálculo del tope y su aprobación son los de la spec 020 (`CotizacionTopeCalculator`).
 - **R-16:** **Decisión sobre el ajuste (AJU-02).** `decision` es `aprueba` o `rechaza` y es definitiva, con vigencia de 24 horas (tarea `VencerAjuste`, spec 054): sin respuesta queda rechazada por vencimiento y el precio sigue siendo el tope aprobado.
 - **R-17:** **Avisos.** Cada cotización final y cada ajuste crea un aviso para el cliente, y cada decisión, uno para el técnico, por la bandeja de salida (specs 037 y 054); los avisos no llevan precios ni textos escritos por las personas.
 - **R-18:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
@@ -86,7 +86,7 @@ Definir y especificar los endpoints COT-06, COT-07, AJU-01, AJU-02 del Excel de 
 
 **4.1 Criterio → prueba**
 
-*(Enmienda 2026-11-23, borrador sin firmar: los nombres `Spec049Tests.CriterioNN_CA_049_NN` de la versión anterior no existen en el código. Los de abajo son los de las pruebas de integración de #352, pendiente de fusión y de CI en verde; hasta entonces son nombres previstos y no evidencia. El trazador solo exige el sufijo `CA_049_NN`.)*
+*(Enmienda 2026-11-23, aprobada por José Julián Hernández Hernández el 2026-11-24: los nombres `Spec049Tests.CriterioNN_CA_049_NN` de la versión anterior no existen en el código. Los de abajo son los de las pruebas de integración de #352, pendiente de fusión y de CI en verde; hasta entonces son nombres previstos y no evidencia. El trazador solo exige el sufijo `CA_049_NN`.)*
 
 | Criterio | Prueba (IntegrationTest/Requests; pendiente de #352) |
 |---|---|
@@ -191,7 +191,7 @@ Definir y especificar los endpoints COT-06, COT-07, AJU-01, AJU-02 del Excel de 
 | visitaId | ObjectId | Sí | Debe existir y estar en curso | Compuesto |
 | cotizacionId | ObjectId | Sí | Debe existir | No |
 | montoNuevo | Entero | Sí | Mayor que el tope en al menos 100 pesos | No |
-| motivo | Texto | Sí | De 10 a 300 caracteres (enmienda 2026-11-23, borrador sin firmar: antes 8). Moderado | No |
+| motivo | Texto | Sí | De 10 a 300 caracteres (enmienda 2026-11-23, aprobada por José Julián Hernández Hernández el 2026-11-24: antes 8). Moderado | No |
 | estado | Texto | Sí | Solo esos valores | Compuesto |
 | creadoEn | Fecha y hora UTC | Sí | Lo asigna el servidor | No |
 | decididoEn | Fecha y hora UTC | No |  | No |
@@ -278,11 +278,12 @@ Las pruebas citan el caso como `CA_049_NN` en el nombre (para `python scripts/sd
 
 
 ## Nota de enmienda (2026-11-23, decisión de José)
-- **Estado de esta enmienda:** Borrador sin firmar. La aprobación de abajo es la original; no se marca ninguna firma nueva. Lo firma José.
+- **Estado de esta enmienda:** aprobada por José Julián Hernández Hernández el 2026-11-24. La aprobación de abajo es la original; la firma de esta enmienda es la línea «Enmienda» de la sección Aprobación.
 - **Largo del motivo del ajuste: de 10 a 300 caracteres, no de 8 a 300.** El texto original decía 8 en R-08 (reglas de `motivo`), en R-15 y en la tabla de campos de §6; el código aplica 10 (`FinalQuoteRules.MinReason = 10`, usado por `FinalQuoteValidators`, con su comentario «PARA VALIDACIÓN DE JOSÉ») y `docs/endpoints.md` ya dice 10. El 8 que sí vale es el de `descripcion` de la cotización final (R-13, `MinDescription = 8`), que no cambia. Las dos reglas cercanas con motivo de 8 a 300 son de otras specs (050 R-26 y 061 R-01) y tampoco cambian.
 - **Tabla criterio → prueba (§4.1):** se reemplazan los nombres que no existían por los de las pruebas de #352 (`Spec049CotizacionFinalTests`, `Spec049AjusteTests` y `Spec049TransversalesTests`). Quedan como previstos hasta que #352 se fusione con el CI en verde.
 
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
+- [x] Enmienda 2026-11-23 — nombre: José Julián Hernández Hernández fecha: 2026-11-24
 - [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

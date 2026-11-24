@@ -1,5 +1,5 @@
+using Knock.Hosting.Security;
 using Knock.Market.Api.Common.Errors;
-using Knock.Market.Api.Common.Security;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;

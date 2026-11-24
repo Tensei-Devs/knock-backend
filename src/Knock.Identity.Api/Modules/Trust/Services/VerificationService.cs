@@ -1,3 +1,4 @@
+using Knock.Hosting.Concurrency;
 using Knock.Identity.Api.Common.Errors;
 using Knock.Identity.Api.Modules.Trust.Crypto;
 using Knock.Identity.Api.Modules.Trust.Data;
@@ -154,6 +155,13 @@ internal sealed class VerificationService(
             throw new DomainException(DomainErrorKind.Conflict, "Some photos are missing.", VerificationErrors.PhotosMissingCode);
         }
 
+        // Dentro de la instancia, los envíos con la misma CURP se turnan (KeyedGate): dos escrituras a la vez sobre el índice único parcial de `curpVigente` se bloqueaban entre sí
+        // en documentdb-local. Entre instancias decide el índice único (CA-20).
+        return await KeyedGate.RunAsync("curp|" + (verification.CurpHmac ?? id.ToString()), () => SubmitSerializedAsync(sub, id, verification, now, cancellationToken), cancellationToken);
+    }
+
+    private async Task<VerificationSentResponse> SubmitSerializedAsync(string sub, ObjectId id, VerificationForCapture verification, DateTime now, CancellationToken cancellationToken)
+    {
         // R-06 al enviar: el HMAC ya guardado se compara con las demás cuentas; el índice único parcial cierra la carrera (CA-20).
         if (verification.CurpHmac is { } stored && await store.ExistsLiveCurpAsync([stored], sub, cancellationToken))
         {

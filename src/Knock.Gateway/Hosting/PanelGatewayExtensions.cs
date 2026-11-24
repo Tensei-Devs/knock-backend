@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using Knock.Hosting.RateLimiting;
+using Knock.Hosting.Security;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -35,7 +36,7 @@ internal sealed record GatewayPanelSettings(string Issuer, string Audience, Symm
         byte[] key;
         if (string.IsNullOrWhiteSpace(configured))
         {
-            key = RandomNumberGenerator.GetBytes(GatewayJwtSettings.MinimumKeyBytes);
+            key = RandomNumberGenerator.GetBytes(JwtSettingsFactory.MinimumKeyBytes);
         }
         else
         {
@@ -45,9 +46,9 @@ internal sealed record GatewayPanelSettings(string Issuer, string Audience, Symm
                 throw new InvalidOperationException("PanelJwt:SigningKey must be Base64.");
             }
 
-            if (written < GatewayJwtSettings.MinimumKeyBytes)
+            if (written < JwtSettingsFactory.MinimumKeyBytes)
             {
-                throw new InvalidOperationException($"PanelJwt:SigningKey must decode to at least {GatewayJwtSettings.MinimumKeyBytes} bytes.");
+                throw new InvalidOperationException($"PanelJwt:SigningKey must decode to at least {JwtSettingsFactory.MinimumKeyBytes} bytes.");
             }
 
             key = buffer[..written];
