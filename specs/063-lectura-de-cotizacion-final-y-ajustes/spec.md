@@ -27,9 +27,9 @@ Que el cliente dueño y el técnico de una visita puedan **leer** la cotización
 - **R-03:** `descripcion` es el texto que escribió el técnico: nunca se repite en registros (spec 011) y la respuesta no lleva identificadores de personas.
 - **R-04:** `GET /api/v1/visitas/{id}/ajustes-pendientes` exige JWT y las mismas reglas de acceso de R-01. Responde 200 `{ items: [{ id, cotizacionId, montoNuevo, motivo, estado: "pendiente", venceEn }] }` con a lo más un ajuste por cotización (spec 049 R-15) y ordenado por `venceEn` ascendente; sin ajustes, `items` vacío (no 404).
 - **R-05:** Un ajuste `pendiente` con `venceEn` pasado no se lista (se trata como vencido, sin escribir).
-- **R-06:** Un `id` que no es un `ObjectId` responde 422 con `errors.id` sin repetir el valor. *(Enmienda 2026-11-24, borrador sin firmar: un `id` mal formado responde 400, por la convención de la spec 002, R-10; ya no hay 422 en estas rutas; antes decía 422 con `errors.id`. Ver la nota al final.)*
+- **R-06:** Un `id` que no es un `ObjectId` responde 422 con `errors.id` sin repetir el valor. *(Enmienda 2026-11-24, aprobada por José Julián Hernández Hernández el 2026-11-24: un `id` mal formado responde 400, por la convención de la spec 002, R-10; ya no hay 422 en estas rutas; antes decía 422 con `errors.id`. Ver la nota al final.)*
 - **R-07:** Ambas respuestas llevan `Cache-Control: private, no-store`, sin `ETag`, y cuentan con el límite general de lectura de visitas (el mismo de `GET /api/v1/visitas/{id}`).
-- **R-08:** Las dos rutas declaran en OpenAPI 200, 401, 404, 422 y 429 con ProblemDetails, y `code` en los errores de negocio. *(Enmienda 2026-11-24, borrador sin firmar: declaran 400 en lugar de 422; antes decía 422. Ver la nota al final.)*
+- **R-08:** Las dos rutas declaran en OpenAPI 200, 401, 404, 422 y 429 con ProblemDetails, y `code` en los errores de negocio. *(Enmienda 2026-11-24, aprobada por José Julián Hernández Hernández el 2026-11-24: declaran 400 en lugar de 422; antes decía 422. Ver la nota al final.)*
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dada una visita con cotización final `enviada`, cuando el cliente dueño la lee, entonces responde 200 con `precio`, `descripcion`, `estado = enviada` y `venceEn`.
@@ -39,10 +39,10 @@ Que el cliente dueño y el técnico de una visita puedan **leer** la cotización
 - **CA-05:** Dada una cotización final ya decidida, cuando se lee, entonces `estado` es `aprobada` o `rechazada` y trae `decididaEn`.
 - **CA-06:** Dada una visita con un ajuste pendiente vigente, cuando el cliente o el técnico lee `ajustes-pendientes`, entonces el ajuste aparece con `montoNuevo`, `motivo` y `venceEn`.
 - **CA-07:** Dada una visita sin ajustes pendientes o con uno vencido, cuando se lee, entonces responde 200 con `items` vacío.
-- **CA-08:** Dado un `id` mal formado, cuando se llama cualquiera de las dos rutas, entonces responde 422 con `errors.id` y no repite el valor. *(Enmienda 2026-11-24, borrador sin firmar: responde 400 sin repetir el valor; antes decía 422 con `errors.id`. Ver la nota al final.)*
+- **CA-08:** Dado un `id` mal formado, cuando se llama cualquiera de las dos rutas, entonces responde 422 con `errors.id` y no repite el valor. *(Enmienda 2026-11-24, aprobada por José Julián Hernández Hernández el 2026-11-24: responde 400 sin repetir el valor; antes decía 422 con `errors.id`. Ver la nota al final.)*
 - **CA-09:** Dada una petición sin token o con token vencido, cuando se llama, entonces responde 401.
 - **CA-10:** Dadas las dos respuestas, cuando se inspeccionan los encabezados, entonces `Cache-Control` es `private, no-store` y no hay `ETag`.
-- **CA-11:** Dado el contrato publicado, cuando se lee `docs/openapi.v1.json`, entonces las dos rutas declaran 200, 401, 404, 422 y 429. *(Enmienda 2026-11-24, borrador sin firmar: declaran 200, 400, 401, 404 y 429; antes decía 422. Ver la nota al final.)*
+- **CA-11:** Dado el contrato publicado, cuando se lee `docs/openapi.v1.json`, entonces las dos rutas declaran 200, 401, 404, 422 y 429. *(Enmienda 2026-11-24, aprobada por José Julián Hernández Hernández el 2026-11-24: declaran 200, 400, 401, 404 y 429; antes decía 422. Ver la nota al final.)*
 
 **4.1 Criterio → prueba prevista**
 
@@ -56,8 +56,8 @@ Que el cliente dueño y el técnico de una visita puedan **leer** la cotización
 ## 5. Contrato
 | Ruta | Quién | Entrada | Éxito | Errores |
 |---|---|---|---|---|
-| `GET /api/v1/visitas/{id}/cotizacion-final` | cliente dueño o técnico de la visita | ruta `id` | `200 { visitaId, precio, descripcion, estado, venceEn, decididaEn? }` | `401`, `404`, `422`, `429` *(Enmienda 2026-11-24, borrador sin firmar: `400` en lugar de `422`)* |
-| `GET /api/v1/visitas/{id}/ajustes-pendientes` | cliente dueño o técnico de la visita | ruta `id` | `200 { items: [{ id, cotizacionId, montoNuevo, motivo, estado, venceEn }] }` | `401`, `404`, `422`, `429` *(Enmienda 2026-11-24, borrador sin firmar: `400` en lugar de `422`)* |
+| `GET /api/v1/visitas/{id}/cotizacion-final` | cliente dueño o técnico de la visita | ruta `id` | `200 { visitaId, precio, descripcion, estado, venceEn, decididaEn? }` | `401`, `404`, `422`, `429` *(Enmienda 2026-11-24, aprobada por José Julián Hernández Hernández el 2026-11-24: `400` en lugar de `422`)* |
+| `GET /api/v1/visitas/{id}/ajustes-pendientes` | cliente dueño o técnico de la visita | ruta `id` | `200 { items: [{ id, cotizacionId, montoNuevo, motivo, estado, venceEn }] }` | `401`, `404`, `422`, `429` *(Enmienda 2026-11-24, aprobada por José Julián Hernández Hernández el 2026-11-24: `400` en lugar de `422`)* |
 
 ## 6. Modelo de datos
 Sin colecciones, campos ni índices nuevos: se lee `visitas.cotizacionFinal` y `ajustes_precio` (índice por `visitaId` y `estado` de la spec 049, §6).
@@ -78,10 +78,10 @@ Specs 049 (modelo y estados), 050 (visita), 021 y 022 (acceso a la visita), 009 
 | Texto del técnico en registros | Redacción (spec 011) | R-03 |
 
 ## 10. Plan de pruebas
-Unitarias del cálculo de vigencia, integración con MongoDB real, seguridad negativa (acceso, 404 uniforme, 401, 422 *(Enmienda 2026-11-24, borrador sin firmar: 400)*) y contrato (OpenAPI de Mercado).
+Unitarias del cálculo de vigencia, integración con MongoDB real, seguridad negativa (acceso, 404 uniforme, 401, 422 *(Enmienda 2026-11-24, aprobada por José Julián Hernández Hernández el 2026-11-24: 400)*) y contrato (OpenAPI de Mercado).
 
 ## 11. Escenarios
-**Positivo:** el cliente reabre la visita y lee el precio final y su descripción. **Negativo:** otra persona intenta leerla (404). **Error esperado:** `id` mal formado (422 *(Enmienda 2026-11-24, borrador sin firmar: 400)*). **Límite:** la cotización venció hace un segundo (se lee `vencida`).
+**Positivo:** el cliente reabre la visita y lee el precio final y su descripción. **Negativo:** otra persona intenta leerla (404). **Error esperado:** `id` mal formado (422 *(Enmienda 2026-11-24, aprobada por José Julián Hernández Hernández el 2026-11-24: 400)*). **Límite:** la cotización venció hace un segundo (se lee `vencida`).
 
 ## 12. Definición de terminado
 CA-01 a CA-11 con prueba; `python scripts/sdd_lint.py --trace 063` en OK; OpenAPI de Mercado regenerado con `scripts/export_openapi.py`; `docs/endpoints.md` al día; gates de `AGENTS.md §5` en verde; `Memoria.md` y `docs/memoria/` actualizados.
@@ -98,13 +98,14 @@ CA-01 a CA-11 con prueba; `python scripts/sdd_lint.py --trace 063` en OK; OpenAP
 - Si la spec 049 se enmienda para mover la cotización final a otra colección, esta lectura cambia con ella.
 
 ## Nota de enmienda (2026-11-24, decisión de José)
-- **Estado de esta enmienda:** Borrador sin firmar. La aprobación de abajo es la original; no se marca ninguna firma nueva. Lo firma José.
+- **Estado de esta enmienda:** aprobada por José Julián Hernández Hernández el 2026-11-24. La aprobación de abajo es la original; la firma de esta enmienda es la línea «Enmienda» de la sección Aprobación.
 - **Un `id` de visita mal formado responde 400, no 422.** La convención de la spec 002 (R-10) dice que un identificador de ruta mal formado (por ejemplo un `ObjectId` inválido) es 400, «no se puede interpretar». Hoy el código responde 422: `VisitRouteValidator` (`src/Knock.Market.Api/Modules/Requests/Validators/FinalQuoteValidators.cs:56-60`) falla y el filtro de validación responde 422 con `errors` (`src/Knock.Market.Api/Hosting/ValidationExtensions.cs:53-56`); las pruebas `Spec063LecturaSeguridadTests.Id_Mal_Formado_Responde_422_...CA_063_08` y el contrato (`Spec063ContractTests`, CA-11) hoy esperan 422. Estas rutas no tienen cuerpo ni otro campo que pueda dar 422, así que 422 sale del contrato publicado.
 - **Tarea de código (pendiente, otro PR tras la firma):** `task.md` T-07. El PR de código cambia `VisitRoute` para responder 400, ajusta las pruebas y regenera `docs/openapi.v1.json`; como `VisitRoute` también la usa la spec 064, se hace junto con ella.
 - **Spec 049 no se enmendó:** su texto no dice 422 para el `id` de ruta mal formado de forma específica (solo «valor inválido» sobre ruta y cuerpo); se anota como duda para José.
 
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-23
+- [x] Enmienda 2026-11-24 — nombre: José Julián Hernández Hernández fecha: 2026-11-24
 - [x] Sin conflicto con la constitución
 - **Estados:** Aprobada
 
