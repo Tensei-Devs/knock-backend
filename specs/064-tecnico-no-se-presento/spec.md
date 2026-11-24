@@ -26,10 +26,10 @@ Que el cliente pueda reportar que el técnico no llegó a la cita. Hoy solo el t
 - **R-03:** Cambio atómico y condicionado: `estado = no_presentado`, `quienFalto = tecnico`, `tardia` sin cambio, `actualizadoEn`; escribe el evento `TecnicoNoSePresento` (`visitaId`, `solicitudId`, `clienteId`, `tecnicoUsuarioId`) en el buzón en la misma transacción. Repetir la llamada con la visita ya `no_presentado` por el técnico responde 200 idempotente sin duplicar el evento.
 - **R-04:** Responde 200 `{ visitaId, estado, quienFalto }` con `quienFalto = tecnico`.
 - **R-05:** El código de la visita deja de ser válido (la visita deja de ser `confirmada`), así que `POST /visitas/{id}/llegada` responde su 409 habitual.
-- **R-06:** Cuerpo vacío; cualquier cuerpo con campos se ignora. `id` inválido: 422 `errors.id`; cuerpo ilegible: 400.
+- **R-06:** Cuerpo vacío; cualquier cuerpo con campos se ignora. `id` inválido: 422 `errors.id`; cuerpo ilegible: 400. *(Enmienda 2026-11-24, borrador sin firmar: un `id` mal formado responde 400 (spec 002, R-10); antes decía 422 `errors.id`. Ver la nota al final.)*
 - **R-07:** Límite: la política `visitas-cambios` (20 por minuto) de las demás acciones de visita.
 - **R-08:** El aviso al técnico usa texto fijo (spec 037/054), sin nombre ni datos del cliente.
-- **R-09:** OpenAPI declara 200, 401, 404, 409 `outside_arrival_window`, 422 y 429 con ProblemDetails y `code`.
+- **R-09:** OpenAPI declara 200, 401, 404, 409 `outside_arrival_window`, 422 y 429 con ProblemDetails y `code`. *(Enmienda 2026-11-24, borrador sin firmar: declara 400 y ya no 422; antes decía 422. Ver la nota al final.)*
 
 ## 4. Criterios de aceptación
 - **CA-01:** Dada una visita `confirmada` y pasados 20 minutos de la hora de la cita, cuando el cliente dueño llama la ruta, entonces responde 200 con `estado = no_presentado` y `quienFalto = tecnico`.
@@ -37,10 +37,10 @@ Que el cliente pueda reportar que el técnico no llegó a la cita. Hoy solo el t
 - **CA-03:** Dado un llamado antes de los 15 minutos, después de las 2 horas o con la visita en otro estado, cuando se llama, entonces 409 `outside_arrival_window` y no cambia nada.
 - **CA-04:** Dado el técnico de la visita o una persona ajena, cuando llama la ruta, entonces 404 uniforme y no cambia nada.
 - **CA-05:** Dada la visita ya marcada `no_presentado` por el técnico ausente, cuando el cliente repite, entonces 200 sin segundo evento.
-- **CA-06:** Dado un `id` mal formado, entonces 422 `errors.id` sin repetir el valor; sin token, 401.
+- **CA-06:** Dado un `id` mal formado, entonces 422 `errors.id` sin repetir el valor; sin token, 401. *(Enmienda 2026-11-24, borrador sin firmar: entonces 400 sin repetir el valor; antes decía 422 `errors.id`. Ver la nota al final.)*
 - **CA-07:** Dada la visita marcada, cuando el técnico intenta `POST /visitas/{id}/llegada`, entonces responde el 409 de siempre y no cambia el estado.
 - **CA-08:** Dadas 21 llamadas en un minuto, entonces la 21 responde 429 con `Retry-After`.
-- **CA-09:** Dado el contrato publicado, cuando se lee `docs/openapi.v1.json`, entonces la ruta declara 200, 401, 404, 409, 422 y 429.
+- **CA-09:** Dado el contrato publicado, cuando se lee `docs/openapi.v1.json`, entonces la ruta declara 200, 401, 404, 409, 422 y 429. *(Enmienda 2026-11-24, borrador sin firmar: declara 200, 400, 401, 404, 409 y 429; antes decía 422. Ver la nota al final.)*
 
 **4.1 Criterio → prueba prevista**
 
@@ -54,7 +54,7 @@ Que el cliente pueda reportar que el técnico no llegó a la cita. Hoy solo el t
 ## 5. Contrato
 | Ruta | Quién | Entrada | Éxito | Errores |
 |---|---|---|---|---|
-| `POST /api/v1/visitas/{id}/tecnico-ausente` | cliente dueño de la visita | ruta `id`, sin cuerpo | `200 { visitaId, estado, quienFalto }` | `400`, `401`, `404`, `409 outside_arrival_window`, `422`, `429` |
+| `POST /api/v1/visitas/{id}/tecnico-ausente` | cliente dueño de la visita | ruta `id`, sin cuerpo | `200 { visitaId, estado, quienFalto }` | `400`, `401`, `404`, `409 outside_arrival_window`, `422`, `429` *(Enmienda 2026-11-24, borrador sin firmar: sin `422`; el `400` ya listado cubre también el `id` mal formado)* |
 
 ## 6. Modelo de datos
 Sin colecciones ni índices nuevos. `quienFalto` ya existe en `visitas` (spec 050 §6) y admite ahora `tecnico` además de `cliente`; evento nuevo `TecnicoNoSePresento` en el buzón.
@@ -92,6 +92,11 @@ CA-01 a CA-09 con prueba; `python scripts/sdd_lint.py --trace 064` en OK; OpenAP
 
 ## 15. Riesgos y dudas abiertas
 - La spec 021 lo dejó fuera de alcance sin spec dueña: esta la crea; falta confirmar que no choca con HU-034/HU-041.
+
+## Nota de enmienda (2026-11-24, decisión de José)
+- **Estado de esta enmienda:** Borrador sin firmar. La aprobación de abajo es la original; no se marca ninguna firma nueva. Lo firma José.
+- **Un `id` de visita mal formado responde 400, no 422** (convención de la spec 002, R-10, ya usada aquí para el cuerpo ilegible). Hoy el código responde 422: `VisitScheduleController.TechnicianAbsent` recibe `VisitRoute` y `VisitRouteValidator` (`FinalQuoteValidators.cs:56-60`) falla con el filtro que responde 422 (`ValidationExtensions.cs:53-56`); la prueba `Spec064TecnicoAusenteSeguridadTests.Id_Mal_Formado_Responde_422_...CA_064_06` y el contrato (CA-09) hoy esperan 422. La ruta no tiene otro campo que pueda dar 422.
+- **Tarea de código (pendiente, otro PR tras la firma):** `task.md` T-07, junto con 063 T-07 (comparten `VisitRoute`).
 
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-23
