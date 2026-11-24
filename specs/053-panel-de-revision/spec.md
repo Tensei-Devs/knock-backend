@@ -93,7 +93,7 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 - **CA-36:** Dada una recuperación en revisión, cuando un verificador la aprueba, entonces el número cambia, se cierran las sesiones y queda un registro `recuperacion_decidida` en la misma transacción; sin poder escribir la auditoría responde 503 `audit_unavailable` y no cambia nada; y un moderador sin `verification:review` recibe 403 con su registro de denegación.
 - **CA-37:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
 - **CA-38:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
-- **CA-39:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
+- **CA-39:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413. *(Enmienda 2026-11-23, borrador sin firmar: R-25 se exige con política propia en las rutas del panel; ver la nota al final.)*
 - **CA-40:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
 - **CA-41:** Dado un reporte decidido `critica` contra una persona que no es técnica, cuando se consulta la decisión o la cola, entonces la gravedad sigue siendo `critica` (nunca se sobrescribe) y la prioridad derivada es `alta`; en cualquier otro caso la prioridad es `normal` y un reporte sin decidir no trae prioridad.
 
@@ -311,6 +311,12 @@ Las pruebas citan el caso como `CA_053_NN` en el nombre (para `python scripts/sd
 ## Nota de enmienda (2026-11-23, decisión de José)
 - **R-20, gravedad y prioridad por separado:** el reporte guarda la gravedad que asignó la moderación (`gravedad` y `decision.gravedad`); `critica` queda como `critica` aunque no se suspenda a un cliente y nunca se sobrescribe. La **prioridad** se deriva aparte y se guarda en el campo `prioridad` del reporte en la misma transacción de la decisión: `alta` cuando la gravedad es `critica` y la persona reportada no es técnica (la suspensión no aplica, spec 059, R-03); `normal` en cualquier otro caso. `POST /api/v1/admin/reportes/{id}/decision` responde además `prioridad` y `GET /api/v1/admin/reportes` la trae en los reportes ya decididos (por ejemplo en apelación); un reporte sin decidir no la trae. Caso nuevo CA-41. Sin índice nuevo (no se consulta por prioridad; el orden de la cola sigue siendo gravedad y antigüedad) y sin script en `db/`.
 - No se marcan firmas: la aprobación de abajo es la original.
+
+## Nota de enmienda (2026-11-23, tercera, decisión de José)
+- **Estado de esta enmienda:** Borrador sin firmar. La aprobación de abajo es la original; no se marca ninguna firma nueva. Lo firma José. El trabajo de código que pide queda en `task.md` como pendiente y **depende de esa firma**.
+- **R-25 y CA-39: las rutas del panel deben tener política 429.** Cada ruta de `/api/v1/admin/verificaciones` y `/api/v1/admin/reportes` (VER-03 a VER-05 y REP-04 y REP-05) lleva una política de límite **por persona del panel (el `sub` de la sesión del panel)**, con 429 y `Retry-After`, registrada en `docs/rate-limit-matrix.md` (R-25 ya lo pedía; el texto de arriba no fijaba el criterio de partición ni el valor). Los valores concretos son **propuestos y los valida José** al implementar, medidos con el uso real del panel; la partición por persona y no por IP es el requisito (el token del panel no pasa por el esquema de la IP del gateway, igual que en las políticas `admin-catalogo` y `admin-opiniones`).
+- **Evidencia del hueco:** `AdminVerificacionesController` y `AdminReportesController` no usan `[EnableRateLimiting]` (0 coincidencias); solo los limitan los topes globales por IP. `IdentityRateLimits` no tiene política para el panel. `CA-39` sigue sin prueba.
+- Tarea: `task.md` T-11 (política y pruebas de 429 y 413 con host real), pendiente de la firma. No cambia la ruta ni el contrato salvo declarar el 429 en OpenAPI.
 
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14

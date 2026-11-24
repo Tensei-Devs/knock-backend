@@ -44,7 +44,7 @@ Que una persona pueda **subir las fotos de su solicitud** (obligatorias, de 1 a 
 - **CA-07:** Dado un contenido rechazado por moderación, cuando se confirma, entonces 422 `image_rejected`, el archivo no pasa a `listo` y la cuarentena se limpia; con la moderación caída, 503 `moderation_unavailable` (falla cerrada).
 - **CA-08:** Dado un `id` de solicitud que no es del `sub`, de otro `uso` o no `listo`, cuando se crea la solicitud, entonces 422 `photo_invalid` sin decir cuál condición falló (spec 020 R-04, sin cambio).
 - **CA-09:** Dado cualquier registro o error, cuando se inspeccionan, entonces no contienen `sub`, nombres de blob, enlaces firmados ni identificadores de fotos.
-- **CA-10:** Dado el contrato publicado, cuando se lee `docs/openapi.v1.json`, entonces `proposito` incluye `solicitud`, la respuesta de confirmar tiene `url` opcional y `POST /imagenes/subidas` declara el 429.
+- **CA-10:** Dado el contrato publicado, cuando se lee `docs/openapi.v1.json`, entonces `proposito` incluye `solicitud`, la respuesta de confirmar tiene `url` opcional y `POST /imagenes/subidas` declara el 429. *(Enmienda 2026-11-23, borrador sin firmar: el contrato publicado deja `url` requerida y `proposito` como cadena libre a propósito; ver la nota al final.)*
 
 **4.1 Criterio → prueba prevista**
 
@@ -99,6 +99,13 @@ CA-01 a CA-10 con prueba; `python scripts/sdd_lint.py --trace 062` en OK; OpenAP
 ## 15. Riesgos y dudas abiertas
 - La decisión 1 de §14 (misma ruta con `proposito = solicitud`) cambia el contrato público de `POST /api/v1/imagenes/subidas` de forma **aditiva** (no rompe a quien ya usa `perfil` y `trabajo`); se revisa al firmar la spec.
 - Las pruebas con Azurite corren en el CI; en local requieren Docker.
+
+## Nota de enmienda (2026-11-23, decisión de José)
+- **Estado de esta enmienda:** Borrador sin firmar. La aprobación de abajo es la original; no se marca ninguna firma nueva y el texto anterior de cada criterio se conserva como historial. Lo firma José.
+- **CA-10 y la decisión 2 de §14: desviación a propósito del contrato publicado.** La spec pedía `url` opcional en la respuesta de confirmar y `proposito` con el valor `solicitud` declarado. El contrato publicado (`docs/openapi.v1.json`) deja `url` **requerida** (cadena no nula) y `proposito` como **cadena libre** (sin lista cerrada de valores): hacer `url` opcional o cerrar `proposito` con una lista cambia el contrato público de forma incompatible y `oasdiff` lo marca (`response-property-became-nullable`). La compatibilidad con quien ya usa `perfil` y `trabajo` pesa más que reflejar `solicitud` en el esquema.
+- **Cómo se cumple igual:** en una foto de solicitud el servicio pasa `url = null` y la propiedad **se omite del JSON** (`JsonIgnore(Condition = WhenWritingNull)`); `id` la sustituye. El valor `solicitud` y los demás se validan en tiempo de ejecución (un `proposito` desconocido responde 422, CA-05), no en el esquema; `POST /imagenes/subidas` sí declara el 429. Evidencia: `ImagenConfirmadaResponse` en `ImagenesDtos.cs` (su comentario cita `oasdiff`) y el esquema `ImagenConfirmadaResponse` con `required: [id, url, ancho, alto, bytes]` en el contrato.
+- **Lo que cambia en CA-10:** se prueba que el contrato declara el 429 y que `url` sigue requerida con la omisión en tiempo de ejecución, no «`url` opcional» ni «`proposito` incluye `solicitud`». Un contrato v2 podría reflejar ambas cosas (huecos de comportamiento de la auditoría, 3.C).
+- **No se enmienda CA-07** (503 `storage_unavailable` frente a `moderation_unavailable` con la moderación caída): queda como pregunta abierta para José.
 
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-23
