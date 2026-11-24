@@ -1,5 +1,6 @@
 // jscpd:ignore-start -- EXC-015
 using Knock.Hosting.ForwardedHeaders;
+using Knock.Hosting.Http;
 using Microsoft.Extensions.Options;
 using Serilog;
 
@@ -54,7 +55,7 @@ internal static class KnockApplicationExtensions
         app.UseAuthentication();
         app.UseRateLimiter();
         app.UseMiddleware<RequestBodyLimitMiddleware>();
-        app.UseMiddleware<JsonCompressionMiddleware>();
+        app.UseKnockJsonCompression("/api/v1/panel");
         app.UseAuthorization();
         // /health: vida (spec 001, igual que el gateway y Messaging); /health/ready: dependencias de datos (spec 003).
         app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "identidad" }));

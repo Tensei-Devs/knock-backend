@@ -34,7 +34,7 @@
 | T-15 | `LoggingExtensions` y `ObservabilityExtensions` a `Knock.Hosting` | R-08 · CA-12 | pendiente |
 | T-16 | `RedisExtensions` y `HealthExtensions` a `Knock.Hosting`; `MongoExtensions` y la parte técnica de `DataExtensions` a `src/Knock.Hosting.Data` (no existe) | R-07a · CA-12, CA-13 | pendiente |
 | T-17 | `SecurityHeadersMiddleware`, `HstsExtensions`, `ProblemResponses`, `CorsExtensions`/`CorsMiddleware`, `RequestBodyLimitMiddleware`, `JwtSettings` y la validación del JWT | R-08 · CA-12 | pendiente (siguen copiados en los servicios) |
-| T-18 | `JsonCompressionMiddleware` y la validación de opciones de caché | R-08 · CA-12 | pendiente (copiados en Identity y Market) |
+| T-18 | `JsonCompressionMiddleware` y la validación de opciones de caché | R-08 · CA-12 | parcial: `JsonCompressionMiddleware` y la validación de opciones de caché ya están en `Knock.Hosting` (`Http/`), sin copias; EXC-018 sigue por el método `Matches` de `MeController` y `OficiosController`, que no está en el catálogo de §3.2 (se necesita la enmienda de R-04 para moverlo o aceptar la copia) |
 | T-19 | El resto de `Common/` y `Hosting/` de Identity copiado de Market | R-08 · CA-12 | pendiente |
 | T-20 | Retirar EXC-007, EXC-008, EXC-015, EXC-016, EXC-018 y EXC-021; `**/Knock.Hosting.Data/**/*.cs` en `mutate` de Stryker | R-13, R-18 · CA-12 | pendiente (vencen EXC-015, EXC-016 y EXC-018 el 2026-12-04: renovarlas o hacer T-17 a T-19 antes) |
 | T-21 | `HostingLibraryBoundaryTests.Servicios_Sin_Copias_Del_Catalogo_CA_055_12` y `Sin_MongoDB_En_Hosting_Ni_Gateway_CA_055_13` | CA-12, CA-13 | pendiente |

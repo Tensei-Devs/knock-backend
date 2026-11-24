@@ -1,4 +1,5 @@
 using Knock.Hosting.ForwardedHeaders;
+using Knock.Hosting.Http;
 using Microsoft.Extensions.Options;
 using Serilog;
 
@@ -62,7 +63,7 @@ internal static class KnockApplicationExtensions
         app.UseAuthentication();
         app.UseRateLimiter();
         app.UseMiddleware<RequestBodyLimitMiddleware>();
-        app.UseMiddleware<JsonCompressionMiddleware>();
+        app.UseKnockJsonCompression();
         app.UseAuthorization();
         app.MapKnockHealth();
         app.MapKnockOpenApi(app.Environment);
