@@ -1,6 +1,7 @@
 using Knock.Hosting.Data;
 using Knock.Hosting.ForwardedHeaders;
 using Knock.Hosting.Health;
+using Knock.Hosting.Http;
 using Knock.Hosting.Logging;
 using Knock.Hosting.Observability;
 using Microsoft.Extensions.Options;
@@ -66,7 +67,7 @@ internal static class KnockApplicationExtensions
         app.UseAuthentication();
         app.UseRateLimiter();
         app.UseMiddleware<RequestBodyLimitMiddleware>();
-        app.UseMiddleware<JsonCompressionMiddleware>();
+        app.UseKnockJsonCompression();
         app.UseAuthorization();
         app.MapKnockHealth();
         app.MapKnockOpenApi(app.Environment);

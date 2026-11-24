@@ -1,3 +1,4 @@
+using Knock.Hosting.Http;
 using Microsoft.Extensions.Options;
 
 namespace Knock.Market.Api.Modules.Catalog.Data;
@@ -19,18 +20,12 @@ internal sealed class CatalogCacheOptions
 }
 
 /// <summary>Valida <see cref="CatalogCacheOptions"/> al arrancar. Los mensajes nombran la clave, nunca el valor.</summary>
-internal sealed class CatalogCacheOptionsValidator : IValidateOptions<CatalogCacheOptions>
+internal sealed class CatalogCacheOptionsValidator()
+    : CacheLifetimeOptionsValidator<CatalogCacheOptions>(CatalogCacheOptions.LifetimeKey, CatalogCacheOptions.MinimumLifetimeSeconds, CatalogCacheOptions.MaximumLifetimeSeconds)
 {
-    // jscpd:ignore-start -- EXC-018
-    public ValidateOptionsResult Validate(string? name, CatalogCacheOptions options)
+    protected override int? LifetimeSeconds(CatalogCacheOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
-        if (options.CatalogLifetimeSeconds is not (>= CatalogCacheOptions.MinimumLifetimeSeconds and <= CatalogCacheOptions.MaximumLifetimeSeconds))
-        {
-            return ValidateOptionsResult.Fail($"{CatalogCacheOptions.LifetimeKey} must be an integer from {CatalogCacheOptions.MinimumLifetimeSeconds} to {CatalogCacheOptions.MaximumLifetimeSeconds} (seconds).");
-        }
-
-        return ValidateOptionsResult.Success;
+        return options.CatalogLifetimeSeconds;
     }
-    // jscpd:ignore-end -- EXC-018
 }

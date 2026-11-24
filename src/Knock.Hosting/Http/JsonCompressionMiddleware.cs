@@ -1,27 +1,25 @@
-// jscpd:ignore-start -- EXC-015, EXC-018
 using System.Globalization;
 using System.IO.Compression;
-using System.Text.Json.Serialization;
-using Knock.Identity.Api.Modules.Account.Dtos;
-using Knock.Identity.Api.Modules.Panel.Dtos;
-using Knock.Identity.Api.Modules.Sesiones.Dtos;
-using Knock.Identity.Api.Modules.Usuarios.Dtos;
-using Microsoft.AspNetCore.Mvc;
 
-namespace Knock.Identity.Api.Hosting;
+namespace Knock.Hosting.Http;
 
 /// <summary>
 /// Compresión de JSON superior a 1 KB (spec 010, R-09 y CA-04): la compresión estándar de ASP.NET Core no garantiza umbral, así que este
 /// middleware comprime solo respuestas <c>application/json</c> 200 con más de <see cref="MinimumBytes"/> bytes y <c>Accept-Encoding</c>
-/// compatible (<c>br</c> preferido, luego <c>gzip</c>). Nunca comprime rutas de autenticación ni del panel (llevan tokens, spec 033 R-22; amenaza BREACH/CRIME), ni
+/// compatible (<c>br</c> preferido, luego <c>gzip</c>). Nunca comprime rutas de autenticación (llevan tokens; amenaza BREACH/CRIME), ni
 /// 304/204 ni respuestas sin cuerpo, ni respuestas pequeñas ni las que ya llegan codificadas. Conserva <c>ETag</c> y <c>Cache-Control</c>
 /// y agrega <c>Vary: Accept-Encoding</c> a toda respuesta JSON 200 y a los 304, se compriman o no, para que una caché pública no
 /// entregue una variante a quien pidió otra. El Gateway no comprime (deja pasar el <c>Content-Encoding</c> tal cual).
 /// La respuesta se bufferiza solo hasta <see cref="MaximumBufferedBytes"/>: si es mayor, el resto pasa sin comprimir y no se tocan las
 /// cabeceras ya enviadas (el consumo máximo en memoria es el techo más lo que se escribe en esa pasada).
 /// </summary>
-internal sealed class JsonCompressionMiddleware(RequestDelegate next)
+public sealed class JsonCompressionMiddleware(RequestDelegate next, JsonCompressionOptions? options = null)
 {
+    /// <summary>Las rutas de autenticación nunca se comprimen (llevan tokens; BREACH/CRIME); el servicio puede agregar más con <see cref="JsonCompressionOptions"/>.</summary>
+    private const string _authPath = "/api/v1/auth";
+
+    private readonly string[] _skippedPaths = [_authPath, .. options?.SkippedPaths ?? []];
+
     public const int MinimumBytes = 1024;
 
     /// <summary>Techo del búfer en memoria; respuestas mayores pasan sin comprimir (la protección no depende de tamaño del payload).</summary>
@@ -67,9 +65,8 @@ internal sealed class JsonCompressionMiddleware(RequestDelegate next)
     }
 
     // Sin Accept-Encoding compatible la respuesta también pasa por el búfer: así lleva Vary igual que la variante comprimida.
-    private static bool ShouldSkipRequest(HttpContext context) =>
-        context.Request.Path.StartsWithSegments("/api/v1/auth", StringComparison.OrdinalIgnoreCase)
-        || context.Request.Path.StartsWithSegments("/api/v1/panel", StringComparison.OrdinalIgnoreCase);
+    private bool ShouldSkipRequest(HttpContext context) =>
+        _skippedPaths.Any(path => context.Request.Path.StartsWithSegments(path, StringComparison.OrdinalIgnoreCase));
 
     private static string? PickEncoding(HttpContext context)
     {
@@ -279,28 +276,15 @@ internal sealed class JsonCompressionMiddleware(RequestDelegate next)
     }
 }
 
-/// <summary>Contexto de serialización JSON generado en compilación (spec 010, T-06): DTO de sesión, perfil y problemas.</summary>
-[JsonSerializable(typeof(ProblemDetails))]
-[JsonSerializable(typeof(SessionResponse))]
-[JsonSerializable(typeof(RefreshResponse))]
-[JsonSerializable(typeof(ProfileResponse))]
-[JsonSerializable(typeof(SessionListItemResponse))]
-[JsonSerializable(typeof(List<SessionListItemResponse>))]
-[JsonSerializable(typeof(FirebaseExchangeRequest))]
-[JsonSerializable(typeof(RefreshRequest))]
-[JsonSerializable(typeof(UpdateProfileRequest))]
-[JsonSerializable(typeof(ConsentResponse))]
-[JsonSerializable(typeof(ConsentResponse[]))]
-[JsonSerializable(typeof(UpdateConsentRequest))]
-[JsonSerializable(typeof(PendingResponse))]
-[JsonSerializable(typeof(DeletionScheduledResponse))]
-[JsonSerializable(typeof(PanelCelularRequest))]
-[JsonSerializable(typeof(PanelCelularResponse))]
-[JsonSerializable(typeof(PanelTotpRequest))]
-[JsonSerializable(typeof(PanelAccesoResponse))]
-[JsonSerializable(typeof(PanelActivacionRequest))]
-[JsonSerializable(typeof(PanelActivacionResponse))]
-internal sealed partial class IdentityJsonSerializerContext : JsonSerializerContext
+/// <summary>Rutas que el servicio agrega a las que <see cref="JsonCompressionMiddleware"/> nunca comprime (por ejemplo, el panel de Identidad, spec 033 R-22).</summary>
+public sealed record JsonCompressionOptions(IReadOnlyList<string> SkippedPaths);
+
+/// <summary>Registro del middleware de compresión de JSON de la spec 010.</summary>
+public static class JsonCompressionExtensions
 {
+    public static IApplicationBuilder UseKnockJsonCompression(this IApplicationBuilder app, params string[] extraSkippedPaths)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+        return app.UseMiddleware<JsonCompressionMiddleware>(new JsonCompressionOptions(extraSkippedPaths));
+    }
 }
-// jscpd:ignore-end -- EXC-015, EXC-018

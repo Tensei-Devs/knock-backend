@@ -174,7 +174,7 @@ excepciones:
   - id: EXC-018
     herramienta: jscpd
     regla: duplicación textual (y huella estructural de codemap)
-    alcance: spec 010 (KNOCK-205): JsonCompressionMiddleware de Identity.Api y de Market.Api, el método Matches de MeController y de OficiosController, y las validaciones de opciones ProfileCacheOptions y CatalogCacheOptions (con marcadores jscpd:ignore-start/end con EXC-018)
+    alcance: spec 010 (KNOCK-205): solo el método Matches de MeController y de OficiosController (marcadores jscpd:ignore-start/end con EXC-018). JsonCompressionMiddleware y la validación de opciones de caché pasaron a Knock.Hosting en KNOCK-281; Matches no está en el catálogo de la spec 055 (R-04) y mover esa pieza pide la enmienda del catálogo
     justificacion: >-
       La caché, la compresión y los ETag de la spec 010 se implementan en cada servicio por separado porque un servicio no referencia a otro
       y todavía no existe la biblioteca técnica compartida (misma situación de EXC-015, EXC-007 y EXC-008). Las copias cambian solo el espacio de nombres y
