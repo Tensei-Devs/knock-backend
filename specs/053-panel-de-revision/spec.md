@@ -51,7 +51,7 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 - **R-22:** **Permiso y auditoría de las decisiones.** El permiso `verification:review` (rol `verificador`, y `administrador`, spec 033 R-02) cubre las dos colas, la de verificaciones de identidad y la de recuperaciones de acceso; la lista de permisos de la 033 es cerrada y no se agrega uno nuevo. Cada decisión de VER-05 escribe en `panel_auditoria` (spec 033 R-23) un registro con `evento` `verificacion_decidida` o `recuperacion_decidida`, `resultado`, `sub` del verificador y `recursoId`, sin celular, motivo ni datos de la persona; si la auditoría no se puede escribir, la acción responde 503 `audit_unavailable` y no se ejecuta (R-24). Como las recuperaciones y el panel viven en Identidad, el cambio de número, el cierre de sesiones y el registro de auditoría se escriben en **una sola transacción**. Un moderador sin `verification:review` recibe 403 `insufficient_permission` (también auditado).
 - **R-23:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
 - **R-24:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
-- **R-25:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden). *(Enmienda 2026-11-24, borrador sin firmar: los límites del panel son por sesión del panel, 120 por minuto en lecturas y 30 por minuto al abrir y decidir; ver la nota al final.)*
+- **R-25:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden). *(Enmienda 2026-11-24, aprobada por José Julián Hernández Hernández el 2026-11-24: los límites del panel son por sesión del panel, 120 por minuto en lecturas y 30 por minuto al abrir y decidir; ver la nota al final.)*
 - **R-26:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
 
 ## 4. Criterios de aceptación
@@ -93,7 +93,7 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 - **CA-36:** Dada una recuperación en revisión, cuando un verificador la aprueba, entonces el número cambia, se cierran las sesiones y queda un registro `recuperacion_decidida` en la misma transacción; sin poder escribir la auditoría responde 503 `audit_unavailable` y no cambia nada; y un moderador sin `verification:review` recibe 403 con su registro de denegación.
 - **CA-37:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
 - **CA-38:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
-- **CA-39:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413. *(Enmienda 2026-11-23, aprobada por José Julián Hernández Hernández el 2026-11-24: R-25 se exige con política propia en las rutas del panel; ver la nota al final.)* *(Enmienda 2026-11-24, borrador sin firmar: el límite se cuenta por sesión del panel (`sid`) y sus valores son 120 por minuto para lecturas y 30 por minuto para abrir y decidir; antes decía «valores a validar por José» y partición por persona del panel. 413 por cuerpo mayor al tope de la decisión (2 048 bytes). Ver la nota al final.)*
+- **CA-39:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413. *(Enmienda 2026-11-23, aprobada por José Julián Hernández Hernández el 2026-11-24: R-25 se exige con política propia en las rutas del panel; ver la nota al final.)* *(Enmienda 2026-11-24, aprobada por José Julián Hernández Hernández el 2026-11-24: el límite se cuenta por sesión del panel (`sid`) y sus valores son 120 por minuto para lecturas y 30 por minuto para abrir y decidir; antes decía «valores a validar por José» y partición por persona del panel. 413 por cuerpo mayor al tope de la decisión (2 048 bytes). Ver la nota al final.)*
 - **CA-40:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
 - **CA-41:** Dado un reporte decidido `critica` contra una persona que no es técnica, cuando se consulta la decisión o la cola, entonces la gravedad sigue siendo `critica` (nunca se sobrescribe) y la prioridad derivada es `alta`; en cualquier otro caso la prioridad es `normal` y un reporte sin decidir no trae prioridad.
 
@@ -319,7 +319,7 @@ Las pruebas citan el caso como `CA_053_NN` en el nombre (para `python scripts/sd
 - Tarea: `task.md` T-11 (política y pruebas de 429 y 413 con host real), desbloqueada por la firma del 2026-11-24 (pendiente de código). No cambia la ruta ni el contrato salvo declarar el 429 en OpenAPI.
 
 ## Nota de enmienda (2026-11-24, decisión de José)
-- **Estado de esta enmienda:** Borrador sin firmar. La aprobación de abajo es la original; no se marca ninguna firma nueva. Lo firma José.
+- **Estado de esta enmienda:** aprobada por José Julián Hernández Hernández el 2026-11-24. La aprobación de abajo es la original; la firma de esta enmienda es la línea «Enmienda» de la sección Aprobación.
 - **R-25 y CA-39: valores y partición fijados.** Los límites de las rutas del panel se cuentan **por sesión del panel** (el claim `sid` del token del panel, el mismo que valida `PanelAuthorization.cs:84-85`; no por IP ni por `sub`: reemplaza el «por persona del panel» y el «valores propuestos que valida José» de la nota 2026-11-23, tercera). Dos políticas, con 429 y `Retry-After`:
 
 | Política (nombre propuesto) | Rutas | Límite | Partición |
@@ -334,6 +334,7 @@ Las pruebas citan el caso como `CA_053_NN` en el nombre (para `python scripts/sd
 
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
+- [x] Enmienda 2026-11-24 — nombre: José Julián Hernández Hernández fecha: 2026-11-24
 - [x] Enmienda 2026-11-23 — nombre: José Julián Hernández Hernández fecha: 2026-11-24
 - [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)
