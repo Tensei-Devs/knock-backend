@@ -1,5 +1,5 @@
 using AwesomeAssertions;
-using Knock.Market.Api.Hosting;
+using Knock.Hosting.Redis;
 using Knock.Market.Api.Modules.Catalog;
 using Knock.Market.Api.Modules.Catalog.Data;
 using Microsoft.Extensions.Configuration;

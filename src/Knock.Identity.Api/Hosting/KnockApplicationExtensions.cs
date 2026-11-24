@@ -1,5 +1,6 @@
 // jscpd:ignore-start -- EXC-015
 using Knock.Hosting.ForwardedHeaders;
+using Knock.Hosting.Health;
 using Microsoft.Extensions.Options;
 using Serilog;
 

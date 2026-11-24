@@ -1,5 +1,6 @@
 using Knock.Contracts.Correlation;
 using Knock.Hosting.ForwardedHeaders;
+using Knock.Hosting.Health;
 using Knock.Hosting.Lifecycle;
 using Knock.Messaging.Api.Hosting;
 using Knock.Messaging.Api.Modules.Avisos;
@@ -70,6 +71,6 @@ if (app.Environment.IsDevelopment())
 app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "mensajeria" })).AllowAnonymous();
 app.MapControllers();
 app.MapChatHub();
-app.MapKnockReadiness();
+app.MapKnockReadiness(allowAnonymous: true);
 
 await app.RunAsync();
