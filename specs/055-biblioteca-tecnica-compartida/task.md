@@ -42,3 +42,4 @@
 ## Definición de terminado
 - Los casos CA de `spec.md` tienen prueba con su ID; `python scripts/sdd_lint.py --trace 055` en OK, salvo CA-11 y CA-12 hasta sus etapas y los marcados «(comando)».
 - Gates de `AGENTS.md §5` en verde, par revisor y `Memoria.md` al día.
+- Revisión por par y `security-reviewer` omitidas por decisión de José (2026-11-24) en el PR de seguridad de T-17; autorrevisión de seguridad hecha (sin presentarla como hecha por una persona).
