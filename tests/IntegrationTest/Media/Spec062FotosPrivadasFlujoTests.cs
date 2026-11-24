@@ -81,8 +81,9 @@ public sealed class Spec062FotosPrivadasFlujoTests
         rejectedResponse.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
         (await Spec020Host.ReadAsync(rejectedResponse)).GetProperty("code").GetString().Should().Be("image_rejected");
         (await files.FindAsync(rejected.Id, CancellationToken.None))!.File.State.Should().Be(MediaFileState.Rejected);
-        // La spec pide el código moderation_unavailable; la ruta privada responde 503 con storage_unavailable. Se prueba lo que no cambia: falla cerrada con 503 y nada pasa a «listo».
+        // Falla cerrada: 503 con el código de la moderación (no el del almacenamiento) y nada pasa a «listo».
         unavailableResponse.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+        (await Spec020Host.ReadAsync(unavailableResponse)).GetProperty("code").GetString().Should().Be("moderation_unavailable");
         (await files.FindAsync(unavailable.Id, CancellationToken.None))!.File.State.Should().Be(MediaFileState.Pending);
         (await azurite.ListBlobNamesAsync(_media.FilesContainer)).Should().BeEmpty("ninguna foto llega al contenedor final");
         (await azurite.ListBlobNamesAsync(_media.QuarantineContainer)).Should().ContainSingle().Which.Should().Be(unavailable.Key, "solo se limpia la cuarentena de la rechazada");
