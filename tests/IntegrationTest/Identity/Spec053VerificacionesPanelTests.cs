@@ -112,8 +112,7 @@ public sealed class Spec053VerificacionesPanelTests
 
         firstPage.GetProperty("items").GetArrayLength().Should().Be(3);
         secondPage.GetProperty("items").GetArrayLength().Should().Be(2);
-        secondPage.TryGetProperty("nextCursor", out var next).Should().BeTrue();
-        next.ValueKind.Should().Be(JsonValueKind.Null);
+        secondPage.TryGetProperty("nextCursor", out _).Should().BeFalse("en la última página el cursor no se envía (el campo nulo se omite, como en las demás listas)");
         firstPage.GetProperty("items").EnumerateArray().Concat(secondPage.GetProperty("items").EnumerateArray()).Select(item => item.GetProperty("id").GetString()).Should().Equal(ids);
     }
 
