@@ -21,7 +21,7 @@ public sealed class Spec043BloqueoMensajesTests
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public async Task Bloqueo_En_Cualquier_Sentido_Corta_El_Envio_Con_404_CA_043_26(bool clientBlocks)
+    public async Task Bloqueo_En_Cualquier_Sentido_Corta_El_Envio_Con_404_CA_043_26_CA_043_27(bool clientBlocks)
     {
         await using var scenario = await ConversacionesScenario.StartAsync();
         var copy = await scenario.CopyAsync();
