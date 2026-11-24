@@ -1,6 +1,7 @@
 extern alias MarketApi;
 
 using AwesomeAssertions;
+using MarketApi::Knock.Market.Api.Modules.Requests.Data;
 using MarketApi::Knock.Market.Api.Modules.Requests.Services;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
@@ -11,6 +12,51 @@ namespace Knock.IntegrationTest.Requests;
 
 public sealed class Spec029CierreTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Cierre_Con_Envios_Reales_Conserva_Los_Descartados_CA_029_06(bool expire)
+    {
+        var clock = new Spec053DespachadorBandejaTests.TestClock();
+        var now = clock.GetUtcNow();
+        await using var host = await Spec020Host.StartAsync(configure: services => services.AddSingleton<TimeProvider>(clock));
+        using var created = await host.CreateAsync(host.ValidBody());
+        var id = ObjectId.Parse((await Spec020Host.ReadAsync(created)).GetProperty("id").GetString());
+        using var scope = host.Services.CreateScope();
+        var sends = scope.ServiceProvider.GetRequiredService<EnviosStore>();
+        var quoted = ObjectId.GenerateNewId();
+        var active = ObjectId.GenerateNewId();
+        var discarded = ObjectId.GenerateNewId();
+        foreach (var technician in new[] { quoted, active, discarded })
+        {
+            await sends.InsertAsync(id, technician, Guid.NewGuid().ToString("D"), 1, "relleno", now.UtcDateTime, CancellationToken.None);
+        }
+
+        var deliveries = host.Database.GetCollection<BsonDocument>("envios");
+        await deliveries.UpdateOneAsync(new BsonDocument("tecnicoId", quoted), new BsonDocument("$set", new BsonDocument("estado", "cotizado")));
+        await sends.DiscardAsync(id, discarded, now.UtcDateTime, CancellationToken.None);
+        await host.Database.GetCollection<BsonDocument>("cotizaciones").InsertOneAsync(
+            new BsonDocument { { "solicitudId", id }, { "tecnicoId", quoted }, { "estado", "enviada" } });
+        if (expire)
+        {
+            await host.Database.GetCollection<BsonDocument>("solicitudes").UpdateOneAsync(
+                new BsonDocument("_id", id), new BsonDocument("$set", new BsonDocument("venceEn", now.UtcDateTime)));
+        }
+
+        var service = scope.ServiceProvider.GetRequiredService<CierreDeSolicitudService>();
+        if (expire) await service.ExpireAsync(id, CancellationToken.None);
+        else await service.CancelAsync(id, host.ClientSub, "other", CancellationToken.None);
+
+        var result = await deliveries.Find(new BsonDocument("solicitudId", id)).ToListAsync();
+        result.Should().HaveCount(3);
+        var reason = expire ? "request_expired" : "request_cancelled";
+        result.Where(d => d["tecnicoId"] != discarded).Should().OnlyContain(d => d["estado"] == "cerrado" && d["cerradoMotivo"] == reason);
+        result.Single(d => d["tecnicoId"] == discarded)["estado"].AsString.Should().Be("descartado");
+        var message = await host.Database.GetCollection<BsonDocument>("outbox")
+            .Find(new BsonDocument("_id", (expire ? "SolicitudVencida:" : "SolicitudCancelada:") + id)).SingleAsync();
+        message["datos"]["tecnicosAvisar"].AsBsonArray.Select(x => x.AsString).Should().Equal(quoted.ToString());
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

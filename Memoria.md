@@ -1,5 +1,9 @@
 # Memoria — knock-backend
 
+## 2026-11-24 — KNOCK-71: integración de cascada con envíos de la 028
+- **Avance:** `Spec029CierreTests` usa `EnviosStore` y reloj inyectado para probar cancelación y vencimiento: cierra envíos activos y cotizados, conserva descartados y avisa solo al técnico que cotizó. T-02 sigue parcial: no se forzó una carrera real entre reparto y cierre ni se acreditó la cobertura completa.
+- **Verificación:** build Release con warnings como errores; integración 028/029 61/61 y base 028/029 2/2; `dotnet format`, trazador 029, codemap y excepciones correctos. El trazador reconoce nombres, no prueba cobertura completa. T-04 y T-06 ya existían en la rama y sus pruebas filtradas pasaron; sin cambios de producción ni dependencias.
+
 ## 2026-11-23 — Spec 035 T-04 y T-09: ProblemDetails 400 y 422 en Mensajería, matriz de límites y humo de dos clientes (KNOCK-186)
 - **Decisión:** sin dependencias nuevas. Se comprueba `instance` (plantilla de la ruta) y la traza sin consulta también con 400 y 422 en Mensajería, sobre su host real y la sonda de validación de la infraestructura de controllers. `docs/rate-limit-matrix.md` gana la matriz por política verificada contra `MarketRateLimits`, `IdentityRateLimits`, `MessagingRateLimits` y los `appsettings.json` (faltaban las políticas de agenda, visitas, cotización final, opiniones, mapa, explorar y asistente). El humo CA-15 queda como `tests/smoke/spec035-dos-clientes.sh`: necesita dos orígenes con IP pública distinta, se corre a mano contra el entorno de evaluación y no lo ejecuta el CI.
 - **A evitar:** correr el humo desde un solo origen (falla a propósito) o tomarlo como cumplido sin pegar su salida en el PR de despliegue.
