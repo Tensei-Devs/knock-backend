@@ -1010,6 +1010,13 @@
           "StackExchange.Redis": "[2.13.23, )"
         }
       },
+      "knock.hosting.data": {
+        "type": "Project",
+        "dependencies": {
+          "Knock.Hosting": "[1.0.0, )",
+          "MongoDB.Driver": "[3.14.0, )"
+        }
+      },
       "knock.identity.api": {
         "type": "Project",
         "dependencies": {
@@ -1023,6 +1030,7 @@
           "FluentValidation.DependencyInjectionExtensions": "[12.1.1, )",
           "Knock.Contracts": "[1.0.0, )",
           "Knock.Hosting": "[1.0.0, )",
+          "Knock.Hosting.Data": "[1.0.0, )",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[11.0.0, )",
           "Microsoft.AspNetCore.OpenApi": "[11.0.0, )",
           "MongoDB.Driver": "[3.14.0, )",
@@ -1047,6 +1055,7 @@
           "FluentValidation.DependencyInjectionExtensions": "[12.1.1, )",
           "Knock.Contracts": "[1.0.0, )",
           "Knock.Hosting": "[1.0.0, )",
+          "Knock.Hosting.Data": "[1.0.0, )",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[11.0.0, )",
           "Microsoft.AspNetCore.OpenApi": "[11.0.0, )",
           "MongoDB.Driver": "[3.14.0, )",
@@ -1069,6 +1078,7 @@
           "FluentValidation.DependencyInjectionExtensions": "[12.1.1, )",
           "Knock.Contracts": "[1.0.0, )",
           "Knock.Hosting": "[1.0.0, )",
+          "Knock.Hosting.Data": "[1.0.0, )",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[11.0.0, )",
           "Microsoft.AspNetCore.OpenApi": "[11.0.0, )",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[11.0.0, )",

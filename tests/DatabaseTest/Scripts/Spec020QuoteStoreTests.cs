@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using AwesomeAssertions;
+using Knock.Hosting.Data;
 using Knock.IntegrationTest.Support;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Requests.Data;

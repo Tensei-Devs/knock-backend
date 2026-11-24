@@ -123,7 +123,7 @@ public sealed class Spec058MigracionTests
         await files.Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(
             Builders<BsonDocument>.IndexKeys.Ascending("archivoId"), new CreateIndexOptions { Unique = true, Name = "archivoId_1" }));
         var options = new MediaOptions();
-        var store = new MongoMediaFileStore(database, Options.Create(new KnockMongoOptions()));
+        var store = new MongoMediaFileStore(database, Options.Create(new Knock.Hosting.Data.KnockMongoOptions()));
         var blobs = new AzureMediaBlobStore(new BlobServiceClient(azurite.ConnectionString), new EnlaceSubidaNoDisponible(), Options.Create(options));
         return (new ArchivosMigrationRunner(store, blobs, TimeProvider.System), store, options, files);
     }

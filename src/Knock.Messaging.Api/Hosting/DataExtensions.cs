@@ -1,3 +1,4 @@
+using Knock.Hosting.Data;
 namespace Knock.Messaging.Api.Hosting;
 
 /// <summary>

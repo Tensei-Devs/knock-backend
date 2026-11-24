@@ -31,7 +31,7 @@ public class Spec020bMediaUsoIntegrationTests
         _sharedClient ??= new MongoDB.Driver.MongoClient(documentDb.ConnectionString);
         var database = _sharedClient.GetDatabase("s020b_" + Guid.NewGuid().ToString("N"));
         var options = new MediaOptions { ReducedMaxSide = 512, MaxConcurrentProcessing = 2 };
-        var store = new MongoMediaFileStore(database, Options.Create(new MarketApi::Knock.Market.Api.Hosting.KnockMongoOptions()));
+        var store = new MongoMediaFileStore(database, Options.Create(new Knock.Hosting.Data.KnockMongoOptions()));
         var service = new MediaService(store, new AzureMediaBlobStore(new Azure.Storage.Blobs.BlobServiceClient(azurite.ConnectionString), new EnlaceSubidaNoDisponible(), Options.Create(options)), processor, new AllowAll(), TimeProvider.System);
         var links = new RecordingLinks();
         var api = new MediaApi(service, links, Options.Create(options));

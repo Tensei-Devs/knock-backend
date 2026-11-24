@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using Knock.Hosting.Data;
 using Knock.Market.Api.Common.Errors;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Requests.Domain;

@@ -1,3 +1,4 @@
+using Knock.Hosting.Data;
 using Knock.Hosting.ForwardedHeaders;
 using Knock.Hosting.Health;
 using Knock.Hosting.Logging;

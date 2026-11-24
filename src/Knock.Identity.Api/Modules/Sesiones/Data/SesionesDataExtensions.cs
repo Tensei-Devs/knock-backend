@@ -1,3 +1,4 @@
+using Knock.Hosting.Data;
 using Knock.Identity.Api.Hosting;
 
 namespace Knock.Identity.Api.Modules.Sesiones.Data;

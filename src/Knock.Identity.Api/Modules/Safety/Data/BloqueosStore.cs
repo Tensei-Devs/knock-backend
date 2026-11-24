@@ -1,6 +1,7 @@
 using System.Globalization;
 using Knock.Contracts.Safety;
 using Knock.Hosting.Concurrency;
+using Knock.Hosting.Data;
 using Knock.Identity.Api.Hosting;
 using Knock.Identity.Api.Hosting.Procesos.Outbox;
 using Microsoft.Extensions.Options;
