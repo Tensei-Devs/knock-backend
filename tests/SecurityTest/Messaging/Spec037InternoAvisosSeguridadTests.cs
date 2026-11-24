@@ -119,14 +119,48 @@ public sealed class Spec037InternoAvisosSeguridadTests
         delete.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    internal static Task<SecurityMessagingFactory> CreateHostAsync(string connectionString, string databaseName, byte[] marketKey) =>
-        SecurityMessagingFactory.CreateAsync(new Dictionary<string, string?>
+    /// <summary>
+    /// Anfitrión de Mensajería con MongoDB real. Con <paramref name="pushEnabled"/> el despachador queda encendido (por omisión <c>Notificaciones:PushHabilitado</c> es falso y el receptor no registra
+    /// nada): se usa una cuenta de servicio ficticia generada en cada ejecución y, al no haber dispositivos, nunca se llama a FCM; solo queda el registro de envíos.
+    /// </summary>
+    internal static Task<SecurityMessagingFactory> CreateHostAsync(string connectionString, string databaseName, byte[] marketKey, bool pushEnabled = false)
+    {
+        var settings = new Dictionary<string, string?>
         {
             ["ConnectionStrings:KnockMongo"] = connectionString,
             ["Mongo:Databases:Messaging"] = databaseName,
             ["Security:InternalTokens:MarketKey"] = Convert.ToBase64String(marketKey),
             ["Security:InternalTokens:IdentityKey"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)),
+        };
+        if (pushEnabled)
+        {
+            settings["Notificaciones:PushHabilitado"] = "true";
+            settings["Notificaciones:Fcm:ProjectId"] = "project-test";
+            settings["Notificaciones:Fcm:ServiceAccount"] = FakeServiceAccountJson();
+        }
+
+        return SecurityMessagingFactory.CreateAsync(settings);
+    }
+
+    /// <summary>
+    /// Crea el índice único de deduplicación que en producción pone <c>db/037-notificaciones.js</c> (el servicio no crea índices): sin él, la base temporal de la prueba acepta dos registros del mismo evento.
+    /// </summary>
+    internal static Task EnsureDeduplicationIndexAsync(IMongoClient mongo, string databaseName) =>
+        mongo.GetDatabase(databaseName).GetCollection<BsonDocument>("notifications.enviados").Indexes.CreateOneAsync(
+            new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending("eventoId").Ascending("destinatario"),
+                new CreateIndexOptions { Name = "eventoId_1_destinatario_1", Unique = true }));
+
+    private static string FakeServiceAccountJson()
+    {
+        using var rsa = RSA.Create(2048);
+        return System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, string>
+        {
+            ["client_email"] = "svc@project-test.example",
+            ["private_key"] = rsa.ExportPkcs8PrivateKeyPem(),
+            ["token_uri"] = "https://oauth.example/token",
         });
+    }
 
     internal static string Mint(string issuer, byte[] key, string permission, TimeSpan? lifetime = null)
     {

@@ -27,10 +27,11 @@ public sealed class Spec061AvisoTecnicoTests
         using var mongo = new MongoClient(fixture.ConnectionString);
         try
         {
-            await using var host = await Spec037InternoAvisosSeguridadTests.CreateHostAsync(fixture.ConnectionString, name, marketKey);
+            await Spec037InternoAvisosSeguridadTests.EnsureDeduplicationIndexAsync(mongo, name);
+            await using var host = await Spec037InternoAvisosSeguridadTests.CreateHostAsync(fixture.ConnectionString, name, marketKey, pushEnabled: true);
             using var client = host.CreateClient();
             var opinion = ObjectId.GenerateNewId().ToString();
-            var body = new { eventoId = "OpinionModerada:" + opinion + ":1", tipo = _type, destinatarioId = Guid.NewGuid().ToString("D"), rol = "tecnico", recurso = opinion };
+            var body = new { eventoId = "OpinionModerada:" + Guid.NewGuid().ToString("N") + ":1", tipo = _type, destinatarioId = Guid.NewGuid().ToString("D"), rol = "tecnico", recurso = opinion };
             var credential = Spec037InternoAvisosSeguridadTests.Mint("knock-market", marketKey, _type);
             var notices = mongo.GetDatabase(name).GetCollection<BsonDocument>("notifications.enviados");
 
