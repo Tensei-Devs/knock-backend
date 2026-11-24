@@ -114,6 +114,7 @@ internal sealed partial class VerificationReviewService(
         {
             RecoveryDecisionOutcome.Decided => new VerificationDecisionResult(id.ToString(), approved ? ReviewStates.Verified : ReviewStates.Rejected, now),
             RecoveryDecisionOutcome.AlreadyDecided => throw AlreadyDecided(),
+            RecoveryDecisionOutcome.PhoneTaken => throw new DomainException(DomainErrorKind.Conflict, "The new phone number already belongs to an account.", ModerationErrorCodes.PhoneTakenCode),
             _ => throw NotFound(),
         };
     }

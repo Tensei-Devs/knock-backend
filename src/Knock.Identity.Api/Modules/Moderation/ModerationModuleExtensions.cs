@@ -20,7 +20,8 @@ public static class ModerationModuleExtensions
         services.AddSingleton<IReportReviewStore>(provider => provider.GetRequiredService<ReportReviewStore>());
         services.TryAddSingleton<IVerificationPhotoLinks, UnavailableVerificationPhotoLinks>();
         services.TryAddSingleton<IVerificationBlobPurger, NoVerificationBlobs>();
-        services.TryAddSingleton<IAccessRecoveryReviews, NoAccessRecoveryReviews>();
+        services.TryAddSingleton<IRecoverySessionClosures, NoRecoverySessionClosures>();
+        services.AddSingleton<IAccessRecoveryReviews, AccessRecoveryReviewStore>();
         services.TryAddSingleton<IReportDecisionEffects, ReportDecisionEffects>();
         services.AddSingleton<VerificationReviewService>();
         services.AddSingleton<ReportReviewService>();

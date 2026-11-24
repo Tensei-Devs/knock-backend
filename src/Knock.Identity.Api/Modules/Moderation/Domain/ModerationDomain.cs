@@ -110,6 +110,7 @@ internal static class ModerationErrorCodes
     public const string ReportAlreadyDecidedCode = "report_already_decided";
     public const string InvalidCursorCode = "invalid_review_cursor";
     public const string PhotosUnavailableCode = "photos_unavailable";
+    public const string PhoneTakenCode = "phone_already_registered";
 }
 
 /// <summary>Nombres de los eventos de auditoría de esta spec (R-17 y R-22): sin celular, motivo ni datos de la persona.</summary>
