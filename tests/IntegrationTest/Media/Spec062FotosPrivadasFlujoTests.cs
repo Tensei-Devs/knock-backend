@@ -158,6 +158,8 @@ public sealed class Spec062FotosPrivadasFlujoTests
                 // Aquí la comprobación de fotos de la solicitud es la real (módulo de archivos), no el doble de las demás pruebas de la 020.
                 services.RemoveAll<IRequestPhotos>();
                 services.AddScoped<IRequestPhotos, MediaRequestPhotos>();
+                // El host no trae Redis: los límites por persona van con el contador en memoria, como en las pruebas HTTP de la 062.
+                services.AddSingleton(new LimitesImagen(new ContadorVentanaMemoria(TimeProvider.System), new ContadorVentanaMemoria(TimeProvider.System)));
             });
 
     private static Task<HttpResponseMessage> Confirm(Spec020Host host, string sub, PrivatePhoto photo) =>
