@@ -86,7 +86,7 @@ Definir y especificar los endpoints COT-06, COT-07, AJU-01, AJU-02 del Excel de 
 
 **4.1 Criterio → prueba**
 
-*(Enmienda 2026-11-23, aprobada por José Julián Hernández Hernández el 2026-11-24: los nombres `Spec049Tests.CriterioNN_CA_049_NN` de la versión anterior no existen en el código. Los de abajo son los de las pruebas de integración de #352, pendiente de fusión y de CI en verde; hasta entonces son nombres previstos y no evidencia. El trazador solo exige el sufijo `CA_049_NN`.)*
+*(Enmienda 2026-11-23, aprobada por José Julián Hernández Hernández el 2026-11-24: los nombres `Spec049Tests.CriterioNN_CA_049_NN` de la versión anterior no existen en el código. Los de abajo son los de las pruebas de integración de #352, que ya está fusionado; su CI no se ha leído aquí, así que los nombres son los del código fusionado y no una afirmación de CI verde. El trazador solo exige el sufijo `CA_049_NN`.)*
 
 | Criterio | Prueba (IntegrationTest/Requests; pendiente de #352) |
 |---|---|
