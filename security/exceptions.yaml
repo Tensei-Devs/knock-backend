@@ -157,7 +157,7 @@ excepciones:
   - id: EXC-008
     herramienta: jscpd, codemap
     regla: código duplicado (jscpd:ignore y línea base de clones de docs/architecture/clones-baseline.json)
-    alcance: src/Knock.Identity.Api/Hosting/MongoExtensions.cs, src/Knock.Identity.Api/Hosting/RedisExtensions.cs, src/Knock.Identity.Api/Hosting/HealthExtensions.cs, src/Knock.Messaging.Api/Hosting/MongoExtensions.cs, src/Knock.Messaging.Api/Hosting/HealthExtensions.cs, src/Knock.Gateway/Hosting/RedisExtensions.cs, src/Knock.Gateway/Hosting/HealthExtensions.cs
+    alcance: src/Knock.Identity.Api/Hosting/MongoExtensions.cs y src/Knock.Messaging.Api/Hosting/MongoExtensions.cs (RedisExtensions y HealthExtensions pasaron a Knock.Hosting en KNOCK-281; solo queda MongoDB, que va a Knock.Hosting.Data)
     justificacion: >-
       Spec 003 (KNOCK-198): cada servicio necesita su cliente de MongoDB y de Redis, y la constitución solo permite una biblioteca
       compartida de tipos y contratos sin lógica (Knock.Contracts). Por decisión del líder del 2026-11-04 se aceptan por ahora copias
@@ -213,7 +213,7 @@ excepciones:
   - id: EXC-021
     herramienta: jscpd, codemap
     regla: código duplicado (jscpd:ignore y línea base de clones de docs/architecture/clones-baseline.json)
-    alcance: src/Knock.Messaging.Api/Hosting/RedisExtensions.cs, src/Knock.Messaging.Api/Hosting/SecurityHeadersMiddleware.cs, src/Knock.Messaging.Api/Hosting/AuthenticationExtensions.cs y src/Knock.Messaging.Api/Hosting/ProblemResponses.cs (4 archivos con su nombre exacto; JwtSettings.cs pasó a Knock.Hosting en KNOCK-281, entre «// jscpd:ignore-start -- EXC-021» y su cierre; RateLimitingExtensions.cs salió con KNOCK-280); no se amplía más allá de 5 (la siguiente copia obliga a hacer la biblioteca compartida)
+    alcance: src/Knock.Messaging.Api/Hosting/SecurityHeadersMiddleware.cs, src/Knock.Messaging.Api/Hosting/AuthenticationExtensions.cs y src/Knock.Messaging.Api/Hosting/ProblemResponses.cs (3 archivos con su nombre exacto; RedisExtensions pasó a Knock.Hosting en KNOCK-281 y JwtSettings.cs también, entre «// jscpd:ignore-start -- EXC-021» y su cierre; RateLimitingExtensions.cs salió con KNOCK-280); no se amplía más allá de 5 (la siguiente copia obliga a hacer la biblioteca compartida)
     justificacion: >-
       BUG-004 (KNOCK-241): Mensajería necesita el mismo JWT, encabezados de seguridad, límite por IP y cliente de Redis que Identidad, Mercado y el gateway antes de publicar su
       primer endpoint y de la spec 026 (KNOCK-62). Aún no existe la biblioteca técnica compartida y un servicio no referencia a otro, así que se copian estas clases de

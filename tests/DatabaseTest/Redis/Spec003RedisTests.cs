@@ -1,6 +1,6 @@
 using AwesomeAssertions;
+using Knock.Hosting.Redis;
 using Knock.IntegrationTest.Support;
-using Knock.Market.Api.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -65,7 +65,7 @@ public sealed class Spec003RedisTests
             .AddInMemoryCollection(new Dictionary<string, string?> { [KnockRedisOptions.ConnectionStringKey] = connectionString })
             .Build();
         var services = new ServiceCollection().AddSingleton<IConfiguration>(configuration).AddLogging();
-        services.AddKnockRedis();
+        services.AddKnockRedis("knock-api");
         return services.BuildServiceProvider();
     }
 }

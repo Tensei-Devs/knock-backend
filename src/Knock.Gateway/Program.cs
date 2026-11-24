@@ -1,6 +1,7 @@
 using Knock.Contracts.Correlation;
 using Knock.Gateway.Hosting;
 using Knock.Hosting.ForwardedHeaders;
+using Knock.Hosting.Health;
 using Knock.Hosting.Lifecycle;
 using Knock.Hosting.Logging;
 using Knock.Hosting.Observability;
@@ -47,7 +48,7 @@ app.UseMiddleware<PanelTokenMiddleware>();
 app.UseMiddleware<UserRateLimitMiddleware>();
 app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "gateway" })).AllowAnonymous();
-app.MapHealthChecks(HealthExtensions.ReadyPath, new HealthCheckOptions { Predicate = check => check.Tags.Contains(HealthExtensions.ReadyTag) }).AllowAnonymous();
+app.MapKnockReadiness(allowAnonymous: true);
 app.MapReverseProxy();
 
 await app.RunAsync();

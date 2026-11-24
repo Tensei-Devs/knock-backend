@@ -1,4 +1,5 @@
 using Knock.Hosting.ForwardedHeaders;
+using Knock.Hosting.Health;
 using Knock.Hosting.Logging;
 using Knock.Hosting.Observability;
 using Microsoft.Extensions.Options;
