@@ -53,6 +53,15 @@ public sealed class Spec054Tests
     }
 
     [Fact]
+    public void La_Limpieza_Conserva_14_Dias_Lo_Hecho_Y_90_Lo_Fallido_Y_Lo_Reciente_No_Vence_CA_054_18()
+    {
+        // El borrado lo hace el índice TTL de `limpiarEn` (`Spec054OutboxScriptTests`, CA_054_09); aquí se fija la fecha que cada cierre le pone.
+        PoliticaDeReintentos.LimpiarEn(_now, fallido: false).Should().Be(_now.AddDays(PoliticaDeReintentos.RetencionTerminadoDias));
+        PoliticaDeReintentos.LimpiarEn(_now, fallido: true).Should().Be(_now.AddDays(90));
+        PoliticaDeReintentos.LimpiarEn(_now, fallido: false).Should().BeAfter(_now.AddDays(13), "un documento de menos de 14 días se conserva");
+    }
+
+    [Fact]
     public void Esperas_De_Reintento_Y_Limpieza_CA_054_06()
     {
         _attempts.Select(x => PoliticaDeReintentos.Espera(x)!.Value.TotalSeconds).Should().Equal(5, 30, 120, 600);

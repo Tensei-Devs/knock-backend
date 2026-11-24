@@ -118,6 +118,10 @@ Las cinco rutas de `/api/v1/me/casa-y-auto` (CAS-01 a CAS-05) no tienen polític
 
 Políticas por `sub` del JWT (ventana fija, por proceso; con dos réplicas el límite efectivo se duplica), todas con 429 y `Retry-After`: `POST /me/cambio-numero` **3 por hora** (R-20), `POST /me/cambio-numero/confirmar` **5 por hora**, `POST /me/exportaciones` **3 por hora** y `POST /me/eliminacion` **5 por hora**; estos tres últimos son valores propuestos porque la spec no los fija. `POST /recuperacion-acceso` (pública) tiene **3 por hora por IP** y además **3 por hora por número** (nuevo y anterior, contados por su HMAC en `RecoveryAttemptLimiter`, en memoria del proceso). `POST` y `GET /suspension/apelacion` (pública, spec 060) llevan la política `suspension-apelacion`: **20 por hora por IP** (`IdentityRateLimits`) y **5 por hora por número** (HMAC, `SuspensionAppealLimiter`, en memoria del proceso); cuerpo de 2 KiB (413). `GET/PUT /me/consentimientos`, `GET /me/pendientes` y `POST /me/eliminacion/cancelar` usan solo el límite general. Cuerpos: 4 KiB en cambio de número y recuperación, 8 KiB en eliminación, 1 KiB en consentimientos, exportaciones y cancelar (413). Para que las políticas por persona lean el `sub`, Identidad ejecuta `UseAuthentication` antes de `UseRateLimiter`.
 
+## Bloqueos y reportes en Identidad (spec 043, KNOCK-95)
+
+Políticas por `sub` del JWT, con 429 y `Retry-After`: `POST` y `DELETE /usuarios/{id}/bloqueo` **30 por hora**, `POST /reportes` y `POST /reportes/{id}/apelacion` **10 por hora**, `GET /me/bloqueos` y `GET /reportes/me` **120 por minuto**. Son valores propuestos porque la spec 043 (R-26) no los fija: pendientes de validación de José. Cuerpos: 4 KiB en crear reporte y en apelar (413).
+
 ## Verificación de identidad en Identidad (spec 025, KNOCK-79)
 
 `POST /api/v1/me/verificacion` tiene una política por `sub` de **3 creaciones por hora** (`RateLimitingExtensions.VerificationCreatePolicy`, con `SubjectPolicy` y partición compartida); la respuesta 429 incluye `Retry-After`. Frena el uso de la creación como oráculo de CURP (§9). `GET /api/v1/me/verificacion` usa los límites globales. El cuerpo se limita a 8 KB (413).
@@ -202,6 +206,9 @@ Todas las políticas con nombre usan el contador compartido en Redis con respald
 | `suspension-apelacion` | `SuspensionAppealController` | 20 por hora | IP |
 | `exportaciones` | `MeExportacionesController` | 3 por hora | `sub` |
 | `eliminacion` | `MeEliminacionController` | 5 por hora | `sub` |
+| `bloqueos` | `BloqueosController` (POST y DELETE) | 30 por hora | `sub` |
+| `reportes` | `ReportesController` (crear y apelar) | 10 por hora | `sub` |
+| `seguridad-leer` | `BloqueosController` y `ReportesController` (lecturas propias) | 120 por minuto | `sub` |
 | `verificacion-crear` | `MeVerificacionController` | 3 por hora | `sub` |
 | `verificacion-confirmar` | `FotosVerificacionController` | 10 por hora | `sub` |
 

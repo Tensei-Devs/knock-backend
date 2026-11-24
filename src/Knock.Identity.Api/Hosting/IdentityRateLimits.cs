@@ -20,6 +20,15 @@ internal static class IdentityRateLimits
     /// <summary>Spec 039: programar la eliminación de la cuenta (USR-10). Valor propuesto: la spec no fija límite, solo registra el 429.</summary>
     public const string DeletionPolicy = "eliminacion";
 
+    /// <summary>Spec 043 (R-26): bloquear y desbloquear (BLO-01 y BLO-02). Valor propuesto: la spec no fija límite, solo registra el 429.</summary>
+    public const string BlockPolicy = "bloqueos";
+
+    /// <summary>Spec 043 (R-26): crear un reporte y apelar su decisión (REP-01 y REP-03). Valor propuesto: la spec no fija límite, solo registra el 429.</summary>
+    public const string ReportPolicy = "reportes";
+
+    /// <summary>Spec 043 (R-26): leer la lista de bloqueos y de reportes propios (BLO-03 y REP-02). Valor propuesto: la spec no fija límite, solo registra el 429.</summary>
+    public const string SafetyReadPolicy = "seguridad-leer";
+
     /// <summary>Spec 025 (R-19): crear una verificación, 3 por hora por persona.</summary>
     public const string VerificationCreatePolicy = "verificacion-crear";
 
@@ -46,6 +55,9 @@ internal static class IdentityRateLimits
                 .PerClient(SuspensionAppealPolicy, "suspension-apelacion", 20, TimeSpan.FromHours(1))
                 .PerSubject(ExportPolicy, 3, TimeSpan.FromHours(1))
                 .PerSubject(DeletionPolicy, 5, TimeSpan.FromHours(1))
+                .PerSubject(BlockPolicy, 30, TimeSpan.FromHours(1))
+                .PerSubject(ReportPolicy, 10, TimeSpan.FromHours(1))
+                .PerSubject(SafetyReadPolicy, 120, TimeSpan.FromMinutes(1))
                 .PerSubject(VerificationCreatePolicy, 3, TimeSpan.FromHours(1))
                 .PerSubject(VerificationConfirmPolicy, 10, TimeSpan.FromHours(1)),
         });

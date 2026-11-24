@@ -4,6 +4,7 @@ using Knock.Identity.Api.Modules.Safety.Dtos;
 using Knock.Identity.Api.Modules.Safety.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.WebUtilities;
 
 namespace Knock.Identity.Api.Modules.Safety.Controllers.V1;
@@ -21,6 +22,7 @@ internal sealed class BloqueosController(BlockService service) : ControllerBase
 
     /// <summary>Bloquea a la persona de la ruta. 201; 404 <c>user_not_found</c>; 409 <c>already_blocked</c>; 422 si es uno mismo o el identificador no es válido.</summary>
     [HttpPost("api/v{version:apiVersion}/usuarios/{id}/bloqueo")]
+    [EnableRateLimiting(IdentityRateLimits.BlockPolicy)]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, _problemJson)]
@@ -40,6 +42,7 @@ internal sealed class BloqueosController(BlockService service) : ControllerBase
 
     /// <summary>Quita el bloqueo («Deshacer»). 204; 404 <c>block_not_found</c> si no había.</summary>
     [HttpDelete("api/v{version:apiVersion}/usuarios/{id}/bloqueo")]
+    [EnableRateLimiting(IdentityRateLimits.BlockPolicy)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, _problemJson)]
@@ -54,6 +57,7 @@ internal sealed class BloqueosController(BlockService service) : ControllerBase
 
     /// <summary>A quién tiene bloqueado quien llama, de lo más reciente a lo más antiguo, con paginación por cursor y solo con identificador, nombre público y fecha.</summary>
     [HttpGet("api/v{version:apiVersion}/me/bloqueos")]
+    [EnableRateLimiting(IdentityRateLimits.SafetyReadPolicy)]
     [ProducesResponseType<BlockedPage>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, _problemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]
