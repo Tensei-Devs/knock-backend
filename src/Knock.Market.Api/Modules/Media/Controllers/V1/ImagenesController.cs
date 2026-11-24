@@ -133,6 +133,7 @@ internal sealed class ImagenesController(SubidaImagenService service) : Controll
             MediaOutcomeStatus.Unprocessable when detalle == MediaRejection.ModerationRejected => (StatusCodes.Status422UnprocessableEntity, "image_rejected"),
             MediaOutcomeStatus.Unprocessable => (StatusCodes.Status422UnprocessableEntity, CodigosImagen.ImageInvalidCode),
             MediaOutcomeStatus.NotFound => (StatusCodes.Status404NotFound, "upload_not_found"),
+            MediaOutcomeStatus.Unavailable when detalle == MediaRejection.ModerationUnavailable => (StatusCodes.Status503ServiceUnavailable, "moderation_unavailable"),
             _ => (StatusCodes.Status503ServiceUnavailable, "storage_unavailable"),
         };
         return Regla(codigoEstado, codigo, reintentarEnSegundos is { } segundos ? TimeSpan.FromSeconds(segundos) : null);

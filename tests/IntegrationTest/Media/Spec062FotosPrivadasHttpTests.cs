@@ -7,6 +7,7 @@ using System.Text.Json;
 using AwesomeAssertions;
 using Knock.IntegrationTest.Support;
 using MarketApi::Knock.Market.Api.Modules.Media.Data;
+using MarketApi::Knock.Market.Api.Modules.Media.Domain;
 using MarketApi::Knock.Market.Api.Modules.Media.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -24,13 +25,13 @@ public sealed class Spec062FotosPrivadasHttpTests
     private const string _ruta = "/api/v1/imagenes/subidas";
     private const string _cuerpo = """{"proposito":"solicitud","tipoContenido":"image/jpeg","tamanoBytes":1000}""";
 
-    private static MarketApiFactory Crear() => MarketApiFactory.CreateOffline(
+    private static MarketApiFactory Crear(IMediaBlobStore? blobs = null) => MarketApiFactory.CreateOffline(
         services =>
         {
             services.RemoveAll<IMediaFileStore>();
             services.RemoveAll<IMediaBlobStore>();
             services.AddSingleton<IMediaFileStore>(new InMemoryMediaFileStore());
-            services.AddSingleton<IMediaBlobStore>(new InMemoryMediaBlobStore());
+            services.AddSingleton<IMediaBlobStore>(blobs ?? new InMemoryMediaBlobStore());
             services.AddSingleton<ISubidasImagenStore>(new SubidasImagenMemoriaStore());
             services.AddSingleton(new LimitesImagen(new ContadorVentanaMemoria(TimeProvider.System), new ContadorVentanaMemoria(TimeProvider.System)));
         },
@@ -101,5 +102,38 @@ public sealed class Spec062FotosPrivadasHttpTests
         (await sinSubir.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString().Should().Be("file_not_uploaded");
         ajena.StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await ajena.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString().Should().Be("upload_not_found");
+    }
+
+    [Fact]
+    public async Task PedirEnlace_Con_El_Almacenamiento_Caido_Responde_503_Storage_Unavailable_Y_No_Moderation_CA_062_07()
+    {
+        using var factory = Crear(new LinkFailingBlobStore());
+        using var client = Autenticado(factory, "persona-5");
+
+        using var respuesta = await Pedir(client);
+
+        respuesta.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+        (await respuesta.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString().Should().Be("storage_unavailable");
+    }
+
+    /// <summary>Almacén de blobs cuyo enlace de subida falla como falla un Azure caído; el resto delega en el doble en memoria.</summary>
+    private sealed class LinkFailingBlobStore : IMediaBlobStore
+    {
+        private readonly InMemoryMediaBlobStore _inner = new();
+
+        public Task<EnlaceSubida> CreateUploadLinkAsync(string quarantineBlob, string contentType, CancellationToken cancellationToken) =>
+            throw new IOException("Blob storage is unavailable.");
+
+        public Task EnsureContainersAsync(CancellationToken cancellationToken) => _inner.EnsureContainersAsync(cancellationToken);
+
+        public Task<UploadedBlob?> GetUploadedAsync(string quarantineBlob, CancellationToken cancellationToken) => _inner.GetUploadedAsync(quarantineBlob, cancellationToken);
+
+        public Task<byte[]?> DownloadQuarantineAsync(string quarantineBlob, UploadedBlob expected, CancellationToken cancellationToken) =>
+            _inner.DownloadQuarantineAsync(quarantineBlob, expected, cancellationToken);
+
+        public Task UploadFileAsync(string fileBlob, byte[] content, ImageFormat format, CancellationToken cancellationToken) =>
+            _inner.UploadFileAsync(fileBlob, content, format, cancellationToken);
+
+        public Task DeleteQuarantineAsync(string quarantineBlob, CancellationToken cancellationToken) => _inner.DeleteQuarantineAsync(quarantineBlob, cancellationToken);
     }
 }

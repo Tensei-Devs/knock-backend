@@ -10,7 +10,8 @@ internal sealed record MediaOutcome<T>(MediaOutcomeStatus Status, T? Value = def
     public static MediaOutcome<T> NotFound() => new(MediaOutcomeStatus.NotFound);
     public static MediaOutcome<T> Conflict(string detail) => new(MediaOutcomeStatus.Conflict, Detail: detail);
     public static MediaOutcome<T> Unprocessable(string detail) => new(MediaOutcomeStatus.Unprocessable, Detail: detail);
-    public static MediaOutcome<T> Unavailable() => new(MediaOutcomeStatus.Unavailable);
+    /// <summary>A dependency is down (503). Without <paramref name="detail"/> the cause is the storage; <see cref="MediaRejection.ModerationUnavailable"/> marks the moderation (spec 062, CA-07).</summary>
+    public static MediaOutcome<T> Unavailable(string? detail = null) => new(MediaOutcomeStatus.Unavailable, Detail: detail);
     /// <summary>The per-owner cap of pending uploads was reached (429 <c>limit_exceeded</c> with <c>Retry-After</c>, spec 058 R-11).</summary>
     public static MediaOutcome<T> LimitExceeded(int retryAfterSeconds) => new(MediaOutcomeStatus.LimitExceeded, RetryAfterSeconds: retryAfterSeconds);
 }
@@ -18,6 +19,7 @@ internal static class MediaRejection
 {
     public const string InvalidFile = "The file must be a JPEG, PNG or WebP image of 5 MB or less.";
     public const string ModerationRejected = "The content was rejected by moderation.";
+    public const string ModerationUnavailable = "The moderation service is unavailable.";
     public const string NotUploaded = "No file was uploaded with the upload link.";
     public const string ChangedDuringConfirmation = "The uploaded file changed while it was being confirmed. Upload it again.";
     public static readonly string DimensionsTooLarge = string.Create(System.Globalization.CultureInfo.InvariantCulture,

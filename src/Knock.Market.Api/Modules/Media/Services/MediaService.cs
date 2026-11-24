@@ -125,16 +125,16 @@ internal sealed class MediaService(
         }
         catch (TimeoutException)
         {
-            return MediaOutcome<ConfirmedFile>.Unavailable();
+            return MediaOutcome<ConfirmedFile>.Unavailable(MediaRejection.ModerationUnavailable);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return MediaOutcome<ConfirmedFile>.Unavailable();
+            return MediaOutcome<ConfirmedFile>.Unavailable(MediaRejection.ModerationUnavailable);
         }
 
         if (review.Outcome == ModerationOutcome.Unavailable)
         {
-            return MediaOutcome<ConfirmedFile>.Unavailable();
+            return MediaOutcome<ConfirmedFile>.Unavailable(MediaRejection.ModerationUnavailable);
         }
         if (review.Outcome != ModerationOutcome.Allowed)
         {

@@ -97,6 +97,7 @@ public sealed class MediaServiceTests
         var confirm = await harness.Service.ConfirmAsync(_ownerId, ticketId, CancellationToken.None);
 
         confirm.Status.Should().Be(MediaOutcomeStatus.Unavailable);
+        confirm.Detail.Should().Be(MediaRejection.ModerationUnavailable, "the cause is the moderation, not the storage (spec 062, CA-07)");
         harness.Blobs.ContainsQuarantine(quarantine).Should().BeTrue("a retry needs the uploaded image");
         harness.Blobs.CountFinalBlobs().Should().Be(0, "nothing is published when moderation is down");
         (await harness.Files.FindAsync(ticketId, CancellationToken.None))!.File.State.Should().Be(MediaFileState.Pending);
