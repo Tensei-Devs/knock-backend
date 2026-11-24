@@ -1,7 +1,10 @@
 using Knock.Contracts.Correlation;
 using Knock.Gateway.Hosting;
 using Knock.Hosting.ForwardedHeaders;
+using Knock.Hosting.Health;
 using Knock.Hosting.Lifecycle;
+using Knock.Hosting.Logging;
+using Knock.Hosting.Observability;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Serilog;
 
@@ -26,8 +29,8 @@ builder.Services
     .AddKnockGatewayAuthentication()
     .AddKnockGatewayPanel();
 // Spec 011: Serilog estructurado y OpenTelemetry con redacción; Azure Monitor solo si hay APPLICATIONINSIGHTS_CONNECTION_STRING.
-builder.Services.AddKnockLogging(builder.Configuration);
-builder.Services.AddKnockObservability(builder.Configuration, builder.Environment);
+builder.Services.AddKnockLogging(builder.Configuration, typeof(Program).Assembly);
+builder.Services.AddKnockObservability(builder.Configuration, builder.Environment, typeof(Program).Assembly, "knock-api");
 
 var app = builder.Build();
 
@@ -45,7 +48,7 @@ app.UseMiddleware<PanelTokenMiddleware>();
 app.UseMiddleware<UserRateLimitMiddleware>();
 app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "gateway" })).AllowAnonymous();
-app.MapHealthChecks(HealthExtensions.ReadyPath, new HealthCheckOptions { Predicate = check => check.Tags.Contains(HealthExtensions.ReadyTag) }).AllowAnonymous();
+app.MapKnockReadiness(allowAnonymous: true);
 app.MapReverseProxy();
 
 await app.RunAsync();

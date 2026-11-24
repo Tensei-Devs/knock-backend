@@ -5,6 +5,8 @@ extern alias messaging;
 using System.Net;
 using System.Security.Cryptography;
 using AwesomeAssertions;
+using Knock.Hosting.Health;
+using Knock.Hosting.Redis;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server.Features;
@@ -17,7 +19,6 @@ using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using StackExchange.Redis;
 using Xunit;
-using MarketHosting = Knock.Market.Api.Hosting;
 
 namespace Knock.UnitTest.Hosting;
 
@@ -33,13 +34,13 @@ public sealed class Spec003DataClientsTests
     private static readonly Dictionary<string, Service> _services = new()
     {
         ["Identity"] = new(s => identity::Knock.Identity.Api.Hosting.DataExtensions.AddKnockData(s),
-            e => identity::Knock.Identity.Api.Hosting.HealthExtensions.MapKnockReadiness(e), "Identity", Redis: true),
+            e => HealthExtensions.MapKnockReadiness(e), "Identity", Redis: true),
         ["Messaging"] = new(s => messaging::Knock.Messaging.Api.Hosting.DataExtensions.AddKnockData(s),
-            e => messaging::Knock.Messaging.Api.Hosting.HealthExtensions.MapKnockReadiness(e), "Messaging", Redis: false),
+            e => HealthExtensions.MapKnockReadiness(e, true), "Messaging", Redis: false),
         ["Gateway"] = new(s => gateway::Knock.Gateway.Hosting.DataExtensions.AddKnockData(s),
-            e => gateway::Knock.Gateway.Hosting.HealthExtensions.MapKnockReadiness(e), MongoKey: null, Redis: true),
+            e => HealthExtensions.MapKnockReadiness(e, true), MongoKey: null, Redis: true),
         // Market registra Redis a demanda del módulo que lo use (spec 003); aquí se prueba ese registro.
-        ["Market"] = new(s => MarketHosting.RedisExtensions.AddKnockRedis(s), Map: null, MongoKey: null, Redis: true),
+        ["Market"] = new(s => RedisExtensions.AddKnockRedis(s, "knock-api"), Map: null, MongoKey: null, Redis: true),
     };
 
     public static TheoryData<string> AllServices() => [.. _services.Keys];

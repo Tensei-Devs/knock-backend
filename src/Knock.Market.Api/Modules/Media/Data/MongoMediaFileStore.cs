@@ -1,4 +1,5 @@
 using System.Globalization;
+using Knock.Hosting.Data;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Media.Domain;
 using Microsoft.Extensions.Options;

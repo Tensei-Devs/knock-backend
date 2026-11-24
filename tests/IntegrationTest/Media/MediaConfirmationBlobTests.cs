@@ -38,7 +38,7 @@ public class MediaConfirmationBlobTests
     }
 
     [Fact]
-    public async Task ConfirmedPhotoMovesCleanedToFinalAndClearsQuarantine_OI2_02()
+    public async Task ConfirmedPhotoMovesCleanedToFinalAndClearsQuarantine_OI2_02_CA_058_11()
     {
         await using var azurite = await AzuriteFixture.StartAsync();
         using var processor = CreateProcessor();
@@ -59,7 +59,7 @@ public class MediaConfirmationBlobTests
         confirm.Value.State.Should().Be("listo");
         var files = await azurite.ListBlobNamesAsync(options.FilesContainer);
         files.Should().HaveCount(2, "the cleaned original and the reduced copy reach the final container");
-        files.Should().OnlyContain(name => name.StartsWith(key, StringComparison.Ordinal));
+        files.Should().BeEquivalentTo([$"{key}/original.jpg", $"{key}/reducida.jpg"], "spec 058 CA-11: the blob names are the same as before the collection change");
         (await azurite.ListBlobNamesAsync(options.QuarantineContainer)).Should().BeEmpty("the quarantine copy is deleted after confirmation");
 
         var originalBlob = azurite.Container(options.FilesContainer).GetBlobClient($"{key}/original.jpg");
@@ -108,7 +108,7 @@ public class MediaConfirmationBlobTests
         var options = new MediaOptions { ReducedMaxSide = 512, MaxConcurrentProcessing = 2 };
         var configured = Options.Create(options);
         var blobs = new BlobServiceClient(azurite.ConnectionString);
-        var store = new MongoMediaFileStore(database, Options.Create(new MarketApi::Knock.Market.Api.Hosting.KnockMongoOptions()));
+        var store = new MongoMediaFileStore(database, Options.Create(new Knock.Hosting.Data.KnockMongoOptions()));
         var service = new MediaService(
             store,
             new AzureMediaBlobStore(blobs, new EnlaceSubidaNoDisponible(), configured),

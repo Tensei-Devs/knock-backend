@@ -283,12 +283,13 @@ Las pruebas citan el caso como `CA_043_NN` en el nombre (para `python scripts/sd
 - Dependencias: conversaciones y reparto de solicitudes de las specs 026, 028 y 030, y la cola del panel de la spec 053.
 
 ## Nota de enmienda (2026-11-23, decisión de José)
-- **Estado de esta enmienda:** Borrador sin firmar. La aprobación de abajo es la original; no se marca ninguna firma nueva. Lo firma José. El trabajo de código que pide queda en `task.md` como pendiente y **depende de esa firma**.
+- **Estado de esta enmienda:** aprobada por José Julián Hernández Hernández el 2026-11-24. La aprobación de abajo es la original; la firma de esta enmienda es la línea «Enmienda» de la sección Aprobación. El trabajo de código que pide queda en `task.md` como pendiente y **depende de esa firma**.
 - **R-26: límites por ruta, valores PROPUESTOS.** La spec exigía un límite registrado por ruta sin fijar los valores. José aprobó tal cual, **sujetos a medición**, los que propone el PR #355 (todos por `sub` del JWT, con 429 y `Retry-After`): bloquear y desbloquear (`POST` y `DELETE /usuarios/{id}/bloqueo`) **30 por hora** (política `bloqueos`); crear reporte y apelar (`POST /reportes` y `POST /reportes/{id}/apelacion`) **10 por hora** (`reportes`); lecturas propias (`GET /me/bloqueos` y `GET /reportes/me`) **120 por minuto** (`seguridad-leer`). Cuerpos de 4 KiB en crear reporte y en apelar (413).
 - **Estado del código:** #355 está **abierto y no fusionado** en `sprint-05`; al escribir esta nota las políticas no existen en el código. Esta nota solo documenta los valores como propuestos; la implementación es la de #355, con `Spec043LimitesTests` (CA-36).
 - Se ajustarán con la medición del uso real; ajustarlos es cambiar la configuración y la matriz, no esta spec.
 
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
+- [x] Enmienda 2026-11-23 — nombre: José Julián Hernández Hernández fecha: 2026-11-24
 - [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

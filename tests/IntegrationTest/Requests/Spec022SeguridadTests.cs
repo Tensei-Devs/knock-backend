@@ -1,7 +1,7 @@
 extern alias MarketApi;
-
 using System.Net;
 using AwesomeAssertions;
+using Knock.Hosting.Data;
 using Knock.IntegrationTest.Support;
 using MarketApi::Knock.Market.Api.Hosting;
 using MarketApi::Knock.Market.Api.Modules.Requests.Data;

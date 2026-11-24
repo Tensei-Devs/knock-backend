@@ -1,5 +1,6 @@
 using System.Globalization;
 using Knock.Contracts.Catalog;
+using Knock.Hosting.Data;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Requests.Domain;
 using Knock.Market.Api.Modules.Requests.Services;

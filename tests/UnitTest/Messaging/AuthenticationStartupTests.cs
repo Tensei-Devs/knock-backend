@@ -1,6 +1,7 @@
 extern alias messaging;
 
 using AwesomeAssertions;
+using Knock.Hosting.Security;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
@@ -34,7 +35,7 @@ public sealed class AuthenticationStartupTests
     [Fact]
     public void ValidConfiguration_Loads_TC_BUG_004_06()
     {
-        var settings = MessagingHosting.JwtSettingsFactory.Create(Config(Valid()), new FakeEnvironment(Environments.Production));
+        var settings = JwtSettingsFactory.Create(Config(Valid()), new FakeEnvironment(Environments.Production));
 
         settings.Issuer.Should().Be("knock-api");
         settings.Audience.Should().Be("knock-app");
@@ -49,7 +50,7 @@ public sealed class AuthenticationStartupTests
         var values = Valid();
         values["Jwt:SigningKey"] = signingKey;
 
-        var act = () => MessagingHosting.JwtSettingsFactory.Create(Config(values), new FakeEnvironment(Environments.Production));
+        var act = () => JwtSettingsFactory.Create(Config(values), new FakeEnvironment(Environments.Production));
 
         act.Should().Throw<InvalidOperationException>().Which.Message.Should().Contain("Jwt:SigningKey");
     }
@@ -58,9 +59,9 @@ public sealed class AuthenticationStartupTests
     public void ShortKey_FailsFast_TC_BUG_004_06()
     {
         var values = Valid();
-        values["Jwt:SigningKey"] = Key(MessagingHosting.JwtSettingsFactory.MinimumKeyBytes - 1);
+        values["Jwt:SigningKey"] = Key(JwtSettingsFactory.MinimumKeyBytes - 1);
 
-        var act = () => MessagingHosting.JwtSettingsFactory.Create(Config(values), new FakeEnvironment(Environments.Production));
+        var act = () => JwtSettingsFactory.Create(Config(values), new FakeEnvironment(Environments.Production));
 
         act.Should().Throw<InvalidOperationException>().Which.Message.Should().Contain("at least");
     }
@@ -73,7 +74,7 @@ public sealed class AuthenticationStartupTests
         var values = Valid();
         values.Remove(missing);
 
-        var act = () => MessagingHosting.JwtSettingsFactory.Create(Config(values), new FakeEnvironment(Environments.Production));
+        var act = () => JwtSettingsFactory.Create(Config(values), new FakeEnvironment(Environments.Production));
 
         act.Should().Throw<InvalidOperationException>().Which.Message.Should().Contain(missing);
     }
@@ -84,8 +85,8 @@ public sealed class AuthenticationStartupTests
         var values = Valid();
         values.Remove("Jwt:SigningKey");
 
-        var settings = MessagingHosting.JwtSettingsFactory.Create(Config(values), new FakeEnvironment(Environments.Development));
+        var settings = JwtSettingsFactory.Create(Config(values), new FakeEnvironment(Environments.Development));
 
-        settings.SigningKey.Key.Length.Should().BeGreaterThanOrEqualTo(MessagingHosting.JwtSettingsFactory.MinimumKeyBytes);
+        settings.SigningKey.Key.Length.Should().BeGreaterThanOrEqualTo(JwtSettingsFactory.MinimumKeyBytes);
     }
 }

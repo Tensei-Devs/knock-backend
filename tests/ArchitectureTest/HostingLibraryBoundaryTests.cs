@@ -80,4 +80,26 @@ public class HostingLibraryBoundaryTests
     [MemberData(nameof(Projects))]
     public void Servicios_Sin_Copias_De_La_Etapa_2_CA_055_11(string project) =>
         Assembly.Load(project).GetTypes().Select(t => t.Name).Should().NotContain(_stage2Types);
+
+    [Fact]
+    public void Sin_MongoDB_En_Hosting_Ni_Gateway_CA_055_13()
+    {
+        // R-07a: solo Knock.Hosting.Data (y los tres servicios que tienen base de datos) cargan el controlador de MongoDB.
+        foreach (var name in new[] { _library, "Knock.Gateway" })
+        {
+            Assembly.Load(name).GetReferencedAssemblies().Select(a => a.Name).Should().NotContain(["MongoDB.Driver", "MongoDB.Bson", "Knock.Hosting.Data"], name);
+        }
+
+        Assembly.Load("Knock.Hosting.Data").GetReferencedAssemblies().Select(a => a.Name).Should().Contain("MongoDB.Driver");
+    }
+
+    [Fact]
+    public void Hosting_Data_No_Referencia_Servicios_Ni_Contratos_CA_055_01()
+    {
+        // R-07a: Knock.Hosting.Data cumple R-01 a R-06 igual que Knock.Hosting.
+        var references = Assembly.Load("Knock.Hosting.Data").GetReferencedAssemblies().Select(a => a.Name).ToList();
+
+        references.Should().NotContain([.. _projects, "Knock.Contracts"]);
+        Types.InAssembly(Assembly.Load("Knock.Hosting.Data")).ShouldNot().Inherit<ControllerBase>().GetResult().IsSuccessful.Should().BeTrue();
+    }
 }

@@ -1,6 +1,7 @@
 extern alias identity;
 using System.Security.Cryptography;
 using System.Text.Json;
+using Knock.Hosting.Data;
 using Knock.IntegrationTest.Support;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
@@ -12,7 +13,7 @@ using MongoDB.Driver;
 using Xunit;
 using DemoVerificationSeeder = identity::Knock.Identity.Api.Modules.Trust.Services.DemoVerificationSeeder;
 using DemoVerificationStore = identity::Knock.Identity.Api.Modules.Trust.Data.DemoVerificationStore;
-using KnockMongoOptions = identity::Knock.Identity.Api.Hosting.KnockMongoOptions;
+using KnockMongoOptions = Knock.Hosting.Data.KnockMongoOptions;
 
 namespace Knock.DatabaseTest.Demo;
 

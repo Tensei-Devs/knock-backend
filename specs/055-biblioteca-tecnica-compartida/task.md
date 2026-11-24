@@ -31,9 +31,9 @@
 
 | Tarea | Qué se hace | Cubre | Estado |
 |---|---|---|---|
-| T-15 | `LoggingExtensions` y `ObservabilityExtensions` a `Knock.Hosting` | R-08 · CA-12 | pendiente |
-| T-16 | `RedisExtensions` y `HealthExtensions` a `Knock.Hosting`; `MongoExtensions` y la parte técnica de `DataExtensions` a `src/Knock.Hosting.Data` (no existe) | R-07a · CA-12, CA-13 | pendiente |
-| T-17 | `SecurityHeadersMiddleware`, `HstsExtensions`, `ProblemResponses`, `CorsExtensions`/`CorsMiddleware`, `RequestBodyLimitMiddleware`, `JwtSettings` y la validación del JWT | R-08 · CA-12 | pendiente (siguen copiados en los servicios) |
+| T-15 | `LoggingExtensions` y `ObservabilityExtensions` a `Knock.Hosting` | R-08 · CA-12 | hecha (`src/Knock.Hosting/Logging/LoggingExtensions.cs` y `Observability/ObservabilityExtensions.cs`; sin copias en los cuatro proyectos; EXC-007 retirada) |
+| T-16 | `RedisExtensions` y `HealthExtensions` a `Knock.Hosting`; `MongoExtensions` y la parte técnica de `DataExtensions` a `src/Knock.Hosting.Data` (no existe) | R-07a · CA-12, CA-13 | hecha (`RedisExtensions` y `HealthExtensions` en `src/Knock.Hosting`; `MongoExtensions` en `src/Knock.Hosting.Data`, que solo referencian los tres servicios; `DataExtensions` de cada servicio conserva solo la clave de su base; `Sin_MongoDB_En_Hosting_Ni_Gateway_CA_055_13`) |
+| T-17 | `SecurityHeadersMiddleware`, `HstsExtensions`, `ProblemResponses`, `CorsExtensions`/`CorsMiddleware`, `RequestBodyLimitMiddleware`, `JwtSettings` y la validación del JWT | R-08 · CA-12 | parcial: `JwtSettings`, `JwtSettingsFactory` y los parámetros de validación del JWT ya están en `Knock.Hosting.Security` (KNOCK-281); faltan `SecurityHeadersMiddleware`, `HstsExtensions`, `ProblemResponses`, CORS y `RequestBodyLimitMiddleware`, que difieren entre copias (CSP en desarrollo, HSTS del gateway, código `payload_too_large`, encabezados CORS permitidos) y se parametrizan en PR aparte |
 | T-18 | `JsonCompressionMiddleware` y la validación de opciones de caché | R-08 · CA-12 | parcial: `JsonCompressionMiddleware` y la validación de opciones de caché ya están en `Knock.Hosting` (`Http/`), sin copias; EXC-018 sigue por el método `Matches` de `MeController` y `OficiosController`, que no está en el catálogo de §3.2 (se necesita la enmienda de R-04 para moverlo o aceptar la copia) |
 | T-19 | El resto de `Common/` y `Hosting/` de Identity copiado de Market | R-08 · CA-12 | pendiente |
 | T-20 | Retirar EXC-007, EXC-008, EXC-015, EXC-016, EXC-018 y EXC-021; `**/Knock.Hosting.Data/**/*.cs` en `mutate` de Stryker | R-13, R-18 · CA-12 | pendiente (vencen EXC-015, EXC-016 y EXC-018 el 2026-12-04: renovarlas o hacer T-17 a T-19 antes) |
@@ -42,3 +42,4 @@
 ## Definición de terminado
 - Los casos CA de `spec.md` tienen prueba con su ID; `python scripts/sdd_lint.py --trace 055` en OK, salvo CA-11 y CA-12 hasta sus etapas y los marcados «(comando)».
 - Gates de `AGENTS.md §5` en verde, par revisor y `Memoria.md` al día.
+- Revisión por par y `security-reviewer` omitidas por decisión de José (2026-11-24) en el PR de seguridad de T-17; autorrevisión de seguridad hecha (sin presentarla como hecha por una persona).

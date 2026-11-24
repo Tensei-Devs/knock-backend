@@ -1,3 +1,4 @@
+using Knock.Hosting.Data;
 using Knock.Messaging.Api.Hosting;
 using Knock.Messaging.Api.Modules.Conversaciones.Domain;
 using Microsoft.Extensions.Options;

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Knock.Hosting.Data;
 using Knock.Market.Api.Hosting;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;

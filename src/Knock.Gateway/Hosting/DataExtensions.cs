@@ -1,3 +1,4 @@
+using Knock.Hosting.Redis;
 namespace Knock.Gateway.Hosting;
 
 /// <summary>
@@ -9,7 +10,7 @@ internal static class DataExtensions
     public static IServiceCollection AddKnockData(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
-        services.AddKnockRedis();
+        services.AddKnockRedis("knock-gateway");
         return services;
     }
 }
