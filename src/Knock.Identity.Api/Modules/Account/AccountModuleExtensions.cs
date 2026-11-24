@@ -3,6 +3,7 @@ using Knock.Identity.Api.Modules.Account.Data;
 using Knock.Identity.Api.Modules.Account.Domain;
 using Knock.Identity.Api.Modules.Account.Services;
 using Knock.Identity.Api.Modules.HomeAndCar.Services;
+using Knock.Identity.Api.Modules.Moderation.Services;
 using Knock.Identity.Api.Modules.Usuarios.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -25,6 +26,8 @@ public static class AccountModuleExtensions
         services.AddSingleton<PhoneChangeService>();
         services.AddSingleton<IRecoveryAttemptLimiter, RecoveryAttemptLimiter>();
         services.AddSingleton<AccessRecoveryService>();
+        // Lo que sigue de aprobar una recuperacion en el panel (spec 053, D-07): aviso a los dispositivos y sesiones canceladas.
+        services.Replace(ServiceDescriptor.Singleton<IRecoverySessionClosures, RecoverySessionClosures>());
         services.AddSingleton<DataExportService>();
         services.AddOptions<OptionalConsentOptions>().BindConfiguration(OptionalConsentOptions.SectionName);
         services.AddSingleton<ConsentService>();

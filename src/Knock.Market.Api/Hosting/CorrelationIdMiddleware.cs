@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Knock.Hosting.Observability;
 using Serilog.Context;
 
 namespace Knock.Market.Api.Hosting;

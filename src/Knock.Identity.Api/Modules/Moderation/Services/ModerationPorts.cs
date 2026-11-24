@@ -48,6 +48,8 @@ internal enum RecoveryDecisionOutcome
     NotFound,
     AlreadyDecided,
     Decided,
+    PhoneTaken,
+    SelfReview,
 }
 
 /// <summary>
@@ -69,6 +71,26 @@ internal sealed class NoAccessRecoveryReviews : IAccessRecoveryReviews
 
     public Task<RecoveryDecisionOutcome> DecideAsync(ObjectId id, bool approved, string deciderSub, Func<StoreTransaction, Task> writeAudit, CancellationToken cancellationToken) =>
         Task.FromResult(RecoveryDecisionOutcome.NotFound);
+}
+
+/// <summary>
+/// Lo que sigue de aprobar una recuperación de acceso, ya confirmada la transacción: el aviso <c>sesion_revocada</c> a los dispositivos de cada sesión cerrada y su cancelación en Redis (specs 037 y 016). Lo implementa
+/// el módulo de la cuenta (spec 039); sin él no hay nada que avisar.
+/// </summary>
+internal interface IRecoverySessionClosures
+{
+    Task AfterCommitAsync(IReadOnlyList<string> sessionIds, CancellationToken cancellationToken);
+
+    /// <summary>Repite solo la cancelación en Redis (idempotente) cuando la primera vez falló después de confirmar; sin avisos nuevos.</summary>
+    Task RetryCancellationAsync(IReadOnlyList<string> sessionIds, CancellationToken cancellationToken);
+}
+
+/// <summary>Sin el módulo de la cuenta no hay sesiones que avisar ni cancelar fuera de la base.</summary>
+internal sealed class NoRecoverySessionClosures : IRecoverySessionClosures
+{
+    public Task AfterCommitAsync(IReadOnlyList<string> sessionIds, CancellationToken cancellationToken) => Task.CompletedTask;
+
+    public Task RetryCancellationAsync(IReadOnlyList<string> sessionIds, CancellationToken cancellationToken) => Task.CompletedTask;
 }
 
 /// <summary>Lo que se decidió sobre un reporte, con los identificadores que necesitan los efectos y nada más (sin textos ni datos de las personas).</summary>

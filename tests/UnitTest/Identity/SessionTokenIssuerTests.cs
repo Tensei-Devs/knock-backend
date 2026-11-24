@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 using AwesomeAssertions;
-using Knock.Identity.Api.Common.Security;
+using Knock.Hosting.Security;
 using Knock.Identity.Api.Modules.Sesiones.Services;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;

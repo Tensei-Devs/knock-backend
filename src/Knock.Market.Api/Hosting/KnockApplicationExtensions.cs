@@ -1,6 +1,8 @@
 using Knock.Hosting.Data;
 using Knock.Hosting.ForwardedHeaders;
 using Knock.Hosting.Health;
+using Knock.Hosting.Logging;
+using Knock.Hosting.Observability;
 using Microsoft.Extensions.Options;
 using Serilog;
 
@@ -11,7 +13,7 @@ internal static class KnockApplicationExtensions
     public static WebApplicationBuilder AddKnockApi(this WebApplicationBuilder builder)
     {
         builder.Services
-            .AddKnockLogging(builder.Configuration)
+            .AddKnockLogging(builder.Configuration, typeof(KnockApplicationExtensions).Assembly)
             .AddControllers(options => options.Filters.Add<ValidationFilter>())
             .AddInternalControllers();
         builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.TypeInfoResolverChain.Insert(0, MarketJsonSerializerContext.Default));
@@ -27,7 +29,7 @@ internal static class KnockApplicationExtensions
             .AddKnockHealth()
             .AddKnockMongo()
             .AddKnockModules(builder.Configuration, builder.Environment.IsDevelopment())
-            .AddKnockObservability(builder.Configuration, builder.Environment);
+            .AddKnockObservability(builder.Configuration, builder.Environment, typeof(KnockApplicationExtensions).Assembly, "knock-market");
         return builder;
     }
 

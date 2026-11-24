@@ -87,6 +87,31 @@ public sealed class Spec037InternoAvisosSeguridadTests
     }
 
     [Fact]
+    public async Task InternalNotices_CredentialWithoutThePermission_Returns403ServiceNotAllowed_CA_056_03()
+    {
+        var fixture = await DocumentDbFixture.SharedAsync();
+        var name = "s056_perm_" + Convert.ToHexString(RandomNumberGenerator.GetBytes(8));
+        var marketKey = RandomNumberGenerator.GetBytes(32);
+        using var mongo = new MongoClient(fixture.ConnectionString);
+        try
+        {
+            await using var host = await CreateHostAsync(fixture.ConnectionString, name, marketKey);
+            using var client = host.CreateClient();
+            var body = new { eventoId = Guid.NewGuid().ToString("N"), tipo = "solicitud_nueva", destinatarioId = Guid.NewGuid().ToString("D"), rol = "tecnico", recurso = ObjectId.GenerateNewId().ToString() };
+
+            using var response = await SecureHttp.PostJsonAsync(client, _path, body, Mint("knock-market", marketKey, "cotizacion_nueva"));
+
+            response.StatusCode.Should().Be(HttpStatusCode.Forbidden, "una credencial válida sin el permiso del tipo no ejecuta la operación");
+            (await response.Content.ReadAsStringAsync()).Should().Contain("service_not_allowed");
+            (await mongo.GetDatabase(name).GetCollection<BsonDocument>("notifications.enviados").CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(0);
+        }
+        finally
+        {
+            await mongo.DropDatabaseAsync(name);
+        }
+    }
+
+    [Fact]
     public async Task InternalNotices_RejectsExtraFieldsAndWrongRoleWithoutEchoingValues()
     {
         var marketKey = RandomNumberGenerator.GetBytes(32);

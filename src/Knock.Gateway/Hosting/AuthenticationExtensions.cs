@@ -1,38 +1,10 @@
+using Knock.Hosting.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
 
 namespace Knock.Gateway.Hosting;
-
-/// <summary>Configuración del JWT que valida el gateway: la misma que firma Identidad (<c>Jwt:Issuer</c>, <c>Jwt:Audience</c> y <c>Jwt:SigningKey</c> en Base64, al menos 32 bytes).</summary>
-internal sealed record GatewayJwtSettings(string Issuer, string Audience, SymmetricSecurityKey SigningKey)
-{
-    public const int MinimumKeyBytes = 32;
-
-    public static GatewayJwtSettings Create(IConfiguration configuration)
-    {
-        ArgumentNullException.ThrowIfNull(configuration);
-        var issuer = Required(configuration, "Jwt:Issuer");
-        var audience = Required(configuration, "Jwt:Audience");
-        var configured = Required(configuration, "Jwt:SigningKey");
-        var buffer = new byte[configured.Length];
-        if (!Convert.TryFromBase64String(configured, buffer, out var written))
-        {
-            throw new InvalidOperationException("Jwt:SigningKey must be Base64.");
-        }
-
-        if (written < MinimumKeyBytes)
-        {
-            throw new InvalidOperationException($"Jwt:SigningKey must decode to at least {MinimumKeyBytes} bytes.");
-        }
-
-        return new GatewayJwtSettings(issuer, audience, new SymmetricSecurityKey(buffer[..written]));
-    }
-
-    private static string Required(IConfiguration configuration, string key) =>
-        string.IsNullOrWhiteSpace(configuration[key]) ? throw new InvalidOperationException($"{key} is required.") : configuration[key]!;
-}
 
 /// <summary>
 /// Autenticación del gateway (spec 009): un solo algoritmo (HMAC-SHA256), firmante, destinatario y vencimiento sin tolerancia, y rechazo de los JWT
@@ -46,29 +18,14 @@ internal static class AuthenticationExtensions
 
     public static IServiceCollection AddKnockGatewayAuthentication(this IServiceCollection services)
     {
-        services.AddSingleton(provider => GatewayJwtSettings.Create(provider.GetRequiredService<IConfiguration>()));
+        services.AddSingleton(provider => JwtSettingsFactory.CreateRequiringKey(provider.GetRequiredService<IConfiguration>()));
         services.AddSingleton<IRevokedSessions, RedisRevokedSessions>();
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
         services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
-            .Configure<GatewayJwtSettings>((options, settings) =>
+            .Configure<JwtSettings>((options, settings) =>
             {
                 options.MapInboundClaims = false;
-                // jscpd:ignore-start -- EXC-016
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuer = true,
-                    ValidIssuer = settings.Issuer,
-                    ValidateAudience = true,
-                    ValidAudience = settings.Audience,
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = settings.SigningKey,
-                    RequireSignedTokens = true,
-                    ValidateLifetime = true,
-                    RequireExpirationTime = true,
-                    ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
-                    ClockSkew = TimeSpan.Zero,
-                };
-                // jscpd:ignore-end
+                options.TokenValidationParameters = settings.ToValidationParameters();
                 options.Events = new JwtBearerEvents
                 {
                     OnTokenValidated = RejectCancelledSessionAsync,
