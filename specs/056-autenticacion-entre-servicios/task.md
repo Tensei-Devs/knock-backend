@@ -13,7 +13,7 @@
 | T-07 | Replay (idempotente, sin `jti` guardado) y rotación (dos claves, 24 h) según P-03 y P-02 | CA-10, CA-11 | hecha (`ServiceCredentialTests` CA_056_10 y CA_056_11; repetición por ruta en `Spec041HistorialInternoTests` y `Spec037InternoAvisosSeguridadTests`; la repetición de las demás rutas internas queda pendiente) |
 | T-10 | Dejar probado que Mensajería→Mercado (spec 026) reenvía el JWT del usuario | R-11 · CA-12 | pendiente |
 | T-11 | Enmienda a la spec 055 para el catálogo de `Knock.Hosting` (P-01b), en PR aparte y antes del código | P-01b | hecha en este PR (§14 punto 5 de la spec 055; sin aprobar hasta que las den las personas) |
-| T-08 | Secretos (`avisos-key-*`, `interno-key-identity`) y permisos en Key Vault y Terraform | P-04 | del líder (fuera de esta spec) |
+| T-08 | Secretos (`avisos-key-*`, `interno-key-identity`) y permisos en Key Vault y Terraform | P-04 | hecha (conciliado 2026-11-23): `avisos-key-*` e `interno-key-*` cableados en `deploy/apps/main.tf` con el rol `Key Vault Secrets User` de `deploy/modules/service/main.tf`; los secretos existen en el Key Vault según el informe operativo de José del 2026-11-23 (no se puede comprobar desde el repositorio) |
 | T-09 | `docs/endpoints.md` si cambia el esquema, `Memoria.md` e informe | — | parcial (`docs/rotacion-de-claves-de-servicio.md`; `docs/endpoints.md` no cambia) |
 
 ## Definición de terminado
