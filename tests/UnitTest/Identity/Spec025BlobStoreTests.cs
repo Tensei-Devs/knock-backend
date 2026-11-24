@@ -112,4 +112,18 @@ public sealed class Spec025BlobStoreTests
         query["sp"].Should().Be("r");
         query["sr"].Should().Be("b");
     }
+
+    [Theory]
+    [InlineData(301)]
+    [InlineData(3600)]
+    [InlineData(0)]
+    [InlineData(-5)]
+    public void Link_Longer_Than_Five_Minutes_Or_Already_Expired_Is_Refused_CA_025_03(int seconds)
+    {
+        var blob = new BlobServiceClient(new Uri(Options().CuentaUrl)).GetBlobContainerClient("verificaciones").GetBlobClient("ejemplo/selfie");
+
+        var act = () => AzureVerificationBlobStore.Sign(blob, Key(), BlobSasPermissions.Read, _now, TimeSpan.FromSeconds(seconds));
+
+        act.Should().Throw<ArgumentOutOfRangeException>("el SAS nunca vive más de 5 minutos ni nace vencido");
+    }
 }

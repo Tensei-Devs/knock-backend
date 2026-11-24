@@ -16,3 +16,4 @@
 - No encender `Verificacion:Blob:Habilitado` sin los contenedores y el rol de la identidad administrada: con cualquier fallo de Azure la persona recibe 503.
 - Las pruebas del Key Vault llevan el sufijo `CA_025_07` aunque ese caso es la CURP duplicada: no confundir al leer la trazabilidad.
 - Pendiente fuera de este cambio: T-09 (par revisor y `security-reviewer`: biometría y credenciales).
+- Autorrevisión de seguridad (2026-11-24, asistente de código con IA; la revisión por par y la de security-reviewer se omitieron por decisión de José): `Sign` rechaza un SAS de más de 5 minutos o ya vencido (tope duro, no solo la constante de quien llama) y el fallo cerrado (503) cubre también errores de red y de E/S. Riesgo anotado, no corregido: si el borrado de cuarentena falla tras escribir el definitivo, el reintento recibe 409 `photo_already_confirmed` con la foto aún sin marcar; la captura vence a las 24 h y se reinicia (disponibilidad, no fuga).

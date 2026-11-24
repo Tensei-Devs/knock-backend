@@ -20,6 +20,9 @@ internal sealed class AzureVerificationBlobStore(BlobServiceClient service, Veri
     /// <summary>Tolerancia de reloj: el SAS empieza un minuto antes de emitirse.</summary>
     internal static readonly TimeSpan ClockSkew = TimeSpan.FromMinutes(1);
 
+    /// <summary>Tope duro de vida de un enlace (R-08, 5 minutos): ningún llamador puede pedir un SAS más largo ni uno ya vencido.</summary>
+    internal static readonly TimeSpan MaxLinkLifetime = TimeSpan.FromMinutes(5);
+
     private static readonly TimeSpan _keyLifetime = TimeSpan.FromHours(24);
     private static readonly TimeSpan _keyMargin = TimeSpan.FromHours(1);
 
@@ -112,6 +115,11 @@ internal sealed class AzureVerificationBlobStore(BlobServiceClient service, Veri
     {
         ArgumentNullException.ThrowIfNull(blob);
         ArgumentNullException.ThrowIfNull(key);
+        if (lifetime <= TimeSpan.Zero || lifetime > MaxLinkLifetime)
+        {
+            throw new ArgumentOutOfRangeException(nameof(lifetime), "A verification link lives at most five minutes.");
+        }
+
         var sas = new BlobSasBuilder(permissions, now + lifetime)
         {
             BlobContainerName = blob.BlobContainerName,
@@ -168,7 +176,7 @@ internal sealed class AzureVerificationBlobStore(BlobServiceClient service, Veri
         {
             return await operation();
         }
-        catch (Exception ex) when (ex is RequestFailedException or AuthenticationFailedException or CredentialUnavailableException or HttpRequestException)
+        catch (Exception ex) when (ex is RequestFailedException or AuthenticationFailedException or CredentialUnavailableException or HttpRequestException or IOException or TimeoutException)
         {
             throw new DomainException(DomainErrorKind.ServiceUnavailable, "The private verification storage is unavailable.", VerificationErrors.StorageUnavailableCode);
         }
