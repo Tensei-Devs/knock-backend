@@ -1,5 +1,5 @@
 using System.Security.Cryptography;
-using Knock.Identity.Api.Common.Security;
+using Knock.Hosting.Security;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 

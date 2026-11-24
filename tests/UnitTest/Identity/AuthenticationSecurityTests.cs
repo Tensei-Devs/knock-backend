@@ -2,7 +2,7 @@ using System.Net;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using AwesomeAssertions;
-using Knock.Identity.Api.Common.Security;
+using Knock.Hosting.Security;
 using Knock.Identity.Api.Hosting;
 using Knock.Identity.Api.Modules.Sesiones.Controllers.V1;
 using Knock.Identity.Api.Modules.Sesiones.Data;

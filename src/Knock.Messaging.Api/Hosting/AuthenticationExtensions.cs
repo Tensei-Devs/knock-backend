@@ -1,6 +1,7 @@
 // jscpd:ignore-start -- EXC-021: copia de src/Knock.Market.Api/Hosting/AuthenticationExtensions.cs (KNOCK-241) más la comprobación de sesión cancelada; se unifica en la biblioteca técnica de KNOCK-251.
 using System.Security.Claims;
 using Knock.Contracts.Sessions;
+using Knock.Hosting.Security;
 using Knock.Messaging.Api.Common.Errors;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -52,20 +53,7 @@ internal static class AuthenticationExtensions
             .Configure<JwtSettings>((options, settings) =>
             {
                 options.MapInboundClaims = false;
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuer = true,
-                    ValidIssuer = settings.Issuer,
-                    ValidateAudience = true,
-                    ValidAudience = settings.Audience,
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = settings.SigningKey,
-                    RequireSignedTokens = true,
-                    ValidateLifetime = true,
-                    RequireExpirationTime = true,
-                    ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
-                    ClockSkew = TimeSpan.Zero,
-                };
+                options.TokenValidationParameters = settings.ToValidationParameters();
                 options.Events = new JwtBearerEvents
                 {
                     OnMessageReceived = AcceptHubTokenFromQuery,
