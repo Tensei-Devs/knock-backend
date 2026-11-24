@@ -17,7 +17,7 @@ public sealed class Spec037InternoAvisosSeguridadTests
     private const string _path = "/api/v1/interno/avisos";
 
     [Fact]
-    public async Task InternalNotices_RejectsAnonymousForeignKeysAndMissingPermissions()
+    public async Task InternalNotices_RejectsAnonymousForeignKeysAndMissingPermissions_CA_037_14()
     {
         var fixture = await DocumentDbFixture.SharedAsync();
         var name = "s037_int_" + Convert.ToHexString(RandomNumberGenerator.GetBytes(8));
@@ -41,6 +41,13 @@ public sealed class Spec037InternoAvisosSeguridadTests
             userToken.StatusCode.Should().Be(HttpStatusCode.Unauthorized, "un token de persona no es un token de servicio");
             forbidden.StatusCode.Should().Be(HttpStatusCode.Forbidden);
             longLived.StatusCode.Should().Be(HttpStatusCode.Unauthorized, "el token de servicio vive 5 minutos como máximo");
+            using var wrongAudience = await SecureHttp.PostJsonAsync(client, _path, body, Mint("knock-market", marketKey, "solicitud_nueva", audience: "knock-otro"));
+            using var wrongIssuer = await SecureHttp.PostJsonAsync(client, _path, body, Mint("knock-otro", marketKey, "solicitud_nueva"));
+            using var expired = await SecureHttp.PostJsonAsync(client, _path, body, Mint("knock-market", marketKey, "solicitud_nueva", issuedAgo: TimeSpan.FromMinutes(30)));
+            wrongAudience.StatusCode.Should().Be(HttpStatusCode.Unauthorized, "el destinatario del token debe ser Mensajería");
+            wrongIssuer.StatusCode.Should().Be(HttpStatusCode.Unauthorized, "un emisor fuera de Mercado e Identidad no firma");
+            expired.StatusCode.Should().Be(HttpStatusCode.Unauthorized, "un token vencido no entra");
+            (await forbidden.Content.ReadAsStringAsync()).Should().Contain("service_not_allowed");
             (await mongo.GetDatabase(name).GetCollection<BsonDocument>("notifications.enviados").CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(0);
         }
         finally
@@ -119,18 +126,70 @@ public sealed class Spec037InternoAvisosSeguridadTests
         delete.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
+    [Fact]
+    public async Task InternalNotices_SessionRevoked_DeletesOnlyTheDevicesOfThatSession_CA_037_18()
+    {
+        var fixture = await DocumentDbFixture.SharedAsync();
+        var name = "s037_sid_" + Convert.ToHexString(RandomNumberGenerator.GetBytes(8));
+        var identityKey = RandomNumberGenerator.GetBytes(32);
+        using var mongo = new MongoClient(fixture.ConnectionString);
+        try
+        {
+            await using var host = await CreateHostAsync(fixture.ConnectionString, name, RandomNumberGenerator.GetBytes(32), identityKey: identityKey);
+            using var client = host.CreateClient();
+            var devices = mongo.GetDatabase(name).GetCollection<BsonDocument>("notifications.dispositivos");
+            var closed = Guid.NewGuid().ToString("N");
+            var kept = Guid.NewGuid().ToString("N");
+            await devices.InsertManyAsync(
+            [
+                Device("persona-a", closed),
+                Device("persona-a", kept),
+                Device("persona-b", Guid.NewGuid().ToString("N")),
+            ]);
+            var credential = Mint("knock-identity", identityKey, "sesion_revocada");
+            var body = new { eventoId = Guid.NewGuid().ToString("N"), tipo = "sesion_revocada", sid = closed };
+
+            using var first = await SecureHttp.PostJsonAsync(client, _path, body, credential);
+            using var repeated = await SecureHttp.PostJsonAsync(client, _path, body, credential);
+            using var market = await SecureHttp.PostJsonAsync(client, _path, new { eventoId = Guid.NewGuid().ToString("N"), tipo = "sesion_revocada", sid = kept }, Mint("knock-market", RandomNumberGenerator.GetBytes(32), "sesion_revocada"));
+
+            first.StatusCode.Should().Be(HttpStatusCode.Accepted);
+            repeated.StatusCode.Should().Be(HttpStatusCode.Accepted, "repetir el aviso no falla");
+            market.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            (await devices.CountDocumentsAsync(Builders<BsonDocument>.Filter.Eq("sid", closed))).Should().Be(0, "la sesión terminada ya no recibe avisos");
+            (await devices.CountDocumentsAsync(Builders<BsonDocument>.Filter.Eq("sid", kept))).Should().Be(1, "las demás sesiones de la persona siguen");
+            (await devices.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(2);
+        }
+        finally
+        {
+            await mongo.DropDatabaseAsync(name);
+        }
+    }
+
+    private static BsonDocument Device(string person, string session) => new()
+    {
+        ["_id"] = ObjectId.GenerateNewId(),
+        ["id"] = Guid.NewGuid().ToString("N"),
+        ["personaId"] = person,
+        ["sid"] = session,
+        ["plataforma"] = "android",
+        ["tokenHuella"] = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)),
+        ["identificadorCifrado"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(24)),
+        ["renovadoEn"] = new BsonDateTime(DateTime.UtcNow),
+    };
+
     /// <summary>
     /// Anfitrión de Mensajería con MongoDB real. Con <paramref name="pushEnabled"/> el despachador queda encendido (por omisión <c>Notificaciones:PushHabilitado</c> es falso y el receptor no registra
     /// nada): se usa una cuenta de servicio ficticia generada en cada ejecución y, al no haber dispositivos, nunca se llama a FCM; solo queda el registro de envíos.
     /// </summary>
-    internal static Task<SecurityMessagingFactory> CreateHostAsync(string connectionString, string databaseName, byte[] marketKey, bool pushEnabled = false)
+    internal static Task<SecurityMessagingFactory> CreateHostAsync(string connectionString, string databaseName, byte[] marketKey, bool pushEnabled = false, byte[]? identityKey = null)
     {
         var settings = new Dictionary<string, string?>
         {
             ["ConnectionStrings:KnockMongo"] = connectionString,
             ["Mongo:Databases:Messaging"] = databaseName,
             ["Security:InternalTokens:MarketKey"] = Convert.ToBase64String(marketKey),
-            ["Security:InternalTokens:IdentityKey"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)),
+            ["Security:InternalTokens:IdentityKey"] = Convert.ToBase64String(identityKey ?? RandomNumberGenerator.GetBytes(32)),
         };
         if (pushEnabled)
         {
@@ -162,13 +221,13 @@ public sealed class Spec037InternoAvisosSeguridadTests
         });
     }
 
-    internal static string Mint(string issuer, byte[] key, string permission, TimeSpan? lifetime = null)
+    internal static string Mint(string issuer, byte[] key, string permission, TimeSpan? lifetime = null, string audience = "knock-notifications", TimeSpan? issuedAgo = null)
     {
-        var now = DateTime.UtcNow;
+        var now = DateTime.UtcNow - (issuedAgo ?? TimeSpan.Zero);
         var descriptor = new SecurityTokenDescriptor
         {
             Issuer = issuer,
-            Audience = "knock-notifications",
+            Audience = audience,
             IssuedAt = now,
             NotBefore = now,
             Expires = now.Add(lifetime ?? TimeSpan.FromMinutes(4)),

@@ -85,7 +85,7 @@ public sealed class Spec037DespachoIntegrationTests
     }
 
     [Fact]
-    public async Task Dispatch_InvalidTokenIsDeletedAndTransientFailureRetriesThreeTimes_CA_037_07_CA_037_08()
+    public async Task Dispatch_InvalidTokenIsDeletedAndTransientFailureRetriesThreeTimes_CA_037_07_CA_037_08_CA_037_11()
     {
         await using var world = await World.StartAsync();
         var invalid = World.NewPerson();
