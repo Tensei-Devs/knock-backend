@@ -1,4 +1,4 @@
-# 2026-11-24 · KNOCK-000 · contract-publish incluye el contrato de Mensajería
+# 2026-11-23 · KNOCK-000 · contract-publish incluye el contrato de Mensajería
 
 ## Qué cambió
 `.github/workflows/contract-publish.yml` ahora dispara también con cambios en `docs/openapi.messaging.v1.json` y pasa ese archivo a `scripts/ci/merge_openapi.py` con la opción nueva `--messaging`, de modo que `contracts/openapi.v1.json` del frontend combina Market, Identidad y Mensajería. Sin pasos ni secretos nuevos. `merge_openapi.py` omite del lado de Mensajería solo las rutas internas que ya publican los otros servicios (`/health` y `/interno/*`); cualquier otra ruta o esquema repetido sigue fallando. `scripts/ci/test_merge_openapi.py` suma cuatro pruebas (unión con Mensajería, ruta pública repetida, versión distinta y los contratos reales del repositorio).

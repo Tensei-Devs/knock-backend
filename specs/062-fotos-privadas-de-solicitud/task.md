@@ -1,6 +1,6 @@
 # Tareas 062 — Flujo privado de fotos de solicitud
 
-> **Estado:** conciliado con el código de `sprint-05` el 2026-11-24 (PR #294 y #332 para 060; #287 para 062); cada tarea cita su evidencia y la que no tiene prueba con ID queda parcial o pendiente. **Prioridad máxima de la Fase 4** (decisión de José, 2026-11-23): sin este flujo nadie puede crear una solicitud válida.
+> **Estado:** conciliado con el código de `sprint-05` el 2026-11-23 (PR #294 y #332 para 060; #287 para 062); cada tarea cita su evidencia y la que no tiene prueba con ID queda parcial o pendiente. **Prioridad máxima de la Fase 4** (decisión de José, 2026-11-23): sin este flujo nadie puede crear una solicitud válida.
 
 | Tarea | Qué se hace | Cubre | Depende de | Estado |
 |---|---|---|---|---|

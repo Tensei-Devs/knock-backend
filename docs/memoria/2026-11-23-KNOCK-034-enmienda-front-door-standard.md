@@ -1,4 +1,4 @@
-# 2026-11-24 · KNOCK-34 · Enmienda de la spec 034: Front Door Standard permitido
+# 2026-11-23 · KNOCK-34 · Enmienda de la spec 034: Front Door Standard permitido
 
 ## Qué cambió
 La spec 034 lleva una enmienda fechada: R-11 y CA-10 permiten Front Door Standard (sin WAF ni Premium), tal como lo crea `deploy/modules/edge`. La tabla de criterios y el riesgo de recursos de pago se ajustan, y T-01 de `task.md` queda conciliada. Solo documentación.
