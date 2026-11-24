@@ -37,7 +37,7 @@ public static class TrustModuleExtensions
         services.AddScoped<IManejadorDeTarea, AvisarAlVerificadorHandler>();
         services.AddScoped<IManejadorDeTarea, BorrarFotosDeVerificacionHandler>();
         // Dependencias de infraestructura con valor por omisión que FALLA CERRADO (503): el cliente real de Blob y de Key Vault se registra antes de AddTrustModule() y las reemplaza.
-        services.TryAddSingleton<IVerificationBlobStore, UnavailableVerificationBlobStore>();
+        services.AddBlobVerificationStore();
         services.AddKeyVaultVerificationKeyWrapper();
         services.AddSingleton<CifradoDeVerificacion>();
         services.AddSingleton<FotoVerificacionStore>();
@@ -62,6 +62,24 @@ public static class TrustModuleExtensions
             return options.Habilitado
                 ? KeyVaultVerificationKeyWrapper.Create(options, provider.GetService<TokenCredential>() ?? new DefaultAzureCredential())
                 : new UnavailableVerificationKeyWrapper();
+        });
+        return services;
+    }
+
+    /// <summary>
+    /// Con <c>Verificacion:Blob:Habilitado=false</c> (por omisión) queda <see cref="UnavailableVerificationBlobStore"/> (503, falla cerrado) sin tocar Azure; encendido, usa la cuenta privada de
+    /// verificación con la identidad administrada (el <see cref="TokenCredential"/> registrado o <see cref="DefaultAzureCredential"/>). Un doble registrado antes gana.
+    /// </summary>
+    internal static IServiceCollection AddBlobVerificationStore(this IServiceCollection services)
+    {
+        services.AddOptions<VerificationBlobOptions>().BindConfiguration(VerificationBlobOptions.SectionName).ValidateOnStart();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<VerificationBlobOptions>, VerificationBlobOptionsValidator>());
+        services.TryAddSingleton<IVerificationBlobStore>(provider =>
+        {
+            var options = provider.GetRequiredService<IOptions<VerificationBlobOptions>>().Value;
+            return options.Habilitado
+                ? AzureVerificationBlobStore.Create(options, provider.GetService<TokenCredential>() ?? new DefaultAzureCredential(), provider.GetRequiredService<TimeProvider>())
+                : new UnavailableVerificationBlobStore();
         });
         return services;
     }
