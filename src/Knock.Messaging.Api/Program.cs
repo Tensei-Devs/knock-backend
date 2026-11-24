@@ -4,6 +4,7 @@ using Knock.Hosting.Health;
 using Knock.Hosting.Lifecycle;
 using Knock.Hosting.Logging;
 using Knock.Hosting.Observability;
+using Knock.Hosting.Security;
 using Knock.Messaging.Api.Hosting;
 using Knock.Messaging.Api.Modules.Avisos;
 using Knock.Messaging.Api.Modules.Bloqueos;
@@ -50,7 +51,7 @@ var app = builder.Build();
 
 app.UseForwardedHeaders();
 app.UseKnockCorrelationId();
-app.UseMiddleware<SecurityHeadersMiddleware>();
+app.UseKnockSecurityHeaders(new SecurityHeadersOptions());
 app.UseExceptionHandler();
 // Una respuesta de error sin cuerpo (404, 405…) sale como ProblemDetails, igual que en los otros servicios.
 app.UseStatusCodePages();
