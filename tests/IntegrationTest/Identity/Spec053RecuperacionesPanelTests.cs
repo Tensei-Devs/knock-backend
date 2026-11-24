@@ -210,4 +210,65 @@ public sealed class Spec053RecuperacionesPanelTests
             }
         }
     }
+
+    [Fact]
+    public async Task AReviewerCannotDecideTheRecoveryOfTheirOwnAccount_AndNothingChanges_CA_053_14()
+    {
+        using var factory = await HostAsync();
+        using var client = factory.CreateClient();
+        var verifier = await PanelReportKit.SeedPanelAccountAsync(factory.Services, ["verificador"]);
+        var (user, _) = await PanelReportKit.SeedAccountAsync(factory.Users, true);
+        await factory.Users.UpdateOneAsync(Builders<BsonDocument>.Filter.Eq("_id", user), Builders<BsonDocument>.Update.Set("sub", verifier));
+        var before = (await UserAsync(factory, user))["celularHash"].AsBsonBinaryData.Bytes;
+        var session = await SeedSessionAsync(factory, user);
+        var recovery = await SeedRecoveryAsync(factory, user);
+
+        using var response = await SendAsync(client, HttpMethod.Post, _route + "/" + recovery.Id + "/decision", PanelReportKit.Token(verifier), new { decision = "aprobada" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await JsonAsync(response)).GetProperty("code").GetString().Should().Be("self_review_not_allowed");
+        (await UserAsync(factory, user))["celularHash"].AsBsonBinaryData.Bytes.Should().Equal(before);
+        (await factory.Sessions.Find(Builders<BsonDocument>.Filter.Eq("_id", session)).SingleAsync())["revocada"].AsBoolean.Should().BeFalse();
+        (await Recoveries(factory).Find(Builders<BsonDocument>.Filter.Eq("_id", recovery.Id)).SingleAsync())["estado"].AsString.Should().Be("pendiente");
+        (await AuditOfAsync(factory, recovery.Id)).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task WithoutTokenOrWithoutThePermission_TheDecisionIsRefused_AndNothingChanges_CA_053_36()
+    {
+        using var factory = await HostAsync();
+        using var client = factory.CreateClient();
+        var moderator = await PanelReportKit.SeedPanelAccountAsync(factory.Services, ["moderador"]);
+        var (user, _) = await PanelReportKit.SeedAccountAsync(factory.Users, true);
+        var recovery = await SeedRecoveryAsync(factory, user);
+        var path = _route + "/" + recovery.Id + "/decision";
+
+        using var anonymous = await client.PostAsJsonAsync(new Uri(path, UriKind.Relative), new { decision = "aprobada" });
+        using var denied = await SendAsync(client, HttpMethod.Post, path, PanelReportKit.Token(moderator), new { decision = "aprobada" });
+
+        anonymous.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        denied.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await Recoveries(factory).Find(Builders<BsonDocument>.Filter.Eq("_id", recovery.Id)).SingleAsync())["estado"].AsString.Should().Be("pendiente");
+        (await AuditOfAsync(factory, recovery.Id)).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task RepeatingAnApprovalThatJustConfirmed_CancelsTheClosedSessionsAgain_AndAnswers409_CA_053_36()
+    {
+        using var factory = await HostAsync();
+        using var client = factory.CreateClient();
+        var verifier = await PanelReportKit.SeedPanelAccountAsync(factory.Services, ["verificador"]);
+        var (user, _) = await PanelReportKit.SeedAccountAsync(factory.Users, true);
+        var session = await SeedSessionAsync(factory, user);
+        var recovery = await SeedRecoveryAsync(factory, user, "aprobada");
+        // Como si Redis hubiera fallado tras confirmar: la sesión está revocada en la base y no consta en la lista del gateway.
+        await factory.Sessions.UpdateOneAsync(Builders<BsonDocument>.Filter.Eq("_id", session), Builders<BsonDocument>.Update.Set("revocada", true));
+        await Recoveries(factory).UpdateOneAsync(Builders<BsonDocument>.Filter.Eq("_id", recovery.Id), Builders<BsonDocument>.Update.Set("decididoEn", new BsonDateTime(DateTime.UtcNow)));
+        (await factory.Redis.KeyExistsAsync("sesion-cancelada:" + session)).Should().BeFalse();
+
+        using var response = await SendAsync(client, HttpMethod.Post, _route + "/" + recovery.Id + "/decision", PanelReportKit.Token(verifier), new { decision = "aprobada" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await factory.Redis.KeyExistsAsync("sesion-cancelada:" + session)).Should().BeTrue();
+    }
 }

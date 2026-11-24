@@ -49,6 +49,7 @@ internal enum RecoveryDecisionOutcome
     AlreadyDecided,
     Decided,
     PhoneTaken,
+    SelfReview,
 }
 
 /// <summary>
@@ -79,12 +80,17 @@ internal sealed class NoAccessRecoveryReviews : IAccessRecoveryReviews
 internal interface IRecoverySessionClosures
 {
     Task AfterCommitAsync(IReadOnlyList<string> sessionIds, CancellationToken cancellationToken);
+
+    /// <summary>Repite solo la cancelación en Redis (idempotente) cuando la primera vez falló después de confirmar; sin avisos nuevos.</summary>
+    Task RetryCancellationAsync(IReadOnlyList<string> sessionIds, CancellationToken cancellationToken);
 }
 
 /// <summary>Sin el módulo de la cuenta no hay sesiones que avisar ni cancelar fuera de la base.</summary>
 internal sealed class NoRecoverySessionClosures : IRecoverySessionClosures
 {
     public Task AfterCommitAsync(IReadOnlyList<string> sessionIds, CancellationToken cancellationToken) => Task.CompletedTask;
+
+    public Task RetryCancellationAsync(IReadOnlyList<string> sessionIds, CancellationToken cancellationToken) => Task.CompletedTask;
 }
 
 /// <summary>Lo que se decidió sobre un reporte, con los identificadores que necesitan los efectos y nada más (sin textos ni datos de las personas).</summary>

@@ -40,6 +40,9 @@ internal sealed class AccessRecoveryReviewStore(
     private const string _revokedField = "revocada";
     private const string _expiresField = "venceEn";
 
+    /// <summary>Lo que dura un token de acceso (spec 016); pasado ese tiempo desde la decisión ya no puede quedar uno vivo.</summary>
+    private static readonly TimeSpan _accessTokenLifetime = TimeSpan.FromMinutes(15);
+
     private static readonly FilterDefinitionBuilder<BsonDocument> _filter = Builders<BsonDocument>.Filter;
 
     private IMongoCollection<BsonDocument> Recoveries => database.GetCollection<BsonDocument>(_recoveries);
@@ -85,7 +88,7 @@ internal sealed class AccessRecoveryReviewStore(
         ArgumentNullException.ThrowIfNull(writeAudit);
         return DecisionTurns.RunAsync(
             id.ToString(),
-            () => SettledAsync(id, cancellationToken),
+            () => SettledAsync(id, approved, cancellationToken),
             Map,
             () => DecideAndNotifyAsync(id, approved, deciderSub, writeAudit, cancellationToken),
             cancellationToken);
@@ -94,20 +97,72 @@ internal sealed class AccessRecoveryReviewStore(
     private static RecoveryDecisionOutcome Map(DecisionStoreOutcome outcome) =>
         outcome == DecisionStoreOutcome.NotFound ? RecoveryDecisionOutcome.NotFound : RecoveryDecisionOutcome.AlreadyDecided;
 
-    private async Task<DecisionStoreOutcome?> SettledAsync(ObjectId id, CancellationToken cancellationToken)
+    private async Task<DecisionStoreOutcome?> SettledAsync(ObjectId id, bool approved, CancellationToken cancellationToken)
     {
         var current = await Recoveries.Find(_filter.Eq(_idField, id), new FindOptions { MaxTime = mongoOptions.Value.QueryMaxTime })
-            .Project(Builders<BsonDocument>.Projection.Include(_stateField)).Limit(1).FirstOrDefaultAsync(cancellationToken);
+            .Project(Builders<BsonDocument>.Projection.Include(_stateField).Include(_userField).Include(_decidedAtField)).Limit(1).FirstOrDefaultAsync(cancellationToken);
         if (current is null)
         {
             return DecisionStoreOutcome.NotFound;
         }
 
-        return current.TryGetValue(_stateField, out var state) && state == _pending ? null : DecisionStoreOutcome.AlreadyDecided;
+        if (current.TryGetValue(_stateField, out var state) && state == _pending)
+        {
+            return null;
+        }
+
+        if (approved && state == _approved)
+        {
+            await RetryCancellationAsync(current, cancellationToken);
+        }
+
+        return DecisionStoreOutcome.AlreadyDecided;
+    }
+
+    /// <summary>
+    /// Si la aprobación confirmó pero Redis falló al cancelar las sesiones, la petición respondió error y quien reintenta recibe 409; antes de responderlo se repite la cancelación (idempotente) de las sesiones revocadas
+    /// de esa cuenta que aún no vencen, mientras pueda quedar un token de acceso vivo (15 minutos desde la decisión). Así una sesión no queda viva tras cambiar el celular.
+    /// </summary>
+    private async Task RetryCancellationAsync(BsonDocument recovery, CancellationToken cancellationToken)
+    {
+        var now = clock.GetUtcNow().UtcDateTime;
+        if (!recovery.TryGetValue(_decidedAtField, out var decidedAt) || !decidedAt.IsValidDateTime || now - decidedAt.ToUniversalTime() > _accessTokenLifetime
+            || !recovery.TryGetValue(_userField, out var userId) || !userId.IsObjectId)
+        {
+            return;
+        }
+
+        var closed = _filter.Eq(_userField, userId.AsObjectId) & _filter.Eq(_revokedField, true) & _filter.Gt(_expiresField, new BsonDateTime(now));
+        var ids = (await Sessions.Find(closed, new FindOptions { MaxTime = mongoOptions.Value.QueryMaxTime }).Project(Builders<BsonDocument>.Projection.Include(_idField)).ToListAsync(cancellationToken))
+            .Select(document => document[_idField].AsObjectId.ToString()).ToList();
+        if (ids.Count > 0)
+        {
+            await closures.RetryCancellationAsync(ids, cancellationToken);
+        }
+    }
+
+    /// <summary>D-05: quien decide no puede ser la persona de la recuperación (el <c>sub</c> de la cuenta del caso).</summary>
+    private async Task<bool> IsOwnRecoveryAsync(ObjectId id, string deciderSub, CancellationToken cancellationToken)
+    {
+        var recovery = await Recoveries.Find(_filter.Eq(_idField, id), new FindOptions { MaxTime = mongoOptions.Value.QueryMaxTime })
+            .Project(Builders<BsonDocument>.Projection.Include(_userField)).Limit(1).FirstOrDefaultAsync(cancellationToken);
+        if (recovery is null || !recovery.TryGetValue(_userField, out var userId) || !userId.IsObjectId)
+        {
+            return false;
+        }
+
+        var owner = await Users.Find(_filter.Eq(_idField, userId.AsObjectId), new FindOptions { MaxTime = mongoOptions.Value.QueryMaxTime })
+            .Project(Builders<BsonDocument>.Projection.Include("sub")).Limit(1).FirstOrDefaultAsync(cancellationToken);
+        return owner is not null && owner.TryGetValue("sub", out var sub) && sub.IsString && string.Equals(sub.AsString, deciderSub, StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task<RecoveryDecisionOutcome> DecideAndNotifyAsync(ObjectId id, bool approved, string deciderSub, Func<StoreTransaction, Task> writeAudit, CancellationToken cancellationToken)
     {
+        if (await IsOwnRecoveryAsync(id, deciderSub, cancellationToken))
+        {
+            return RecoveryDecisionOutcome.SelfReview;
+        }
+
         var now = clock.GetUtcNow().UtcDateTime;
         IReadOnlyList<string> revoked;
         try

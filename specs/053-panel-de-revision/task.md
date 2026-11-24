@@ -21,3 +21,5 @@
 ## Definición de terminado
 - Los criterios de aceptación de `spec.md` están cubiertos por pruebas en verde.
 - El CI está en verde, un par revisó el cambio y `Memoria.md` está al día.
+
+> Nota (2026-11-24): revisión por par y security-reviewer omitidas por decisión de José; autorrevisión de seguridad hecha sobre la cola y decisión de recuperaciones (#363) por un asistente de código con IA, no por una persona.

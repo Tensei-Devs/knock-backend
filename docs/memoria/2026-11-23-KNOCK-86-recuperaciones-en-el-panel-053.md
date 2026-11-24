@@ -10,3 +10,8 @@ CA-32 y CA-36 de la 053 piden que aprobar una recuperación cambie el número y 
 - Descifrar o registrar el celular nuevo: pasa de un documento a otro tal cual.
 - Cerrar las sesiones fuera de la transacción de la decisión.
 - Usar `nivel` de la cola como nivel de verificación en una recuperación: ahí es el tipo de cuenta.
+
+## Autorrevisión de seguridad (2026-11-24)
+- Qué cambió: decidir la recuperación de la propia cuenta responde 403 `self_review_not_allowed` (D-05) sin efectos; el cierre posterior a la confirmación intenta todas las sesiones aunque una falle (aviso y Redis por separado) y, si algo falla, la petición responde error en lugar de éxito; un reintento de aprobación sobre un caso recién aprobado repite la cancelación en Redis de las sesiones revocadas (hasta 15 minutos desde la decisión) antes de responder 409.
+- Por qué: si Redis fallaba tras confirmar, el caso quedaba aprobado, el reintento daba 409 y los tokens de acceso de las sesiones viejas seguían vivos hasta 15 minutos con el celular ya cambiado.
+- A evitar: tratar la cancelación en Redis como opcional; riesgo aceptado: si nadie reintenta, el token de acceso vive como máximo 15 minutos (los tokens de renovación ya están revocados en la base).
