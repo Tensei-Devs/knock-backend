@@ -1,5 +1,10 @@
 # Memoria — knock-backend
 
+## 2026-11-24 — KNOCK-68: seguridad del reparto, T-09
+- **Avance:** pruebas de descarte por cliente y técnico ajeno, y de datos personales en registros y evento de reparto. Se reutilizaron las pruebas existentes de 401, elegibilidad y reparto apagado; sin cambios de producción ni dependencias.
+- **Verificación:** build Release con warnings como errores, 94 pruebas de integración 028/020, formato y trazado 028 pasaron. Un intento anterior falló por Docker inaccesible; la corrida posterior pasó. El trazador reconoce nombres, no demuestra por sí mismo cobertura.
+- **Pendiente:** CI y revisión humana; la prueba de registros observa la salida del escenario ejecutado, no todas las condiciones posibles.
+
 ## 2026-11-23 — Spec 035 T-04 y T-09: ProblemDetails 400 y 422 en Mensajería, matriz de límites y humo de dos clientes (KNOCK-186)
 - **Decisión:** sin dependencias nuevas. Se comprueba `instance` (plantilla de la ruta) y la traza sin consulta también con 400 y 422 en Mensajería, sobre su host real y la sonda de validación de la infraestructura de controllers. `docs/rate-limit-matrix.md` gana la matriz por política verificada contra `MarketRateLimits`, `IdentityRateLimits`, `MessagingRateLimits` y los `appsettings.json` (faltaban las políticas de agenda, visitas, cotización final, opiniones, mapa, explorar y asistente). El humo CA-15 queda como `tests/smoke/spec035-dos-clientes.sh`: necesita dos orígenes con IP pública distinta, se corre a mano contra el entorno de evaluación y no lo ejecuta el CI.
 - **A evitar:** correr el humo desde un solo origen (falla a propósito) o tomarlo como cumplido sin pegar su salida en el PR de despliegue.

@@ -1,5 +1,6 @@
 using System.Net;
 using AwesomeAssertions;
+using Knock.IntegrationTest.Support;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -125,6 +126,23 @@ public sealed class Spec028BandejaTests
         using var discard = await host.SendAsync(HttpMethod.Post, $"/api/v1/solicitudes/{ObjectId.GenerateNewId()}/descartar");
         inbox.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         discard.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Descarte_Rechaza_Cliente_Y_Tecnico_Ajeno_CA_028_13()
+    {
+        await using var host = await StartAsync();
+        var owner = await TechnicianAsync(host);
+        var other = await TechnicianAsync(host);
+        var id = await CreateSendAsync(host, owner);
+        using var client = await DiscardAsync(host, id, host.ClientSub);
+        using var foreign = await DiscardAsync(host, id, other);
+        client.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        foreign.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        ProblemBody.Reasons(await foreign.Content.ReadAsStringAsync()).Should().NotContain(owner);
+        var send = await host.Database.GetCollection<BsonDocument>("envios")
+            .Find(new BsonDocument("solicitudId", ObjectId.Parse(id))).SingleAsync();
+        send["estado"].AsString.Should().Be("activo");
     }
 
     private static Task<Spec020Host> StartAsync() => Spec020Host.StartAsync(new Dictionary<string, string?>
