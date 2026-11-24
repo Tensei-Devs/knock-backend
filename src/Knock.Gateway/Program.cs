@@ -2,7 +2,9 @@ using Knock.Contracts.Correlation;
 using Knock.Gateway.Hosting;
 using Knock.Hosting.ForwardedHeaders;
 using Knock.Hosting.Lifecycle;
+using Knock.Hosting.Security;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,7 +20,7 @@ builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
 builder.Services.AddReverseProxy().LoadFromConfig(builder.Configuration.GetSection("ReverseProxy")).AddKnockForwardedHeadersTransform();
 builder.Services
     .AddKnockGatewayProblemDetails()
-    .AddKnockGatewayHsts()
+    .AddKnockHsts()
     .AddKnockForwardedHeaders()
     .AddKnockGatewayCors(builder.Configuration)
     .AddKnockData()
@@ -33,7 +35,8 @@ var app = builder.Build();
 
 app.UseForwardedHeaders();
 app.UseKnockCorrelationId();
-app.UseMiddleware<SecurityHeadersMiddleware>();
+// Detrás del ingreso la petición llega como HTTP y UseHsts no respondería: el encabezado lo fija el middleware (BUG-002).
+app.UseKnockSecurityHeaders(new SecurityHeadersOptions { StrictTransportSecurity = app.Services.GetRequiredService<IOptions<HstsSettings>>().Value.HeaderValue });
 app.UseExceptionHandler();
 app.UseSerilogRequestLogging(LoggingExtensions.ConfigureRequestLogging);
 app.UseRouting();

@@ -33,7 +33,7 @@
 |---|---|---|---|
 | T-15 | `LoggingExtensions` y `ObservabilityExtensions` a `Knock.Hosting` | R-08 · CA-12 | pendiente |
 | T-16 | `RedisExtensions` y `HealthExtensions` a `Knock.Hosting`; `MongoExtensions` y la parte técnica de `DataExtensions` a `src/Knock.Hosting.Data` (no existe) | R-07a · CA-12, CA-13 | pendiente |
-| T-17 | `SecurityHeadersMiddleware`, `HstsExtensions`, `ProblemResponses`, `CorsExtensions`/`CorsMiddleware`, `RequestBodyLimitMiddleware`, `JwtSettings` y la validación del JWT | R-08 · CA-12 | pendiente (siguen copiados en los servicios) |
+| T-17 | `SecurityHeadersMiddleware`, `HstsExtensions`, `ProblemResponses`, `CorsExtensions`/`CorsMiddleware`, `RequestBodyLimitMiddleware`, `JwtSettings` y la validación del JWT | R-08 · CA-12 | parcial: `SecurityHeadersMiddleware` y `HstsExtensions` ya están en `Knock.Hosting.Security` (KNOCK-281); faltan `ProblemResponses`, CORS y `RequestBodyLimitMiddleware` (y, en su PR aparte, `JwtSettings`) |
 | T-18 | `JsonCompressionMiddleware` y la validación de opciones de caché | R-08 · CA-12 | pendiente (copiados en Identity y Market) |
 | T-19 | El resto de `Common/` y `Hosting/` de Identity copiado de Market | R-08 · CA-12 | pendiente |
 | T-20 | Retirar EXC-007, EXC-008, EXC-015, EXC-016, EXC-018 y EXC-021; `**/Knock.Hosting.Data/**/*.cs` en `mutate` de Stryker | R-13, R-18 · CA-12 | pendiente (vencen EXC-015, EXC-016 y EXC-018 el 2026-12-04: renovarlas o hacer T-17 a T-19 antes) |
