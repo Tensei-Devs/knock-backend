@@ -1,5 +1,6 @@
 using System.Text.Json;
 using AwesomeAssertions;
+using Knock.Hosting.Security;
 using Xunit;
 
 namespace Knock.UnitTest.Hosting;
@@ -28,6 +29,21 @@ public sealed class Spec056SecretosTests
                 {
                     value.Should().BeNullOrWhiteSpace($"{Path.GetFileName(file)} no debe traer el valor de {path}: las claves llegan por variables de entorno o Key Vault (spec 056, R-08)");
                 }
+            }
+        }
+    }
+
+    [Fact]
+    public void Configuration_FilesCarryNoKeyMaterialUnderAnyName_CA_056_08()
+    {
+        var files = _projects.SelectMany(project => Directory.EnumerateFiles(Path.Combine(RepositoryRoot(), "src", project), "appsettings*.json")).ToList();
+
+        foreach (var file in files)
+        {
+            using var document = JsonDocument.Parse(File.ReadAllText(file));
+            foreach (var (path, value) in Flatten(document.RootElement, string.Empty))
+            {
+                ServiceCredential.TryReadKey(value).Should().BeNull($"{Path.GetFileName(file)} lleva en {path} un valor con forma de clave de servicio (Base64 de 32 bytes o más): va en Key Vault, no en el repositorio");
             }
         }
     }

@@ -9,3 +9,4 @@ T-05, T-06 y T-10 de la spec 056 estaban pendientes o parciales y CA-03, CA-08 y
 ## A evitar
 - Dar T-06 por cerrada: falta probar el contenido de los registros de una llamada rechazada y aceptada, y la revisión de `security-reviewer`.
 - Dar CA-12 por completo: el 401 de Mercado ante una credencial de servicio en la ruta pública solo está cubierto por la validación (CA_056_04).
+- Autorrevisión de seguridad (2026-11-24, asistente de código con IA; revisión por par y security-reviewer omitidas por decisión de José): se agregó una prueba que busca valores con forma de clave de servicio (Base64 de 32 bytes o más) bajo cualquier nombre en los `appsettings*.json`, porque la prueba por nombre (`InternalTokens`, `SigningKey`) no detecta una clave puesta con otro nombre. `Spec056ReenvioDelJwtTests` usa un `HttpClient` sin el registro de DI: hoy el registro no agrega manejadores, pero un manejador futuro no lo vería esta prueba.

@@ -14,7 +14,7 @@
 | T-10 | Dejar probado que Mensajería→Mercado (spec 026) reenvía el JWT del usuario | R-11 · CA-12 | parcial: `Spec056ReenvioDelJwtTests` (CA_056_12) prueba que `MarketVisitaCatalog` reenvía el JWT del usuario a la ruta pública y no reintenta con otra credencial tras 401/403; el 401 de Mercado ante una credencial de servicio en esa ruta sigue cubierto solo por la validación (`CA_056_04`), sin prueba de integración propia |
 | T-11 | Enmienda a la spec 055 para el catálogo de `Knock.Hosting` (P-01b), en PR aparte y antes del código | P-01b | hecha en este PR (§14 punto 5 de la spec 055; sin aprobar hasta que las den las personas) |
 | T-08 | Secretos (`avisos-key-*`, `interno-key-identity`) y permisos en Key Vault y Terraform | P-04 | hecha (conciliado 2026-11-23): `avisos-key-*` e `interno-key-*` cableados en `deploy/apps/main.tf` con el rol `Key Vault Secrets User` de `deploy/modules/service/main.tf`; los secretos existen en el Key Vault según el informe operativo de José del 2026-11-23 (no se puede comprobar desde el repositorio) |
-| T-09 | `docs/endpoints.md` si cambia el esquema, `Memoria.md` e informe | — | parcial (`docs/rotacion-de-claves-de-servicio.md`; `docs/endpoints.md` no cambia) |
+| T-09 | `docs/endpoints.md` si cambia el esquema, `Memoria.md` e informe | — | parcial (`docs/rotacion-de-claves-de-servicio.md`; `docs/endpoints.md` no cambia); revisión por par y security-reviewer omitidas por decisión de José (2026-11-24); autorrevisión de seguridad hecha por el asistente de código con IA (no por una persona) |
 
 ## Definición de terminado
 - Los casos CA de `spec.md` tienen prueba con su ID; `python scripts/sdd_lint.py --trace 056` en OK.
