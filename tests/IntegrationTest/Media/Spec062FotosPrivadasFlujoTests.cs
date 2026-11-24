@@ -191,10 +191,10 @@ public sealed class Spec062FotosPrivadasFlujoTests
 
     private static byte[] Jpeg()
     {
-        using var bitmap = new SKBitmap(new SKImageInfo(800, 400));
+        using var bitmap = new SKBitmap(new SKImageInfo(320, 240));
         using var canvas = new SKCanvas(bitmap);
-        canvas.Clear(SKColors.CornflowerBlue);
-        using var data = bitmap.Encode(SKEncodedImageFormat.Jpeg, 90);
+        canvas.Clear(SKColors.SteelBlue);
+        using var data = bitmap.Encode(SKEncodedImageFormat.Jpeg, 85);
         return data.ToArray();
     }
 
