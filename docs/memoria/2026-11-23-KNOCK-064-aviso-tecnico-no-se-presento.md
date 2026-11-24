@@ -1,4 +1,4 @@
-# 2026-11-24 · KNOCK-064 · Aviso al técnico que no se presentó
+# 2026-11-23 · KNOCK-064 · Aviso al técnico que no se presentó
 
 ## Qué cambió
 Mercado entrega `TecnicoNoSePresento` desde su bandeja a `POST /api/v1/interno/avisos` de Mensajería (`EntregaTecnicoNoSePresento`, mismo cliente, dirección y clave que `opinion_oculta`). Mensajería suma el tipo `tecnico_no_se_presento` (categoría `visitas`, rol `tecnico`) y la constante del texto fijo decidido por José (D-01). Enmienda fechada en la spec 064, `docs/events.md` y tarea T-04 cerrada.

@@ -47,7 +47,7 @@ variable "public_images_host" {
 }
 
 variable "sku_name" {
-  description = "Solo Standard_AzureFrontDoor (unos 35 USD al mes de base). Premium (unos 330 USD) está prohibido por ADR-007 (enmienda 2026-11-24) y spec 034 R-11."
+  description = "Solo Standard_AzureFrontDoor (unos 35 USD al mes de base). Premium (unos 330 USD) está prohibido por ADR-007 (enmienda 2026-11-23) y spec 034 R-11."
   type        = string
   default     = "Standard_AzureFrontDoor"
 

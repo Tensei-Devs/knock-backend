@@ -1,6 +1,6 @@
 # Tareas 060 — Apelación de una persona suspendida
 
-> **Estado:** conciliado con el código de `sprint-05` el 2026-11-24 (PR #294 y #332 para 060; #287 para 062); cada tarea cita su evidencia y la que no tiene prueba con ID queda parcial o pendiente.
+> **Estado:** conciliado con el código de `sprint-05` el 2026-11-23 (PR #294 y #332 para 060; #287 para 062); cada tarea cita su evidencia y la que no tiene prueba con ID queda parcial o pendiente.
 
 | Tarea | Qué se hace | Cubre | Depende de | Estado |
 |---|---|---|---|---|
