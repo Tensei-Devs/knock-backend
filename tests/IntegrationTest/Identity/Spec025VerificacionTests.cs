@@ -7,8 +7,11 @@ using System.Text;
 using System.Text.Json;
 using AwesomeAssertions;
 using IdentityApi::Knock.Identity.Api.Modules.Trust.Data;
+using IdentityApi::Knock.Identity.Api.Modules.Trust.Services;
+using IdentityApi::Knock.Identity.Api.Modules.Trust.Storage;
 using Knock.IntegrationTest.Support;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Xunit;
@@ -22,10 +25,12 @@ internal sealed record Spec025Person(string Sub, ObjectId UserId, string DeviceI
 /// Spec 025, T-07 (versión sin fotos): <c>POST</c> y <c>GET /api/v1/me/verificacion</c> sobre MongoDB real, con seguridad negativa y registros sin CURP.
 /// CURP ficticia.
 /// </summary>
-public sealed class Spec025VerificacionTests : IAsyncLifetime
+public sealed partial class Spec025VerificacionTests : IAsyncLifetime
 {
     private const string _route = "/api/v1/me/verificacion";
     private const string _curp = "GODE561231HDFRRN09";
+    private readonly RecordingVerificationEvents _events = new();
+    private readonly SwitchableVerificationBlobStore _blobs = new();
     private IdentityApiFactory _factory = null!;
     private HttpClient _client = null!;
 
@@ -35,7 +40,11 @@ public sealed class Spec025VerificacionTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _factory = await IdentityApiFactory.CreateAsync();
+        _factory = await IdentityApiFactory.CreateAsync(configureServices: services =>
+        {
+            services.Replace(ServiceDescriptor.Singleton<IVerificationEvents>(_events));
+            services.Replace(ServiceDescriptor.Singleton<IVerificationBlobStore>(_blobs));
+        });
         await _factory.Services.GetRequiredService<VerificationStore>().EnsureIndexesAsync(CancellationToken.None);
         _client = _factory.CreateClient();
     }
@@ -43,6 +52,7 @@ public sealed class Spec025VerificacionTests : IAsyncLifetime
     public async Task DisposeAsync()
     {
         _client.Dispose();
+        _blobs.DisposeReal();
         await _factory.DisposeAsync();
     }
 
@@ -79,9 +89,9 @@ public sealed class Spec025VerificacionTests : IAsyncLifetime
     private static object Body(string level = "basica", bool? consent = true, string curp = _curp) =>
         new { nivel = level, aceptaBiometria = consent, versionAviso = "1.0", curp };
 
-    private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string? token, object? body = null, string? raw = null)
+    private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string? token, object? body = null, string? raw = null, string? route = null)
     {
-        using var request = new HttpRequestMessage(method, _route);
+        using var request = new HttpRequestMessage(method, route ?? _route);
         if (token is not null) request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         if (raw is not null) request.Content = new StringContent(raw, Encoding.UTF8, "application/json");
         else if (body is not null) request.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");

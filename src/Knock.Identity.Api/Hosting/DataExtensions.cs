@@ -1,3 +1,5 @@
+using Knock.Hosting.Data;
+using Knock.Hosting.Redis;
 namespace Knock.Identity.Api.Hosting;
 
 /// <summary>
@@ -13,7 +15,7 @@ internal static class DataExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
         services.AddKnockMongoDatabase(DatabaseKey);
-        services.AddKnockRedis();
+        services.AddKnockRedis("knock-identity");
         return services;
     }
 }

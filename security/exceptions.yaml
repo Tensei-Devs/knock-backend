@@ -145,7 +145,7 @@ excepciones:
   - id: EXC-016
     herramienta: jscpd
     regla: duplicación textual (y huella estructural de codemap)
-    alcance: src/Knock.Gateway/Hosting/ProblemResponses.cs, src/Knock.Gateway/Hosting/CorsExtensions.cs y los parámetros de validación del JWT de src/Knock.Gateway/Hosting/AuthenticationExtensions.cs (marcadores jscpd:ignore-start/end con EXC-016)
+    alcance: src/Knock.Gateway/Hosting/ProblemResponses.cs y src/Knock.Gateway/Hosting/CorsExtensions.cs (marcadores jscpd:ignore-start/end con EXC-016; los parámetros de validación del JWT pasaron a Knock.Hosting en KNOCK-281)
     justificacion: >-
       El gateway necesita la misma respuesta ProblemDetails de error, la misma lectura de los proxies de confianza y los mismos parámetros de validación del JWT que Market (spec 009); cada servicio es
       desplegable por separado (spec 001) y no comparten código técnico todavía. La duplicación es intencional y temporal. Evidencia: PR de KNOCK-204 y la lista
@@ -154,32 +154,6 @@ excepciones:
     creada: 2026-11-04
     vence: 2026-12-04
     plan: unificar en la biblioteca técnica compartida (la misma de EXC-015) y retirar los marcadores y la excepción antes de vencer.
-  - id: EXC-007
-    herramienta: jscpd
-    regla: duplicación de código (clones)
-    alcance: src/Knock.Identity.Api/Hosting/{LoggingExtensions,ObservabilityExtensions}.cs, src/Knock.Messaging.Api/Hosting/{LoggingExtensions,ObservabilityExtensions}.cs y src/Knock.Gateway/Hosting/{LoggingExtensions,ObservabilityExtensions}.cs (9 archivos, entre «// jscpd:ignore-start -- EXC-007» y su cierre)
-    justificacion: >-
-      Spec 011 (KNOCK-206): los tres servicios y el gateway deben registrar con el mismo formato y la misma redacción de datos personales
-      que Market. Aún no existe una biblioteca técnica compartida y un servicio no referencia a otro, así que se copian las tres clases de
-      src/Knock.Market.Api/Hosting cambiando solo el espacio de nombres, la categoría por defecto del log y la ruta de salud. Las copias se
-      prueban por separado en tests/UnitTest/Hosting/Spec011ObservabilityTests.cs. Aprobada por el líder el 2026-11-04.
-    responsable: Ángel Alexis Blas Castillo
-    creada: 2026-11-04
-    vence: 2027-02-02
-    plan: unificar las tres clases en una biblioteca técnica compartida (junto con las copias de EXC-008), quitar los marcadores y retirar la excepción antes de vencer.
-  - id: EXC-008
-    herramienta: jscpd, codemap
-    regla: código duplicado (jscpd:ignore y línea base de clones de docs/architecture/clones-baseline.json)
-    alcance: src/Knock.Identity.Api/Hosting/MongoExtensions.cs, src/Knock.Identity.Api/Hosting/RedisExtensions.cs, src/Knock.Identity.Api/Hosting/HealthExtensions.cs, src/Knock.Messaging.Api/Hosting/MongoExtensions.cs, src/Knock.Messaging.Api/Hosting/HealthExtensions.cs, src/Knock.Gateway/Hosting/RedisExtensions.cs, src/Knock.Gateway/Hosting/HealthExtensions.cs
-    justificacion: >-
-      Spec 003 (KNOCK-198): cada servicio necesita su cliente de MongoDB y de Redis, y la constitución solo permite una biblioteca
-      compartida de tipos y contratos sin lógica (Knock.Contracts). Por decisión del líder del 2026-11-04 se aceptan por ahora copias
-      de src/Knock.Market.Api/Hosting/MongoExtensions.cs y RedisExtensions.cs, y un HealthExtensions igual en los tres servicios,
-      cada una marcada con «jscpd:ignore-start -- EXC-008». Evidencia: PR de KNOCK-198.
-    responsable: Ángel Alexis Blas Castillo
-    creada: 2026-11-04
-    vence: 2027-02-02
-    plan: unificar después en una biblioteca técnica (con su spec y el cambio de la constitución que la permita), borrar las copias y retirar la excepción antes de vencer.
   - id: EXC-017
     herramienta: revisión de arquitectura (modelo de amenazas, KNOCK-78)
     regla: acceso de red público del clúster de MongoDB (DB-5 y H-04 del modelo de amenazas)
@@ -200,7 +174,7 @@ excepciones:
   - id: EXC-018
     herramienta: jscpd
     regla: duplicación textual (y huella estructural de codemap)
-    alcance: spec 010 (KNOCK-205): JsonCompressionMiddleware de Identity.Api y de Market.Api, el método Matches de MeController y de OficiosController, y las validaciones de opciones ProfileCacheOptions y CatalogCacheOptions (con marcadores jscpd:ignore-start/end con EXC-018)
+    alcance: spec 010 (KNOCK-205): solo el método Matches de MeController y de OficiosController (marcadores jscpd:ignore-start/end con EXC-018). JsonCompressionMiddleware y la validación de opciones de caché pasaron a Knock.Hosting en KNOCK-281; Matches no está en el catálogo de la spec 055 (R-04) y mover esa pieza pide la enmienda del catálogo
     justificacion: >-
       La caché, la compresión y los ETag de la spec 010 se implementan en cada servicio por separado porque un servicio no referencia a otro
       y todavía no existe la biblioteca técnica compartida (misma situación de EXC-015, EXC-007 y EXC-008). Las copias cambian solo el espacio de nombres y
@@ -226,7 +200,7 @@ excepciones:
   - id: EXC-021
     herramienta: jscpd, codemap
     regla: código duplicado (jscpd:ignore y línea base de clones de docs/architecture/clones-baseline.json)
-    alcance: src/Knock.Messaging.Api/Hosting/RedisExtensions.cs, src/Knock.Messaging.Api/Hosting/JwtSettings.cs, src/Knock.Messaging.Api/Hosting/AuthenticationExtensions.cs y src/Knock.Messaging.Api/Hosting/ProblemResponses.cs (4 archivos con su nombre exacto; SecurityHeadersMiddleware.cs pasó a Knock.Hosting en KNOCK-281, entre «// jscpd:ignore-start -- EXC-021» y su cierre; RateLimitingExtensions.cs salió con KNOCK-280); no se amplía más allá de 5 (la siguiente copia obliga a hacer la biblioteca compartida)
+    alcance: src/Knock.Messaging.Api/Hosting/AuthenticationExtensions.cs y src/Knock.Messaging.Api/Hosting/ProblemResponses.cs (2 archivos con su nombre exacto; RedisExtensions y JwtSettings pasaron a Knock.Hosting y SecurityHeadersMiddleware a Knock.Hosting.Security en KNOCK-281, entre «// jscpd:ignore-start -- EXC-021» y su cierre; RateLimitingExtensions.cs salió con KNOCK-280); no se amplía más allá de 5 (la siguiente copia obliga a hacer la biblioteca compartida)
     justificacion: >-
       BUG-004 (KNOCK-241): Mensajería necesita el mismo JWT, encabezados de seguridad, límite por IP y cliente de Redis que Identidad, Mercado y el gateway antes de publicar su
       primer endpoint y de la spec 026 (KNOCK-62). Aún no existe la biblioteca técnica compartida y un servicio no referencia a otro, así que se copian estas clases de

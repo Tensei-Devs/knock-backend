@@ -1,6 +1,7 @@
 extern alias identity;
 using System.Security.Cryptography;
 using System.Text;
+using Knock.Hosting.Data;
 using Knock.IntegrationTest.Support;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
@@ -13,7 +14,7 @@ using MongoDB.Driver;
 using Xunit;
 using DemoClientSeeder = identity::Knock.Identity.Api.Modules.Usuarios.Services.DemoClientSeeder;
 using IProfileCache = identity::Knock.Identity.Api.Modules.Usuarios.Data.IProfileCache;
-using KnockMongoOptions = identity::Knock.Identity.Api.Hosting.KnockMongoOptions;
+using KnockMongoOptions = Knock.Hosting.Data.KnockMongoOptions;
 using PhoneProtectionKeys = identity::Knock.Identity.Api.Modules.Sesiones.Services.PhoneProtectionKeys;
 using PhoneProtectionOptions = identity::Knock.Identity.Api.Modules.Sesiones.Services.PhoneProtectionOptions;
 using PhoneProtector = identity::Knock.Identity.Api.Modules.Sesiones.Services.PhoneProtector;

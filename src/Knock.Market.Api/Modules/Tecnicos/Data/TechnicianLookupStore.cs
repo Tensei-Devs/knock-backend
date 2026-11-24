@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Knock.Hosting.Data;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Tecnicos.Domain;
 using Knock.Market.Api.Modules.Tecnicos.Dtos;

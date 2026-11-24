@@ -8,10 +8,12 @@ WORKDIR /src
 COPY global.json Directory.Build.props .editorconfig ./
 COPY src/Knock.Contracts/Knock.Contracts.csproj src/Knock.Contracts/packages.lock.json src/Knock.Contracts/
 COPY src/Knock.Hosting/Knock.Hosting.csproj src/Knock.Hosting/packages.lock.json src/Knock.Hosting/
+COPY src/Knock.Hosting.Data/Knock.Hosting.Data.csproj src/Knock.Hosting.Data/packages.lock.json src/Knock.Hosting.Data/
 COPY src/Knock.Messaging.Api/Knock.Messaging.Api.csproj src/Knock.Messaging.Api/packages.lock.json src/Knock.Messaging.Api/
 RUN dotnet restore src/Knock.Messaging.Api/Knock.Messaging.Api.csproj --locked-mode
 COPY src/Knock.Contracts/ src/Knock.Contracts/
 COPY src/Knock.Hosting/ src/Knock.Hosting/
+COPY src/Knock.Hosting.Data/ src/Knock.Hosting.Data/
 COPY src/Knock.Messaging.Api/ src/Knock.Messaging.Api/
 RUN dotnet publish src/Knock.Messaging.Api/Knock.Messaging.Api.csproj -c Release --no-restore -o /app/publish /p:UseAppHost=false
 

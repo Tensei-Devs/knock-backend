@@ -1,3 +1,4 @@
+using Knock.Hosting.Data;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Catalog.Domain;
 using Microsoft.Extensions.Options;

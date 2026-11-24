@@ -1,6 +1,9 @@
 using Knock.Contracts.Correlation;
 using Knock.Hosting.ForwardedHeaders;
+using Knock.Hosting.Health;
 using Knock.Hosting.Lifecycle;
+using Knock.Hosting.Logging;
+using Knock.Hosting.Observability;
 using Knock.Hosting.Security;
 using Knock.Messaging.Api.Hosting;
 using Knock.Messaging.Api.Modules.Avisos;
@@ -28,8 +31,9 @@ builder.Services
 // Más información sobre OpenAPI: https://aka.ms/aspnet/openapi
 builder.Services.AddKnockOpenApi();
 // Spec 011: Serilog estructurado y OpenTelemetry con redacción; Azure Monitor solo si hay APPLICATIONINSIGHTS_CONNECTION_STRING.
-builder.Services.AddKnockLogging(builder.Configuration);
-builder.Services.AddKnockObservability(builder.Configuration, builder.Environment);
+builder.Services.AddKnockLogging(builder.Configuration, typeof(Program).Assembly);
+builder.Services.AddKnockObservability(
+    builder.Configuration, builder.Environment, typeof(Program).Assembly, "knock-api", Knock.Messaging.Api.Modules.Chat.Services.ChatMetrics.MeterName);
 builder.Services.AddKnockForwardedHeaders();
 builder.Services.AddKnockData();
 // Spec 026: chat de visita en tiempo real con SignalR y Redis como puente entre copias.
@@ -71,6 +75,6 @@ if (app.Environment.IsDevelopment())
 app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "mensajeria" })).AllowAnonymous();
 app.MapControllers();
 app.MapChatHub();
-app.MapKnockReadiness();
+app.MapKnockReadiness(allowAnonymous: true);
 
 await app.RunAsync();

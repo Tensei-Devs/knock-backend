@@ -1,4 +1,5 @@
 using Knock.Contracts.Moderation;
+using Knock.Hosting.Data;
 using Knock.Market.Api.Common.Bandeja;
 using Knock.Market.Api.Common.Crypto;
 using Knock.Market.Api.Common.TareasProgramadas;

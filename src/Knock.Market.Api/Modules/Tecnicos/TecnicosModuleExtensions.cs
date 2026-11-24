@@ -1,3 +1,4 @@
+using Knock.Hosting.Data;
 using Knock.Market.Api.Common.Crypto;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Tecnicos.Data;

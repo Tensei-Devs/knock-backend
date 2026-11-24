@@ -1,27 +1,20 @@
-extern alias gateway;
-extern alias messaging;
-
 using AwesomeAssertions;
+using Knock.Hosting.Logging;
 using Serilog.Events;
 using Serilog.Parsing;
 using Xunit;
-using GatewayHosting = gateway::Knock.Gateway.Hosting;
-using MessagingHosting = messaging::Knock.Messaging.Api.Hosting;
 
 namespace Knock.UnitTest.Hosting;
 
 /// <summary>
 /// Spec 035 (KNOCK-186, R-01): el filtro de fuentes de cada proyecto descarta, por debajo de <c>Warning</c>, los eventos que escriben la dirección completa con su
-/// consulta, y deja pasar los demás. Las cuatro copias de <c>LoggingExtensions</c> deben comportarse igual.
+/// consulta, y deja pasar los demás. La implementación única de <c>LoggingExtensions</c> (spec 055) la usan los cuatro proyectos.
 /// </summary>
 public sealed class Spec035QueryBearingSourcesTests
 {
     private static readonly (string Project, Func<LogEvent, bool> Filter)[] _filters =
     [
-        ("gateway", GatewayHosting.LoggingExtensions.IsQueryBearingBelowWarning),
-        ("identity", Knock.Identity.Api.Hosting.LoggingExtensions.IsQueryBearingBelowWarning),
-        ("messaging", MessagingHosting.LoggingExtensions.IsQueryBearingBelowWarning),
-        ("market", Knock.Market.Api.Hosting.LoggingExtensions.IsQueryBearingBelowWarning),
+        ("hosting", LoggingExtensions.IsQueryBearingBelowWarning),
     ];
 
     public static TheoryData<string> Projects

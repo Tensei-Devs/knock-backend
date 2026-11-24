@@ -2,6 +2,7 @@ using Azure.Core;
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using Knock.Contracts.Moderation;
+using Knock.Hosting.Data;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Media.Data;
 using Knock.Market.Api.Modules.Media.Services;

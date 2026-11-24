@@ -3,6 +3,7 @@ using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using AwesomeAssertions;
+using Knock.Hosting.Http;
 using Knock.Market.Api.Hosting;
 using Microsoft.AspNetCore.Http;
 using Xunit;
@@ -204,15 +205,37 @@ public sealed class JsonCompressionTests
     }
 
     [Fact]
+    public async Task ExtraSkippedPath_IsNeverCompressed_CA_010_04()
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Path = "/api/v1/panel/acceso";
+        context.Request.Headers["Accept-Encoding"] = "gzip, br";
+        var responseBody = new MemoryStream();
+        context.Response.Body = responseBody;
+        var middleware = new JsonCompressionMiddleware(
+            async ctx =>
+            {
+                ctx.Response.StatusCode = StatusCodes.Status200OK;
+                ctx.Response.ContentType = "application/json";
+                await ctx.Response.Body.WriteAsync(new byte[2048], CancellationToken.None);
+            },
+            new JsonCompressionOptions(["/api/v1/panel"]));
+
+        await middleware.InvokeAsync(context);
+
+        context.Response.Headers.ContentEncoding.ToString().Should().BeEmpty("el panel de Identidad nunca se comprime (spec 033, R-22)");
+    }
+
+    [Fact]
     public async Task IdentityLargeResponseAlsoPassesThrough_CA_010_04()
     {
-        var size = IdentityHosting.JsonCompressionMiddleware.MaximumBufferedBytes + 1;
+        var size = JsonCompressionMiddleware.MaximumBufferedBytes + 1;
         var context = new DefaultHttpContext();
         context.Request.Path = "/api/v1/me";
         context.Request.Headers["Accept-Encoding"] = "gzip, br";
         var responseBody = new MemoryStream();
         context.Response.Body = responseBody;
-        var middleware = new IdentityHosting.JsonCompressionMiddleware(async ctx =>
+        var middleware = new JsonCompressionMiddleware(async ctx =>
         {
             ctx.Response.StatusCode = StatusCodes.Status200OK;
             ctx.Response.ContentType = "application/json";
@@ -258,7 +281,7 @@ public sealed class JsonCompressionTests
         context.Request.Headers["Accept-Encoding"] = "gzip, br";
         var responseBody = new MemoryStream();
         context.Response.Body = responseBody;
-        var middleware = new IdentityHosting.JsonCompressionMiddleware(async ctx =>
+        var middleware = new JsonCompressionMiddleware(async ctx =>
         {
             ctx.Response.StatusCode = StatusCodes.Status200OK;
             ctx.Response.ContentType = "application/json";
@@ -329,26 +352,5 @@ public sealed class JsonCompressionTests
         await act.Should().ThrowAsync<InvalidOperationException>();
         responseBody.Length.Should().Be(0, "lo bufferizado se descarta y la respuesta no empieza");
         context.Response.Body.Should().BeSameAs(responseBody, "el cuerpo real queda restaurado para el manejador de excepciones");
-    }
-
-    [Fact]
-    public async Task IdentityExceptionBeforeOverflow_AlsoDiscardsBuffer_CA_010_04()
-    {
-        var context = new DefaultHttpContext();
-        context.Request.Path = "/api/v1/me";
-        var responseBody = new MemoryStream();
-        context.Response.Body = responseBody;
-        var middleware = new IdentityHosting.JsonCompressionMiddleware(async ctx =>
-        {
-            ctx.Response.StatusCode = StatusCodes.Status200OK;
-            ctx.Response.ContentType = "application/json";
-            await ctx.Response.Body.WriteAsync(new byte[512], CancellationToken.None);
-            throw new InvalidOperationException("falla a mitad de la respuesta");
-        });
-
-        var act = () => middleware.InvokeAsync(context);
-
-        await act.Should().ThrowAsync<InvalidOperationException>();
-        responseBody.Length.Should().Be(0);
     }
 }
