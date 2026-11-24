@@ -13,7 +13,7 @@ namespace Knock.SecurityTest.Messaging;
 public sealed class Spec037DeviceAvailabilityTests
 {
     [Fact]
-    public async Task EnabledHost_RegistersAndDeletesOnlyOwnedDevice()
+    public async Task EnabledHost_RegistersAndDeletesOnlyOwnedDevice_CA_037_01_CA_037_02_CA_037_09()
     {
         var fixture = await DocumentDbFixture.SharedAsync();
         var name = "s037_http_" + Convert.ToHexString(RandomNumberGenerator.GetBytes(8));

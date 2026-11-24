@@ -36,7 +36,7 @@ public sealed class Spec037DeviceStoreTests
     }
 
     [Fact]
-    public async Task Registration_IsAtomicAndDeletionIsOwnerScoped()
+    public async Task Registration_IsAtomicAndDeletionIsOwnerScoped_CA_037_01_CA_037_02_CA_037_13()
     {
         var fixture = await DocumentDbFixture.SharedAsync();
         using var client = new MongoClient(fixture.ConnectionString);

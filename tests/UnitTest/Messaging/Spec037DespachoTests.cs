@@ -168,17 +168,36 @@ public sealed class Spec037DespachoTests
     }
 
     [Fact]
-    public async Task Dispatch_FcmFailure_RetriesThreeTimesAndRecordsFailure_R_09()
+    public async Task Dispatch_FcmFailure_RetriesThreeTimesWithGrowingWaitAndRecordsFailure_CA_037_11()
     {
-        var harness = new Harness();
+        var clock = new RecordingClock();
+        var harness = new Harness(clock: clock);
         for (var i = 0; i < 3; i++)
         {
             harness.Sender.Results.Enqueue(PushResult.Failed);
         }
 
         (await harness.Dispatcher.DispatchAsync(Harness.Event("solicitud_nueva"), CancellationToken.None)).Should().Be(DispatchOutcome.Failed);
+
         harness.Sender.Calls.Should().Be(DespachadorDeAvisos.MaxAttempts);
+        clock.Waits.Should().HaveCount(DespachadorDeAvisos.MaxAttempts - 1, "la espera va entre intentos, no tras el último");
+        clock.Waits.Should().BeInAscendingOrder().And.OnlyHaveUniqueItems("la espera crece en cada reintento");
         harness.Store.Results.Values.Should().ContainSingle().Which.Should().Be("fallido");
+    }
+
+    [Fact]
+    public async Task Dispatch_TwoEventsOnTheSameResourceOneDeliveredTwice_SendsTwoNoticesNotThree_CA_037_19()
+    {
+        var harness = new Harness();
+        var second = new AvisoEvent("evt-2", "cotizacion_nueva", _person, _resource, null);
+        var first = new AvisoEvent("evt-1", "cotizacion_nueva", _person, _resource, null);
+
+        (await harness.Dispatcher.DispatchAsync(first, CancellationToken.None)).Should().Be(DispatchOutcome.Sent);
+        (await harness.Dispatcher.DispatchAsync(second, CancellationToken.None)).Should().Be(DispatchOutcome.Sent);
+        (await harness.Dispatcher.DispatchAsync(first, CancellationToken.None)).Should().Be(DispatchOutcome.Duplicate);
+
+        harness.Sender.Calls.Should().Be(2);
+        harness.Store.Reserved.Should().HaveCount(2);
     }
 
     [Fact]
@@ -193,14 +212,15 @@ public sealed class Spec037DespachoTests
 
     private sealed class Harness
     {
-        public Harness(bool enabled = true)
+        public Harness(bool enabled = true, TimeProvider? clock = null)
         {
+            Clock = clock ?? new FixedClock();
             Dispatcher = new DespachadorDeAvisos(new PushOptions(enabled), Sender, Store, new Presence(this), Devices, Clock);
         }
 
         public bool Present { get; set; }
 
-        public FixedClock Clock { get; } = new();
+        public TimeProvider Clock { get; }
 
         public FakeSender Sender { get; } = new();
 
@@ -227,6 +247,20 @@ public sealed class Spec037DespachoTests
 
         public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period) =>
             base.CreateTimer(callback, state, TimeSpan.Zero, Timeout.InfiniteTimeSpan);
+    }
+
+    /// <summary>Reloj fijo que además anota cada espera pedida, para comprobar que crece.</summary>
+    private sealed class RecordingClock : TimeProvider
+    {
+        public List<TimeSpan> Waits { get; } = [];
+
+        public override DateTimeOffset GetUtcNow() => new(2026, 11, 21, 12, 0, 0, TimeSpan.Zero);
+
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            Waits.Add(dueTime);
+            return base.CreateTimer(callback, state, TimeSpan.Zero, Timeout.InfiniteTimeSpan);
+        }
     }
 
     private sealed class FakeSender : IPushSender

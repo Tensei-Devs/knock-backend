@@ -10,7 +10,7 @@ namespace Knock.UnitTest.Messaging;
 public sealed partial class Spec044AvisosTests
 {
     [Fact]
-    public async Task MarkAllRead_AffectsOnlyTheCaller_CA_044_12()
+    public async Task MarkAllRead_AffectsOnlyTheCaller_CA_044_12_CA_044_18()
     {
         var store = StoreWith(3, others: 2);
 

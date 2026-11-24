@@ -10,7 +10,7 @@ public sealed class Spec056RutasInternasTests
     private const string _internalSample = "/api/v1/interno/avisos";
 
     [Fact]
-    public void Ninguna_Ruta_Del_Gateway_Alcanza_Las_Rutas_Internas_CA_056_07()
+    public void Ninguna_Ruta_Del_Gateway_Alcanza_Las_Rutas_Internas_CA_056_07_CA_037_15()
     {
         using var document = JsonDocument.Parse(File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "Knock.Gateway", "appsettings.json")));
         var routes = document.RootElement.GetProperty("ReverseProxy").GetProperty("Routes").EnumerateObject().ToList();
