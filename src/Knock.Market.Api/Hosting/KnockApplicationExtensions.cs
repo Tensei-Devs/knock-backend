@@ -4,6 +4,7 @@ using Knock.Hosting.Health;
 using Knock.Hosting.Http;
 using Knock.Hosting.Logging;
 using Knock.Hosting.Observability;
+using Knock.Hosting.Security;
 using Microsoft.Extensions.Options;
 using Serilog;
 
@@ -38,7 +39,7 @@ internal static class KnockApplicationExtensions
     {
         app.UseForwardedHeaders();
         app.UseMiddleware<CorrelationIdMiddleware>();
-        app.UseMiddleware<SecurityHeadersMiddleware>();
+        app.UseKnockSecurityHeaders(new SecurityHeadersOptions { RelaxContentSecurityPolicyForApiDocsInDevelopment = true });
         app.UseExceptionHandler();
         // Una respuesta de error sin cuerpo (404 de una ruta inexistente, 405…) sale como ProblemDetails igual que las excepciones (spec 002, R-03).
         app.UseStatusCodePages();

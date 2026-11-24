@@ -1,13 +1,13 @@
 using System.Globalization;
 using Microsoft.Extensions.Options;
 
-namespace Knock.Gateway.Hosting;
+namespace Knock.Hosting.Security;
 
 /// <summary>
-/// HSTS del gateway (<c>Security:Hsts</c>, BUG-002): <c>max-age</c> e <c>includeSubDomains</c>. Nunca <c>preload</c>. Los valores por defecto son los
+/// HSTS fijado por el middleware de encabezados de seguridad (<c>Security:Hsts</c>, BUG-002): <c>max-age</c> e <c>includeSubDomains</c>. Nunca <c>preload</c>. Los valores por defecto son los
 /// documentados en <c>docs/security-headers.md</c> (365 días con subdominios); un valor menor o igual a cero impide el arranque.
 /// </summary>
-internal sealed class HstsSettings
+public sealed class HstsSettings
 {
     public const string SectionName = "Security:Hsts";
 
@@ -20,10 +20,10 @@ internal sealed class HstsSettings
         $"max-age={((long)MaxAge.TotalSeconds).ToString(CultureInfo.InvariantCulture)}{(IncludeSubDomains ? "; includeSubDomains" : string.Empty)}";
 }
 
-internal static class HstsExtensions
+public static class HstsExtensions
 {
     /// <summary>Registra y valida <c>Security:Hsts</c> al arrancar; el mensaje nombra la clave y nunca repite el valor.</summary>
-    public static IServiceCollection AddKnockGatewayHsts(this IServiceCollection services)
+    public static IServiceCollection AddKnockHsts(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
         services.AddOptions<HstsSettings>()
