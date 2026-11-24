@@ -16,6 +16,7 @@
 | T-08 | Transversales: `sub` del token, registros sin datos personales, 429 y 413, sin `Idempotency-Key` | R-15 a R-18 · CA-21 a CA-24 | T-02 a T-07 | T-09 | por asignar | hecha (KNOCK-105): `sub` del token en cada operación (sin identificadores en rutas, consultas ni cuerpos), 404 sin repetir el id, el módulo no escribe registros, 413 con `Content-Length` mayor de 1 KiB en los dos POST (además de `RequestSizeLimit`), 429 con `Retry-After` por persona y sin `Idempotency-Key`. Pruebas: `Spec044AvisosTests` (CA-21 a CA-24, unitarias) y `Spec044AvisosSeguridadTests` (401, 422, 413 y 429 sobre HTTP real; **corren solo en CI**, usan Redis en contenedor) |
 | T-09 | OpenAPI, `docs/endpoints.md` y `docs/rate-limit-matrix.md` | §5 | T-02 a T-07 | T-08 | por asignar | parcial: existe `docs/openapi.messaging.v1.json`; revisar `docs/endpoints.md` y matriz de límites |
 | T-10 | Gates, `Memoria.md` y revisión de par | §12 | todas | — | por asignar | pendiente |
+| T-11 | **Cierre del prerrequisito T-00 (enmienda 2026-11-23).** Con 037 T-10 fusionada, verificar de punta a punta que un evento aceptado por `POST /api/v1/interno/avisos` aparece en `GET /api/v1/avisos` y en el contador, y reemplazar los datos sembrados de las pruebas de CA-01 a CA-13 por avisos creados por el despachador | R-10 a R-14 | 037 T-10 | — | por asignar | pendiente: depende de la firma de la enmienda y de 037 T-10 |
 
 ## Definición de terminado
 - Los criterios de aceptación de `spec.md` están cubiertos por pruebas en verde.

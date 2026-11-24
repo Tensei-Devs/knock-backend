@@ -61,13 +61,13 @@ Definir y especificar los endpoints SRV-01, SRV-02, SRV-03, SRV-04 del Excel de 
 - **CA-10:** Dado un cuerpo que no se puede leer, cuando llama `POST /api/v1/tecnicos/me/servicios`, entonces responde 400 y no guarda nada.
 - **CA-11:** Dado el rol «técnico (dueño)», cuando llama `PUT /api/v1/tecnicos/me/servicios/{id}` con datos válidos, entonces responde 200 con lo descrito en §5.
 - **CA-12:** Dada una petición sin token o con token vencido, cuando llama `PUT /api/v1/tecnicos/me/servicios/{id}`, entonces responde 401 y no ejecuta la operación.
-- **CA-13:** Dada una persona que no cumple el rol «técnico (dueño)», cuando llama `PUT /api/v1/tecnicos/me/servicios/{id}`, entonces responde 403 y no cambia nada.
+- **CA-13:** Dada una persona que no cumple el rol «técnico (dueño)», cuando llama `PUT /api/v1/tecnicos/me/servicios/{id}`, entonces responde 403 y no cambia nada. *(Enmienda 2026-11-23, borrador sin firmar: una cuenta sin perfil de técnico recibe 404 `not_a_technician`, no 403; antes decía 403.)*
 - **CA-14:** Dado un valor inválido según las reglas de §6, cuando llama `PUT /api/v1/tecnicos/me/servicios/{id}`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
 - **CA-15:** Dado un cuerpo que no se puede leer, cuando llama `PUT /api/v1/tecnicos/me/servicios/{id}`, entonces responde 400 y no guarda nada.
 - **CA-16:** Dado el caso «el servicio no existe o no es del técnico», cuando llama `PUT /api/v1/tecnicos/me/servicios/{id}`, entonces responde 404 `service_not_found` con ProblemDetails y no cambia el estado.
 - **CA-17:** Dado el rol «técnico (dueño)», cuando llama `DELETE /api/v1/tecnicos/me/servicios/{id}` con datos válidos, entonces responde 204 con lo descrito en §5.
 - **CA-18:** Dada una petición sin token o con token vencido, cuando llama `DELETE /api/v1/tecnicos/me/servicios/{id}`, entonces responde 401 y no ejecuta la operación.
-- **CA-19:** Dada una persona que no cumple el rol «técnico (dueño)», cuando llama `DELETE /api/v1/tecnicos/me/servicios/{id}`, entonces responde 403 y no cambia nada.
+- **CA-19:** Dada una persona que no cumple el rol «técnico (dueño)», cuando llama `DELETE /api/v1/tecnicos/me/servicios/{id}`, entonces responde 403 y no cambia nada. *(Enmienda 2026-11-23, borrador sin firmar, extensión a confirmar: igual que CA-13, 404 `not_a_technician`; antes decía 403.)*
 - **CA-20:** Dado un valor inválido según las reglas de §6, cuando llama `DELETE /api/v1/tecnicos/me/servicios/{id}`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
 - **CA-21:** Dado el caso «el servicio no existe o no es del técnico», cuando llama `DELETE /api/v1/tecnicos/me/servicios/{id}`, entonces responde 404 `service_not_found` con ProblemDetails y no cambia el estado.
 - **CA-22:** Dado un técnico, cuando agrega un servicio con datos válidos, entonces queda creado; con un precio de 0 o negativo, un nombre de más de 60 caracteres o un oficio que no es suyo responde 422.
@@ -120,8 +120,8 @@ Definir y especificar los endpoints SRV-01, SRV-02, SRV-03, SRV-04 del Excel de 
 |---|---|---|---|---|
 | SRV-01 | `GET /api/v1/tecnicos/{id}/servicios` | persona con sesión (cliente o técnico) | Ruta: id | 200; 401; 404 |
 | SRV-02 | `POST /api/v1/tecnicos/me/servicios` | cuenta con perfil de técnico | Cuerpo: nombre, detalle, precioReferencia, oficio | 201; 400; 401; 422 |
-| SRV-03 | `PUT /api/v1/tecnicos/me/servicios/{id}` | técnico (dueño) | Ruta: id. Cuerpo: campos | 200; 400; 401; 403; 404 |
-| SRV-04 | `DELETE /api/v1/tecnicos/me/servicios/{id}` | técnico (dueño) | Ruta: id | 204; 401; 403; 404 |
+| SRV-03 | `PUT /api/v1/tecnicos/me/servicios/{id}` | técnico (dueño) | Ruta: id. Cuerpo: campos | 200; 400; 401; 404 |
+| SRV-04 | `DELETE /api/v1/tecnicos/me/servicios/{id}` | técnico (dueño) | Ruta: id | 204; 401; 404 |
 
 **Filtros, orden, paginación y caché**
 
@@ -230,6 +230,12 @@ Las pruebas citan el caso como `CA_047_NN` en el nombre (para `python scripts/sd
 ## 15. Riesgos y dudas abiertas
 - Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
 - Dependencia: oficios y elegibilidad de las specs 028 y 046.
+
+## Nota de enmienda (2026-11-23, decisión de José)
+- **Estado de esta enmienda:** Borrador sin firmar. La aprobación de abajo es la original; no se marca ninguna firma nueva y el texto anterior de cada criterio se conserva como historial. Lo firma José.
+- **CA-13: cuenta sin perfil de técnico, 404 `not_a_technician`, no 403.** Es lo mismo que ya dice CA-08 para `POST /api/v1/tecnicos/me/servicios` («404 sin revelar que el recurso existe»): las tres rutas de escritura (alta, edición y baja) responden igual. Evidencia: `ServiciosController.Fail` devuelve 404 con `ErrorCodes.NotATechnicianCode` para `ServiceStatus.NotATechnician`, y `ServiceService` lo produce en `CreateAsync`, `UpdateAsync` y `DeleteAsync` cuando la cuenta no tiene perfil.
+- **Extensión a CA-19 (para que José la confirme o la tache):** la baja (`DELETE`) comparte exactamente el mismo código y responde 404 `not_a_technician`; se corrige CA-19 igual, para que la spec no se contradiga. La tabla de §5 (SRV-03 y SRV-04) quita el 403.
+- Pruebas que siguen a esta enmienda: las de #356 (`..._CA_047_13` y, si se agrega, `_CA_047_19`).
 
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14

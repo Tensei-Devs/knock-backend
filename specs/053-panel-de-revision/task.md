@@ -16,6 +16,7 @@
 | T-08 | Transversales: `sub` del token, registros sin datos personales, 429 y 413, sin `Idempotency-Key` | R-23 a R-26 · CA-37 a CA-40 | T-02 a T-07 | T-09 | por asignar | pendiente |
 | T-09 | OpenAPI, `docs/endpoints.md` y `docs/rate-limit-matrix.md` | §5 | T-02 a T-07 | T-08 | por asignar | pendiente |
 | T-10 | Gates, `Memoria.md` y revisión de par | §12 | todas | — | por asignar | pendiente |
+| T-11 | **Política 429 en las rutas del panel (enmienda 2026-11-23, R-25 y CA-39).** Una política por persona del panel (`sub` de la sesión del panel) en `AdminVerificacionesController` y `AdminReportesController`: registrada en `IdentityRateLimits`, con 429 y `Retry-After`, valor propuesto a validar por José, fila en `docs/rate-limit-matrix.md`, 429 declarado en OpenAPI (regenerado) y pruebas `CA_053_39` (429 con `Retry-After` y 413 con cuerpo excesivo) contra host real | R-25 · CA-39 | T-02 a T-06 | T-08 | por asignar | pendiente: depende de la firma de la enmienda de José del 2026-11-23; hoy las rutas del panel no tienen política (0 `[EnableRateLimiting]`). Toca la configuración compartida de límites (`RateLimit*`): rebasar sobre #355 |
 
 ## Definición de terminado
 - Los criterios de aceptación de `spec.md` están cubiertos por pruebas en verde.
