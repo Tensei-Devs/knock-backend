@@ -1,4 +1,5 @@
 using Knock.Contracts.Catalog;
+using Knock.Hosting.Data;
 using Knock.Hosting.Redis;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Catalog.Data;

@@ -1,4 +1,5 @@
 using Knock.Hosting.Concurrency;
+using Knock.Hosting.Data;
 using Knock.Identity.Api.Hosting;
 using Knock.Identity.Api.Modules.Panel;
 using Knock.Identity.Api.Modules.Safety.Domain;

@@ -1,6 +1,7 @@
 using Azure.Core;
 using Azure.Identity;
 using Knock.Contracts.Moderation;
+using Knock.Hosting.Data;
 using Knock.Hosting.Redis;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Moderation.Data;

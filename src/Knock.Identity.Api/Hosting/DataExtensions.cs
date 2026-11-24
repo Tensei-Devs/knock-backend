@@ -1,3 +1,4 @@
+using Knock.Hosting.Data;
 using Knock.Hosting.Redis;
 namespace Knock.Identity.Api.Hosting;
 

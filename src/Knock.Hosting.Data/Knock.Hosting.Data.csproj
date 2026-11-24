@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Knock.Hosting.Data</RootNamespace>
+  </PropertyGroup>
+
+  <!-- Spec 055, R-07a: la parte de MongoDB de la biblioteca técnica. Solo la usan Identidad, Mensajería y Mercado; el gateway no carga MongoDB.Driver. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="MongoDB.Driver" Version="3.14.0" />
+    <ProjectReference Include="..\Knock.Hosting\Knock.Hosting.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Microsoft.Extensions.Configuration" />
+    <Using Include="Microsoft.Extensions.DependencyInjection" />
+    <Using Include="Microsoft.Extensions.Logging" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Knock.UnitTest" />
+    <InternalsVisibleTo Include="Knock.IntegrationTest" />
+    <InternalsVisibleTo Include="Knock.SecurityTest" />
+  </ItemGroup>
+
+</Project>

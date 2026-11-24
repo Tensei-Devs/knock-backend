@@ -472,6 +472,13 @@
           "Serilog.AspNetCore": "[10.0.0, )",
           "StackExchange.Redis": "[2.13.23, )"
         }
+      },
+      "knock.hosting.data": {
+        "type": "Project",
+        "dependencies": {
+          "Knock.Hosting": "[1.0.0, )",
+          "MongoDB.Driver": "[3.14.0, )"
+        }
       }
     }
   }

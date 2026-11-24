@@ -1,4 +1,5 @@
 using Knock.Hosting.Concurrency;
+using Knock.Hosting.Data;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Trust.Domain;
 using Microsoft.Extensions.Options;

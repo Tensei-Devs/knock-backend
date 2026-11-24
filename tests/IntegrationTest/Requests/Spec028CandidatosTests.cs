@@ -6,7 +6,7 @@ using MarketApi::Knock.Market.Api.Modules.Requests.Data;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using MongoOptions = MarketApi::Knock.Market.Api.Hosting.KnockMongoOptions;
+using MongoOptions = Knock.Hosting.Data.KnockMongoOptions;
 
 namespace Knock.IntegrationTest.Requests;
 

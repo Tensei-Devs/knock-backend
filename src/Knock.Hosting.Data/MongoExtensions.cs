@@ -6,13 +6,13 @@ using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
-namespace Knock.Market.Api.Hosting;
+namespace Knock.Hosting.Data;
 
 /// <summary>
 /// Conexión a MongoDB del proceso (sección <c>Mongo</c> de appsettings, sin secretos). La cadena llega por
 /// <c>ConnectionStrings:KnockMongo</c> desde variables de entorno o user-secrets; en Azure, Key Vault (TT-SEC-01).
 /// </summary>
-internal sealed class KnockMongoOptions
+public sealed class KnockMongoOptions
 {
     public const string ConnectionStringName = "KnockMongo";
     public const string ConnectionStringKey = "ConnectionStrings:" + ConnectionStringName;
@@ -134,7 +134,7 @@ internal sealed partial class KnockMongoOptionsValidator : IValidateOptions<Knoc
     }
 }
 
-internal static class MongoExtensions
+public static class MongoExtensions
 {
     public const string HealthCheckName = "mongodb";
 
@@ -181,8 +181,9 @@ internal static class MongoExtensions
     }
 
     /// <summary>Ajustes del cliente: la cadena da el destino y las credenciales; el tamaño del pool y los tiempos los fija la configuración.</summary>
-    internal static MongoClientSettings CreateSettings(KnockMongoOptions options)
+    public static MongoClientSettings CreateSettings(KnockMongoOptions options)
     {
+        ArgumentNullException.ThrowIfNull(options);
         var settings = MongoClientSettings.FromConnectionString(options.ConnectionString);
         settings.MaxConnectionPoolSize = options.MaxPoolSize
             ?? throw new InvalidOperationException($"{KnockMongoOptions.MaxPoolSizeKey} is not configured.");

@@ -1,3 +1,4 @@
+using Knock.Hosting.Data;
 using Knock.Identity.Api.Hosting;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;

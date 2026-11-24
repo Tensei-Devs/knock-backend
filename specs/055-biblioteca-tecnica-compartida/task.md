@@ -32,7 +32,7 @@
 | Tarea | Qué se hace | Cubre | Estado |
 |---|---|---|---|
 | T-15 | `LoggingExtensions` y `ObservabilityExtensions` a `Knock.Hosting` | R-08 · CA-12 | pendiente |
-| T-16 | `RedisExtensions` y `HealthExtensions` a `Knock.Hosting`; `MongoExtensions` y la parte técnica de `DataExtensions` a `src/Knock.Hosting.Data` (no existe) | R-07a · CA-12, CA-13 | parcial: `RedisExtensions` y `HealthExtensions` ya están en `src/Knock.Hosting` (`Redis/`, `Health/`) sin copias; falta `MongoExtensions` y la parte técnica de `DataExtensions` en `src/Knock.Hosting.Data` |
+| T-16 | `RedisExtensions` y `HealthExtensions` a `Knock.Hosting`; `MongoExtensions` y la parte técnica de `DataExtensions` a `src/Knock.Hosting.Data` (no existe) | R-07a · CA-12, CA-13 | hecha (`RedisExtensions` y `HealthExtensions` en `src/Knock.Hosting`; `MongoExtensions` en `src/Knock.Hosting.Data`, que solo referencian los tres servicios; `DataExtensions` de cada servicio conserva solo la clave de su base; `Sin_MongoDB_En_Hosting_Ni_Gateway_CA_055_13`) |
 | T-17 | `SecurityHeadersMiddleware`, `HstsExtensions`, `ProblemResponses`, `CorsExtensions`/`CorsMiddleware`, `RequestBodyLimitMiddleware`, `JwtSettings` y la validación del JWT | R-08 · CA-12 | pendiente (siguen copiados en los servicios) |
 | T-18 | `JsonCompressionMiddleware` y la validación de opciones de caché | R-08 · CA-12 | pendiente (copiados en Identity y Market) |
 | T-19 | El resto de `Common/` y `Hosting/` de Identity copiado de Market | R-08 · CA-12 | pendiente |

@@ -108,7 +108,7 @@ public class MediaConfirmationBlobTests
         var options = new MediaOptions { ReducedMaxSide = 512, MaxConcurrentProcessing = 2 };
         var configured = Options.Create(options);
         var blobs = new BlobServiceClient(azurite.ConnectionString);
-        var store = new MongoMediaFileStore(database, Options.Create(new MarketApi::Knock.Market.Api.Hosting.KnockMongoOptions()));
+        var store = new MongoMediaFileStore(database, Options.Create(new Knock.Hosting.Data.KnockMongoOptions()));
         var service = new MediaService(
             store,
             new AzureMediaBlobStore(blobs, new EnlaceSubidaNoDisponible(), configured),
