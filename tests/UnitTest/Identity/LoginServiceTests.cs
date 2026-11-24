@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using AwesomeAssertions;
+using Knock.Hosting.Security;
 using Knock.Identity.Api.Common.Errors;
-using Knock.Identity.Api.Common.Security;
 using Knock.Identity.Api.Modules.Sesiones.Data;
 using Knock.Identity.Api.Modules.Sesiones.Domain;
 using Knock.Identity.Api.Modules.Sesiones.Services;
