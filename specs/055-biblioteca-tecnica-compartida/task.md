@@ -31,7 +31,7 @@
 
 | Tarea | Qué se hace | Cubre | Estado |
 |---|---|---|---|
-| T-15 | `LoggingExtensions` y `ObservabilityExtensions` a `Knock.Hosting` | R-08 · CA-12 | pendiente |
+| T-15 | `LoggingExtensions` y `ObservabilityExtensions` a `Knock.Hosting` | R-08 · CA-12 | hecha (`src/Knock.Hosting/Logging/LoggingExtensions.cs` y `Observability/ObservabilityExtensions.cs`; sin copias en los cuatro proyectos; EXC-007 retirada) |
 | T-16 | `RedisExtensions` y `HealthExtensions` a `Knock.Hosting`; `MongoExtensions` y la parte técnica de `DataExtensions` a `src/Knock.Hosting.Data` (no existe) | R-07a · CA-12, CA-13 | pendiente |
 | T-17 | `SecurityHeadersMiddleware`, `HstsExtensions`, `ProblemResponses`, `CorsExtensions`/`CorsMiddleware`, `RequestBodyLimitMiddleware`, `JwtSettings` y la validación del JWT | R-08 · CA-12 | pendiente (siguen copiados en los servicios) |
 | T-18 | `JsonCompressionMiddleware` y la validación de opciones de caché | R-08 · CA-12 | pendiente (copiados en Identity y Market) |

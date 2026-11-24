@@ -1,4 +1,3 @@
-// jscpd:ignore-start -- EXC-007: copia de src/Knock.Market.Api/Hosting/ObservabilityExtensions.cs (spec 011); se unifica en una biblioteca técnica.
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -17,14 +16,14 @@ using OpenTelemetry.Trace;
 using Serilog.Core;
 using Serilog.Events;
 
-namespace Knock.Identity.Api.Hosting;
+namespace Knock.Hosting.Observability;
 
 /// <summary>Opciones sin secretos de <c>Observability:*</c> (TT-OBS-01). La cadena de conexión nunca vive aquí.</summary>
 internal sealed class ObservabilityOptions
 {
     public const string SectionName = "Observability";
 
-    public string ServiceName { get; set; } = "knock-api";
+    public string ServiceName { get; set; } = string.Empty;
 
     /// <summary>Fracción de trazas que se envían: 1.0 (100 %) con el tope diario del recurso (decisión P7).</summary>
     public float SamplingRatio { get; set; } = 1.0f;
@@ -49,7 +48,7 @@ internal sealed class AzureMonitorExportStatus
         _signals[signal] = new AzureMonitorSignalSettings(options.DisableOfflineStorage, options.EnableLiveMetrics, options.SamplingRatio, options.TracesPerSecond);
 }
 
-internal static class ObservabilityExtensions
+public static class ObservabilityExtensions
 {
     /// <summary>Única fuente de la cadena de conexión: variable de entorno o referencia de Key Vault en Container Apps.</summary>
     public const string ConnectionStringKey = "APPLICATIONINSIGHTS_CONNECTION_STRING";
@@ -57,23 +56,34 @@ internal static class ObservabilityExtensions
     /// <summary>Variable que lee el exportador de Azure Monitor para no enviar Statsbeat (estadísticas internas del SDK a Microsoft).</summary>
     public const string StatsbeatDisabledKey = "APPLICATIONINSIGHTS_STATSBEAT_DISABLED";
 
-    /// <summary>Raíz de las rutas de salud (<c>/health</c> y <c>/health/ready</c>, specs 001 y 003): no generan spans.</summary>
-    private const string _healthPath = "/health";
-
     public const string CorrelationIdAttribute = "knock.correlation_id";
     public const string TracesSignal = "traces";
     public const string MetricsSignal = "metrics";
     public const string LogsSignal = "logs";
 
+    /// <summary>Raíz de las rutas de salud (<c>/health</c> y <c>/health/ready</c>, specs 001 y 003): no generan spans.</summary>
+    private const string _healthPath = "/health";
+
     /// <summary>
     /// OpenTelemetry siempre (trazas, métricas y logs con redacción) y los exportadores de Azure Monitor solo si hay cadena de conexión.
     /// La tubería es la misma en todos los entornos; las pruebas solo agregan un exportador en memoria (decisión previa 3).
+    /// <paramref name="serviceAssembly"/> da la versión del servicio (<c>service.version</c>), <paramref name="defaultServiceName"/> es el <c>Observability:ServiceName</c> si la configuración no lo trae y <paramref name="extraMeters"/>
+    /// son los medidores propios del servicio que se exportan junto a <c>System.Runtime</c>.
     /// </summary>
-    public static IServiceCollection AddKnockObservability(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
+    public static IServiceCollection AddKnockObservability(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment environment,
+        Assembly serviceAssembly,
+        string defaultServiceName,
+        params string[] extraMeters)
     {
         ArgumentNullException.ThrowIfNull(configuration);
         ArgumentNullException.ThrowIfNull(environment);
-        var options = configuration.GetSection(ObservabilityOptions.SectionName).Get<ObservabilityOptions>() ?? new ObservabilityOptions();
+        ArgumentNullException.ThrowIfNull(serviceAssembly);
+        ArgumentNullException.ThrowIfNull(extraMeters);
+        var options = new ObservabilityOptions { ServiceName = defaultServiceName };
+        configuration.GetSection(ObservabilityOptions.SectionName).Bind(options);
         if (options.SamplingRatio is < 0f or > 1f || string.IsNullOrWhiteSpace(options.ServiceName))
         {
             throw new InvalidOperationException("Observability:SamplingRatio must be between 0 and 1 and Observability:ServiceName is required.");
@@ -110,7 +120,7 @@ internal static class ObservabilityExtensions
 
         services.AddOpenTelemetry()
             .ConfigureResource(resource => resource
-                .AddService(options.ServiceName, serviceVersion: ServiceVersion())
+                .AddService(options.ServiceName, serviceVersion: ServiceVersion(serviceAssembly))
                 .AddAttributes([new KeyValuePair<string, object>("deployment.environment", environment.EnvironmentName)]))
             .WithTracing(tracing =>
             {
@@ -125,7 +135,7 @@ internal static class ObservabilityExtensions
             })
             .WithMetrics(metrics =>
             {
-                metrics.AddAspNetCoreInstrumentation().AddMeter("System.Runtime");
+                metrics.AddAspNetCoreInstrumentation().AddMeter("System.Runtime").AddMeter(extraMeters);
                 if (status.Enabled)
                 {
                     metrics.AddAzureMonitorMetricExporter(exporter => Configure(MetricsSignal, exporter));
@@ -163,9 +173,9 @@ internal static class ObservabilityExtensions
         };
     }
 
-    private static string ServiceVersion() =>
-        typeof(ObservabilityExtensions).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-        ?? typeof(ObservabilityExtensions).Assembly.GetName().Version?.ToString()
+    private static string ServiceVersion(Assembly serviceAssembly) =>
+        serviceAssembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+        ?? serviceAssembly.GetName().Version?.ToString()
         ?? "0.0.0";
 }
 
@@ -213,10 +223,8 @@ internal sealed class IgnoreIncomingTraceContextPropagator : DistributedContextP
 /// Reenvía a OpenTelemetry los eventos que ya pasaron los niveles y enriquecedores de Serilog (TT-API-03), con sus propiedades
 /// como atributos y la excepción como <c>exception.*</c>. Si OpenTelemetry no está registrado, no hace nada.
 /// </summary>
-internal sealed class OpenTelemetryLogSink(IServiceProvider services) : ILogEventSink
+internal sealed class OpenTelemetryLogSink(IServiceProvider services, string defaultCategory) : ILogEventSink
 {
-    private const string _defaultCategory = "Knock.Identity.Api";
-
     private readonly Lazy<ILoggerProvider?> _provider = new(
         () => services.GetServices<ILoggerProvider>().OfType<OpenTelemetryLoggerProvider>().FirstOrDefault());
 
@@ -232,7 +240,7 @@ internal sealed class OpenTelemetryLogSink(IServiceProvider services) : ILogEven
 
         var category = logEvent.Properties.TryGetValue("SourceContext", out var source) && source is ScalarValue { Value: string name }
             ? name
-            : _defaultCategory;
+            : defaultCategory;
         var logger = _loggers.GetOrAdd(category, provider.CreateLogger);
         var level = Level(logEvent.Level);
         if (logger.IsEnabled(level))
@@ -287,4 +295,3 @@ internal sealed class SerilogLogState : IReadOnlyList<KeyValuePair<string, objec
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }
-// jscpd:ignore-end -- EXC-007

@@ -1,5 +1,6 @@
+using System.Reflection;
 using System.Text;
-using Knock.Hosting.Logging;
+using Knock.Hosting.Observability;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Routing.Patterns;
 using Serilog;
@@ -8,24 +9,27 @@ using Serilog.Core;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
 
-namespace Knock.Market.Api.Hosting;
+namespace Knock.Hosting.Logging;
 
-internal static class LoggingExtensions
+public static class LoggingExtensions
 {
 
     /// <summary>
-    /// Serilog a consola en JSON (una línea por evento), configurable desde appsettings. Los mismos eventos, ya filtrados y enriquecidos,
-    /// van a OpenTelemetry (TT-OBS-01) con <see cref="OpenTelemetryLogSink"/>.
+    /// Serilog a consola en JSON (una línea por evento, redactada con <see cref="RedactingJsonFormatter"/>), configurable desde appsettings. Los mismos eventos, ya filtrados y enriquecidos,
+    /// van a OpenTelemetry (TT-OBS-01) con <see cref="OpenTelemetryLogSink"/>. La categoría de los eventos sin <c>SourceContext</c> es el nombre del ensamblado
+    /// del servicio (<paramref name="serviceAssembly"/>).
     /// </summary>
-    public static IServiceCollection AddKnockLogging(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddKnockLogging(this IServiceCollection services, IConfiguration configuration, Assembly serviceAssembly)
     {
+        ArgumentNullException.ThrowIfNull(serviceAssembly);
+        var defaultCategory = serviceAssembly.GetName().Name ?? "Knock";
         services.AddSerilog((provider, logger) => logger
             .ReadFrom.Configuration(configuration)
             .Filter.ByExcluding(IsQueryBearingBelowWarning)
             .Enrich.FromLogContext()
             .Enrich.With<ScopeRequestPathEnricher>()
             .WriteTo.Console(new RedactingJsonFormatter(new RenderedCompactJsonFormatter()))
-            .WriteTo.Sink(new OpenTelemetryLogSink(provider)));
+            .WriteTo.Sink(new OpenTelemetryLogSink(provider, defaultCategory)));
         return services;
     }
 
