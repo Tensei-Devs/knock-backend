@@ -258,7 +258,7 @@ public sealed class Spec050CambiosTests
         var document = await host.VisitDocAsync(visit.VisitId);
         document["estado"].AsString.Should().Be("no_presentado");
         document["quienFalto"].AsString.Should().Be("cliente");
-        (await host.OutboxOfAsync("VisitaCerrada", visit.VisitId.ToString())).Should().Be(1, "el cliente recibe el aviso");
+        (await host.OutboxCountOfAsync("VisitaCerrada", visit.VisitId.ToString())).Should().Be(1, "el cliente recibe el aviso");
     }
 
     [Fact]

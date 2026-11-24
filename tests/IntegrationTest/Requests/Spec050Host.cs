@@ -65,4 +65,12 @@ internal static class Spec050Host
         await host.SetAppointmentAsync(visit.VisitId, DateTime.UtcNow + fromNow);
         return visit;
     }
+
+    /// <summary>Cuántos eventos del tipo dado hay en el outbox para el agregado.</summary>
+    public static Task<long> OutboxCountOfAsync(this Spec020Host host, string type, string aggregateId) =>
+        host.CountAsync("outbox", Builders<BsonDocument>.Filter.Eq("tipo", type) & Builders<BsonDocument>.Filter.Eq("agregadoId", aggregateId));
+
+    /// <summary>Los eventos del outbox del tipo dado.</summary>
+    public static Task<List<BsonDocument>> OutboxEventsOfTypeAsync(this Spec020Host host, string type) =>
+        host.Database.GetCollection<BsonDocument>("outbox").Find(Builders<BsonDocument>.Filter.Eq("tipo", type)).ToListAsync();
 }

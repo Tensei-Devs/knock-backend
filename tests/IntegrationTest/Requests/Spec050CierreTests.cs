@@ -31,7 +31,7 @@ public sealed class Spec050CierreTests
         var document = await host.VisitDocAsync(visit.VisitId);
         document["estado"].AsString.Should().Be("terminada");
         document["trabajo"]["descripcion"].AsString.Should().Be(Spec050Host.Work);
-        (await host.OutboxOfAsync("VisitaTerminada", visit.VisitId.ToString())).Should().Be(1);
+        (await host.OutboxCountOfAsync("VisitaTerminada", visit.VisitId.ToString())).Should().Be(1);
         var tasks = host.Database.GetCollection<BsonDocument>("tareas_programadas");
         var opinion = await tasks.Find(new BsonDocument { { "tipo", "CerrarPeriodoDeOpinion" }, { "claveNegocio", visit.VisitId.ToString() } }).SingleAsync();
         var reportClose = await tasks.Find(new BsonDocument { { "tipo", "CerrarReporteDeNoTerminado" }, { "claveNegocio", visit.VisitId.ToString() } }).SingleAsync();
@@ -110,7 +110,7 @@ public sealed class Spec050CierreTests
         var report = (await host.VisitDocAsync(visit.VisitId))["reporteNoTerminado"].AsBsonDocument;
         report["estado"].AsString.Should().Be("en_revision");
         report["texto"].AsString.Should().Be(_report);
-        var created = await host.OutboxEventsAsync("ReporteNoTerminadoCreado");
+        var created = await host.OutboxEventsOfTypeAsync("ReporteNoTerminadoCreado");
         created.Should().ContainSingle();
         created[0]["datos"].ToJson().Should().NotContain(_report, "el evento solo lleva identificadores");
     }
@@ -177,7 +177,7 @@ public sealed class Spec050CierreTests
         asTechnician.StatusCode.Should().Be(HttpStatusCode.NotFound);
         asStranger.StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await host.VisitDocAsync(visit.VisitId)).Contains("permisoPublicarFotos").Should().BeFalse();
-        (await host.OutboxEventsAsync("PermisoFotosCambiado")).Should().BeEmpty();
+        (await host.OutboxEventsOfTypeAsync("PermisoFotosCambiado")).Should().BeEmpty();
     }
 
     [Fact]
@@ -214,7 +214,7 @@ public sealed class Spec050CierreTests
         }
 
         (await host.VisitDocAsync(old.VisitId)).Contains("reporteNoTerminado").Should().BeFalse();
-        (await host.OutboxEventsAsync("ReporteNoTerminadoCreado")).Should().ContainSingle();
+        (await host.OutboxEventsOfTypeAsync("ReporteNoTerminadoCreado")).Should().ContainSingle();
     }
 
     [Fact]
@@ -235,7 +235,7 @@ public sealed class Spec050CierreTests
         revoked.StatusCode.Should().Be(HttpStatusCode.OK);
         (await Spec020Host.ReadAsync(revoked)).GetProperty("permiso").GetBoolean().Should().BeFalse();
         (await host.VisitDocAsync(visit.VisitId))["permisoPublicarFotos"].AsBoolean.Should().BeFalse();
-        var events = await host.OutboxEventsAsync("PermisoFotosCambiado");
+        var events = await host.OutboxEventsOfTypeAsync("PermisoFotosCambiado");
         events.Should().HaveCount(2, "repetir el mismo valor no escribe otro evento");
         events.Select(e => e["datos"]["permiso"].AsBoolean).Should().BeEquivalentTo([true, false]);
     }
