@@ -51,15 +51,30 @@ internal interface IDeviceTokens
     Task DeleteBySessionAsync(string session, CancellationToken cancellationToken);
 }
 
-internal sealed record AvisoEvent(string EventoId, string Evento, string Destinatario, string? Recurso, string? Conversacion);
+/// <summary>Aviso dentro de la app que el despachador deja en la colección <c>avisos</c> (spec 037 R-14, spec 044 §6): solo texto fijo del catálogo y la pantalla que abre la app.</summary>
+internal sealed record AvisoEnApp(string EventoId, string Destinatario, string Rol, string Tipo, AvisoPlantilla Plantilla, string Recurso, DateTime CreadoEn);
 
-/// <summary>Núcleo del despachador (spec 037 R-04 a R-09). No lee colecciones de otros servicios: recibe el evento ya entregado. Con el interruptor apagado no envía ni registra nada.</summary>
+/// <summary>Escritura de la colección <c>avisos</c> (spec 044 §6). Idempotente por <c>eventoId</c> y destinatario: repetir el evento no duplica el aviso.</summary>
+internal interface IAvisosEnApp
+{
+    /// <returns><see langword="true"/> si lo creó; <see langword="false"/> si ya existía.</returns>
+    Task<bool> CreateAsync(AvisoEnApp aviso, CancellationToken cancellationToken);
+}
+
+/// <summary>Evento entregado al despachador. <c>Rol</c> es <c>cliente</c> o <c>tecnico</c> del cuerpo de la ruta interna, o <see langword="null"/> si el tipo no distingue rol (<c>reporte_decidido</c>).</summary>
+internal sealed record AvisoEvent(string EventoId, string Evento, string Destinatario, string? Recurso, string? Conversacion, string? Rol = null);
+
+/// <summary>
+/// Núcleo del despachador (spec 037 R-04 a R-09 y R-14). No lee colecciones de otros servicios: recibe el evento ya entregado. Primero crea siempre el aviso dentro de la app (no depende del
+/// interruptor del push ni de los dispositivos, enmienda del 2026-11-24); después, solo si el interruptor está encendido, decide y envía el push. Con el interruptor apagado el push no envía ni registra nada.
+/// </summary>
 internal sealed class DespachadorDeAvisos(
     PushOptions options,
     IPushSender sender,
     IEnviadosStore sent,
     IPresenceReader presence,
     IDeviceTokens devices,
+    IAvisosEnApp inApp,
     TimeProvider clock)
 {
     public const int MaxAttempts = 3;
@@ -67,30 +82,21 @@ internal sealed class DespachadorDeAvisos(
     public async Task<DispatchOutcome> DispatchAsync(AvisoEvent evento, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(evento);
+        var payload = AvisoRules.BuildPayload(evento.Evento, evento.Recurso, evento.Conversacion, Guid.NewGuid());
+        if (payload is null)
+        {
+            return options.Enabled ? DispatchOutcome.Invalid : DispatchOutcome.Disabled;
+        }
+
+        await CreateInAppNoticeAsync(evento, payload["tipo"], cancellationToken);
         if (!options.Enabled)
         {
             return DispatchOutcome.Disabled;
         }
 
-        var payload = AvisoRules.BuildPayload(evento.Evento, evento.Recurso, evento.Conversacion, Guid.NewGuid());
-        if (payload is null)
+        if (evento.Evento == AvisoRules.NewMessageEvent && await SuppressedNewMessageAsync(evento, cancellationToken) is { } suppressed)
         {
-            return DispatchOutcome.Invalid;
-        }
-
-        if (evento.Evento == AvisoRules.NewMessageEvent)
-        {
-            if (await presence.IsPresentAsync(evento.Destinatario, cancellationToken))
-            {
-                return DispatchOutcome.Present;
-            }
-
-            var start = await sent.GetWindowStartAsync(evento.Conversacion!, evento.Destinatario, cancellationToken);
-            if (AvisoRules.DecideWindow(start, clock.GetUtcNow().UtcDateTime) == WindowDecision.Suppress)
-            {
-                await sent.CountSuppressedAsync(evento.Conversacion!, evento.Destinatario, cancellationToken);
-                return DispatchOutcome.Grouped;
-            }
+            return suppressed;
         }
 
         var key = AvisoRules.DeduplicationKey(evento.EventoId, evento.Destinatario);
@@ -125,6 +131,37 @@ internal sealed class DespachadorDeAvisos(
 
         await sent.RecordResultAsync(key, delivered ? "enviado" : "fallido", cancellationToken);
         return delivered ? DispatchOutcome.Sent : DispatchOutcome.Failed;
+    }
+
+    /// <summary>Presencia en vivo y ventana de 5 minutos de <c>mensaje_nuevo</c> (R-07, R-08): el resultado si el push no debe enviarse, o <see langword="null"/> si sigue.</summary>
+    private async Task<DispatchOutcome?> SuppressedNewMessageAsync(AvisoEvent evento, CancellationToken cancellationToken)
+    {
+        if (await presence.IsPresentAsync(evento.Destinatario, cancellationToken))
+        {
+            return DispatchOutcome.Present;
+        }
+
+        var start = await sent.GetWindowStartAsync(evento.Conversacion!, evento.Destinatario, cancellationToken);
+        if (AvisoRules.DecideWindow(start, clock.GetUtcNow().UtcDateTime) != WindowDecision.Suppress)
+        {
+            return null;
+        }
+
+        await sent.CountSuppressedAsync(evento.Conversacion!, evento.Destinatario, cancellationToken);
+        return DispatchOutcome.Grouped;
+    }
+
+    /// <summary>Spec 037 R-14: el aviso dentro de la app existe aunque el push no se envíe (sin dispositivos, presencia, ventana, límite o interruptor apagado). Texto fijo; nada de la otra parte.</summary>
+    private async Task CreateInAppNoticeAsync(AvisoEvent evento, string tipo, CancellationToken cancellationToken)
+    {
+        var template = AvisoCatalog.Find(evento.Evento);
+        if (template is null)
+        {
+            return;
+        }
+
+        var role = evento.Rol ?? AvisoRules.ClientRole;
+        await inApp.CreateAsync(new AvisoEnApp(evento.EventoId, evento.Destinatario, role, tipo, template, evento.Recurso!, clock.GetUtcNow().UtcDateTime), cancellationToken);
     }
 
     private async Task<bool> SendWithRetriesAsync(string person, string token, IReadOnlyDictionary<string, string> payload, CancellationToken cancellationToken)

@@ -34,7 +34,7 @@ internal interface INoticesStore
 
 /// <summary>
 /// Colecciones <c>avisos</c> y <c>preferencias_avisos</c> (spec 044 §6). Único punto del módulo con <c>IMongoCollection</c>: los filtros son tipados y toda lectura o escritura lleva el
-/// <c>usuarioId</c> del token, así un aviso ajeno no existe para quien lo pide (R-12, R-15). Nada se cachea. Este módulo nunca crea avisos (R-14): solo el despachador de la spec 037.
+/// <c>usuarioId</c> del token, así un aviso ajeno no existe para quien lo pide (R-12, R-15). Nada se cachea. Este módulo nunca crea avisos (R-14): los crea el despachador de la spec 037 (<c>AvisosEnAppStore</c>).
 /// </summary>
 internal sealed class NoticesStore(
     [FromKeyedServices(DataExtensions.DatabaseKey)] IMongoDatabase database,
@@ -148,6 +148,11 @@ internal sealed class NoticesStore(
             cancellationToken: cancellationToken);
         await Notices.Indexes.CreateOneAsync(
             new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("venceEn"), new CreateIndexOptions { ExpireAfter = TimeSpan.Zero }),
+            cancellationToken: cancellationToken);
+        await Notices.Indexes.CreateOneAsync(
+            new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending("eventoId").Ascending(_userField),
+                new CreateIndexOptions<BsonDocument> { Unique = true, PartialFilterExpression = _filter.Exists("eventoId") }),
             cancellationToken: cancellationToken);
         await Preferences.Indexes.CreateOneAsync(
             new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending(_userField), new CreateIndexOptions { Unique = true }),

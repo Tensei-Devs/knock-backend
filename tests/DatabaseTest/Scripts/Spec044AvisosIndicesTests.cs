@@ -39,6 +39,7 @@ public sealed class Spec044AvisosIndicesTests
             (await notices.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(1, "reaplicar no borra datos");
             (await MongoIndexes.DescribeAsync(database, "avisos")).Should().Equal(
                 "_id_ _id:1 - ttl:-",
+                "eventoId_1_usuarioId_1 eventoId:1,usuarioId:1 unique ttl:-",
                 "usuarioId_1_leido_1_creadoEn_-1 usuarioId:1,leido:1,creadoEn:-1 - ttl:-",
                 "venceEn_1 venceEn:1 - ttl:0");
             (await MongoIndexes.DescribeAsync(database, "preferencias_avisos")).Should().Equal(
@@ -70,6 +71,32 @@ public sealed class Spec044AvisosIndicesTests
 
             (await duplicate.Should().ThrowAsync<MongoWriteException>()).Which.WriteError.Category.Should().Be(ServerErrorCategory.DuplicateKey);
             await preferences.InsertOneAsync(new BsonDocument { ["usuarioId"] = "u2" });
+        }
+        finally
+        {
+            await client.DropDatabaseAsync(name);
+        }
+    }
+
+    [Fact]
+    public async Task Script_MakesTheInAppNoticeIdempotentPerEventAndPerson_R_14()
+    {
+        var documentDb = await DocumentDbFixture.SharedAsync();
+        var name = "s044_evt_" + Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(6));
+        using var client = new MongoClient(documentDb.ConnectionString);
+        try
+        {
+            await using var tools = await MongoToolsContainer.StartAsync(documentDb, new Dictionary<string, string> { ["KNOCK_DB_MESSAGING"] = name });
+            (await tools.RunAsync("mongosh", "--nodb", "--quiet", "--file", $"{MongoToolsContainer.DbDirectory}/{_scriptName}")).ExitCode.Should().Be(0);
+            var notices = client.GetDatabase(name).GetCollection<BsonDocument>("avisos");
+            await notices.InsertManyAsync([new BsonDocument { ["usuarioId"] = "u1" }, new BsonDocument { ["usuarioId"] = "u1" }]);
+            await notices.InsertOneAsync(new BsonDocument { ["usuarioId"] = "u1", ["eventoId"] = "e1" });
+
+            var duplicate = async () => await notices.InsertOneAsync(new BsonDocument { ["usuarioId"] = "u1", ["eventoId"] = "e1" });
+
+            (await duplicate.Should().ThrowAsync<MongoWriteException>()).Which.WriteError.Category.Should().Be(ServerErrorCategory.DuplicateKey);
+            await notices.InsertOneAsync(new BsonDocument { ["usuarioId"] = "u2", ["eventoId"] = "e1" });
+            await notices.InsertOneAsync(new BsonDocument { ["usuarioId"] = "u1", ["eventoId"] = "e2" });
         }
         finally
         {
