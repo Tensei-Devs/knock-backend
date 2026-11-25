@@ -10,7 +10,7 @@ namespace Knock.Market.Api.Modules.Requests.Services;
 /// Comparar las cotizaciones de una solicitud propia (spec 021, HU-032 y HU-033): lee las cotizaciones y los datos públicos de sus técnicos, las ordena y etiqueta con
 /// <see cref="QuoteComparer"/> y dice si el cliente ya puede elegir. Nunca devuelve teléfono, WhatsApp ni direcciones (R-08). No toca MongoDB.
 /// </summary>
-internal sealed class QuoteComparisonService(RequestsStore requests, ChoiceStore choices, TimeProvider clock)
+internal sealed class QuoteComparisonService(RequestsStore requests, ChoiceStore choices, TimeProvider clock, IBlockLookup blocks)
 {
     /// <summary>
     /// Listado para el cliente dueño; <see langword="null"/> (404 uniforme) si la solicitud no existe o es de otra persona. Un <paramref name="id"/> que no es
@@ -29,7 +29,7 @@ internal sealed class QuoteComparisonService(RequestsStore requests, ChoiceStore
             return null;
         }
 
-        var documents = await choices.ListQuotesAsync(requestId, cancellationToken);
+        var documents = await WithoutBlockedAsync(clientId, await choices.ListQuotesAsync(requestId, cancellationToken), cancellationToken);
         var technicians = await choices.FindTechniciansAsync([.. documents.Select(d => d["tecnicoId"].AsObjectId).Distinct()], withContact: false, cancellationToken);
         var quotes = documents.Select(d => ToQuote(d, technicians)).ToList();
         var compared = QuoteComparer.Compare(quotes, order ?? QuoteComparer.Recommended);
@@ -39,6 +39,14 @@ internal sealed class QuoteComparisonService(RequestsStore requests, ChoiceStore
         var block = ChoiceRules.Block(request.Estado, request.VenceEnUtc, clock.GetUtcNow().UtcDateTime, quotes.Count(q => q.Estado == "enviada"));
         var items = compared.Items.Select(ToItem).ToList();
         return new QuoteComparison(requestId.ToString(), items, items.Count, compared.TiposMixtos, block is null, block, block == RequestErrorCodes.RequestAlreadyChosenCode ? visitId : null);
+    }
+
+    /// <summary>Spec 043, R-16 y R-18: no se muestran las cotizaciones de un técnico con un bloqueo en cualquier sentido con el cliente (una sola consulta a la proyección <c>bloqueos</c>).</summary>
+    private async Task<IReadOnlyList<BsonDocument>> WithoutBlockedAsync(string clientId, IReadOnlyList<BsonDocument> documents, CancellationToken cancellationToken)
+    {
+        var owners = documents.Select(d => Text(d, "tecnicoUsuarioId")).OfType<string>();
+        var blocked = await blocks.BlockedWithAsync(clientId, owners, cancellationToken);
+        return blocked.Count == 0 ? documents : [.. documents.Where(d => Text(d, "tecnicoUsuarioId") is not { } owner || !blocked.Contains(owner))];
     }
 
     private static QuoteComparisonItem ToItem(ComparedQuote compared)

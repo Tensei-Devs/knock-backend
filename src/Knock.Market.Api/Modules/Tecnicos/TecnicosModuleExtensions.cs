@@ -30,6 +30,8 @@ public static class TecnicosModuleExtensions
         services.AddScoped<ITechnicianSelfStore, TechnicianSelfStore>();
         services.AddScoped<MyTechnicianService>();
         services.AddScoped<ITechnicianLookupReader, TechnicianLookupStore>();
+        services.AddScoped<ITechnicianOwnerReader, TechnicianLookupStore>();
+        services.AddScoped<TechnicianBlockFilter>();
         services.AddSingleton<TechnicianReadCache>();
         services.AddScoped<ITechnicianMapReader, TechnicianMapStore>();
         services.AddScoped<TechnicianMapService>();

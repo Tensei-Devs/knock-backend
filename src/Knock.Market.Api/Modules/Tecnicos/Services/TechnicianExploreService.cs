@@ -20,7 +20,7 @@ internal interface ITechnicianExploreReader
 /// Explorar (spec 046, TEC-14, R-36 a R-38 y R-49): cinco bloques de hasta 10 elementos. <c>auto</c>, <c>agua</c> y <c>luz</c> son los oficios <c>mec</c>, <c>plo</c> y
 /// <c>ele</c> del catálogo. Se guarda 1 minuto por filtro, colonia y si hay sesión (un booleano, nunca la persona) y se invalida al escribir un perfil.
 /// </summary>
-internal sealed class TechnicianExploreService(ITechnicianExploreReader reader, ICatalogApi catalog, IMemoryCache cache, TechnicianReadCache readCache)
+internal sealed class TechnicianExploreService(ITechnicianExploreReader reader, ICatalogApi catalog, IMemoryCache cache, TechnicianReadCache readCache, TechnicianBlockFilter? blockFilter = null)
 {
     public const int BlockSize = 10;
 
@@ -30,7 +30,35 @@ internal sealed class TechnicianExploreService(ITechnicianExploreReader reader, 
 
     public static bool IsKnownFilter(string? filter) => filter is null or ExploreQuery.AllFilter || _tradeByFilter.ContainsKey(filter);
 
-    public async Task<ExploreOutcome> ExploreAsync(ExploreQuery query, bool signedIn, CancellationToken cancellationToken)
+    public Task<ExploreOutcome> ExploreAsync(ExploreQuery query, bool signedIn, CancellationToken cancellationToken) => ExploreAsync(query, signedIn, null, cancellationToken);
+
+    /// <summary>Igual, y con sesión quita de «mejor calificados» y «cerca de ti» a los técnicos con un bloqueo en cualquier sentido con <paramref name="viewer"/> (spec 043, R-16), después de la caché compartida.</summary>
+    public async Task<ExploreOutcome> ExploreAsync(ExploreQuery query, bool signedIn, string? viewer, CancellationToken cancellationToken)
+    {
+        var outcome = await ExploreSharedAsync(query, signedIn, cancellationToken);
+        if (blockFilter is null || outcome.Response is not { } response || !signedIn || string.IsNullOrWhiteSpace(viewer))
+        {
+            return outcome;
+        }
+
+        var listed = response.MejorCalificados.Concat(response.CercaDeTi ?? []).Select(t => t.Id);
+        var hidden = await blockFilter.HiddenAsync(viewer, listed, cancellationToken);
+        if (hidden.Count == 0)
+        {
+            return outcome;
+        }
+
+        return outcome with
+        {
+            Response = response with
+            {
+                MejorCalificados = [.. response.MejorCalificados.Where(t => !hidden.Contains(t.Id))],
+                CercaDeTi = response.CercaDeTi is null ? null : [.. response.CercaDeTi.Where(t => !hidden.Contains(t.Id))],
+            },
+        };
+    }
+
+    private async Task<ExploreOutcome> ExploreSharedAsync(ExploreQuery query, bool signedIn, CancellationToken cancellationToken)
     {
         var filter = query.Filtro ?? ExploreQuery.AllFilter;
         var colonia = query.Colonia is null ? null : MongoDB.Bson.ObjectId.Parse(query.Colonia).ToString();

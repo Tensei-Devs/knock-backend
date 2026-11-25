@@ -25,9 +25,10 @@ internal sealed class ExplorarController(TechnicianExploreService explore) : Con
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, _problemJson)]
     public async Task<IActionResult> Explore([FromQuery] ExploreQuery query, CancellationToken cancellationToken)
     {
-        var signedIn = !string.IsNullOrWhiteSpace(User.FindFirst("sub")?.Value);
+        var viewer = User.FindFirst("sub")?.Value;
+        var signedIn = !string.IsNullOrWhiteSpace(viewer);
         Response.Headers.CacheControl = signedIn ? "private, no-store" : "public, max-age=60";
-        var outcome = await explore.ExploreAsync(query, signedIn, cancellationToken);
+        var outcome = await explore.ExploreAsync(query, signedIn, viewer, cancellationToken);
         return outcome.Status == ExploreStatus.Ok ? Ok(outcome.Response) : TechnicianProblems.Rule(this, StatusCodes.Status422UnprocessableEntity, ErrorCodes.ColoniaNotFoundCode, "colonia");
     }
 }
