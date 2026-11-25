@@ -1,15 +1,20 @@
-// jscpd:ignore-start -- EXC-015
-using Knock.Hosting.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Metadata;
 
-namespace Knock.Identity.Api.Hosting;
+namespace Knock.Hosting.Http;
+
+/// <summary>Lo que cambia entre los servicios en el 413 (spec 055, R-05): el <c>code</c> del error; Identidad no lo escribe todavía.</summary>
+public sealed record RequestBodyLimitOptions
+{
+    /// <summary>Valor del campo <c>code</c> del 413; <see langword="null"/> no lo escribe.</summary>
+    public string? PayloadTooLargeCode { get; init; }
+}
 
 /// <summary>
 /// Aplica el límite de cuerpo declarado con <c>[RequestSizeLimit]</c> y responde 413 en ProblemDetails.
 /// Con <c>Content-Length</c> se rechaza antes de leer; sin él, el servidor corta la lectura y se traduce a 413.
 /// </summary>
-internal sealed class RequestBodyLimitMiddleware(RequestDelegate next)
+public sealed class RequestBodyLimitMiddleware(RequestDelegate next, RequestBodyLimitOptions? options = null)
 {
     public async Task InvokeAsync(HttpContext context)
     {
@@ -23,7 +28,7 @@ internal sealed class RequestBodyLimitMiddleware(RequestDelegate next)
 
         if (context.Request.ContentLength > limit)
         {
-            await ProblemResponses.WriteAsync(context, StatusCodes.Status413PayloadTooLarge, "Request body too large");
+            await ProblemResponses.WriteAsync(context, StatusCodes.Status413PayloadTooLarge, "Request body too large", options?.PayloadTooLargeCode);
             return;
         }
 
@@ -39,8 +44,7 @@ internal sealed class RequestBodyLimitMiddleware(RequestDelegate next)
         }
         catch (BadHttpRequestException ex) when (ex.StatusCode == StatusCodes.Status413PayloadTooLarge && !context.Response.HasStarted)
         {
-            await ProblemResponses.WriteAsync(context, StatusCodes.Status413PayloadTooLarge, "Request body too large");
+            await ProblemResponses.WriteAsync(context, StatusCodes.Status413PayloadTooLarge, "Request body too large", options?.PayloadTooLargeCode);
         }
     }
 }
-// jscpd:ignore-end

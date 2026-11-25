@@ -27,7 +27,7 @@ public class HostingLibraryBoundaryTests
     private static readonly string[] _stage3Types =
     [
         "LoggingExtensions", "ObservabilityExtensions", "RedisExtensions", "HealthExtensions", "MongoExtensions", "SecurityHeadersMiddleware", "HstsExtensions", "JwtSettings",
-        "JsonCompressionMiddleware", "ProblemResponses", "ProblemDetailsExtensions",
+        "JsonCompressionMiddleware", "ProblemResponses", "ProblemDetailsExtensions", "RequestBodyLimitMiddleware", "CorsMiddleware",
     ];
 
     public static TheoryData<string> Projects

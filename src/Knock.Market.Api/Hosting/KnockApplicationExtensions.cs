@@ -5,6 +5,7 @@ using Knock.Hosting.Http;
 using Knock.Hosting.Logging;
 using Knock.Hosting.Observability;
 using Knock.Hosting.Security;
+using Knock.Market.Api.Common.Errors;
 using Microsoft.Extensions.Options;
 using Serilog;
 
@@ -56,7 +57,7 @@ internal static class KnockApplicationExtensions
             app.UseHttpsRedirection();
         }
 
-        app.UseMiddleware<CorsMiddleware>();
+        app.UseKnockCors(CorsOptions(app.Services.GetRequiredService<IOptions<SecuritySettings>>().Value.Cors));
         app.Use(async (context, next) =>
         {
             if (context.Request.Path.Equals("/api/v1/zonas/lista-espera", StringComparison.OrdinalIgnoreCase))
@@ -68,7 +69,7 @@ internal static class KnockApplicationExtensions
         });
         app.UseAuthentication();
         app.UseRateLimiter();
-        app.UseMiddleware<RequestBodyLimitMiddleware>();
+        app.UseMiddleware<RequestBodyLimitMiddleware>(new RequestBodyLimitOptions { PayloadTooLargeCode = ErrorCodes.PayloadTooLargeCode });
         app.UseKnockJsonCompression();
         app.UseAuthorization();
         app.MapKnockHealth();
@@ -76,4 +77,8 @@ internal static class KnockApplicationExtensions
         app.MapControllers();
         return app;
     }
+
+    /// <summary>Los orígenes y la vigencia del preflight salen de <c>Security:Cors</c>; los encabezados de petición que concede este servicio son los de su contrato.</summary>
+    private static KnockCorsOptions CorsOptions(CorsSettings cors) =>
+        new(cors.AllowedOrigins, cors.PreflightMaxAge, ["Authorization", "Content-Type", "X-Correlation-Id", "Idempotency-Key", "If-Match", "If-None-Match", "Cache-Control"]);
 }
