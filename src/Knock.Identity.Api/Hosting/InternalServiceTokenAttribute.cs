@@ -1,4 +1,5 @@
 using System.Globalization;
+using Knock.Hosting.Http;
 using Knock.Hosting.Security;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;

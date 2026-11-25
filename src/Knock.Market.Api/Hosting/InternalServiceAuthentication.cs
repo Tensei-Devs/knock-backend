@@ -1,3 +1,4 @@
+using Knock.Hosting.Http;
 using Knock.Hosting.Security;
 using Knock.Market.Api.Common.Errors;
 using Microsoft.AspNetCore.Authentication;

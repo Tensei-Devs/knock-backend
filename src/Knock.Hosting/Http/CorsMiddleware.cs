@@ -1,9 +1,13 @@
-// jscpd:ignore-start -- EXC-015
 using System.Globalization;
-using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
 
-namespace Knock.Identity.Api.Hosting;
+namespace Knock.Hosting.Http;
+
+/// <summary>Lo que cambia entre los servicios en CORS (spec 055, R-05): los orígenes y la vigencia del preflight que lee cada uno de su <c>Security:Cors</c> y los encabezados de petición que acepta.</summary>
+/// <param name="AllowedOrigins">Orígenes exactos; vacía significa CORS apagado.</param>
+/// <param name="PreflightMaxAge">Vigencia del preflight (<c>Access-Control-Max-Age</c>).</param>
+/// <param name="AllowedHeaders">Encabezados de petición que se conceden en el preflight.</param>
+public sealed record KnockCorsOptions(IReadOnlyCollection<string> AllowedOrigins, TimeSpan PreflightMaxAge, IReadOnlyList<string> AllowedHeaders);
 
 /// <summary>
 /// CORS por configuración (TT-API-06): orígenes explícitos de <c>Security:Cors:AllowedOrigins</c> con comparación exacta, sin comodín ni credenciales.
@@ -11,16 +15,14 @@ namespace Knock.Identity.Api.Hosting;
 /// (una ruta que solo acepta POST no da 405 ni exige sesión), y los encabezados de la respuesta se fijan en <c>OnStarting</c> para que sobrevivan
 /// al manejador de excepciones (el panel debe poder leer también el 500). Va antes del limitador: el 429 lleva CORS y el preflight no cuenta.
 /// </summary>
-internal sealed class CorsMiddleware(RequestDelegate next, IOptions<SecuritySettings> options)
+public sealed class CorsMiddleware(RequestDelegate next, KnockCorsOptions options)
 {
     public static readonly string[] AllowedMethods = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 
-    public static readonly string[] AllowedHeaders = ["Authorization", "Content-Type", "X-Correlation-Id", "Idempotency-Key", "If-Match"];
-
     public static readonly string[] ExposedHeaders = ["X-Correlation-Id", "Retry-After", "ETag"];
 
-    private readonly HashSet<string> _origins = new(options.Value.Cors.AllowedOrigins, StringComparer.Ordinal);
-    private readonly string _maxAgeSeconds = ((int)options.Value.Cors.PreflightMaxAge.TotalSeconds).ToString(CultureInfo.InvariantCulture);
+    private readonly HashSet<string> _origins = new(options.AllowedOrigins, StringComparer.Ordinal);
+    private readonly string _maxAgeSeconds = ((int)options.PreflightMaxAge.TotalSeconds).ToString(CultureInfo.InvariantCulture);
 
     public Task InvokeAsync(HttpContext context)
     {
@@ -58,7 +60,7 @@ internal sealed class CorsMiddleware(RequestDelegate next, IOptions<SecuritySett
         {
             response.Headers.AccessControlAllowOrigin = origin;
             response.Headers.AccessControlAllowMethods = string.Join(", ", AllowedMethods);
-            response.Headers.AccessControlAllowHeaders = string.Join(", ", AllowedHeaders);
+            response.Headers.AccessControlAllowHeaders = string.Join(", ", options.AllowedHeaders);
             response.Headers.AccessControlMaxAge = _maxAgeSeconds;
         }
 
@@ -66,7 +68,7 @@ internal sealed class CorsMiddleware(RequestDelegate next, IOptions<SecuritySett
     }
 
     /// <summary>El método pedido y cada encabezado pedido deben estar en las listas; si no, no se concede nada.</summary>
-    private static bool IsGranted(HttpRequest request)
+    private bool IsGranted(HttpRequest request)
     {
         var method = request.Headers.AccessControlRequestMethod.ToString();
         if (!AllowedMethods.Contains(method, StringComparer.Ordinal))
@@ -76,7 +78,7 @@ internal sealed class CorsMiddleware(RequestDelegate next, IOptions<SecuritySett
 
         var requested = request.Headers.AccessControlRequestHeaders.ToString()
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return requested.All(name => AllowedHeaders.Contains(name, StringComparer.OrdinalIgnoreCase));
+        return requested.All(name => options.AllowedHeaders.Contains(name, StringComparer.OrdinalIgnoreCase));
     }
 
     private static Task ApplyToResponse((HttpContext Context, string Origin) state)
@@ -102,4 +104,15 @@ internal sealed class CorsMiddleware(RequestDelegate next, IOptions<SecuritySett
         }
     }
 }
-// jscpd:ignore-end
+
+/// <summary>Registro del middleware de CORS en la tubería.</summary>
+public static class CorsApplicationExtensions
+{
+    /// <summary>Agrega <see cref="CorsMiddleware"/> con las opciones del servicio. Va antes del limitador: el 429 lleva CORS y el preflight no cuenta.</summary>
+    public static IApplicationBuilder UseKnockCors(this IApplicationBuilder app, KnockCorsOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+        ArgumentNullException.ThrowIfNull(options);
+        return app.UseMiddleware<CorsMiddleware>(options);
+    }
+}

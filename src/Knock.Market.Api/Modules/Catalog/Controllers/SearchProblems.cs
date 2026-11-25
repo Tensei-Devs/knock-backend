@@ -1,3 +1,4 @@
+using Knock.Hosting.Http;
 using Knock.Market.Api.Hosting;
 using Microsoft.AspNetCore.WebUtilities;
 

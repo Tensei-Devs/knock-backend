@@ -1,3 +1,4 @@
+using Knock.Hosting.Http;
 using Knock.Messaging.Api.Modules.Chat;
 using Knock.Messaging.Api.Modules.Chat.Options;
 using Microsoft.AspNetCore.SignalR.StackExchangeRedis;

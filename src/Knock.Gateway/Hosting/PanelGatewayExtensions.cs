@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using Knock.Hosting.Http;
 using Knock.Hosting.RateLimiting;
 using Knock.Hosting.Security;
 using Microsoft.AspNetCore.Authentication;

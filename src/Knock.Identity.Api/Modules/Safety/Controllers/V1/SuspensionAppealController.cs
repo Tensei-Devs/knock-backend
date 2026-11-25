@@ -1,5 +1,6 @@
 using System.Globalization;
 using Asp.Versioning;
+using Knock.Hosting.Http;
 using Knock.Identity.Api.Hosting;
 using Knock.Identity.Api.Modules.Safety.Dtos;
 using Knock.Identity.Api.Modules.Safety.Services;
