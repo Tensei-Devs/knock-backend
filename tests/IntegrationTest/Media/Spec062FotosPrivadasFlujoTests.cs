@@ -24,6 +24,8 @@ namespace Knock.IntegrationTest.Media;
 /// </summary>
 public sealed class Spec062FotosPrivadasFlujoTests
 {
+    private const int _imageWidth = 320;
+    private const int _imageHeight = 240;
     private static readonly MediaOptions _media = new();
 
     [Fact]
@@ -40,8 +42,8 @@ public sealed class Spec062FotosPrivadasFlujoTests
         confirmed.StatusCode.Should().Be(HttpStatusCode.OK);
         var json = await Spec020Host.ReadAsync(confirmed);
         json.GetProperty("id").GetString().Should().Be(photo.Hex);
-        json.GetProperty("ancho").GetInt32().Should().Be(800);
-        json.GetProperty("alto").GetInt32().Should().Be(400);
+        json.GetProperty("ancho").GetInt32().Should().Be(_imageWidth);
+        json.GetProperty("alto").GetInt32().Should().Be(_imageHeight);
         json.GetProperty("bytes").GetInt32().Should().BeGreaterThan(0);
         (!json.TryGetProperty("url", out var url) || url.ValueKind == JsonValueKind.Null).Should().BeTrue("la foto de una solicitud nunca tiene dirección pública");
         var stored = (await host.Services.GetRequiredService<IMediaFileStore>().FindAsync(photo.Id, CancellationToken.None))!.File;
@@ -127,14 +129,20 @@ public sealed class Spec062FotosPrivadasFlujoTests
         var notUploaded = await CreatePendingAsync(host, owner, "solicitud", Jpeg().Length);
         var uploaded = await UploadAsync(host, azurite, owner, "solicitud");
         var bodies = new List<string>();
+        var success = string.Empty;
 
         var output = await ConsoleCapture.RunAsync(async () =>
         {
-            foreach (var (sub, photo) in new[] { (owner, notUploaded), (stranger, notUploaded), (owner, uploaded) })
+            foreach (var (sub, photo) in new[] { (owner, notUploaded), (stranger, notUploaded) })
             {
                 using var response = await Confirm(host, sub, photo);
                 bodies.Add(await response.Content.ReadAsStringAsync());
             }
+
+            // La confirmación exitosa devuelve el id de la foto por contrato (CA-02): solo se vigila que no filtre lo demás.
+            using var confirmed = await Confirm(host, owner, uploaded);
+            confirmed.StatusCode.Should().Be(HttpStatusCode.OK);
+            success = await confirmed.Content.ReadAsStringAsync();
 
             using var invalid = await host.CreateAsync(RequestBody(host, notUploaded), owner);
             bodies.Add(await invalid.Content.ReadAsStringAsync());
@@ -144,6 +152,10 @@ public sealed class Spec062FotosPrivadasFlujoTests
         {
             output.Should().NotContain(forbidden, "los registros no llevan el sub, nombres de blob, enlaces firmados ni ids de fotos");
             bodies.Should().OnlyContain(body => !body.Contains(forbidden, StringComparison.Ordinal), "los errores tampoco");
+            if (forbidden != uploaded.Hex)
+            {
+                success.Should().NotContain(forbidden, "la respuesta exitosa solo lleva el id de la foto confirmada");
+            }
         }
     }
 
@@ -194,7 +206,7 @@ public sealed class Spec062FotosPrivadasFlujoTests
 
     private static byte[] Jpeg()
     {
-        using var bitmap = new SKBitmap(new SKImageInfo(320, 240));
+        using var bitmap = new SKBitmap(new SKImageInfo(_imageWidth, _imageHeight));
         using var canvas = new SKCanvas(bitmap);
         canvas.Clear(SKColors.SteelBlue);
         using var data = bitmap.Encode(SKEncodedImageFormat.Jpeg, 85);

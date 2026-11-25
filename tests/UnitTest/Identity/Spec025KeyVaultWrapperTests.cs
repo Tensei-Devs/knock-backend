@@ -31,7 +31,7 @@ public sealed class Spec025KeyVaultWrapperTests
     }
 
     [Fact]
-    public void Switch_Off_Keeps_Closed_Failing_Wrapper_CA_025_07()
+    public void Switch_Off_Keeps_Closed_Failing_Wrapper_TC_025_KV_01()
     {
         using var provider = Build([]);
 
@@ -39,7 +39,7 @@ public sealed class Spec025KeyVaultWrapperTests
     }
 
     [Fact]
-    public void Switch_Off_Ignores_Missing_Settings_CA_025_07()
+    public void Switch_Off_Ignores_Missing_Settings_TC_025_KV_02()
     {
         using var provider = Build(new() { ["Verificacion:KeyVault:Habilitado"] = "false" });
 
@@ -53,7 +53,7 @@ public sealed class Spec025KeyVaultWrapperTests
     [InlineData("https://vault.example.test", "curp kek", _version)]
     [InlineData("https://vault.example.test", "curp-kek", "no-es-hex")]
     [InlineData("https://vault.example.test", "curp-kek", "")]
-    public void Switch_On_With_Bad_Settings_Fails_To_Start_CA_025_07(string vault, string key, string version)
+    public void Switch_On_With_Bad_Settings_Fails_To_Start_TC_025_KV_03(string vault, string key, string version)
     {
         var result = new KeyVaultVerificationOptionsValidator().Validate(null, new KeyVaultVerificationOptions { Habilitado = true, VaultUri = vault, KeyName = key, KekVersion = version });
 
@@ -61,7 +61,7 @@ public sealed class Spec025KeyVaultWrapperTests
     }
 
     [Fact]
-    public void Switch_On_With_Good_Settings_Uses_Key_Vault_Wrapper_CA_025_07()
+    public void Switch_On_With_Good_Settings_Uses_Key_Vault_Wrapper_TC_025_KV_04()
     {
         using var provider = Build(new()
         {
@@ -74,7 +74,7 @@ public sealed class Spec025KeyVaultWrapperTests
     }
 
     [Fact]
-    public async Task Wrap_Then_Unwrap_Round_Trips_With_The_Version_In_The_Key_Id_CA_025_07()
+    public async Task Wrap_Then_Unwrap_Round_Trips_With_The_Version_In_The_Key_Id_TC_025_KV_05()
     {
         using var rsa = RSA.Create(2048);
         var ids = new List<Uri>();
@@ -91,7 +91,7 @@ public sealed class Spec025KeyVaultWrapperTests
     }
 
     [Fact]
-    public async Task Unwrap_Uses_The_Stored_Version_After_A_Rotation_CA_025_07()
+    public async Task Unwrap_Uses_The_Stored_Version_After_A_Rotation_TC_025_KV_06()
     {
         using var rsa = RSA.Create(2048);
         var ids = new List<Uri>();
@@ -110,7 +110,7 @@ public sealed class Spec025KeyVaultWrapperTests
     [InlineData("auth")]
     [InlineData("bad-version")]
     [InlineData("bad-base64")]
-    public async Task Vault_Failures_Become_503_Without_Content_CA_025_07(string failure)
+    public async Task Vault_Failures_Become_503_Without_Content_TC_025_KV_07(string failure)
     {
         using var rsa = RSA.Create(2048);
         Exception? error = failure switch
