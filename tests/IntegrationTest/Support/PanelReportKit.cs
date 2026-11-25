@@ -3,6 +3,7 @@ extern alias IdentityApi;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
+using System.Text.Json;
 using IdentityApi::Knock.Identity.Api.Modules.Panel.Data;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.JsonWebTokens;
@@ -108,4 +109,19 @@ internal static class PanelReportKit
 
         return await client.SendAsync(request);
     }
+
+    /// <summary>Envía una petición al panel con el token dado; <paramref name="body"/> opcional va como JSON.</summary>
+    public static async Task<HttpResponseMessage> SendAsync(HttpClient client, HttpMethod method, string path, string token, object? body = null)
+    {
+        using var request = new HttpRequestMessage(method, new Uri(path, UriKind.Relative));
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        if (body is not null)
+        {
+            request.Content = JsonContent.Create(body);
+        }
+
+        return await client.SendAsync(request);
+    }
+
+    public static async Task<JsonElement> JsonAsync(HttpResponseMessage response) => JsonElement.Parse(await response.Content.ReadAsStringAsync());
 }

@@ -1,13 +1,12 @@
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
-using System.Text.Json;
 using AwesomeAssertions;
 using Knock.IntegrationTest.Support;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Xunit;
+using static Knock.IntegrationTest.Support.PanelReportKit;
 
 namespace Knock.IntegrationTest.Identity;
 
@@ -65,20 +64,6 @@ public sealed class Spec053RecuperacionesPanelTests
         });
         return id;
     }
-
-    private static async Task<HttpResponseMessage> SendAsync(HttpClient client, HttpMethod method, string path, string token, object? body = null)
-    {
-        using var request = new HttpRequestMessage(method, new Uri(path, UriKind.Relative));
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        if (body is not null)
-        {
-            request.Content = JsonContent.Create(body);
-        }
-
-        return await client.SendAsync(request);
-    }
-
-    private static async Task<JsonElement> JsonAsync(HttpResponseMessage response) => JsonElement.Parse(await response.Content.ReadAsStringAsync());
 
     private static async Task<BsonDocument> UserAsync(IdentityApiFactory factory, ObjectId id) =>
         await factory.Users.Find(Builders<BsonDocument>.Filter.Eq("_id", id)).SingleAsync();
