@@ -59,6 +59,8 @@ public sealed partial class Spec025VerificacionTests
 
     private static async Task UploadToQuarantineAsync(AzuriteFixture azurite, string name, byte[] content)
     {
+        // En Azure Terraform crea ambos contenedores y el almacén no los crea (mínimo privilegio): en Azurite hay que crear también el definitivo.
+        await azurite.Container(_finalContainer).CreateIfNotExistsAsync();
         var container = azurite.Container(_quarantineContainer);
         await container.CreateIfNotExistsAsync();
         await container.GetBlobClient(name).UploadAsync(BinaryData.FromBytes(content));

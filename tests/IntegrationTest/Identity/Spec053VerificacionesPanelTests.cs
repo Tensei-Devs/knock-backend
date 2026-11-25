@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using AwesomeAssertions;
 using Knock.IntegrationTest.Support;
+using static Knock.IntegrationTest.Support.PanelReportKit;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Xunit;
@@ -52,20 +53,6 @@ public sealed class Spec053VerificacionesPanelTests
         });
         return id;
     }
-
-    private static async Task<HttpResponseMessage> SendAsync(HttpClient client, HttpMethod method, string path, string token, object? body = null)
-    {
-        using var request = new HttpRequestMessage(method, new Uri(path, UriKind.Relative));
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        if (body is not null)
-        {
-            request.Content = JsonContent.Create(body);
-        }
-
-        return await client.SendAsync(request);
-    }
-
-    private static async Task<JsonElement> JsonAsync(HttpResponseMessage response) => JsonElement.Parse(await response.Content.ReadAsStringAsync());
 
     private static Task<List<BsonDocument>> AuditOfAsync(IdentityApiFactory factory, ObjectId id, string name) =>
         Audit(factory).Find(Builders<BsonDocument>.Filter.Eq("recursoId", id.ToString()) & Builders<BsonDocument>.Filter.Eq("evento", name)).ToListAsync();
