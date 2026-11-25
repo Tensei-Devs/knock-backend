@@ -208,7 +208,12 @@ Las pruebas citan el caso como `CA_054_NN` en el nombre (para `python scripts/sd
 - **Dependencias:** la spec 037 (entrega de avisos y claves por emisor, H-1), la biblioteca técnica compartida (KNOCK-251) para quitar la copia del ejecutor en Identidad y el costo de las consultas cada 15 segundos con dos réplicas (spec 034), que es bajo por estar indexadas.
 - **Riesgo aceptado:** si Mensajería necesita tareas propias, esta spec se amplía.
 
+## Nota de enmienda (2026-11-24, pendiente de firma)
+- **Estado de esta enmienda:** **sin firmar**; propuesta para validación de José Julián Hernández Hernández.
+- **R-15, ruta de exportación de Mensajería.** La ruta nombrada `/api/v1/interno/exportacion` se implementa como `GET /api/v1/interno/cuentas/{usuarioId}/exportacion` en Mensajería (igual que la de Mercado), con el permiso `exportacion` y el `usuarioId` en el token (detalle en la nota de la spec 039 de la misma fecha). Solo la llama Identidad.
+
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
+- [ ] Enmienda 2026-11-24 — nombre: ________ fecha: ________
 - [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)
