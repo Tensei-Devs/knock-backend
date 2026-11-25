@@ -1,6 +1,7 @@
 // jscpd:ignore-start -- EXC-021: copia de src/Knock.Market.Api/Hosting/AuthenticationExtensions.cs (KNOCK-241) más la comprobación de sesión cancelada; se unifica en la biblioteca técnica de KNOCK-251.
 using System.Security.Claims;
 using Knock.Contracts.Sessions;
+using Knock.Hosting.Http;
 using Knock.Hosting.Redis;
 using Knock.Hosting.Security;
 using Knock.Messaging.Api.Common.Errors;

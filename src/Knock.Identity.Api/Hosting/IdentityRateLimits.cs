@@ -1,3 +1,4 @@
+using Knock.Hosting.Http;
 using Knock.Hosting.RateLimiting;
 using Microsoft.IdentityModel.JsonWebTokens;
 

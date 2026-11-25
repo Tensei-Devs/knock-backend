@@ -23,6 +23,13 @@ public class HostingLibraryBoundaryTests
     /// <summary>Piezas de la etapa 2 (R-08, KNOCK-280): el limitador vive en la biblioteca; el gateway conserva solo sus middlewares.</summary>
     private static readonly string[] _stage2Types = ["SharedRateLimiter", "RedisRequestCounter", "RateLimitingExtensions", "IRequestCounter"];
 
+    /// <summary>Piezas de la etapa 3 (R-08, KNOCK-281) ya movidas: si vuelven a aparecer en un servicio, es una copia nueva (R-09).</summary>
+    private static readonly string[] _stage3Types =
+    [
+        "LoggingExtensions", "ObservabilityExtensions", "RedisExtensions", "HealthExtensions", "MongoExtensions", "SecurityHeadersMiddleware", "HstsExtensions", "JwtSettings",
+        "JsonCompressionMiddleware", "ProblemResponses", "ProblemDetailsExtensions", "RequestBodyLimitMiddleware", "CorsMiddleware",
+    ];
+
     public static TheoryData<string> Projects
     {
         get
@@ -80,6 +87,11 @@ public class HostingLibraryBoundaryTests
     [MemberData(nameof(Projects))]
     public void Servicios_Sin_Copias_De_La_Etapa_2_CA_055_11(string project) =>
         Assembly.Load(project).GetTypes().Select(t => t.Name).Should().NotContain(_stage2Types);
+
+    [Theory]
+    [MemberData(nameof(Projects))]
+    public void Servicios_Sin_Copias_Del_Catalogo_CA_055_12(string project) =>
+        Assembly.Load(project).GetTypes().Select(t => t.Name).Should().NotContain(_stage3Types);
 
     [Fact]
     public void Sin_MongoDB_En_Hosting_Ni_Gateway_CA_055_13()

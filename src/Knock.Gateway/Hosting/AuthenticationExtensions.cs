@@ -1,3 +1,4 @@
+using Knock.Hosting.Http;
 using Knock.Hosting.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
