@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Knock.Hosting.Mvc;
 using Knock.Market.Api.Modules.Requests.Dtos;
 using Knock.Market.Api.Modules.Requests.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -14,7 +15,7 @@ namespace Knock.Market.Api.Modules.Requests.Controllers.V1;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/visitas")]
 [Authorize]
-[Hosting.PrivateNoStore]
+[PrivateNoStore]
 internal sealed class VisitasController(VisitService service) : BusinessRuleController
 {
     /// <summary>Vista del cliente (con el código cuando corresponde) o del técnico (con la dirección y sin código). Cualquier otra persona recibe 404.</summary>

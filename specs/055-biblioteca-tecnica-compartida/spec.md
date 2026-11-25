@@ -237,9 +237,20 @@ Las tomó el agente con el criterio de la constitución. El Tech Lead puede camb
 - **EXC-018 (el método `Matches` de ETag) no se mueve.** `Matches` de `MeController` y de `OficiosController` no está en el catálogo de §3.2, y moverlo exige enmendar R-04 con dos aprobaciones. Esta enmienda **no** enmienda R-04. EXC-018 se renueva (la renueva el Tech Lead; esta spec no cambia `security/exceptions.yaml`) y queda en 055 como **excepción acotada** solo a `Matches` hasta que una enmienda futura de R-04 decida moverlo o aceptar la copia. El PR #368 (compresión y validación de caché a `Knock.Hosting`) ya recorta la excepción a ese método; al redactar esto seguía abierto, y hasta que se fusione `security/exceptions.yaml` en `origin/sprint-05` todavía cubre también la compresión y las opciones de caché. EXC-018 vence el 2026-12-04.
 - Tareas: sin tarea nueva de código; `task.md` T-18 y T-20 anotan que EXC-018 sigue por `Matches`. Pendiente de la firma de esta enmienda.
 
+## Nota de enmienda (2026-11-25, decisión de José, pendiente de firma)
+- **Estado de esta enmienda:** **sin firmar**. Propuesta para validación de José Julián Hernández Hernández y Ángel Alexis Blas Castillo; no habilita nada por sí sola. La firma es la línea «Enmienda 2026-11-25» de la sección Aprobación; como amplía R-04, pide las dos aprobaciones de §11.
+- **R-01 y R-02: segunda biblioteca `Knock.Hosting.Mvc`.** `src/Knock.Hosting.Mvc` (`net11.0`, `FrameworkReference` a `Microsoft.AspNetCore.App`, raíz `Knock.Hosting.Mvc`) contiene solo las piezas técnicas que dependen de MVC/controladores: `ApiVersioningExtensions` (versión en la ruta, `UrlSegmentApiVersionReader`, sin versión por omisión) y `PrivateNoStoreAttribute` (`Cache-Control: private, no-store`, specs 020 R-18 y 030 R-20). La referencian los tres servicios con controladores; **no** la referencian el gateway, `Knock.Hosting` ni `Knock.Hosting.Data`. La razón es R-02 y R-07: el gateway referencia `Knock.Hosting`, y poner ahí `Asp.Versioning.Mvc` lo haría cargar MVC sin usarlo.
+- **R-04, catálogo:** entran a `Knock.Hosting.Mvc` `ApiVersioningExtensions` y `PrivateNoStoreAttribute`; entran a `Knock.Hosting/Security/` `SecurityExtensions` (`AddKnockSecurity`) y `SecuritySettings` con `HstsPolicySettings`, `HttpsSettings`, `CorsSettings` y `SecuritySettingsValidator`. Identity y Market tenían la misma implementación salvo el espacio de nombres (EXC-015); se movió completa y se borraron las dos copias.
+- **R-06:** los tipos movidos son `public` porque los llaman los servicios y las pruebas; `Knock.Hosting.Mvc` declara `InternalsVisibleTo` hacia `Knock.UnitTest`, `Knock.IntegrationTest` y `Knock.SecurityTest`, igual que `Knock.Hosting`. No se agregó `Knock.DatabaseTest`.
+- **R-07:** `Knock.Hosting.Mvc` agrega `Asp.Versioning.Mvc` 10.2.1, la misma versión que ya usaban los tres servicios; no es una dependencia nueva para el repositorio y queda registrada en `docs/memoria/2026-11-25-KNOCK-266-hosting-mvc.md`. `Knock.Hosting` no agrega paquetes.
+- **R-15 y R-18:** `SHARED` de `ci-pr.yml` y `ci-deploy.yml` incluye `^src/Knock\.Hosting\.Mvc/`, `CODEOWNERS` agrega `/src/Knock.Hosting.Mvc/` y `stryker-config.json` agrega `**/Knock.Hosting.Mvc/**/*.cs` a `mutate`. Los tres `Dockerfile` copian el proyecto.
+- **Sin cambio de comportamiento:** la clave de configuración sigue siendo `Security:*`; `HstsSettings` solo cambia de nombre a `HstsPolicySettings` (no colisiona con `HstsOptions`), y `CorsSettings.AllowedOrigins` pasa de `string[]` a `IReadOnlyList<string>` con la misma clave y el mismo enlace (prueba `AllowedOriginsBindFromConfiguration_AfterTheMoveToTheSharedLibrary_CA_055_12`). El gateway sigue leyendo `Security:Cors:AllowedOrigins` como `string[]` en su propio `CorsExtensions`.
+- Tareas: `task.md` T-19 y T-21. Los contratos OpenAPI de Market e Identity se regeneraron sin diferencias.
+
 ## Aprobación
-- [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-19
-- [x] Revisor 2 (enmienda a la constitución, §11) — nombre: Ángel Alexis Blas Castillo fecha: 2026-11-17
-- [x] Enmienda 2026-11-24 — nombre: José Julián Hernández Hernández fecha: 2026-11-24
+- [x] Revisor 1 - nombre: José Julián Hernández Hernández fecha: 2026-11-19
+- [x] Revisor 2 (enmienda a la constitución, §11) - nombre: Ángel Alexis Blas Castillo fecha: 2026-11-17
+- [x] Enmienda 2026-11-24 - nombre: José Julián Hernández Hernández fecha: 2026-11-24
+- [ ] Enmienda 2026-11-25 - nombre: ________ fecha: ________
 - [x] Sin conflicto con la constitución (con la enmienda 1.2.0)
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

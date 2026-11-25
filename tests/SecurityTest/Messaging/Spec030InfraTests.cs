@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using AwesomeAssertions;
+using Knock.Hosting.Mvc;
 using Knock.IntegrationTest.Support;
 using Knock.SecurityTest.Support;
 using Xunit;

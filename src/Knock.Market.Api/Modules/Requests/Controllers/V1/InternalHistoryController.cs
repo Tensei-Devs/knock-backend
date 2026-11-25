@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using Knock.Contracts.Pagination;
+using Knock.Hosting.Mvc;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Requests.Dtos;
 using Knock.Market.Api.Modules.Requests.Services;

@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Knock.Hosting.Mvc;
 using Knock.Market.Api.Common.Errors;
 using Knock.Market.Api.Modules.Requests.Domain;
 using Knock.Market.Api.Modules.Requests.Dtos;
@@ -17,7 +18,7 @@ namespace Knock.Market.Api.Modules.Requests.Controllers.V1;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/visitas/{id}/llegada")]
 [Authorize]
-[Hosting.PrivateNoStore]
+[PrivateNoStore]
 internal sealed class ArrivalController(ArrivalService service) : BusinessRuleController
 {
     /// <summary>

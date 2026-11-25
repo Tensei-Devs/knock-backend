@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Knock.Hosting.Mvc;
 using Knock.Market.Api.Hosting;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

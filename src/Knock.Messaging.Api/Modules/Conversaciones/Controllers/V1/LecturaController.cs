@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using Knock.Contracts.Pagination;
+using Knock.Hosting.Mvc;
 using Knock.Messaging.Api.Hosting;
 using Knock.Messaging.Api.Modules.Conversaciones.Dtos;
 using Knock.Messaging.Api.Modules.Conversaciones.Services;

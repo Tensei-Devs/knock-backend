@@ -1,10 +1,9 @@
-// jscpd:ignore-start -- EXC-015
 using Microsoft.Extensions.Options;
 
-namespace Knock.Identity.Api.Hosting;
+namespace Knock.Hosting.Security;
 
 /// <summary>HSTS (<c>Security:Hsts</c>): <c>max-age</c> e <c>includeSubDomains</c>. Nunca <c>preload</c>.</summary>
-internal sealed class HstsSettings
+public sealed class HstsPolicySettings
 {
     public TimeSpan MaxAge { get; set; }
 
@@ -12,25 +11,25 @@ internal sealed class HstsSettings
 }
 
 /// <summary>Redirección a HTTPS (<c>Security:Https</c>): sin <c>RedirectPort</c> no se redirige nunca (el caso de Container Apps).</summary>
-internal sealed class HttpsSettings
+public sealed class HttpsSettings
 {
     public int? RedirectPort { get; set; }
 }
 
 /// <summary>CORS (<c>Security:Cors</c>): lista de orígenes explícitos; vacía significa CORS apagado.</summary>
-internal sealed class CorsSettings
+public sealed class CorsSettings
 {
-    public string[] AllowedOrigins { get; set; } = [];
+    public IReadOnlyList<string> AllowedOrigins { get; set; } = [];
 
     public TimeSpan PreflightMaxAge { get; set; }
 }
 
 /// <summary>Valores del pipeline de seguridad; sin secretos. No hay valores por defecto en código: una configuración inválida impide el arranque.</summary>
-internal sealed class SecuritySettings
+public sealed class SecuritySettings
 {
     public const string SectionName = "Security";
 
-    public HstsSettings Hsts { get; set; } = new();
+    public HstsPolicySettings Hsts { get; set; } = new();
 
     public HttpsSettings Https { get; set; } = new();
 
@@ -61,7 +60,7 @@ internal sealed class SecuritySettingsValidator : IValidateOptions<SecuritySetti
             errors.Add("Security:Https:RedirectPort must be between 1 and 65535.");
         }
 
-        for (var i = 0; i < settings.Cors.AllowedOrigins.Length; i++)
+        for (var i = 0; i < settings.Cors.AllowedOrigins.Count; i++)
         {
             if (!IsValidOrigin(settings.Cors.AllowedOrigins[i]))
             {
@@ -69,7 +68,7 @@ internal sealed class SecuritySettingsValidator : IValidateOptions<SecuritySetti
             }
         }
 
-        if (settings.Cors.AllowedOrigins.Length > 0 && settings.Cors.PreflightMaxAge <= TimeSpan.Zero)
+        if (settings.Cors.AllowedOrigins.Count > 0 && settings.Cors.PreflightMaxAge <= TimeSpan.Zero)
         {
             errors.Add("Security:Cors:PreflightMaxAge must be greater than zero when Security:Cors:AllowedOrigins is not empty.");
         }
@@ -95,4 +94,3 @@ internal sealed class SecuritySettingsValidator : IValidateOptions<SecuritySetti
             && string.Equals(value, uri.GetLeftPart(UriPartial.Authority), StringComparison.Ordinal);
     }
 }
-// jscpd:ignore-end
