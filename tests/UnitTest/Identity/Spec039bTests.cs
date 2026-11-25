@@ -36,6 +36,12 @@ public sealed class Spec039bTests
             fail ? throw UnavailableMarketAccountClient.Unavailable() : Task.FromResult(json);
     }
 
+    private sealed class FakeMessaging(string json, bool fail = false) : IMessagingExport
+    {
+        public Task<string> ExportJsonAsync(string sub, CancellationToken cancellationToken) =>
+            fail ? throw MessagingExportClient.Unavailable() : Task.FromResult(json);
+    }
+
     private sealed class FakeStorage : IExportStorage
     {
         public Dictionary<string, byte[]> Saved { get; } = [];
@@ -66,14 +72,14 @@ public sealed class Spec039bTests
     private static AccountExportRecord Account() =>
         new(_sub, "activa", false, "Persona de prueba", "Centro", "20000", _now, [new StoredConsent("promociones", "1", _now, true)]);
 
-    private static Rig Build(IMarketExport? market = null, IExportStorage? storage = null, AccountExportRecord? account = null, params AddressExport[] addresses)
+    private static Rig Build(IMarketExport? market = null, IMessagingExport? messaging = null, IExportStorage? storage = null, AccountExportRecord? account = null, params AddressExport[] addresses)
     {
         var accounts = new FakeAccountStore();
         accounts.ExportsInProgress.Add(_userId);
         var fake = storage as FakeStorage ?? new FakeStorage();
         var notice = new FakeNotice();
         var handler = new PrepararExportacionHandler(
-            new FakeSource(account ?? Account()), new FakeAddresses(addresses), market ?? new FakeMarket("{\"solicitudes\":[]}"), storage ?? fake, notice, accounts, new Spec039Clock(new DateTimeOffset(_now)), NullLogger<PrepararExportacionHandler>.Instance);
+            new FakeSource(account ?? Account()), new FakeAddresses(addresses), market ?? new FakeMarket("{\"solicitudes\":[]}"), messaging ?? new FakeMessaging("{\"conversaciones\":[]}"), storage ?? fake, notice, accounts, new Spec039Clock(new DateTimeOffset(_now)), NullLogger<PrepararExportacionHandler>.Instance);
         return new Rig(handler, accounts, fake, notice);
     }
 
@@ -100,7 +106,8 @@ public sealed class Spec039bTests
         var (name, bytes) = rig.Storage.Saved.Should().ContainSingle().Subject;
         name.Should().Be($"{_userId}-1764000000.zip");
         var files = Unzip(bytes);
-        files.Keys.Should().BeEquivalentTo(ExportArchive.IdentityFile, ExportArchive.MarketFile);
+        files.Keys.Should().BeEquivalentTo(ExportArchive.IdentityFile, ExportArchive.MarketFile, ExportArchive.MessagingFile);
+        files[ExportArchive.MessagingFile].Should().Be("{\"conversaciones\":[]}");
         JsonElement.Parse(files[ExportArchive.IdentityFile]).GetProperty("perfil").GetProperty("name").GetString().Should().Be("Persona de prueba");
         files[ExportArchive.MarketFile].Should().Be("{\"solicitudes\":[]}");
         var sent = rig.Notice.Sent.Should().ContainSingle().Subject;
@@ -136,6 +143,19 @@ public sealed class Spec039bTests
         var last = () => rig.Handler.HandleAsync(Reserved("PrepararExportacion", $"{_userId}:1", attempts: 4), CancellationToken.None);
         await last.Should().ThrowAsync<Exception>();
         rig.Accounts.ExportsInProgress.Should().BeEmpty("sin más reintentos la persona puede pedirla de nuevo");
+    }
+
+    [Fact]
+    public async Task Export_WhenMessagingIsDown_FailsClosedSavesNothingAndNeverNotifies_CA_039_35()
+    {
+        var rig = Build(messaging: new FakeMessaging(string.Empty, fail: true));
+
+        var act = () => rig.Handler.HandleAsync(Reserved("PrepararExportacion", $"{_userId}:1"), CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        rig.Storage.Saved.Should().BeEmpty("no se guarda un ZIP sin mensajeria.json");
+        rig.Notice.Sent.Should().BeEmpty();
+        rig.Accounts.ExportsInProgress.Should().Contain(_userId);
     }
 
     [Fact]

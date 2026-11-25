@@ -25,8 +25,8 @@ internal sealed class MarkNoticeReadRequest
     public string? Id { get; init; }
 }
 
-/// <summary>Un aviso tal como lo ve la persona (R-10): sin códigos de visita, direcciones ni datos sensibles.</summary>
-internal sealed record NoticeResponse(string Id, string Tipo, string ComoRol, string Titulo, string Texto, object? Destino, bool Leido, DateTime CreadoEn);
+/// <summary>Un aviso tal como lo ve la persona (R-10); <c>ComoRol</c> es nulo en los avisos comunes a ambos roles: sin códigos de visita, direcciones ni datos sensibles.</summary>
+internal sealed record NoticeResponse(string Id, string Tipo, string? ComoRol, string Titulo, string Texto, object? Destino, bool Leido, DateTime CreadoEn);
 
 internal sealed record NoticeListResponse(IReadOnlyList<NoticeResponse> Items, string? SiguienteCursor);
 

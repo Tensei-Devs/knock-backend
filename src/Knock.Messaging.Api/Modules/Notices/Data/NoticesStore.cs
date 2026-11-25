@@ -8,7 +8,7 @@ using MongoDB.Driver;
 namespace Knock.Messaging.Api.Modules.Notices.Data;
 
 /// <summary>Un aviso guardado (spec 044 §6). <c>UserId</c> es el <c>sub</c> del token: Mensajería no lee la colección <c>usuarios</c> de Identidad.</summary>
-internal sealed record StoredNotice(string Id, string Type, string Role, string Title, string Text, BsonDocument? Target, bool Read, DateTime CreatedAt);
+internal sealed record StoredNotice(string Id, string Type, string? Role, string Title, string Text, BsonDocument? Target, bool Read, DateTime CreatedAt);
 
 internal sealed record NoticePage(IReadOnlyList<StoredNotice> Items, NoticeCursor? Next);
 
@@ -65,7 +65,8 @@ internal sealed class NoticesStore(
 
         if (!string.IsNullOrEmpty(role))
         {
-            filters.Add(_filter.Eq(_roleField, role));
+            // Los avisos sin rol (reporte decidido, exportación lista) son comunes: salen con cualquier rol (enmienda de la 044 del 2026-11-24). Igualar a null también cubre el campo ausente.
+            filters.Add(_filter.Or(_filter.Eq(_roleField, role), _filter.Eq(_roleField, BsonNull.Value)));
         }
 
         if (after is { } cursor)
@@ -162,7 +163,7 @@ internal sealed class NoticesStore(
     private static StoredNotice ToStored(BsonDocument document) => new(
         document[_idField].AsObjectId.ToString(),
         document.GetValue("tipo", string.Empty).AsString,
-        document.GetValue(_roleField, string.Empty).AsString,
+        document.TryGetValue(_roleField, out var role) && role.IsString ? role.AsString : null,
         document.GetValue("titulo", string.Empty).AsString,
         document.GetValue("texto", string.Empty).AsString,
         document.TryGetValue("destino", out var target) && target.IsBsonDocument ? target.AsBsonDocument : null,

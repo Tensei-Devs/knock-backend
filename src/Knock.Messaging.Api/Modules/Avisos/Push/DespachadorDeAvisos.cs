@@ -52,7 +52,7 @@ internal interface IDeviceTokens
 }
 
 /// <summary>Aviso dentro de la app que el despachador deja en la colección <c>avisos</c> (spec 037 R-14, spec 044 §6): solo texto fijo del catálogo y la pantalla que abre la app.</summary>
-internal sealed record AvisoEnApp(string EventoId, string Destinatario, string Rol, string Tipo, AvisoPlantilla Plantilla, string Recurso, DateTime CreadoEn);
+internal sealed record AvisoEnApp(string EventoId, string Destinatario, string? Rol, string Tipo, AvisoPlantilla Plantilla, string Recurso, DateTime CreadoEn);
 
 /// <summary>Escritura de la colección <c>avisos</c> (spec 044 §6). Idempotente por <c>eventoId</c> y destinatario: repetir el evento no duplica el aviso.</summary>
 internal interface IAvisosEnApp
@@ -160,8 +160,7 @@ internal sealed class DespachadorDeAvisos(
             return;
         }
 
-        var role = evento.Rol ?? AvisoRules.ClientRole;
-        await inApp.CreateAsync(new AvisoEnApp(evento.EventoId, evento.Destinatario, role, tipo, template, evento.Recurso!, clock.GetUtcNow().UtcDateTime), cancellationToken);
+        await inApp.CreateAsync(new AvisoEnApp(evento.EventoId, evento.Destinatario, evento.Rol, tipo, template, evento.Recurso!, clock.GetUtcNow().UtcDateTime), cancellationToken);
     }
 
     private async Task<bool> SendWithRetriesAsync(string person, string token, IReadOnlyDictionary<string, string> payload, CancellationToken cancellationToken)
