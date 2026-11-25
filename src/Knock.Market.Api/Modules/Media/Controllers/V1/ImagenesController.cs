@@ -1,6 +1,5 @@
 using System.Globalization;
 using Asp.Versioning;
-using Knock.Hosting.Mvc;
 using Knock.Market.Api.Modules.Media.Domain;
 using Knock.Market.Api.Modules.Media.Dtos;
 using Knock.Market.Api.Modules.Media.Services;

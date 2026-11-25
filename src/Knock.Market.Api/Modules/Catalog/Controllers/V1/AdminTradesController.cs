@@ -1,5 +1,4 @@
 using Asp.Versioning;
-using Knock.Hosting.Mvc;
 using Knock.Market.Api.Common.Errors;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Catalog.Domain;

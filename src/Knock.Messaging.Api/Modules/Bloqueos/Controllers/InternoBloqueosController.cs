@@ -1,5 +1,4 @@
 using Asp.Versioning;
-using Knock.Hosting.Mvc;
 using Knock.Messaging.Api.Hosting;
 using Knock.Messaging.Api.Modules.Bloqueos.Dtos;
 using Knock.Messaging.Api.Modules.Bloqueos.Services;

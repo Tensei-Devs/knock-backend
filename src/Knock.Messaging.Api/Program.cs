@@ -4,7 +4,6 @@ using Knock.Hosting.Health;
 using Knock.Hosting.Http;
 using Knock.Hosting.Lifecycle;
 using Knock.Hosting.Logging;
-using Knock.Hosting.Mvc;
 using Knock.Hosting.Observability;
 using Knock.Hosting.Security;
 using Knock.Messaging.Api.Hosting;
