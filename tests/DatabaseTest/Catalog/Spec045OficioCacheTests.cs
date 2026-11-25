@@ -18,13 +18,8 @@ namespace Knock.DatabaseTest.Catalog;
 [Collection("CatalogCacheSerial")]
 public sealed class Spec045OficioCacheTests
 {
-    private sealed class RecordingAudit : IPanelAuditTrail
-    {
-        public Task<bool> RecordAsync(PanelAuditEntry entry, CancellationToken cancellationToken) => Task.FromResult(true);
-    }
-
     private static TradeAdminService AdminService(CatalogDatabase database) =>
-        new(database.Get<ITradeAdminStore>(), database.Get<CatalogStore>(), new RecordingAudit(), TimeProvider.System);
+        new(database.Get<ITradeAdminStore>(), database.Get<CatalogStore>(), TimeProvider.System);
 
     [Fact]
     public async Task RepeatedDetailRead_QueriesMongoOnce_CA_045_04()
