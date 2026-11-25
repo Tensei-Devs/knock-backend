@@ -2,7 +2,6 @@ using FluentValidation;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Requests.Domain;
 using Knock.Market.Api.Modules.Requests.Dtos;
-using MongoDB.Bson;
 
 namespace Knock.Market.Api.Modules.Requests.Validators;
 
@@ -50,11 +49,4 @@ internal sealed class AdjustmentBodyValidator : AbstractValidator<AdjustmentBody
             .NotEmpty().WithMessage(RequiredReason)
             .Must(value => value!.Trim().Length is >= FinalQuoteRules.MinReason and <= FinalQuoteRules.MaxReason).WithMessage(FormatReason);
     }
-}
-
-/// <summary>Formato del <c>id</c> de las lecturas de la visita (spec 063, R-06): un <c>ObjectId</c>. Nunca repite el valor.</summary>
-internal sealed class VisitRouteValidator : AbstractValidator<VisitRoute>
-{
-    public VisitRouteValidator() =>
-        RuleFor(x => x.Id).Must(value => value is not null && ObjectId.TryParse(value, out _)).WithMessage(ValidationFilter.GenericReason);
 }
