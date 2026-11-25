@@ -123,6 +123,20 @@ public sealed class Spec043EntregaInternaTests
     }
 
     [Fact]
+    public async Task ExportReadyGoesToMessagingNoticesAsAFixedNoticeWithoutALink_CA_039_35()
+    {
+        using var handler = new StubHandler(HttpStatusCode.Accepted);
+        var carga = new BsonDocument { ["eventoId"] = "exportacion_lista:k:1", ["usuarioId"] = "u1", ["recurso"] = "507f1f77bcf86cd799439011" };
+
+        (await Delivery(handler).DeliverAsync(new OutboxReservado("exportacion_lista:k:1", "exportacion_lista", "messaging", carga, "r", 0), CancellationToken.None)).Should().Be(ResultadoDeEntrega.Aceptado);
+
+        handler.Requests[0].Uri.AbsolutePath.Should().Be("/api/v1/interno/avisos");
+        Claims(handler.Requests[0].Token).Should().Contain(("aud", "knock-notifications")).And.Contain(("permisos", "exportacion_lista"));
+        handler.Requests[0].Body.Should().Contain("\"tipo\":\"exportacion_lista\"").And.Contain("\"destinatarioId\":\"u1\"").And.Contain("\"recurso\":\"507f1f77bcf86cd799439011\"")
+            .And.NotContain("http").And.NotContain("enlace");
+    }
+
+    [Fact]
     public async Task NetworkFailureIsRetriable()
     {
         using var handler = new StubHandler(null);

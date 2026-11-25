@@ -40,7 +40,7 @@ internal sealed class InternoAvisosController(DespachadorDeAvisos dispatcher, ID
         }
         else
         {
-            await dispatcher.DispatchAsync(new AvisoEvent(body.EventoId!, body.Tipo!, body.DestinatarioId!, body.Recurso, null), cancellationToken);
+            await dispatcher.DispatchAsync(new AvisoEvent(body.EventoId!, body.Tipo!, body.DestinatarioId!, body.Recurso, null, body.Rol), cancellationToken);
         }
 
         return Accepted();

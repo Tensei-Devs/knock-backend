@@ -56,6 +56,22 @@ public sealed class KnockRateLimitPolicies
         return this;
     }
 
+    /// <summary>
+    /// Política por una clave que el servicio saca de la petición (por ejemplo, el <c>sid</c> del token del panel, que el limitador aún no ve autenticado). Sin clave, o con una clave que
+    /// <paramref name="keySelector"/> no acepta, cuenta por IP: una petición sin credencial nunca queda sin límite. La clave solo reparte el contador; no autentica a nadie.
+    /// </summary>
+    public KnockRateLimitPolicies PerKey(string name, Func<HttpContext, string?> keySelector, int permitLimit, TimeSpan window)
+    {
+        ArgumentNullException.ThrowIfNull(keySelector);
+        var policy = new RateLimitPolicySettings { PermitLimit = permitLimit, Window = window };
+        _options.AddPolicy(name, context =>
+        {
+            var partition = keySelector(context) is { Length: > 0 } key ? $"{name}:{key}" : $"{name}:ip:{RequestKeys.ClientKey(context)}";
+            return RateLimitPartition.Get(partition, partitionKey => new SharedRateLimiter(_services, _serviceName, partitionKey, policy));
+        });
+        return this;
+    }
+
     /// <summary>Política por IP del cliente; <paramref name="keyPrefix"/> es el prefijo de la partición.</summary>
     public KnockRateLimitPolicies PerClient(string name, string keyPrefix, int permitLimit, TimeSpan window)
     {

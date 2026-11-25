@@ -22,6 +22,7 @@ namespace Knock.Identity.Api.Hosting;
 [JsonSerializable(typeof(UpdateConsentRequest))]
 [JsonSerializable(typeof(PendingResponse))]
 [JsonSerializable(typeof(DeletionScheduledResponse))]
+[JsonSerializable(typeof(LatestExportResponse))]
 [JsonSerializable(typeof(PanelCelularRequest))]
 [JsonSerializable(typeof(PanelCelularResponse))]
 [JsonSerializable(typeof(PanelTotpRequest))]

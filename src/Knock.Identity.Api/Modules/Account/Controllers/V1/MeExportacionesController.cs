@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using Knock.Identity.Api.Hosting;
+using Knock.Identity.Api.Modules.Account.Dtos;
 using Knock.Identity.Api.Modules.Account.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,7 +13,7 @@ namespace Knock.Identity.Api.Modules.Account.Controllers.V1;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/me/exportaciones")]
 [Authorize]
-internal sealed class MeExportacionesController(DataExportService exports) : AccountControllerBase
+internal sealed class MeExportacionesController(DataExportService exports, LatestExportService latest) : AccountControllerBase
 {
     /// <summary>La ruta no lleva cuerpo: cualquiera que llegue se corta en 1 KiB (413).</summary>
     public const int MaxBodyBytes = 1024;
@@ -35,5 +36,27 @@ internal sealed class MeExportacionesController(DataExportService exports) : Acc
 
         await exports.RequestAsync(sub, cancellationToken);
         return Accepted();
+    }
+
+    /// <summary>
+    /// USR-06b. La app lo llama al abrir el aviso <c>exportacion_lista</c>: <c>en_preparacion</c>, <c>vencida</c> o <c>lista</c> con un enlace firmado de 24 horas que se genera en este momento. 404 <c>export_not_found</c> si nunca
+    /// pidió una; 503 <c>export_unavailable</c> si el contenedor no responde. Solo la persona del token; sin caché y el enlace no se registra.
+    /// </summary>
+    [HttpGet("ultima")]
+    [EnableRateLimiting(IdentityRateLimits.ExportLatestPolicy)]
+    [ProducesResponseType<LatestExportResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
+    public async Task<IActionResult> GetLatest(CancellationToken cancellationToken)
+    {
+        if (!TryGetCaller(out var sub, out _))
+        {
+            return UnauthorizedProblem();
+        }
+
+        Response.Headers.CacheControl = "private, no-store";
+        return Ok(await latest.GetAsync(sub, cancellationToken));
     }
 }

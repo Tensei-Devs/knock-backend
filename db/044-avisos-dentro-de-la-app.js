@@ -22,6 +22,9 @@ for (const collection of ["avisos", "preferencias_avisos"]) {
 inAppMessaging.avisos.createIndex({ usuarioId: 1, leido: 1, creadoEn: -1 }, { name: "usuarioId_1_leido_1_creadoEn_-1" });
 inAppMessaging.avisos.createIndex({ venceEn: 1 }, { expireAfterSeconds: 0, name: "venceEn_1" });
 
+// avisos: el despachador de la spec 037 (R-14) crea un aviso por evento y persona; el índice único parcial lo hace idempotente (los avisos sin `eventoId`, p. ej. sembrados, no cuentan).
+inAppMessaging.avisos.createIndex({ eventoId: 1, usuarioId: 1 }, { name: "eventoId_1_usuarioId_1", unique: true, partialFilterExpression: { eventoId: { $exists: true } } });
+
 // preferencias_avisos: un documento por persona.
 inAppMessaging.preferencias_avisos.createIndex({ usuarioId: 1 }, { name: "usuarioId_1", unique: true });
 

@@ -110,6 +110,12 @@ internal sealed class EntregaInternaHttp(IHttpClientFactory clients, IOptions<En
             MessagingAudience,
             [ReportDecidedNotice],
             null),
+        ("exportacion_lista", "messaging") when Text(evento, "usuarioId") is { } owner && Text(evento, "recurso") is { } resource => new EntregaPlan(
+            NoticesPath,
+            new { eventoId = evento.Id, tipo = evento.Tipo, destinatarioId = owner, recurso = resource },
+            MessagingAudience,
+            [evento.Tipo],
+            null),
         ("sesion_revocada", "messaging") when Text(evento, "sid") is { } sid => new EntregaPlan(NoticesPath, new { eventoId = evento.Id, tipo = evento.Tipo, sid }, MessagingAudience, [evento.Tipo], null),
         _ => null,
     };

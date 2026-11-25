@@ -1,9 +1,11 @@
 using Asp.Versioning;
+using Knock.Identity.Api.Hosting;
 using Knock.Identity.Api.Modules.Moderation.Dtos;
 using Knock.Identity.Api.Modules.Moderation.Services;
 using Knock.Identity.Api.Modules.Panel;
 using Knock.Identity.Api.Modules.Panel.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Knock.Identity.Api.Modules.Moderation.Controllers.V1;
 
@@ -21,6 +23,7 @@ internal sealed class AdminVerificacionesController(VerificationReviewService se
 
     /// <summary>VER-03: la cola, de la más antigua a la más reciente, con cursor. Sin fotos ni datos personales.</summary>
     [HttpGet]
+    [EnableRateLimiting(IdentityRateLimits.PanelReadPolicy)]
     [ProducesResponseType<VerificationQueuePage>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, _problemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]
@@ -35,6 +38,7 @@ internal sealed class AdminVerificacionesController(VerificationReviewService se
 
     /// <summary>VER-04: abre una verificación; entrega enlaces de 5 minutos a las fotos y registra quién los abrió. 404 <c>verification_not_found</c>; 410 <c>photos_destroyed</c>.</summary>
     [HttpGet("{id}")]
+    [EnableRateLimiting(IdentityRateLimits.PanelDecisionPolicy)]
     [ProducesResponseType<VerificationDetail>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, _problemJson)]
@@ -51,6 +55,7 @@ internal sealed class AdminVerificacionesController(VerificationReviewService se
 
     /// <summary>VER-05: aprueba o rechaza con motivo; destruye la llave de las fotos (identidad) o cambia el número (recuperación). 404, 409 <c>verification_already_decided</c>, 503 <c>audit_unavailable</c>.</summary>
     [HttpPost("{id}/decision")]
+    [EnableRateLimiting(IdentityRateLimits.PanelDecisionPolicy)]
     [RequestSizeLimit(VerificationDecisionBody.MaxBodyBytes)]
     [ProducesResponseType<VerificationDecisionResult>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, _problemJson)]

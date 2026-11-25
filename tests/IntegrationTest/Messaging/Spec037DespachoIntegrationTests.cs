@@ -8,6 +8,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using StackExchange.Redis;
 using AvisoEvent = MessagingApi::Knock.Messaging.Api.Modules.Avisos.Push.AvisoEvent;
+using AvisosEnAppStore = MessagingApi::Knock.Messaging.Api.Modules.Avisos.Data.AvisosEnAppStore;
 using DespachadorDeAvisos = MessagingApi::Knock.Messaging.Api.Modules.Avisos.Push.DespachadorDeAvisos;
 using DeviceKeyConfiguration = MessagingApi::Knock.Messaging.Api.Modules.Avisos.Services.DeviceKeyConfiguration;
 using DeviceStore = MessagingApi::Knock.Messaging.Api.Modules.Avisos.Data.DeviceStore;
@@ -163,6 +164,59 @@ public sealed class Spec037DespachoIntegrationTests
         call.Payload.Keys.Should().BeSubsetOf(["v", "tipo", "evento", "recurso", "aviso"]);
     }
 
+    [Fact]
+    public async Task Dispatch_PersonWithoutDevices_GetsTheInAppNoticeWithFixedTextAndNoPush_R_14()
+    {
+        await using var world = await World.StartAsync();
+        var person = World.NewPerson();
+        var evento = World.Event("cotizacion_nueva", person) with { Rol = "cliente" };
+
+        var outcome = await world.Dispatcher.DispatchAsync(evento, CancellationToken.None);
+
+        outcome.Should().Be(DispatchOutcome.NoDevices);
+        world.Sender.Calls.Should().BeEmpty();
+        (await world.Sent.Find(Builders<BsonDocument>.Filter.Eq("destinatario", person)).SingleAsync())["resultado"].AsString.Should().Be("sin_dispositivos");
+        var notice = await world.Notices.Find(Builders<BsonDocument>.Filter.Eq("usuarioId", person)).SingleAsync();
+        notice["eventoId"].AsString.Should().Be(evento.EventoId);
+        notice["comoRol"].AsString.Should().Be("cliente");
+        notice["tipo"].AsString.Should().Be("cotizaciones");
+        notice["leido"].AsBoolean.Should().BeFalse();
+        notice["titulo"].AsString.Should().Be("Nueva cotización");
+        notice["destino"].AsBsonDocument["id"].AsString.Should().Be(evento.Recurso);
+        var created = notice["creadoEn"].ToUniversalTime();
+        notice["venceEn"].ToUniversalTime().Should().Be(created.AddDays(30));
+        string[] expected = ["_id", "usuarioId", "eventoId", "comoRol", "tipo", "titulo", "texto", "destino", "leido", "creadoEn", "venceEn"];
+        notice.Names.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public async Task Dispatch_TheSameEventUnderConcurrency_CreatesASingleInAppNotice_R_14()
+    {
+        await using var world = await World.StartAsync();
+        var person = World.NewPerson();
+        await world.RegisterDeviceAsync(person);
+        var evento = World.Event("solicitud_nueva", person);
+
+        await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => world.Dispatcher.DispatchAsync(evento, CancellationToken.None)));
+        await world.Dispatcher.DispatchAsync(evento, CancellationToken.None);
+
+        (await world.Notices.CountDocumentsAsync(Builders<BsonDocument>.Filter.Eq("usuarioId", person))).Should().Be(1);
+        world.Sender.Calls.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Dispatch_DifferentEventsOnTheSameResourceAndPerson_CreateTwoInAppNotices_R_14()
+    {
+        await using var world = await World.StartAsync();
+        var person = World.NewPerson();
+        var resource = ObjectId.GenerateNewId().ToString();
+
+        await world.Dispatcher.DispatchAsync(new AvisoEvent("evt-a", "cotizacion_nueva", person, resource, null), CancellationToken.None);
+        await world.Dispatcher.DispatchAsync(new AvisoEvent("evt-b", "cotizacion_nueva", person, resource, null), CancellationToken.None);
+
+        (await world.Notices.CountDocumentsAsync(Builders<BsonDocument>.Filter.Eq("usuarioId", person))).Should().Be(2);
+    }
+
     private sealed class FakeSender : IPushSender
     {
         private readonly ConcurrentQueue<(string Token, IReadOnlyDictionary<string, string> Payload)> _calls = new();
@@ -217,10 +271,11 @@ public sealed class Spec037DespachoIntegrationTests
             Devices = database.GetCollection<BsonDocument>("notifications.dispositivos");
             Sent = database.GetCollection<BsonDocument>("notifications.enviados");
             Pending = database.GetCollection<BsonDocument>("notifications.pendientes");
+            Notices = database.GetCollection<BsonDocument>("avisos");
             _store = new DeviceStore(database, protection);
             _loggers = LoggerFactory.Create(builder => builder.AddProvider(Logs));
             Tokens = new DeviceTokens(database, new DeviceKeyConfiguration(protection), _loggers.CreateLogger<DeviceTokens>());
-            Dispatcher = new DespachadorDeAvisos(new PushOptions(true, 100), Sender, new EnviadosStore(database), new RedisPresenceReader(redis), Tokens, TimeProvider.System);
+            Dispatcher = new DespachadorDeAvisos(new PushOptions(true, 100), Sender, new EnviadosStore(database), new RedisPresenceReader(redis), Tokens, new AvisosEnAppStore(database), TimeProvider.System);
         }
 
         public ConnectionMultiplexer Redis { get; }
@@ -230,6 +285,8 @@ public sealed class Spec037DespachoIntegrationTests
         public IMongoCollection<BsonDocument> Sent { get; }
 
         public IMongoCollection<BsonDocument> Pending { get; }
+
+        public IMongoCollection<BsonDocument> Notices { get; }
 
         public DeviceTokens Tokens { get; }
 
@@ -249,6 +306,9 @@ public sealed class Spec037DespachoIntegrationTests
             await UniqueIndexAsync(database, "notifications.dispositivos", "id");
             await UniqueIndexAsync(database, "notifications.enviados", "eventoId", "destinatario");
             await UniqueIndexAsync(database, "notifications.pendientes", "conversacionId", "destinatario");
+            await database.GetCollection<BsonDocument>("avisos").Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending("eventoId").Ascending("usuarioId"),
+                new CreateIndexOptions<BsonDocument> { Unique = true, PartialFilterExpression = Builders<BsonDocument>.Filter.Exists("eventoId") }));
             var protection = new TokenProtection("1", RandomNumberGenerator.GetBytes(32), RandomNumberGenerator.GetBytes(32));
             return new World(client, database, await ConnectionMultiplexer.ConnectAsync(redisFixture.ConnectionString), protection);
         }

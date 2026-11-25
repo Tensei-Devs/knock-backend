@@ -43,6 +43,12 @@ internal interface IAccountStore
     /// </summary>
     Task<ExportStartOutcome> TryStartExportAsync(string userId, DateTime now, CancellationToken cancellationToken);
 
+    /// <summary>Guarda en la cuenta el ZIP de la última exportación lista (solo el nombre del blob y el instante): la consulta <c>GET /me/exportaciones/ultima</c> firma el enlace al pedirlo.</summary>
+    Task SetLastExportAsync(string userId, string blobName, DateTime readyAt, CancellationToken cancellationToken);
+
+    /// <summary>Estado de la exportación de la cuenta con ese <paramref name="sub"/>; <c>null</c> si la cuenta no existe.</summary>
+    Task<ExportStatus?> FindExportStatusAsync(string sub, CancellationToken cancellationToken);
+
     /// <summary>Quita la marca de exportación en curso (se usa si la tarea no se pudo encolar).</summary>
     Task ClearExportAsync(string userId, CancellationToken cancellationToken);
 
