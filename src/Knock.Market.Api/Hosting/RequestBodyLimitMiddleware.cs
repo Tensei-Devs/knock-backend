@@ -1,31 +1,10 @@
+using Knock.Hosting.Http;
 using Knock.Market.Api.Common.Errors;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Knock.Market.Api.Hosting;
-
-/// <summary>Respuestas ProblemDetails (RFC 9457) escritas desde middleware o eventos de autenticación. El <c>code</c> (spec 002, R-08) es opcional: sin él no se agrega el campo.</summary>
-internal static class ProblemResponses
-{
-    public static async Task WriteAsync(HttpContext context, int statusCode, string title, string? code = null)
-    {
-        context.Response.StatusCode = statusCode;
-        if (statusCode == StatusCodes.Status401Unauthorized)
-        {
-            context.Response.Headers.WWWAuthenticate = "Bearer";
-        }
-
-        var problems = context.RequestServices.GetRequiredService<IProblemDetailsService>();
-        var problem = new ProblemDetails { Status = statusCode, Title = title };
-        if (code is not null)
-        {
-            problem.Extensions["code"] = code;
-        }
-
-        await problems.WriteAsync(new ProblemDetailsContext { HttpContext = context, ProblemDetails = problem });
-    }
-}
 
 /// <summary>
 /// Aplica el límite de cuerpo declarado con <c>[RequestSizeLimit]</c> y responde 413 en ProblemDetails.

@@ -1,9 +1,7 @@
-extern alias gateway;
-extern alias messaging;
-
 using System.Diagnostics;
 using System.Text.Json;
 using AwesomeAssertions;
+using Knock.Hosting.Http;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Routing.Patterns;
@@ -12,8 +10,6 @@ using Microsoft.Extensions.Hosting;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
 using Xunit;
-using GatewayHosting = gateway::Knock.Gateway.Hosting;
-using MessagingHosting = messaging::Knock.Messaging.Api.Hosting;
 
 namespace Knock.UnitTest.Hosting;
 
@@ -72,10 +68,9 @@ public sealed class Spec035RedaccionTests
         services.AddSingleton<IHostEnvironment>(environment);
         switch (project)
         {
-            case "gateway": GatewayHosting.ProblemResponses.AddKnockGatewayProblemDetails(services); break;
-            case "identity": Knock.Identity.Api.Hosting.ProblemDetailsExtensions.AddKnockProblemDetails(services); break;
-            case "messaging": MessagingHosting.ProblemResponses.AddKnockProblemDetails(services); break;
-            case "market": Knock.Market.Api.Hosting.ProblemDetailsExtensions.AddKnockProblemDetails(services); break;
+            case "gateway": services.AddKnockProblemDetails(new KnockProblemDetailsOptions { ExposeExceptionDetail = false }); break;
+            case "identity": services.AddKnockProblemDetails(new KnockProblemDetailsOptions { W3CTraceId = false }); break;
+            case "messaging" or "market": services.AddKnockProblemDetails(); break;
         }
 
         using var provider = services.BuildServiceProvider();

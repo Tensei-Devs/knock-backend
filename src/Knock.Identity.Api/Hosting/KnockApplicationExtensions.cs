@@ -21,7 +21,8 @@ internal static class KnockApplicationExtensions
         builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.TypeInfoResolverChain.Insert(0, IdentityJsonSerializerContext.Default));
         builder.AddKnockSecurity();
         builder.Services
-            .AddKnockProblemDetails()
+            .AddKnockProblemDetails(new KnockProblemDetailsOptions { W3CTraceId = false })
+            .AddExceptionHandler<DomainExceptionHandler>()
             .AddKnockValidation()
             .AddKnockForwardedHeaders()
             .AddKnockRateLimiting()

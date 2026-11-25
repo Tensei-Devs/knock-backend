@@ -1,34 +1,9 @@
 // jscpd:ignore-start -- EXC-015
+using Knock.Hosting.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Metadata;
 
 namespace Knock.Identity.Api.Hosting;
-
-/// <summary>Respuestas ProblemDetails (RFC 9457) escritas desde middleware o eventos de autenticación.</summary>
-internal static class ProblemResponses
-{
-    public static async Task WriteAsync(HttpContext context, int statusCode, string title, string? code = null)
-    {
-        context.Response.StatusCode = statusCode;
-        if (statusCode == StatusCodes.Status401Unauthorized)
-        {
-            context.Response.Headers.WWWAuthenticate = "Bearer";
-        }
-
-        var problems = context.RequestServices.GetRequiredService<IProblemDetailsService>();
-        var details = new ProblemDetailsContext
-        {
-            HttpContext = context,
-            ProblemDetails = { Status = statusCode, Title = title },
-        };
-        if (code is not null)
-        {
-            details.ProblemDetails.Extensions["code"] = code;
-        }
-
-        await problems.WriteAsync(details);
-    }
-}
 
 /// <summary>
 /// Aplica el límite de cuerpo declarado con <c>[RequestSizeLimit]</c> y responde 413 en ProblemDetails.

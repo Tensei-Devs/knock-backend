@@ -22,6 +22,7 @@ internal static class KnockApplicationExtensions
         builder.AddKnockSecurity();
         builder.Services
             .AddKnockProblemDetails()
+            .AddExceptionHandler<DomainExceptionHandler>()
             .AddKnockValidation()
             .AddKnockForwardedHeaders()
             .AddKnockRateLimiting()

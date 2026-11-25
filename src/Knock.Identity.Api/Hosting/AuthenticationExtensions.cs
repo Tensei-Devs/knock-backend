@@ -1,4 +1,5 @@
 // jscpd:ignore-start -- EXC-015
+using Knock.Hosting.Http;
 using Knock.Hosting.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;

@@ -1,4 +1,5 @@
 using System.Globalization;
+using Knock.Hosting.Http;
 using Knock.Hosting.RateLimiting;
 using Knock.Identity.Api.Hosting;
 using Microsoft.AspNetCore.Mvc;
