@@ -52,6 +52,9 @@ jobs:
       - name: Pruebas del índice de memoria por tarea (KNOCK-189)
         if: hashFiles('scripts/test_memoria.py') != ''
         run: python scripts/test_memoria.py
+      - name: Pruebas del mecanismo de firma de enmiendas (KNOCK-266)
+        if: hashFiles('scripts/test_sdd_sign_amendments.py') != ''
+        run: python scripts/test_sdd_sign_amendments.py
       - name: Duplicación textual (jscpd)
         run: npx --yes jscpd@4 --config .jscpd.json .
       - name: Lint de workflows (actionlint)
