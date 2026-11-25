@@ -88,8 +88,8 @@ excepciones:
       KnockMongoDatabasesTests) la usan por reflexión sobre el host. Se portó el código desde .NET 10 sin cambios de lógica; el aviso es solo de API obsoleta.
     responsable: José Julián Hernández Hernández
     creada: 2026-11-03
-    vence: 2026-12-02
-    plan: portar esas pruebas a IAsyncStartupValidator y retirar el NoWarn antes de vencer.
+    vence: 2027-01-15
+    plan: renovada el 2026-11-24 hasta 2027-01-15 (KNOCK-266). Verificado: `tests/UnitTest/Knock.UnitTest.csproj` conserva el `NoWarn` de SYSLIB0066 y 12 llamadas a `IStartupValidator` en `KnockMongoDatabasesTests`, `KnockMongoOptionsTests`, `Spec003DataClientsTests` y `Spec003RegionTests`; el aviso solo es de API obsoleta, sin cambio de comportamiento. Falta portar esas 4 clases de prueba a `IAsyncStartupValidator` y quitar el `NoWarn` (un PR de pruebas con autorización, porque hoy las pruebas del repo no se tocan); si sigue vigente el 2027-01-15, se renueva de nuevo con lo que falte.
   - id: EXC-015
     herramienta: jscpd
     regla: duplicación textual (y huella estructural de codemap)
@@ -195,8 +195,8 @@ excepciones:
       Evidencia: hallazgo de Gitleaks del 2026-11-09 (regla knock-mongodb-connection-string, ese archivo y esa línea).
     responsable: Ángel Alexis Blas Castillo
     creada: 2026-11-09
-    vence: 2026-12-04
-    plan: fusionar la rama de KNOCK-205 con squash, borrar la rama y retirar la huella y esta excepción cuando el commit ya no exista en ninguna rama.
+    vence: 2027-01-15
+    plan: renovada el 2026-11-24 hasta 2027-01-15 (KNOCK-266). Verificado con `git branch -r --contains`: el commit 0b7a8668 sigue en 68 ramas remotas (65 de trabajo y 3 de Dependabot) y no está en `sprint-05`, por eso no se puede retirar la huella sin reescribir el historial, que no se hace. Se retira cuando la rama de KNOCK-205 y las demás ramas que lo contienen se fusionen o se borren (limpieza de ramas obsoletas, a decisión del líder) y `git branch -r --contains 0b7a8668` ya no devuelva ninguna; en ese mismo PR se quita la huella de `.gitleaksignore`. Si sigue vigente el 2027-01-15, se renueva de nuevo con el conteo de ramas que queden.
   - id: EXC-021
     herramienta: jscpd, codemap
     regla: código duplicado (jscpd:ignore y línea base de clones de docs/architecture/clones-baseline.json)
@@ -213,18 +213,6 @@ excepciones:
     creada: 2026-11-11
     vence: 2027-01-15
     plan: renovada el 2026-11-24 hasta 2027-01-15 (KNOCK-266). RedisExtensions, JwtSettings, SecurityHeadersMiddleware y RateLimitingExtensions ya salieron a Knock.Hosting; quedan `AuthenticationExtensions.cs` y `ProblemResponses.cs` de Mensajería. `ProblemResponses` se mueve con spec 055 T-17 y `AuthenticationExtensions` cuando el resto de su lógica de eventos del JWT se parametrice; al mover ambos se retira la excepción.
-  - id: EXC-022
-    herramienta: NetArchTest (tests/UnitTest/Architecture/ModuleSurfaceTests.cs)
-    regla: cada módulo expone solo AddXxxModule y la interfaz IXxxApi
-    alcance: src/Knock.Market.Api/Modules/Media (la rama `module == "Media"` de la prueba EachModule_ExposesOnlyAddModuleAndInterface_TC_TT_API_01_09)
-    justificacion: >-
-      Spec 013 (KNOCK-208, OI-1): el módulo Media todavía no tiene un consumidor interno real, así que no expone IMediaApi y solo se expone la clase
-      estática AddMediaModule. La prueba lo comprueba con una rama propia para Media en lugar de relajar la regla para los demás módulos.
-      Aprobada por el líder el 2026-11-13.
-    responsable: Ángel Alexis Blas Castillo
-    creada: 2026-11-13
-    vence: 2026-12-04
-    plan: agregar IMediaApi cuando Media tenga consumidor interno (OI-2 u OI-3), quitar la rama `module == "Media"` de la prueba y retirar esta excepción antes de vencer.
   - id: EXC-023
     herramienta: gitleaks
     regla: knock-mongodb-connection-string
@@ -236,8 +224,8 @@ excepciones:
       Evidencia: hallazgo de Gitleaks del 2026-11-14 en la corrida de ci-pr del PR #113 (regla knock-mongodb-connection-string, ese archivo y esas dos líneas).
     responsable: Ángel Alexis Blas Castillo
     creada: 2026-11-14
-    vence: 2026-12-04
-    plan: en el siguiente commit de la rama de KNOCK-40 las cadenas se construyen en la prueba sin el formato completo de conexión; al fusionar esa rama se retiran las dos huellas de .gitleaksignore y esta excepción.
+    vence: 2027-01-15
+    plan: renovada el 2026-11-24 hasta 2027-01-15 (KNOCK-266). Verificado con `git branch -r --contains`: el commit 72c27e46 sigue en 68 ramas remotas (65 de trabajo y 3 de Dependabot) y no está en `sprint-05`; la huella se queda mientras exista en alguna rama. Se retira (junto con las dos huellas de `.gitleaksignore`) cuando la rama de KNOCK-40 y las demás ramas que lo contienen se fusionen o se borren y `git branch -r --contains 72c27e46` ya no devuelva ninguna. Si sigue vigente el 2027-01-15, se renueva de nuevo con el conteo de ramas que queden.
   - id: EXC-024
     herramienta: gitleaks
     regla: knock-mongodb-connection-string
@@ -249,21 +237,8 @@ excepciones:
       Evidencia: hallazgo de Gitleaks del 2026-11-14 en la corrida de ci-pr de los PR #103 y #116 (regla knock-mongodb-connection-string, ese archivo y esa línea).
     responsable: Ángel Alexis Blas Castillo
     creada: 2026-11-14
-    vence: 2026-12-04
-    plan: en el siguiente commit de la rama de KNOCK-246 la cadena se construye sin el formato completo de conexión (con MongoUrlBuilder); la huella se queda mientras el commit exista en el historial y la excepción se renueva si vence antes de que deje de analizarse.
-  - id: EXC-026
-    herramienta: trivy
-    regla: CVE-2026-97054 (HIGH, stdlib de Go 1.27.3; corregido en 1.27.4) en usr/bin/pebble de la imagen base mcr.microsoft.com/dotnet/aspnet:11.0
-    alcance: solo ese CVE en .trivyignore, para las imágenes de Gateway, Identidad, Mercado y Mensajería, que usan esa imagen base; cualquier otro hallazgo sigue bloqueando
-    justificacion: >-
-      Trivy 0.76.1 bloquea el chequeo Contenedor de los PR desde el 2026-11-19 porque la base aspnet:11.0 (construida por Microsoft el 2026-11-10) trae el binario pebble compilado con Go 1.27.3.
-      El binario es una herramienta de la imagen que nuestras APIs no ejecutan, y el CVE trata de servidores HTTP/1 con MaxBytesReader. Aún no existe una imagen base corregida y el sprint 5 cierra el 2026-11-22.
-      Decisión del líder del 2026-11-19: aceptar el hallazgo con vencimiento corto en lugar de esperar la imagen. Evidencia: corrida de ci-pr del 2026-11-19 (ejemplo: PR #158, job Contenedor de Gateway,
-      «Total: 1 (HIGH: 1)» en usr/bin/pebble).
-    responsable: José Julián Hernández Hernández
-    creada: 2026-11-19
-    vence: 2026-12-03
-    plan: cuando Microsoft publique una aspnet:11.0 con Go 1.27.4 o superior, volver a correr el CI, quitar la línea de .trivyignore y retirar esta excepción (KNOCK-290); si no hay imagen corregida antes de vencer, se revisa o se renueva con la decisión del líder.
+    vence: 2027-01-15
+    plan: renovada el 2026-11-24 hasta 2027-01-15 (KNOCK-266). Verificado con `git branch -r --contains`: el commit ee6477cf sigue en 68 ramas remotas (65 de trabajo y 3 de Dependabot) y no está en `sprint-05`; la huella se queda mientras exista en alguna rama. Se retira (junto con su huella de `.gitleaksignore`) cuando la rama de KNOCK-246 y las demás ramas que lo contienen se fusionen o se borren y `git branch -r --contains ee6477cf` ya no devuelva ninguna. Si sigue vigente el 2027-01-15, se renueva de nuevo con el conteo de ramas que queden.
   - id: EXC-027
     herramienta: gitleaks
     regla: knock-mongodb-connection-string y generic-api-key
