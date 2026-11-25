@@ -2,6 +2,7 @@ extern alias MarketApi;
 
 using System.Net;
 using AwesomeAssertions;
+using Knock.IntegrationTest.Support;
 using MarketApi::Knock.Market.Api.Common.TareasProgramadas;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
@@ -118,6 +119,35 @@ public sealed class Spec028RepartoTests
                 document.Should().NotContain(value);
             }
         }
+    }
+
+    [Fact]
+    public async Task Reparto_Registros_Y_Eventos_Sin_Datos_Personales_CA_028_17()
+    {
+        const string name = "NombreFicticioOleadas";
+        const string phone = "5500000099";
+        var forbidden = new List<string> { Spec020Host.Description, Spec020Host.Address, name, phone };
+        var output = await ConsoleCapture.RunAsync(async () =>
+        {
+            var clock = new TestClock();
+            await using var host = await StartAsync(clock, true);
+            forbidden.Add(host.ClientSub);
+            var technician = Technician(host, clock, 0);
+            forbidden.Add(technician["usuarioId"].AsString);
+            technician["nombre"] = name;
+            technician["telefono"] = phone;
+            await host.Database.GetCollection<BsonDocument>("tecnicos").InsertOneAsync(technician);
+            await CreateAsync(host);
+            await RunAsync(host);
+            var events = await Outbox(host).Find(new BsonDocument("tipo", "SolicitudEnviadaATecnico")).ToListAsync();
+            events.Should().ContainSingle();
+            foreach (var value in forbidden)
+            {
+                events[0].ToJson().Should().NotContain(value);
+            }
+        });
+        output.Should().NotBeNullOrWhiteSpace();
+        foreach (var value in forbidden) output.Should().NotContain(value);
     }
 
     [Fact]
