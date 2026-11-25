@@ -16,6 +16,7 @@ internal static class AvisosDataExtensions
             provider.GetRequiredKeyedService<IMongoDatabase>(DataExtensions.DatabaseKey),
             provider.GetRequiredService<DeviceKeyConfiguration>(),
             provider.GetRequiredService<ILogger<DeviceTokens>>()));
+        services.AddSingleton<IAvisosEnApp>(provider => new AvisosEnAppStore(provider.GetRequiredKeyedService<IMongoDatabase>(DataExtensions.DatabaseKey)));
         services.AddSingleton<IPresenceReader, RedisPresenceReader>();
         return services;
     }
