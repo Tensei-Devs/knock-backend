@@ -16,7 +16,7 @@ namespace Knock.Market.Api.Modules.Tecnicos.Data;
 internal sealed class TechnicianLookupStore(
     [FromKeyedServices(TecnicosModuleExtensions.ModuleKey)] IMongoDatabase database,
     IOptions<KnockMongoOptions> options,
-    TimeProvider clock) : ITechnicianLookupReader
+    TimeProvider clock) : ITechnicianLookupReader, ITechnicianOwnerReader
 {
     private IMongoCollection<BsonDocument> Technicians => database.GetCollection<BsonDocument>(TechnicianProfileStore.CollectionName);
 
@@ -78,6 +78,13 @@ internal sealed class TechnicianLookupStore(
         var documents = await find.Project(projection).Limit(limit + 1).ToListAsync(cancellationToken);
         var page = documents.Take(limit).Select(TechnicianProfileStore.ToProfile).ToList();
         return new TechnicianListPage(page, documents.Count > limit ? page[^1].Id.ToString() : null);
+    }
+
+    public async Task<IReadOnlyDictionary<string, string>> FindOwnersAsync(IReadOnlyCollection<ObjectId> technicianIds, CancellationToken cancellationToken)
+    {
+        var documents = await Technicians.Find(Builders<BsonDocument>.Filter.In("_id", technicianIds), new FindOptions { MaxTime = options.Value.QueryMaxTime })
+            .Project(Builders<BsonDocument>.Projection.Include("usuarioId")).ToListAsync(cancellationToken);
+        return documents.Where(d => d.TryGetValue("usuarioId", out var owner) && owner.IsString).ToDictionary(d => d["_id"].AsObjectId.ToString(), d => d["usuarioId"].AsString, StringComparer.Ordinal);
     }
 
     private static FilterDefinition<BsonDocument> BuildFilter(TechnicianListQuery query, DateTime now)

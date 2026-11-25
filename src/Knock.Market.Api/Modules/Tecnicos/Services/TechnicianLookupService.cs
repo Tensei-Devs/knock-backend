@@ -52,7 +52,8 @@ internal sealed class TechnicianLookupService(
     INeighborhoodCenterCatalog centers,
     IMemoryCache cache,
     TimeProvider clock,
-    TechnicianReadCache? readCache = null)
+    TechnicianReadCache? readCache = null,
+    TechnicianBlockFilter? blockFilter = null)
 {
     public const int MaxSuggestions = 8;
 
@@ -153,7 +154,22 @@ internal sealed class TechnicianLookupService(
 
     /// <summary>TEC-02 (spec 046, R-04): filtros estructurados, orden y cursor por página. La caché de la réplica dura
     /// 30 segundos por consulta; su clave no lleva datos de otra persona, y se invalida al escribir (R-07).</summary>
-    public async Task<TechnicianListOutcome> SearchAsync(TechnicianListQuery query, CancellationToken cancellationToken)
+    public Task<TechnicianListOutcome> SearchAsync(TechnicianListQuery query, CancellationToken cancellationToken) => SearchAsync(query, null, cancellationToken);
+
+    /// <summary>Igual, y con sesión quita a los técnicos con un bloqueo en cualquier sentido con <paramref name="viewer"/> (spec 043, R-16), después de la caché compartida.</summary>
+    public async Task<TechnicianListOutcome> SearchAsync(TechnicianListQuery query, string? viewer, CancellationToken cancellationToken)
+    {
+        var outcome = await SearchSharedAsync(query, cancellationToken);
+        if (blockFilter is null || outcome.Response is not { } response || string.IsNullOrWhiteSpace(viewer))
+        {
+            return outcome;
+        }
+
+        var hidden = await blockFilter.HiddenAsync(viewer, response.Tecnicos.Select(t => t.Id), cancellationToken);
+        return hidden.Count == 0 ? outcome : outcome with { Response = response with { Tecnicos = [.. response.Tecnicos.Where(t => !hidden.Contains(t.Id))] } };
+    }
+
+    private async Task<TechnicianListOutcome> SearchSharedAsync(TechnicianListQuery query, CancellationToken cancellationToken)
     {
         var key = CacheKey(query);
         if (cache.TryGetValue(key, out TechnicianListResponse? cached) && cached is not null)
