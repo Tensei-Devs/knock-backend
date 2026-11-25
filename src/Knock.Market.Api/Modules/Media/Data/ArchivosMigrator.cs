@@ -29,9 +29,14 @@ internal sealed class ArchivosMigrator(IMediaFileStore store, MediaMetrics? metr
     };
 
     /// <summary>Lee los blobs <c>*.json</c> del contenedor de registros antiguo; no modifica nada. Solo entrega el contenido: el nombre del blob nunca sale de aquí (spec 058, R-12 y CA-15).</summary>
-    public static async IAsyncEnumerable<BinaryData> ReadLegacyAsync(BlobContainerClient records, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public static IAsyncEnumerable<BinaryData> ReadLegacyAsync(BlobContainerClient records, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(records);
+        return ReadContentsAsync(records, cancellationToken);
+    }
+
+    private static async IAsyncEnumerable<BinaryData> ReadContentsAsync(BlobContainerClient records, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
         await foreach (var name in records.GetBlobsAsync(cancellationToken: cancellationToken).Select(blob => blob.Name).Where(name => name.EndsWith(".json", StringComparison.Ordinal)))
         {
             var content = await records.GetBlobClient(name).DownloadContentAsync(cancellationToken);
