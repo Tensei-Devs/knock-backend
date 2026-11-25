@@ -8,6 +8,7 @@ using MarketApi::Knock.Market.Api.Hosting;
 using MarketApi::Knock.Market.Api.Modules.Media.Data;
 using MarketApi::Knock.Market.Api.Modules.Media.Domain;
 using MarketApi::Knock.Market.Api.Modules.Media.Services;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -98,10 +99,12 @@ public sealed class Spec058MigracionTests
     }
 
     [Fact]
-    public async Task Registro_Ilegible_O_Con_Estado_Desconocido_Cuenta_Como_Fallido_Y_No_Se_Puede_Borrar_CA_058_15()
+    public async Task Registro_Ilegible_O_Con_Estado_Desconocido_Cuenta_Como_Fallido_Con_Su_Motivo_Sin_Nombres_Y_No_Se_Puede_Borrar_CA_058_15()
     {
         await using var azurite = await AzuriteFixture.StartAsync();
-        var (runner, store, _, _) = await CreateAsync(azurite);
+        using var logs = new CapturingLoggerProvider();
+        using var loggers = LoggerFactory.Create(builder => builder.AddProvider(logs));
+        var (runner, store, _, _) = await CreateAsync(azurite, loggers.CreateLogger<ArchivosMigrationRunner>());
         var good = await PutLegacyAsync(azurite, "listo", DateTimeOffset.UtcNow.AddDays(-1));
         var unknownState = await PutLegacyAsync(azurite, "borrado", DateTimeOffset.UtcNow.AddDays(-1));
         await azurite.Container(_legacyContainer).UploadBlobAsync("ilegible.json", BinaryData.FromString("{no es json"));
@@ -112,9 +115,15 @@ public sealed class Spec058MigracionTests
         ArchivosMigrationRunner.SourceCanBeRemoved(report).Should().BeFalse("con fallidos el contenedor no queda listo para borrarse");
         (await store.FindAsync(good.Id, CancellationToken.None)).Should().NotBeNull();
         (await store.FindAsync(unknownState.Id, CancellationToken.None)).Should().BeNull();
+        var written = logs.AllMessages();
+        written.Should().Contain("unreadable_json").And.Contain("unknown_state_or_usage", "cada fallido se reporta con su motivo");
+        foreach (var forbidden in new[] { "ilegible", ".json", unknownState.Id.ToString("N"), unknownState.BlobKey, good.OwnerId })
+        {
+            written.Should().NotContain(forbidden, "ningún registro lleva nombres de blob ni del JSON antiguo (R-12)");
+        }
     }
 
-    private static async Task<(ArchivosMigrationRunner Runner, MongoMediaFileStore Store, MediaOptions Options, IMongoCollection<BsonDocument> Files)> CreateAsync(AzuriteFixture azurite)
+    private static async Task<(ArchivosMigrationRunner Runner, MongoMediaFileStore Store, MediaOptions Options, IMongoCollection<BsonDocument> Files)> CreateAsync(AzuriteFixture azurite, ILogger<ArchivosMigrationRunner>? logger = null)
     {
         var documentDb = await DocumentDbFixture.SharedAsync();
         _client ??= new MongoClient(documentDb.ConnectionString);
@@ -125,7 +134,7 @@ public sealed class Spec058MigracionTests
         var options = new MediaOptions();
         var store = new MongoMediaFileStore(database, Options.Create(new Knock.Hosting.Data.KnockMongoOptions()));
         var blobs = new AzureMediaBlobStore(new BlobServiceClient(azurite.ConnectionString), new EnlaceSubidaNoDisponible(), Options.Create(options));
-        return (new ArchivosMigrationRunner(store, blobs, TimeProvider.System), store, options, files);
+        return (new ArchivosMigrationRunner(store, blobs, TimeProvider.System, logger: logger), store, options, files);
     }
 
     private static async Task<Legacy> PutLegacyAsync(AzuriteFixture azurite, string state, DateTimeOffset createdAt)
