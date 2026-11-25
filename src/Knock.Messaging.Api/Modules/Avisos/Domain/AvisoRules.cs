@@ -30,6 +30,7 @@ internal static partial class AvisoRules
         ["solicitud_vencida"] = "cotizaciones",
         ["cotizacion_vencida"] = "cotizaciones",
         [NewMessageEvent] = "mensajes",
+        [ExportReadyEvent] = "sistema",
     };
 
     public const string SessionRevokedEvent = "sesion_revocada";
@@ -45,6 +46,9 @@ internal static partial class AvisoRules
 
     /// <summary>Texto fijo que la app muestra para <see cref="TechnicianAbsentEvent"/> (spec 064, D-01). La carga v1 no lo transporta: la app lo elige por el campo <c>evento</c> (spec 037, R-05).</summary>
     public const string TechnicianAbsentText = "El cliente reportó que no llegaste a tu visita. Si crees que es un error, contacta a soporte.";
+
+    /// <summary>Aviso de texto fijo y sin enlace de que la exportación de los datos propios está lista (spec 039, R-22, enmienda del 2026-11-23): no distingue rol; la app pide el enlace al abrirlo.</summary>
+    public const string ExportReadyEvent = "exportacion_lista";
 
     public const string ClientRole = "cliente";
 
@@ -65,6 +69,7 @@ internal static partial class AvisoRules
         ["solicitud_vencida"] = ClientRole,
         ["cotizacion_vencida"] = TechnicianRole,
         [NewMessageEvent] = null,
+        [ExportReadyEvent] = null,
     };
 
     /// <summary>Si el evento es del catálogo cerrado (los ocho de la carga v1 o <c>sesion_revocada</c>).</summary>
@@ -74,7 +79,7 @@ internal static partial class AvisoRules
     /// <summary>Si <paramref name="rol"/> corresponde a <paramref name="tipo"/> (R-11).</summary>
     public static bool RoleMatches(string tipo, string? rol) =>
         _roleByEvent.TryGetValue(tipo, out var expected)
-        && (rol is null ? tipo == ReportDecidedEvent : rol is ClientRole or TechnicianRole && (expected is null || expected == rol));
+        && (rol is null ? tipo is ReportDecidedEvent or ExportReadyEvent : rol is ClientRole or TechnicianRole && (expected is null || expected == rol));
 
     /// <summary>Los campos que la carga v1 puede llevar y ningún otro (R-04).</summary>
     public static readonly IReadOnlyList<string> PayloadFields = ["v", "tipo", "evento", "recurso", "aviso", "conversacion"];

@@ -91,6 +91,27 @@ internal sealed class FakeAccountStore : IAccountStore
     public Task<ExportStartOutcome> TryStartExportAsync(string userId, DateTime now, CancellationToken cancellationToken) =>
         Task.FromResult(ExportsInProgress.Add(userId) ? ExportStartOutcome.Started : ExportStartOutcome.AlreadyInProgress);
 
+    /// <summary>Última exportación lista por <c>_id</c> de la cuenta: nombre del ZIP y momento.</summary>
+    public Dictionary<string, (string BlobName, DateTime ReadyAt)> LastExports { get; } = [];
+
+    public Task SetLastExportAsync(string userId, string blobName, DateTime readyAt, CancellationToken cancellationToken)
+    {
+        LastExports[userId] = (blobName, readyAt);
+        return Task.CompletedTask;
+    }
+
+    public Task<ExportStatus?> FindExportStatusAsync(string sub, CancellationToken cancellationToken)
+    {
+        var account = Accounts.FirstOrDefault(candidate => candidate.Sub == sub);
+        if (account is null)
+        {
+            return Task.FromResult<ExportStatus?>(null);
+        }
+
+        var last = LastExports.TryGetValue(account.Id, out var stored) ? stored : default;
+        return Task.FromResult<ExportStatus?>(new ExportStatus(ExportsInProgress.Contains(account.Id), last.BlobName, last.BlobName is null ? null : last.ReadyAt));
+    }
+
     public Task ClearExportAsync(string userId, CancellationToken cancellationToken)
     {
         ExportsInProgress.Remove(userId);

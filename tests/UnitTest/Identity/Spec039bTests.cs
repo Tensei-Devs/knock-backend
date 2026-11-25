@@ -52,11 +52,11 @@ public sealed class Spec039bTests
 
     private sealed class FakeNotice : IExportNotice
     {
-        public List<(string UserId, Uri Link)> Sent { get; } = [];
+        public List<(string UserId, string Sub, string ExportKey)> Sent { get; } = [];
 
-        public Task NotifyReadyAsync(string userId, Uri link, CancellationToken cancellationToken)
+        public Task NotifyReadyAsync(string userId, string sub, string exportKey, CancellationToken cancellationToken)
         {
-            Sent.Add((userId, link));
+            Sent.Add((userId, sub, exportKey));
             return Task.CompletedTask;
         }
     }
@@ -73,7 +73,7 @@ public sealed class Spec039bTests
         var fake = storage as FakeStorage ?? new FakeStorage();
         var notice = new FakeNotice();
         var handler = new PrepararExportacionHandler(
-            new FakeSource(account ?? Account()), new FakeAddresses(addresses), market ?? new FakeMarket("{\"solicitudes\":[]}"), storage ?? fake, notice, accounts, NullLogger<PrepararExportacionHandler>.Instance);
+            new FakeSource(account ?? Account()), new FakeAddresses(addresses), market ?? new FakeMarket("{\"solicitudes\":[]}"), storage ?? fake, notice, accounts, new Spec039Clock(new DateTimeOffset(_now)), NullLogger<PrepararExportacionHandler>.Instance);
         return new Rig(handler, accounts, fake, notice);
     }
 
@@ -90,7 +90,7 @@ public sealed class Spec039bTests
     }
 
     [Fact]
-    public async Task Export_BuildsAZipWithOneJsonPerService_StoresItAndNotifiesWithA24HourLink_CA_039_35()
+    public async Task Export_BuildsAZipWithOneJsonPerService_StoresItAndNotifiesWithoutALink_CA_039_35()
     {
         var rig = Build();
         var key = $"{_userId}:1764000000";
@@ -105,7 +105,9 @@ public sealed class Spec039bTests
         files[ExportArchive.MarketFile].Should().Be("{\"solicitudes\":[]}");
         var sent = rig.Notice.Sent.Should().ContainSingle().Subject;
         sent.UserId.Should().Be(_userId);
-        sent.Link.Query.Should().Be("?ttl=24");
+        sent.Sub.Should().Be(_sub);
+        sent.ExportKey.Should().Be($"{_userId}-1764000000", "el aviso lleva solo identificadores y ningún enlace");
+        rig.Accounts.LastExports.Should().ContainKey(_userId).WhoseValue.Should().Be((name, _now), "la cuenta guarda el ZIP para firmar el enlace al consultarlo");
         rig.Accounts.ExportsInProgress.Should().BeEmpty("la marca de exportación en curso se quita al terminar");
     }
 

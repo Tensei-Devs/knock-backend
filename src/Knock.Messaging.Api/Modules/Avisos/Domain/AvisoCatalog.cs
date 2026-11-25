@@ -32,6 +32,7 @@ internal static class AvisoCatalog
         ["solicitud_vencida"] = new("Solicitud vencida", "Tu solicitud venció sin que eligieras una cotización.", "solicitud"),
         ["cotizacion_vencida"] = new("Cotización vencida", "Una de tus cotizaciones venció.", "cotizacion"),
         [AvisoRules.NewMessageEvent] = new("Mensaje nuevo", "Tienes un mensaje nuevo.", "conversacion"),
+        [AvisoRules.ExportReadyEvent] = new("Tu exportación está lista", "Ya está lista la exportación de tus datos. Ábrela desde la app para descargarla.", "exportacion"),
     }.ToFrozenDictionary(StringComparer.Ordinal);
 
     /// <summary>La plantilla del <paramref name="evento"/>, o <see langword="null"/> si no es del catálogo.</summary>

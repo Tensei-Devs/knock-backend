@@ -8,7 +8,7 @@ namespace Knock.Identity.Api.Modules.Account.Services;
 
 /// <summary>
 /// Tarea <c>PrepararExportacion</c> (spec 039, R-22; spec 054, R-09). Junta los datos de la persona en Identidad y en Mercado, arma el ZIP (un JSON por servicio), lo guarda en el contenedor privado
-/// <c>exportaciones</c>, avisa con un enlace de 24 horas y quita la marca de exportación en curso. Es idempotente: reintentar sobrescribe el mismo archivo. Si agota los reintentos quita la marca para que la
+/// <c>exportaciones</c>, deja el aviso fijo sin enlace y quita la marca de exportación en curso. Es idempotente: reintentar sobrescribe el mismo archivo. Si agota los reintentos quita la marca para que la
 /// persona pueda pedirla de nuevo. Los registros no llevan datos de la persona ni el enlace (R-26).
 /// </summary>
 internal sealed partial class PrepararExportacionHandler(
@@ -18,11 +18,9 @@ internal sealed partial class PrepararExportacionHandler(
     IExportStorage storage,
     IExportNotice notice,
     IAccountStore accounts,
+    TimeProvider clock,
     ILogger<PrepararExportacionHandler> logger) : IManejadorDeTarea
 {
-    /// <summary>Validez del enlace de descarga (R-22).</summary>
-    public static readonly TimeSpan LinkLifetime = TimeSpan.FromHours(24);
-
     private static readonly JsonSerializerOptions _json = new() { WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
     public string Tipo => AccountOutbox.ExportTask;
@@ -66,7 +64,8 @@ internal sealed partial class PrepararExportacionHandler(
         };
         var name = ExportArchive.BlobName(businessKey);
         await storage.SaveAsync(name, ExportArchive.Build(files), cancellationToken);
-        await notice.NotifyReadyAsync(userId, await storage.CreateLinkAsync(name, LinkLifetime, cancellationToken), cancellationToken);
+        await accounts.SetLastExportAsync(userId, name, clock.GetUtcNow().UtcDateTime, cancellationToken);
+        await notice.NotifyReadyAsync(userId, account.Sub, businessKey.Replace(':', '-'), cancellationToken);
         await accounts.ClearExportAsync(userId, cancellationToken);
         LogReady(logger);
     }

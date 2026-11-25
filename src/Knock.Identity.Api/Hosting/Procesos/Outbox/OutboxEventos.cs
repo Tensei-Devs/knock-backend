@@ -27,7 +27,7 @@ internal static class OutboxReglas
     public static readonly IReadOnlyCollection<string> Tipos =
     [
         "solicitud_nueva", "solicitud_sin_tecnicos", "cotizacion_nueva", "cotizacion_aceptada", "solicitud_cancelada", "solicitud_vencida", "cotizacion_vencida", "mensaje_nuevo",
-        "sesion_revocada", "CotizacionElegida", "BloqueoCreado", "BloqueoEliminado",
+        "sesion_revocada", "exportacion_lista", "CotizacionElegida", "BloqueoCreado", "BloqueoEliminado",
         "VerificacionSinRevisarAlertada", "FotosDeVerificacionBorradas", "CuentaSuspendida", "CuentaReactivada", "CuentaEliminada",
         "ReporteDecidido", "TecnicoOcultado", "ApelacionResuelta",
     ];

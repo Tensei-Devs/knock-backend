@@ -18,10 +18,13 @@ internal interface IExportStorage
     Task<Uri> CreateLinkAsync(string name, TimeSpan validFor, CancellationToken cancellationToken);
 }
 
-/// <summary>Aviso a la persona de que su exportación está lista, con el enlace (spec 037: avisos dentro de la app). Nunca se registra el enlace.</summary>
+/// <summary>
+/// Aviso a la persona de que su exportación está lista (spec 037: aviso <c>exportacion_lista</c> de texto fijo, sin enlace; spec 039, R-22 y enmienda del 2026-11-23). El enlace no viaja en el aviso: la app
+/// lo pide al abrirlo con <c>GET /me/exportaciones/ultima</c>. <c>sub</c> es la persona que avisar; <c>userId</c> el identificador interno que es el recurso del aviso.
+/// </summary>
 internal interface IExportNotice
 {
-    Task NotifyReadyAsync(string userId, Uri link, CancellationToken cancellationToken);
+    Task NotifyReadyAsync(string userId, string sub, string exportKey, CancellationToken cancellationToken);
 }
 
 /// <summary>Sustituto mientras no existe el contenedor: falla cerrado.</summary>
@@ -37,7 +40,7 @@ internal sealed class UnavailableExportStorage : IExportStorage
 /// <summary>Sustituto mientras no existe el aviso de exportación lista hacia Mensajería: falla cerrado.</summary>
 internal sealed class UnavailableExportNotice : IExportNotice
 {
-    public Task NotifyReadyAsync(string userId, Uri link, CancellationToken cancellationToken) => throw new InvalidOperationException("The export notice is not configured.");
+    public Task NotifyReadyAsync(string userId, string sub, string exportKey, CancellationToken cancellationToken) => throw new InvalidOperationException("The export notice is not configured.");
 }
 
 /// <summary>Un archivo JSON por servicio dentro del ZIP (spec 039, R-22): <c>identidad.json</c> y <c>mercado.json</c>.</summary>

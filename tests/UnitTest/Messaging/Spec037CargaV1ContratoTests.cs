@@ -23,6 +23,7 @@ public sealed class Spec037CargaV1ContratoTests
     [InlineData("mensaje_nuevo", "mensajes")]
     [InlineData("reporte_decidido", "sistema")]
     [InlineData("opinion_oculta", "sistema")]
+    [InlineData("exportacion_lista", "sistema")]
     public void Payload_SerializesToTheV1ContractShape_CA_037_04_CA_037_10(string evento, string tipo)
     {
         var aviso = Guid.NewGuid();
@@ -45,6 +46,9 @@ public sealed class Spec037CargaV1ContratoTests
     [InlineData("reporte_decidido", null, true)]
     [InlineData("reporte_decidido", "cliente", true)]
     [InlineData("reporte_decidido", "tecnico", true)]
+    [InlineData("exportacion_lista", null, true)]
+    [InlineData("exportacion_lista", "cliente", true)]
+    [InlineData("exportacion_lista", "tecnico", true)]
     [InlineData("opinion_oculta", "tecnico", true)]
     [InlineData("opinion_oculta", "cliente", false)]
     [InlineData("opinion_oculta", null, false)]

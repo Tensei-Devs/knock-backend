@@ -46,7 +46,8 @@ public static class AccountModuleExtensions
         services.TryAddSingleton<IMarketAccountClient>(provider => provider.GetRequiredService<MarketAccountClient>());
         services.TryAddSingleton<IMarketExport>(provider => provider.GetRequiredService<MarketAccountClient>());
         services.TryAddSingleton<IExportStorage, UnavailableExportStorage>();
-        services.TryAddSingleton<IExportNotice, UnavailableExportNotice>();
+        services.AddSingleton<IExportNotice, OutboxExportNotice>();
+        services.AddSingleton<LatestExportService>();
         services.AddSingleton<IManejadorDeTarea, PrepararExportacionHandler>();
         services.AddSingleton<PendingService>();
         services.AddSingleton<AccountDeletionService>();

@@ -36,6 +36,7 @@ internal sealed class AccountStore(
 
     public const string ActiveField = "vigente";
     public const string ExportRequestedAtField = "exportacionSolicitadaEn";
+    public const string LastExportField = "exportacionUltima";
     public const string NewPhoneField = "celularNuevoProtegido";
     public const string RecoveryTypeField = "tipo";
 
@@ -214,6 +215,30 @@ internal sealed class AccountStore(
             .Inc(Fields.VersionField, 1);
         var result = await Users.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
         return result.ModifiedCount == 1 ? ExportStartOutcome.Started : ExportStartOutcome.AlreadyInProgress;
+    }
+
+    public async Task SetLastExportAsync(string userId, string blobName, DateTime readyAt, CancellationToken cancellationToken) =>
+        await Users.UpdateOneAsync(
+            _filter.Eq(Fields.IdField, ObjectId.Parse(userId)),
+            Builders<BsonDocument>.Update
+                .Set(LastExportField, new BsonDocument { ["archivo"] = blobName, ["listaEn"] = new BsonDateTime(readyAt) })
+                .Inc(Fields.VersionField, 1),
+            cancellationToken: cancellationToken);
+
+    public async Task<ExportStatus?> FindExportStatusAsync(string sub, CancellationToken cancellationToken)
+    {
+        var document = await Users.Find(_filter.Eq(Fields.SubField, sub) & _filter.Ne(Fields.StateField, AccountStates.Deleted), _findOptions)
+            .Project(Builders<BsonDocument>.Projection.Include(ExportRequestedAtField).Include(LastExportField)).Limit(1).FirstOrDefaultAsync(cancellationToken);
+        if (document is null)
+        {
+            return null;
+        }
+
+        var last = document.TryGetValue(LastExportField, out var value) && value is BsonDocument stored ? stored : null;
+        return new ExportStatus(
+            document.Contains(ExportRequestedAtField),
+            last is not null && last.TryGetValue("archivo", out var file) && file.IsString ? file.AsString : null,
+            last is not null && last.TryGetValue("listaEn", out var at) && at.IsBsonDateTime ? at.ToUniversalTime() : null);
     }
 
     public async Task ClearExportAsync(string userId, CancellationToken cancellationToken) =>

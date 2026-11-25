@@ -216,7 +216,7 @@ public sealed class Spec037DespachoTests
     [Fact]
     public void Catalog_EveryDispatchableEventHasFixedTextWithinTheLengthLimits_R_14()
     {
-        string[] expected = ["solicitud_nueva", "solicitud_sin_tecnicos", "cotizacion_nueva", "cotizacion_aceptada", "visita_afectada", "reporte_decidido", "opinion_oculta", "tecnico_no_se_presento", "solicitud_cancelada", "solicitud_vencida", "cotizacion_vencida", "mensaje_nuevo"];
+        string[] expected = ["solicitud_nueva", "solicitud_sin_tecnicos", "cotizacion_nueva", "cotizacion_aceptada", "visita_afectada", "reporte_decidido", "opinion_oculta", "tecnico_no_se_presento", "solicitud_cancelada", "solicitud_vencida", "cotizacion_vencida", "mensaje_nuevo", "exportacion_lista"];
         AvisoCatalog.Events.Should().BeEquivalentTo(expected);
         foreach (var evento in AvisoCatalog.Events)
         {

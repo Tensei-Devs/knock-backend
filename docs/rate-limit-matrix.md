@@ -206,7 +206,8 @@ Todas las políticas con nombre usan el contador compartido en Redis con respald
 | `cambio-numero-confirmar` | `MeCambioNumeroController` | 5 por hora | `sub` |
 | `recuperacion-acceso` | `AccessRecoveryController` | 3 por hora | IP |
 | `suspension-apelacion` | `SuspensionAppealController` | 20 por hora | IP |
-| `exportaciones` | `MeExportacionesController` | 3 por hora | `sub` |
+| `exportaciones` | `MeExportacionesController` (POST) | 3 por hora | `sub` |
+| `exportaciones-ultima` | `MeExportacionesController` (GET `ultima`) | 30 por hora (valor propuesto) | `sub` |
 | `eliminacion` | `MeEliminacionController` | 5 por hora | `sub` |
 | `bloqueos` | `BloqueosController` (POST y DELETE) | 30 por hora | `sub` |
 | `reportes` | `ReportesController` (crear y apelar) | 10 por hora | `sub` |

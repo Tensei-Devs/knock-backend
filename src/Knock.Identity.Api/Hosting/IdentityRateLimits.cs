@@ -18,6 +18,9 @@ internal static class IdentityRateLimits
     /// <summary>Spec 039: pedir una exportación (USR-06). Valor propuesto: la spec no fija límite, solo registra el 429.</summary>
     public const string ExportPolicy = "exportaciones";
 
+    /// <summary>Spec 039 (R-22): consultar la última exportación y obtener su enlace de 24 horas (USR-06b). Valor propuesto: 30 por hora por persona.</summary>
+    public const string ExportLatestPolicy = "exportaciones-ultima";
+
     /// <summary>Spec 039: programar la eliminación de la cuenta (USR-10). Valor propuesto: la spec no fija límite, solo registra el 429.</summary>
     public const string DeletionPolicy = "eliminacion";
 
@@ -65,6 +68,7 @@ internal static class IdentityRateLimits
                 .PerClient(AccessRecoveryPolicy, "recuperacion", 3, TimeSpan.FromHours(1))
                 .PerClient(SuspensionAppealPolicy, "suspension-apelacion", 20, TimeSpan.FromHours(1))
                 .PerSubject(ExportPolicy, 3, TimeSpan.FromHours(1))
+                .PerSubject(ExportLatestPolicy, 30, TimeSpan.FromHours(1))
                 .PerSubject(DeletionPolicy, 5, TimeSpan.FromHours(1))
                 .PerSubject(BlockPolicy, 30, TimeSpan.FromHours(1))
                 .PerSubject(ReportPolicy, 10, TimeSpan.FromHours(1))
