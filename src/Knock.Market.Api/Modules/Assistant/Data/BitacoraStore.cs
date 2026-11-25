@@ -1,3 +1,4 @@
+using Knock.Hosting.Concurrency;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -21,9 +22,15 @@ internal sealed class BitacoraStore(IMongoDatabase database) : IBitacoraStore
 
     private IMongoCollection<BsonDocument> Collection => database.GetCollection<BsonDocument>(CollectionName);
 
-    public async Task<bool> UpsertAsync(BitacoraRecord log, CancellationToken cancellationToken)
+    /// <summary>Dentro de la instancia, los PUT del mismo par solicitud y técnico se turnan (<see cref="KeyedGate"/>): varios upsert a la vez sobre el índice único se bloquean entre sí en documentdb-local.</summary>
+    public Task<bool> UpsertAsync(BitacoraRecord log, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(log);
+        return KeyedGate.RunAsync(log.SolicitudId + "|" + log.TecnicoId, () => UpsertSerializedAsync(log, cancellationToken), cancellationToken);
+    }
+
+    private async Task<bool> UpsertSerializedAsync(BitacoraRecord log, CancellationToken cancellationToken)
+    {
         var filter = Filter(log.SolicitudId, log.TecnicoId);
         var u = Builders<BsonDocument>.Update;
         BsonValue expires = log.VenceEn is { } at ? new BsonDateTime(at) : BsonNull.Value;
