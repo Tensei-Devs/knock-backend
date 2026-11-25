@@ -1,5 +1,4 @@
 using Asp.Versioning;
-using Knock.Identity.Api.Hosting;
 using Knock.Identity.Api.Modules.Moderation.Dtos;
 using Knock.Identity.Api.Modules.Moderation.Services;
 using Knock.Identity.Api.Modules.Panel;
@@ -23,7 +22,7 @@ internal sealed class AdminReportesController(ReportReviewService service) : Con
 
     /// <summary>REP-04: la cola por gravedad (crítica primero) y antigüedad, con cursor. Muestra motivo y texto, nunca teléfono ni dirección.</summary>
     [HttpGet]
-    [EnableRateLimiting(IdentityRateLimits.PanelReadPolicy)]
+    [EnableRateLimiting(Knock.Identity.Api.Hosting.IdentityRateLimits.PanelReadPolicy)]
     [ProducesResponseType<ReportQueuePage>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, _problemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]
@@ -38,7 +37,7 @@ internal sealed class AdminReportesController(ReportReviewService service) : Con
 
     /// <summary>REP-05: asigna la gravedad con motivo; la respuesta se deriva de ella. 404 <c>report_not_found</c>; 409 <c>report_already_decided</c>; 503 <c>audit_unavailable</c>.</summary>
     [HttpPost("{id}/decision")]
-    [EnableRateLimiting(IdentityRateLimits.PanelDecisionPolicy)]
+    [EnableRateLimiting(Knock.Identity.Api.Hosting.IdentityRateLimits.PanelDecisionPolicy)]
     [RequestSizeLimit(ReportDecisionBody.MaxBodyBytes)]
     [ProducesResponseType<ReportDecisionResult>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, _problemJson)]
