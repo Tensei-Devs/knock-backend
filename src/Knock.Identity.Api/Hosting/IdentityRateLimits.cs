@@ -1,4 +1,5 @@
 using Knock.Hosting.RateLimiting;
+using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace Knock.Identity.Api.Hosting;
 
@@ -38,6 +39,16 @@ internal static class IdentityRateLimits
     /// <summary>Spec 060 (R-07): apelación de una persona suspendida, 20 por hora por IP; el límite de 5 por hora por número lo aplica el servicio.</summary>
     public const string SuspensionAppealPolicy = "suspension-apelacion";
 
+    /// <summary>Spec 053 (R-25, CA-39): lecturas del panel (VER-03 y REP-04), 120 por minuto por sesión del panel.</summary>
+    public const string PanelReadPolicy = "panel-lectura";
+
+    /// <summary>Spec 053 (R-25, CA-39): abrir una verificación y decidir (VER-04, VER-05 y REP-05), 30 por minuto por sesión del panel.</summary>
+    public const string PanelDecisionPolicy = "panel-decision";
+
+    private const int _maxSidLength = 64;
+    private const int _maxBearerLength = 4096;
+    private const string _bearerPrefix = "Bearer ";
+
     /// <summary>
     /// Límite por IP: política global, estricta para <c>/api/v{n}/auth/*</c> y la sesión del panel (spec 033, R-27) y propia para <c>/health/ready</c>.
     /// </summary>
@@ -59,7 +70,9 @@ internal static class IdentityRateLimits
                 .PerSubject(ReportPolicy, 10, TimeSpan.FromHours(1))
                 .PerSubject(SafetyReadPolicy, 120, TimeSpan.FromMinutes(1))
                 .PerSubject(VerificationCreatePolicy, 3, TimeSpan.FromHours(1))
-                .PerSubject(VerificationConfirmPolicy, 10, TimeSpan.FromHours(1)),
+                .PerSubject(VerificationConfirmPolicy, 10, TimeSpan.FromHours(1))
+                .PerKey(PanelReadPolicy, PanelSessionKey, 120, TimeSpan.FromMinutes(1))
+                .PerKey(PanelDecisionPolicy, PanelSessionKey, 30, TimeSpan.FromMinutes(1)),
         });
 
     /// <summary>Spec 033, R-27: <c>/api/v{n}/panel/sesion/*</c> y <c>/api/v{n}/panel/activacion</c> llevan el mismo límite estricto por IP que <c>/auth</c>.</summary>
@@ -67,4 +80,28 @@ internal static class IdentityRateLimits
         segments.Length >= 4
         && segments[2].Equals("panel", StringComparison.OrdinalIgnoreCase)
         && (segments[3].Equals("sesion", StringComparison.OrdinalIgnoreCase) || segments[3].Equals("activacion", StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// El <c>sid</c> del token del panel, leído sin validar la firma: el limitador corre antes de que el esquema del panel autentique, y la firma la exige después el controlador (sin ella la petición
+    /// responde 401). Sirve solo para repartir el contador por sesión; un token inventado cuenta en su propia partición y no da acceso. Sin token legible devuelve <see langword="null"/> y cuenta por IP.
+    /// </summary>
+    internal static string? PanelSessionKey(HttpContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        var header = context.Request.Headers.Authorization.ToString();
+        if (header.Length is 0 or > _maxBearerLength || !header.StartsWith(_bearerPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var handler = new JsonWebTokenHandler();
+        var token = header[_bearerPrefix.Length..].Trim();
+        if (!handler.CanReadToken(token))
+        {
+            return null;
+        }
+
+        var sid = handler.ReadJsonWebToken(token).TryGetClaim("sid", out var claim) ? claim.Value : null;
+        return sid is { Length: > 0 and <= _maxSidLength } && sid.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_') ? sid : null;
+    }
 }

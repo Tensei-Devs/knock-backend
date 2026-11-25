@@ -15,6 +15,8 @@
 
 **Mensajería** (`Knock.Messaging.Api`, BUG-004 / KNOCK-241) aplica el mismo mecanismo por IP con dos políticas, sin la estricta de `/auth` (no tiene rutas de sesión): **Global** 100 peticiones por minuto (cualquier ruta salvo `/health` y `/health/ready`) y **propia de `/health/ready`** 60 por minuto, configuradas en `RateLimiting:Global` y `RateLimiting:Ready` de su `appsettings.json`. Responde `429` con `Retry-After`. El chat de 30 mensajes por minuto por persona lo define la spec 026. **Límite conocido (aceptado):** el limitador vive en la memoria de cada réplica, así que con 2 réplicas el límite efectivo se duplica, igual que en Identidad y Mercado (se mueve a Redis en el Sprint 5). Además, la IP del cliente solo es la real cuando `ForwardedHeaders` confía en la red del ingreso (`ForwardedHeaders:KnownNetworks`, del #61, KNOCK-201, que Mensajería ya usa): si el despliegue no la fija, Mensajería ve la IP del proxy y el límite se comparte entre todos los clientes. La prueba de «otra IP no se ve afectada» (TC-BUG-004-04) fija la IP con un encabezado de prueba, no de punta a punta.
 
+**Rutas de revisión del panel (spec 053, R-25 y CA-39).** `GET /api/v1/admin/verificaciones` y `GET /api/v1/admin/reportes` llevan la política `panel-lectura` (**120 por minuto**) y `GET /api/v1/admin/verificaciones/{id}` (abre la verificación y firma los enlaces de las fotos) y las dos `POST .../{id}/decision` llevan `panel-decision` (**30 por minuto**), ambas **por sesión del panel** (claim `sid`): otra sesión de la misma cuenta cuenta aparte. Como el limitador corre antes de que el esquema del panel autentique, el `sid` se lee del token sin validar su firma solo para repartir el contador (un token inventado cuenta en su propia partición y la ruta lo rechaza con 401); sin token legible cuenta por IP. 429 con `Retry-After`; las dos decisiones responden 413 con un cuerpo mayor a 2 048 bytes. Contador en Redis compartido con respaldo por copia (`Knock.Hosting`, `PerKey`).
+
 **Panel interno (spec 033, KNOCK-75).** Los cinco endpoints de sesión y activación del panel llevan la política estricta por IP de arriba, con la misma configuración (`RateLimiting:Auth`) y contador aparte del de `/auth`. El resto de `/api/v{n}/panel/**` y todo `/api/v{n}/admin/**` (spec 053) lleva la política por usuario del gateway (`RateLimiting:User`) con el `sub` del token del panel (contador propio `ratelimit:panel-user:{sub}`). Aparte de ellos, los fallos de TOTP se cuentan por IP en Redis (`panel:fallos-ip:{ip}`: 10 en 15 minutos dan 429 `limit_exceeded`) y por cuenta en MongoDB (5 en 15 minutos dan 429 `locked`); ver la spec 033, R-11.
 
 - Las peticiones a `/auth/*` cuentan en las dos políticas (la estricta y la global).
@@ -210,6 +212,8 @@ Todas las políticas con nombre usan el contador compartido en Redis con respald
 | `reportes` | `ReportesController` (crear y apelar) | 10 por hora | `sub` |
 | `seguridad-leer` | `BloqueosController` y `ReportesController` (lecturas propias) | 120 por minuto | `sub` |
 | `verificacion-crear` | `MeVerificacionController` | 3 por hora | `sub` |
+| `panel-lectura` | `AdminVerificacionesController` (cola, VER-03) y `AdminReportesController` (cola, REP-04) | 120 por minuto | `sid` del token del panel |
+| `panel-decision` | `AdminVerificacionesController` (abrir, VER-04, y decidir, VER-05) y `AdminReportesController` (decidir, REP-05) | 30 por minuto | `sid` del token del panel |
 | `verificacion-confirmar` | `FotosVerificacionController` | 10 por hora | `sub` |
 
 **Mercado** (`MarketRateLimits`)
