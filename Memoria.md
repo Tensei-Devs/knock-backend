@@ -1,5 +1,8 @@
 # Memoria — knock-backend
 
+## 2026-11-24 — KNOCK-71: integración de cascada con envíos de la 028
+- **Avance:** `Spec029CierreTests` usa `EnviosStore` y reloj inyectado para probar cancelación y vencimiento: cierra envíos activos y cotizados, conserva descartados y avisa solo al técnico que cotizó. T-02 sigue parcial: no se forzó una carrera real entre reparto y cierre ni se acreditó la cobertura completa.
+- **Verificación:** build Release con warnings como errores; integración 028/029 61/61 y base 028/029 2/2; `dotnet format`, trazador 029, codemap y excepciones correctos. El trazador reconoce nombres, no prueba cobertura completa. T-04 y T-06 ya existían en la rama y sus pruebas filtradas pasaron; sin cambios de producción ni dependencias.
 ## 2026-11-24 — KNOCK-68: seguridad del reparto, T-09
 - **Avance:** pruebas de descarte por cliente y técnico ajeno, y de datos personales en registros y evento de reparto. Se reutilizaron las pruebas existentes de 401, elegibilidad y reparto apagado; sin cambios de producción ni dependencias.
 - **Verificación:** build Release con warnings como errores, 94 pruebas de integración 028/020, formato y trazado 028 pasaron. Un intento anterior falló por Docker inaccesible; la corrida posterior pasó. El trazador reconoce nombres, no demuestra por sí mismo cobertura.
