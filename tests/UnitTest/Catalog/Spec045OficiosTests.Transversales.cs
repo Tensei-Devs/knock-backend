@@ -2,6 +2,7 @@ using System.Reflection;
 using AwesomeAssertions;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Catalog.Controllers.V1;
+using Knock.Market.Api.Modules.Catalog.Data;
 using Knock.Market.Api.Modules.Catalog.Dtos;
 using Knock.Market.Api.Modules.Catalog.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -36,13 +37,13 @@ public sealed partial class Spec045OficiosTests
     }
 
     [Fact]
-    public async Task TheAuditEntryUsesTheSubOfThePanelToken_CA_045_38()
+    public async Task TheAuditEventUsesTheSubOfThePanelToken_CA_045_38()
     {
-        var audit = new FakeAudit();
+        var store = new FakeTradeAdminStore();
 
-        await Admin(AdminService(new FakeTradeAdminStore(), audit: audit), sub: "panel-9").Create(NewBody(), CancellationToken.None);
+        await Admin(AdminService(store), sub: "panel-9").Create(NewBody(), CancellationToken.None);
 
-        audit.Entries.Should().ContainSingle().Which.Subject.Should().Be("panel-9");
+        store.Audits.Should().ContainSingle().Which.PanelSubject.Should().Be("panel-9");
     }
 
     [Fact]
@@ -56,7 +57,7 @@ public sealed partial class Spec045OficiosTests
             .Any(c => c.GetParameters().Any(p => p.ParameterType.Name.StartsWith("ILogger", StringComparison.Ordinal)))).Select(t => t.Name);
 
         withLogger.Should().BeEmpty();
-        typeof(PanelAuditEntry).GetProperties().Select(p => p.Name).Should().BeEquivalentTo("Subject", "Action", "Resource", "At", "Changes");
+        typeof(TradeAuditEvent).GetProperties().Select(p => p.Name).Should().BeEquivalentTo("PanelSubject", "Created", "AtUtc");
     }
 
     [Fact]

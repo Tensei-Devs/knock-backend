@@ -37,10 +37,24 @@ internal sealed class OpinionModeratedEventBodyValidator : AbstractValidator<Opi
 }
 
 /// <summary>
+/// Base de los consumidores de eventos de Mercado que dejan una sola auditoría del panel por <c>eventoId</c> (specs 061 y 045): el identificador del evento es el <c>_id</c> del registro, una entrega repetida
+/// no escribe otro y, dentro de la instancia, las entregas del mismo evento se turnan (<see cref="KeyedGate"/>). Siempre con resultado <c>permitido</c> y de tipo <c>accion</c>.
+/// </summary>
+internal abstract class PanelEventConsumer(AuditoriaPanel audit, string gatePrefix)
+{
+    /// <summary><see langword="true"/> si escribió el registro ahora; <see langword="false"/> si el evento ya estaba auditado.</summary>
+    protected Task<bool> WriteOnceAsync(string eventId, string eventName, string? sub, string permission, string? resourceId, CancellationToken cancellationToken) =>
+        KeyedGate.RunAsync(
+            $"{gatePrefix}:{eventId}",
+            () => audit.WriteOnceAsync(eventId, PanelAuditValues.TipoAccion, eventName, PanelAuditValues.ResultadoPermitido, sub, permission, resourceId, cancellationToken),
+            cancellationToken);
+}
+
+/// <summary>
 /// Consumidor de <c>OpinionModerada</c> (spec 061, R-06 y R-07): deja en <c>panel_auditoria</c> <c>opinion_ocultada</c> u <c>opinion_mostrada</c> con la persona del panel y la opinión, nunca su texto. Es
 /// idempotente por <c>eventoId</c> (que es el <c>_id</c> del registro): una entrega repetida no escribe otro. Dentro de la instancia, las entregas del mismo evento se turnan (<see cref="KeyedGate"/>).
 /// </summary>
-internal sealed class OpinionModeradaConsumer(AuditoriaPanel audit)
+internal sealed class OpinionModeradaConsumer(AuditoriaPanel audit) : PanelEventConsumer(audit, "opinion-moderada")
 {
     public const string EventType = "OpinionModerada";
     public const string HiddenAction = "ocultada";
@@ -51,17 +65,6 @@ internal sealed class OpinionModeradaConsumer(AuditoriaPanel audit)
     public Task<bool> ConsumeAsync(OpinionModeratedEventBody evento, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(evento);
-        return KeyedGate.RunAsync(
-            $"opinion-moderada:{evento.EventoId}",
-            () => audit.WriteOnceAsync(
-                evento.EventoId!,
-                PanelAuditValues.TipoAccion,
-                evento.Accion == HiddenAction ? PanelAuditValues.OpinionOcultada : PanelAuditValues.OpinionMostrada,
-                PanelAuditValues.ResultadoPermitido,
-                evento.PorId,
-                Permission,
-                evento.OpinionId,
-                cancellationToken),
-            cancellationToken);
+        return WriteOnceAsync(evento.EventoId!, evento.Accion == HiddenAction ? PanelAuditValues.OpinionOcultada : PanelAuditValues.OpinionMostrada, evento.PorId, Permission, evento.OpinionId, cancellationToken);
     }
 }

@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Knock.Market.Api.Common.Errors;
 using Knock.Market.Api.Hosting;
+using Knock.Market.Api.Modules.Catalog.Data;
 using Knock.Market.Api.Modules.Catalog.Domain;
 using Knock.Market.Api.Modules.Catalog.Dtos;
 using Knock.Market.Api.Modules.Catalog.Validators;
@@ -29,39 +30,36 @@ public sealed partial class Spec045OficiosTests
     }
 
     [Fact]
-    public async Task Create_LeavesTheAuditEntryWithWhoWhenAndWhat_BeforeWriting_CA_045_08_CA_045_35()
-    {
-        var audit = new FakeAudit();
-
-        await Admin(AdminService(new FakeTradeAdminStore(), audit: audit), sub: "panel-1").Create(NewBody(), CancellationToken.None);
-
-        var entry = audit.Entries.Should().ContainSingle().Subject;
-        entry.Subject.Should().Be("panel-1");
-        entry.Action.Should().Be("trade.create");
-        entry.Resource.Should().Be("gas");
-        entry.At.Should().Be(_now);
-        entry.Changes.Should().ContainKey("topePorcentaje").WhoseValue.Should().Be("25");
-    }
-
-    [Fact]
-    public async Task Create_WithoutTheAuditTrail_Answers503AndWritesNothing_CA_045_35()
+    public async Task Create_LeavesTheAuditEventWithWhoWhenAndWhat_InTheSameWriteAsTheTrade_CA_045_08_CA_045_35()
     {
         var store = new FakeTradeAdminStore();
-        var controller = Admin(AdminService(store, audit: new FakeAudit(available: false)));
 
-        var result = await controller.Create(NewBody(), CancellationToken.None);
+        await Admin(AdminService(store), sub: "panel-1").Create(NewBody(), CancellationToken.None);
 
-        result.Should().BeOfType<ObjectResult>().Which.StatusCode.Should().Be(503);
-        store.Trades.Should().BeEmpty();
-        store.Inserts.Should().Be(0);
+        store.Trades.Should().ContainSingle().Which.Clave.Should().Be("gas");
+        var audit = store.Audits.Should().ContainSingle("el evento viaja con el oficio: el almacén los escribe en una sola transacción").Subject;
+        audit.PanelSubject.Should().Be("panel-1");
+        audit.Created.Should().BeTrue();
+        audit.AtUtc.Should().Be(_now.UtcDateTime);
     }
 
     [Fact]
-    public async Task TheDefaultAuditTrail_FailsClosed_CA_045_35()
+    public async Task Create_WithATakenKey_LeavesNoAuditEvent_CA_045_35()
     {
-        var recorded = await new UnavailablePanelAuditTrail().RecordAsync(new PanelAuditEntry("x", "trade.create", "gas", _now, new Dictionary<string, string>()), CancellationToken.None);
+        var store = new FakeTradeAdminStore();
+        var controller = Admin(AdminService(store));
+        await controller.Create(NewBody(), CancellationToken.None);
 
-        recorded.Should().BeFalse();
+        var act = async () => await controller.Create(NewBody(), CancellationToken.None);
+
+        (await act.Should().ThrowAsync<DomainException>()).Which.Code.Should().Be(TradeErrorCodes.TradeKeyTakenCode);
+        store.Audits.Should().ContainSingle("la clave repetida no escribe nada, tampoco evento");
+    }
+
+    [Fact]
+    public void TheAuditEvent_CarriesOnlyIdentifiers_NeverTheValuesOfTheTrade_CA_045_35_CA_045_39()
+    {
+        typeof(TradeAuditEvent).GetProperties().Select(p => p.Name).Should().BeEquivalentTo("PanelSubject", "Created", "AtUtc");
     }
 
     [Fact]

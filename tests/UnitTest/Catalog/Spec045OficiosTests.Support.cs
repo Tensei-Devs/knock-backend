@@ -42,13 +42,18 @@ public sealed partial class Spec045OficiosTests
 
         public int Inserts { get; private set; }
 
-        public Task<AdminTrade?> UpdateAsync(string clave, TradeChanges changes, CancellationToken cancellationToken)
+        /// <summary>Eventos de auditoría que el almacén real deja en la bandeja de salida en la misma transacción: aquí, uno por cambio escrito.</summary>
+        public List<TradeAuditEvent> Audits { get; } = [];
+
+        public Task<AdminTrade?> UpdateAsync(string clave, TradeChanges changes, TradeAuditEvent audit, CancellationToken cancellationToken)
         {
             var index = Trades.FindIndex(t => t.Clave == clave);
             if (index < 0)
             {
                 return Task.FromResult<AdminTrade?>(null);
             }
+
+            Audits.Add(audit);
 
             var current = Trades[index];
             Trades[index] = current with
@@ -65,7 +70,7 @@ public sealed partial class Spec045OficiosTests
             return Task.FromResult<AdminTrade?>(Trades[index]);
         }
 
-        public Task<bool> InsertAsync(NewTrade trade, CancellationToken cancellationToken)
+        public Task<bool> InsertAsync(NewTrade trade, TradeAuditEvent audit, CancellationToken cancellationToken)
         {
             if (Trades.Any(t => t.Clave == trade.Clave))
             {
@@ -73,28 +78,13 @@ public sealed partial class Spec045OficiosTests
             }
 
             Inserts++;
+            Audits.Add(audit);
             Trades.Add(new AdminTrade(trade.Clave, trade.Nombre, trade.Modalidad, trade.FrasesSugeridas, trade.TopePorcentaje, trade.TopeFijoPorcentaje, trade.PisoAprobacion, trade.VisitaMaxima, trade.Activo));
             return Task.FromResult(true);
         }
 
         public Task<IReadOnlyList<AdminTrade>> ListAllAsync(CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<AdminTrade>>([.. Trades.OrderBy(t => t.Nombre, StringComparer.Ordinal).ThenBy(t => t.Clave, StringComparer.Ordinal)]);
-    }
-
-    private sealed class FakeAudit(bool available = true) : IPanelAuditTrail
-    {
-        public List<PanelAuditEntry> Entries { get; } = [];
-
-        public Task<bool> RecordAsync(PanelAuditEntry entry, CancellationToken cancellationToken)
-        {
-            if (!available)
-            {
-                return Task.FromResult(false);
-            }
-
-            Entries.Add(entry);
-            return Task.FromResult(true);
-        }
     }
 
     private sealed class TestProblemFactory : ProblemDetailsFactory
@@ -114,8 +104,8 @@ public sealed partial class Spec045OficiosTests
         public override DateTimeOffset GetUtcNow() => _now;
     }
 
-    private static TradeAdminService AdminService(FakeTradeAdminStore store, FakeActiveOficios? catalog = null, FakeAudit? audit = null) =>
-        new(store, catalog ?? new FakeActiveOficios(), audit ?? new FakeAudit(), new FixedClock());
+    private static TradeAdminService AdminService(FakeTradeAdminStore store, FakeActiveOficios? catalog = null) =>
+        new(store, catalog ?? new FakeActiveOficios(), new FixedClock());
 
     private static AdminTradesController Admin(TradeAdminService service, string? sub = "cuenta-de-prueba")
     {

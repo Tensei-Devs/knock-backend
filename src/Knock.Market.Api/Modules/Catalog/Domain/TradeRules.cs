@@ -10,9 +10,6 @@ internal static class TradeErrorCodes
 
     /// <summary>404 uniforme de «Otro oficio» para quien no es técnico en registro: no revela que el recurso existe (CA-22).</summary>
     public const string NotFoundCode = "not_found";
-
-    /// <summary>La auditoría del panel no está disponible: la alta o el cambio no se hace (R-20).</summary>
-    public const string AuditUnavailableCode = "panel_audit_unavailable";
 }
 
 #pragma warning restore S3871
