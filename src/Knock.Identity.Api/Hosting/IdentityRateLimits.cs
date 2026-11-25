@@ -86,8 +86,9 @@ internal static class IdentityRateLimits
         && (segments[3].Equals("sesion", StringComparison.OrdinalIgnoreCase) || segments[3].Equals("activacion", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
-    /// El <c>sid</c> del token del panel, leído sin validar la firma: el limitador corre antes de que el esquema del panel autentique, y la firma la exige después el controlador (sin ella la petición
-    /// responde 401). Sirve solo para repartir el contador por sesión; un token inventado cuenta en su propia partición y no da acceso. Sin token legible devuelve <see langword="null"/> y cuenta por IP.
+    /// Clave del contador del panel: el <c>sid</c> del token leído SIN validar la firma (el limitador corre antes de que el esquema del panel autentique) junto con la IP del cliente. La firma la exige
+    /// después el controlador (sin ella la petición responde 401), así que cualquiera puede escribir un token con el <c>sid</c> de otra sesión; unir la IP evita que desde otra red se agote el cupo de esa
+    /// sesión (negación de servicio dirigida) y obliga a quien quiera repartir peticiones a usar muchas IP, que ya frena el límite global por IP. Sin token legible devuelve <see langword="null"/> y cuenta por IP.
     /// </summary>
     internal static string? PanelSessionKey(HttpContext context)
     {
@@ -106,6 +107,6 @@ internal static class IdentityRateLimits
         }
 
         var sid = handler.ReadJsonWebToken(token).TryGetClaim("sid", out var claim) ? claim.Value : null;
-        return sid is { Length: > 0 and <= _maxSidLength } && sid.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_') ? sid : null;
+        return sid is { Length: > 0 and <= _maxSidLength } && sid.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_') ? $"{sid}|{RequestKeys.ClientKey(context)}" : null;
     }
 }
