@@ -15,21 +15,19 @@ namespace Knock.IntegrationTest.Identity;
 /// </summary>
 public sealed class Spec045AuditoriaOficioTests
 {
-    private const string _route = "/api/v1/interno/cambios-de-oficio";
-    private const string _permission = "cambio-de-oficio";
+    private const string _path = "/api/v1/interno/cambios-de-oficio";
+    private const string _grant = "cambio-de-oficio";
 
-    private static string Token(string permission = _permission) => InternalServiceTokens.Issue("n/a", "n/a", [permission], "knock-market", "knock-identity");
+    private static string ServiceToken(string permission = _grant) =>
+        InternalServiceTokens.Issue("n/a", "n/a", [permission], "knock-market", "knock-identity");
 
-    private static object Body(string eventId, string trade, string action, string by) => new { eventoId = eventId, tipo = "CambioDeOficio", oficioClave = trade, accion = action, porId = by };
+    private static object ChangeBody(string eventId, string trade, string action, string by) =>
+        new { eventoId = eventId, tipo = "CambioDeOficio", oficioClave = trade, accion = action, porId = by };
 
-    private static async Task<HttpResponseMessage> PostAsync(HttpClient client, object body, string? token)
+    private static async Task<HttpResponseMessage> Deliver(HttpClient client, object body, string? token)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(_route, UriKind.Relative)) { Content = JsonContent.Create(body) };
-        if (token is not null)
-        {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        }
-
+        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(_path, UriKind.Relative)) { Content = JsonContent.Create(body) };
+        request.Headers.Authorization = token is null ? null : new AuthenticationHeaderValue("Bearer", token);
         return await client.SendAsync(request);
     }
 
@@ -42,9 +40,9 @@ public sealed class Spec045AuditoriaOficioTests
         var moderator = Guid.NewGuid().ToString("D");
         var eventId = $"CambioDeOficio:{ObjectId.GenerateNewId()}";
 
-        using var first = await PostAsync(client, Body(eventId, trade, "creado", moderator), Token());
-        using var second = await PostAsync(client, Body(eventId, trade, "creado", moderator), Token());
-        using var edited = await PostAsync(client, Body($"CambioDeOficio:{ObjectId.GenerateNewId()}", trade, "editado", moderator), Token());
+        using var first = await Deliver(client, ChangeBody(eventId, trade, "creado", moderator), ServiceToken());
+        using var second = await Deliver(client, ChangeBody(eventId, trade, "creado", moderator), ServiceToken());
+        using var edited = await Deliver(client, ChangeBody($"CambioDeOficio:{ObjectId.GenerateNewId()}", trade, "editado", moderator), ServiceToken());
 
         new[] { first, second, edited }.Should().OnlyContain(r => r.StatusCode == HttpStatusCode.Accepted);
         var entries = await factory.Database.GetCollection<BsonDocument>("panel_auditoria").Find(Builders<BsonDocument>.Filter.Eq("recursoId", trade)).ToListAsync();
@@ -58,13 +56,13 @@ public sealed class Spec045AuditoriaOficioTests
         await using var factory = await IdentityApiFactory.CreateAsync(new Dictionary<string, string?> { ["Security:InternalTokens:MarketKey"] = InternalServiceTokens.KeyBase64 });
         using var client = factory.CreateClient();
         var trade = $"t{System.Security.Cryptography.RandomNumberGenerator.GetInt32(1000, 9999)}";
-        var valid = Body($"CambioDeOficio:{ObjectId.GenerateNewId()}", trade, "creado", Guid.NewGuid().ToString("D"));
+        var valid = ChangeBody($"CambioDeOficio:{ObjectId.GenerateNewId()}", trade, "creado", Guid.NewGuid().ToString("D"));
 
-        using var anonymous = await PostAsync(client, valid, null);
-        using var wrongPermission = await PostAsync(client, valid, Token("opinion-moderada"));
-        using var extra = await PostAsync(client, new { eventoId = "CambioDeOficio:x", tipo = "CambioDeOficio", oficioClave = trade, accion = "creado", porId = "p1", nombre = "valor de mas" }, Token());
-        using var badAction = await PostAsync(client, Body("CambioDeOficio:y", trade, "borrado", "p1"), Token());
-        using var badKey = await PostAsync(client, Body("CambioDeOficio:z", "clave con espacios", "creado", "p1"), Token());
+        using var anonymous = await Deliver(client, valid, null);
+        using var wrongPermission = await Deliver(client, valid, ServiceToken("opinion-moderada"));
+        using var extra = await Deliver(client, new { eventoId = "CambioDeOficio:x", tipo = "CambioDeOficio", oficioClave = trade, accion = "creado", porId = "p1", nombre = "valor de mas" }, ServiceToken());
+        using var badAction = await Deliver(client, ChangeBody("CambioDeOficio:y", trade, "borrado", "p1"), ServiceToken());
+        using var badKey = await Deliver(client, ChangeBody("CambioDeOficio:z", "clave con espacios", "creado", "p1"), ServiceToken());
 
         anonymous.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         wrongPermission.StatusCode.Should().Be(HttpStatusCode.Forbidden);

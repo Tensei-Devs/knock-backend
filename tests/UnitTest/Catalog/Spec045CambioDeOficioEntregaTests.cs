@@ -80,21 +80,22 @@ public sealed class Spec045CambioDeOficioEntregaTests
         handler.Sent.Should().BeEmpty();
     }
 
-    private sealed record Sent(string Path, string Body, string Token);
+    private sealed record Posted(string Path, string Body, string Token);
 
     private sealed class Capture(HttpStatusCode answer) : HttpMessageHandler
     {
-        public List<Sent> Sent { get; } = [];
+        public List<Posted> Sent { get; } = [];
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            Sent.Add(new Sent(request.RequestUri!.AbsolutePath, await request.Content!.ReadAsStringAsync(cancellationToken), request.Headers.Authorization!.Parameter!));
+            var body = await request.Content!.ReadAsStringAsync(cancellationToken);
+            Sent.Add(new Posted(request.RequestUri!.AbsolutePath, body, request.Headers.Authorization!.Parameter!));
             return new HttpResponseMessage(answer);
         }
     }
 
     private sealed class Factory(HttpMessageHandler handler) : IHttpClientFactory
     {
-        public HttpClient CreateClient(string name) => new(handler, disposeHandler: false);
+        public HttpClient CreateClient(string name) => new(handler, disposeHandler: false) { BaseAddress = new Uri("http://identity.test") };
     }
 }
