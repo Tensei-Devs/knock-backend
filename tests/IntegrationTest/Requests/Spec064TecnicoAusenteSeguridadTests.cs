@@ -37,16 +37,16 @@ public sealed class Spec064TecnicoAusenteSeguridadTests
     }
 
     [Fact]
-    public async Task Id_Mal_Formado_Responde_422_Sin_Repetir_El_Valor_Y_Sin_Token_401_CA_064_06()
+    public async Task Id_Mal_Formado_Responde_400_Sin_Repetir_El_Valor_Y_Sin_Token_401_CA_064_06()
     {
         await using var host = await Spec020Host.StartAsync();
 
         using var malformed = await host.SendAsync(HttpMethod.Post, $"/api/v1/visitas/{_badId}/tecnico-ausente", host.ClientSub);
         using var anonymous = await host.SendAsync(HttpMethod.Post, $"/api/v1/visitas/{ObjectId.GenerateNewId()}/tecnico-ausente");
 
-        malformed.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        malformed.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var raw = await malformed.Content.ReadAsStringAsync();
-        System.Text.Json.JsonElement.Parse(raw).GetProperty("errors").TryGetProperty("id", out _).Should().BeTrue();
+        System.Text.Json.JsonElement.Parse(raw).GetProperty("code").GetString().Should().Be("invalid_id");
         raw.Should().NotContain(_badId, "el valor recibido nunca se repite");
         anonymous.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }

@@ -51,14 +51,26 @@ internal sealed class FinalQuoteController(FinalQuoteService service) : Document
     /// <summary>Lectura de la cotización final (spec 063): el cliente dueño y el técnico de la visita; cualquier otra persona recibe el mismo 404.</summary>
     [HttpGet("visitas/{id}/cotizacion-final")]
     [ProducesResponseType<FinalQuoteReadResponse>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> ReadFinalQuote(VisitRoute route, CancellationToken cancellationToken) =>
-        await service.ReadFinalQuoteAsync(Subject(), route.Id!, cancellationToken) is { } quote ? Ok(quote) : NotFound();
+    public Task<IActionResult> ReadFinalQuote(VisitRoute route, CancellationToken cancellationToken) =>
+        ReadVisit(route, id => service.ReadFinalQuoteAsync(Subject(), id, cancellationToken));
 
     /// <summary>Lectura de los ajustes pendientes y vigentes de la visita (spec 063); sin ajustes responde 200 con la lista vacía.</summary>
     [HttpGet("visitas/{id}/ajustes-pendientes")]
     [ProducesResponseType<PendingAdjustmentsResponse>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> ReadPendingAdjustments(VisitRoute route, CancellationToken cancellationToken) =>
-        await service.ReadPendingAdjustmentsAsync(Subject(), route.Id!, cancellationToken) is { } adjustments ? Ok(adjustments) : NotFound();
+    public Task<IActionResult> ReadPendingAdjustments(VisitRoute route, CancellationToken cancellationToken) =>
+        ReadVisit(route, id => service.ReadPendingAdjustmentsAsync(Subject(), id, cancellationToken));
+
+    /// <summary>Lectura de la visita: 400 si el <c>id</c> está mal formado, 404 uniforme si no hay nada que la persona pueda ver, 200 con el cuerpo si lo hay.</summary>
+    private async Task<IActionResult> ReadVisit<T>(VisitRoute route, Func<string, Task<T?>> read)
+        where T : class
+    {
+        if (MalformedId(route.Id) is { } malformed)
+        {
+            return malformed;
+        }
+
+        return await read(route.Id!) is { } body ? Ok(body) : NotFound();
+    }
 
     private IActionResult Reply<T>(FinalQuoteOutcome<T> outcome, int successStatus, string conflictCode)
         where T : class =>

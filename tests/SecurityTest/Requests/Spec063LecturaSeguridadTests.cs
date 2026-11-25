@@ -31,16 +31,16 @@ public sealed class Spec063LecturaSeguridadTests
     [Theory]
     [InlineData("cotizacion-final")]
     [InlineData("ajustes-pendientes")]
-    public async Task Id_Mal_Formado_Responde_422_Sin_Repetir_El_Valor_CA_063_08(string route)
+    public async Task Id_Mal_Formado_Responde_400_Sin_Repetir_El_Valor_CA_063_08(string route)
     {
         using var factory = await SecurityMarketFactory.CreateAsync();
         using var client = factory.CreateClient();
 
         using var response = await Send(client, $"/api/v1/visitas/{_badId}/{route}", TokenForge.Valid());
 
-        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var raw = await response.Content.ReadAsStringAsync();
-        System.Text.Json.JsonElement.Parse(raw).GetProperty("errors").TryGetProperty("id", out _).Should().BeTrue();
+        System.Text.Json.JsonElement.Parse(raw).GetProperty("code").GetString().Should().Be("invalid_id");
         raw.Should().NotContain(_badId, "el valor recibido nunca se repite");
         response.Headers.CacheControl!.NoStore.Should().BeTrue();
         response.Headers.Contains("ETag").Should().BeFalse();

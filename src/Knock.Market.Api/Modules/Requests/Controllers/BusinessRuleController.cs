@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
+using MongoDB.Bson;
 
 namespace Knock.Market.Api.Modules.Requests.Controllers;
 
@@ -13,6 +14,11 @@ internal abstract class BusinessRuleController : ControllerBase
 
     /// <summary>Texto con el <c>sub</c> del token; vacío si no lo trae (el limitador y la autenticación ya lo exigen antes).</summary>
     protected string Subject() => User.FindFirst("sub")?.Value ?? string.Empty;
+
+    /// <summary>
+    /// 400 <c>invalid_id</c> si el identificador de la ruta no es un <c>ObjectId</c> (spec 002, R-10: lo que no se puede interpretar), sin repetir el valor; <see langword="null"/> si está bien formado.
+    /// </summary>
+    protected ObjectResult? MalformedId(string? id) => id is not null && ObjectId.TryParse(id, out _) ? null : Rule(StatusCodes.Status400BadRequest, "invalid_id");
 
     /// <summary>Regla de negocio con su <c>code</c> y, si hace falta, una extensión con un dato no personal (por ejemplo <c>intentosRestantes</c>).</summary>
     protected ObjectResult Rule(int status, string code, string? extensionName = null, object? extensionValue = null)

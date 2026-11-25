@@ -27,7 +27,7 @@ internal sealed record AdjustmentResponse(string Id, string CotizacionId, string
 /// <summary>Resultado de decidir un ajuste: <c>topeNuevo</c> solo si se aprobó.</summary>
 internal sealed record AdjustmentDecisionResponse(string Id, string Estado, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? TopeNuevo);
 
-/// <summary>Ruta de las lecturas de la visita: el identificador (spec 063, R-06). Un valor que no es <c>ObjectId</c> responde 422 sin repetirlo.</summary>
+/// <summary>Ruta de las lecturas de la visita: el identificador (spec 063, R-06). Un valor que no es <c>ObjectId</c> lo rechaza el controller con 400 <c>invalid_id</c> sin repetirlo (spec 002, R-10; enmienda 2026-11-24).</summary>
 internal sealed class VisitRoute
 {
     [Microsoft.AspNetCore.Mvc.FromRoute(Name = "id")]
