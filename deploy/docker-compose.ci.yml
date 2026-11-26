@@ -11,7 +11,9 @@ x-servicio: &servicio
     azurite: { condition: service_started }
   environment: &entorno
     ASPNETCORE_ENVIRONMENT: Development
-    ConnectionStrings__KnockMongo: mongodb://${CI_DB_USER:-knock}:${CI_DB_PASSWORD:?CI_DB_PASSWORD is required}@documentdb:10260/?tls=true&tlsAllowInvalidCertificates=true
+    # MongoDB.Driver ignora `tlsAllowInvalidCertificates` (opción de mongosh): se usa `tlsInsecure` (certificado autofirmado de
+    # documentdb-local) y `directConnection` (igual que DocumentDbFixture), solo dentro de la pila efímera del runner.
+    ConnectionStrings__KnockMongo: mongodb://${CI_DB_USER:-knock}:${CI_DB_PASSWORD:?CI_DB_PASSWORD is required}@documentdb:10260/?tls=true&tlsInsecure=true&directConnection=true
     ConnectionStrings__KnockRedis: redis:6379,password=${CI_REDIS_PASSWORD:?CI_REDIS_PASSWORD is required}
     # Cuenta propia del emulador con llave efímera del job (AZURITE_ACCOUNTS); sin llave literal.
     ConnectionStrings__KnockBlob: DefaultEndpointsProtocol=http;AccountName=ciblob;AccountKey=${CI_BLOB_KEY:?CI_BLOB_KEY is required};BlobEndpoint=http://azurite:10000/ciblob;
