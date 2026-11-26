@@ -36,7 +36,7 @@ internal sealed class AvisosEnAppStore(IMongoDatabase database) : IAvisosEnApp
         {
             ["usuarioId"] = aviso.Destinatario,
             ["eventoId"] = aviso.EventoId,
-            ["comoRol"] = aviso.Rol,
+            ["comoRol"] = aviso.Rol is null ? BsonNull.Value : aviso.Rol,
             ["tipo"] = aviso.Tipo,
             ["titulo"] = aviso.Plantilla.Title,
             ["texto"] = aviso.Plantilla.Text,

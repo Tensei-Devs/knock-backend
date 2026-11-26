@@ -30,7 +30,8 @@ public sealed partial class Spec044AvisosTests
         result.Tipos.Where(t => t.Tipo != "promociones").Should().OnlyContain(t => t.Activo);
         result.Tipos.Single(t => t.Tipo == "promociones").Activo.Should().BeFalse();
         result.Tipos.Single(t => t.Tipo == "seguridad").Apagable.Should().BeFalse();
-        result.Tipos.Where(t => t.Tipo != "seguridad").Should().OnlyContain(t => t.Apagable);
+        result.Tipos.Single(t => t.Tipo == "sistema").Apagable.Should().BeFalse("los avisos de sistema no se apagan (enmienda del 2026-11-24)");
+        result.Tipos.Where(t => t.Tipo is not ("seguridad" or "sistema")).Should().OnlyContain(t => t.Apagable);
     }
 
     [Fact]
@@ -48,13 +49,14 @@ public sealed partial class Spec044AvisosTests
     public async Task Preferences_SavedValuesApply_ButSecurityIsAlwaysOn_CA_044_19()
     {
         var store = new FakeStore();
-        store.Preferences[_me] = new Dictionary<string, bool> { ["opiniones"] = false, ["promociones"] = true, ["seguridad"] = false };
+        store.Preferences[_me] = new Dictionary<string, bool> { ["opiniones"] = false, ["promociones"] = true, ["seguridad"] = false, ["sistema"] = false };
 
         var result = PreferencesOf(await Preferencias(store).Get(CancellationToken.None));
 
         result.Tipos.Single(t => t.Tipo == "opiniones").Activo.Should().BeFalse();
         result.Tipos.Single(t => t.Tipo == "promociones").Activo.Should().BeTrue();
         result.Tipos.Single(t => t.Tipo == "seguridad").Activo.Should().BeTrue("la seguridad no se apaga");
+        result.Tipos.Single(t => t.Tipo == "sistema").Activo.Should().BeTrue("los avisos de sistema no se apagan");
     }
 
     [Fact]
@@ -151,6 +153,7 @@ public sealed partial class Spec044AvisosTests
         "missing value" => Change(("visitas", null)),
         "repeated type" => Change(("visitas", true), ("visitas", false)),
         "security off" => Change(("seguridad", false)),
+        "system off" => Change(("sistema", false)),
         _ => Change([.. Domain.NoticeRules.Types.Append("extra").Select(t => ((string?)t, (bool?)true))]),
     };
 
@@ -162,6 +165,7 @@ public sealed partial class Spec044AvisosTests
     [InlineData("missing value")]
     [InlineData("repeated type")]
     [InlineData("security off")]
+    [InlineData("system off")]
     [InlineData("too many entries")]
     public async Task UpdateValidator_RejectsInvalidBodiesWithoutEchoingTheValue_CA_044_03(string label)
     {

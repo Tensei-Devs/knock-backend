@@ -246,7 +246,7 @@ public sealed class Spec037InternoAvisosSeguridadTests
         });
     }
 
-    internal static string Mint(string issuer, byte[] key, string permission, TimeSpan? lifetime = null, string audience = "knock-notifications", TimeSpan? issuedAgo = null)
+    internal static string Mint(string issuer, byte[] key, string permission, TimeSpan? lifetime = null, string audience = "knock-notifications", TimeSpan? issuedAgo = null, string? usuarioId = null)
     {
         var now = DateTime.UtcNow - (issuedAgo ?? TimeSpan.Zero);
         var descriptor = new SecurityTokenDescriptor
@@ -259,6 +259,11 @@ public sealed class Spec037InternoAvisosSeguridadTests
             Claims = new Dictionary<string, object> { ["permisos"] = permission, ["jti"] = Guid.NewGuid().ToString("N") },
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256),
         };
+        if (usuarioId is not null)
+        {
+            descriptor.Claims["usuarioId"] = usuarioId;
+        }
+
         return new JsonWebTokenHandler().CreateToken(descriptor);
     }
 }

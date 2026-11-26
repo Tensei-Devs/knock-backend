@@ -18,6 +18,7 @@ internal static class NoticeRules
     public const string ClientRole = "cliente";
     public const string TechnicianRole = "tecnico";
     public const string SecurityType = "seguridad";
+    public const string SystemType = "sistema";
     public const string PromotionsType = "promociones";
 
     /// <summary>Roles válidos de <c>comoRol</c>.</summary>
@@ -25,25 +26,26 @@ internal static class NoticeRules
 
     /// <summary>
     /// Lista cerrada de tipos (decisión provisional): cotizaciones, visitas, solicitudes aceptadas, opiniones y resultados de verificación (spec 044 §6), más mensajes (frontend 024),
-    /// seguridad y promociones (R-13).
+    /// seguridad, sistema y promociones (R-13; enmienda de la 044 del 2026-11-24: <c>sistema</c> cubre reporte decidido, opinión oculta y exportación lista).
     /// </summary>
     public static readonly IReadOnlyList<string> Types =
-        ["cotizaciones", "mensajes", "visitas", "solicitudes", "opiniones", "verificaciones", SecurityType, PromotionsType];
+        ["cotizaciones", "mensajes", "visitas", "solicitudes", "opiniones", "verificaciones", SecurityType, SystemType, PromotionsType];
 
     /// <summary>Fecha de vencimiento (<c>venceEn</c>) de un aviso creado en <paramref name="createdAt"/>: 30 días después (D-04). La usa quien crea avisos (despachador de la spec 037); el TTL de la base lo borra.</summary>
     public static DateTime ExpiresAt(DateTime createdAt) => createdAt.AddDays(RetentionDays);
 
     public static bool IsKnownRole(string? role) => role is not null && Roles.Contains(role, StringComparer.Ordinal);
 
-    /// <summary>Los avisos de seguridad siempre llegan y no se pueden apagar (D-06).</summary>
-    public static bool CanBeTurnedOff(string type) => !string.Equals(type, SecurityType, StringComparison.Ordinal);
+    /// <summary>Los avisos de seguridad y de sistema siempre llegan y no se pueden apagar (D-06 y enmienda del 2026-11-24).</summary>
+    public static bool CanBeTurnedOff(string type) =>
+        !string.Equals(type, SecurityType, StringComparison.Ordinal) && !string.Equals(type, SystemType, StringComparison.Ordinal);
 
     public static bool IsKnownType(string? type) => type is not null && Types.Contains(type, StringComparer.Ordinal);
 
     /// <summary>Si la persona nunca cambió nada, cada tipo está activo salvo las promociones (R-13, D-06).</summary>
     public static bool DefaultEnabled(string type) => !string.Equals(type, PromotionsType, StringComparison.Ordinal);
 
-    /// <summary>Valor efectivo de un tipo: seguridad siempre activa; si no, lo guardado o el valor por omisión.</summary>
+    /// <summary>Valor efectivo de un tipo: seguridad y sistema siempre activos; si no, lo guardado o el valor por omisión.</summary>
     public static bool Effective(string type, IReadOnlyDictionary<string, bool>? stored) =>
         !CanBeTurnedOff(type) || (stored is not null && stored.TryGetValue(type, out var value) ? value : DefaultEnabled(type));
 
