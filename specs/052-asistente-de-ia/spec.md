@@ -78,7 +78,7 @@ Definir y especificar los endpoints ASI-01, ASI-02, ASI-03, ASI-04, ASI-05, ASI-
 - **CA-20:** Dada una persona que no cumple el rol «cuenta con perfil de técnico», cuando llama `PUT /api/v1/asistente/bitacora/{solicitudId}`, entonces responde 403 y no cambia nada.
 - **CA-21:** Dado un valor inválido según las reglas de §6, cuando llama `PUT /api/v1/asistente/bitacora/{solicitudId}`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
 - **CA-22:** Dado un cuerpo que no se puede leer, cuando llama `PUT /api/v1/asistente/bitacora/{solicitudId}`, entonces responde 400 y no guarda nada.
-- **CA-23:** Dado el caso «recurso no disponible», cuando llama `PUT /api/v1/asistente/bitacora/{solicitudId}`, entonces responde 201 con ProblemDetails y no cambia el estado.
+- **CA-23:** *(Retirado por la enmienda 2026-11-26.)* Dado el caso «recurso no disponible», cuando llama `PUT /api/v1/asistente/bitacora/{solicitudId}`, entonces responde 201 con ProblemDetails y no cambia el estado.
 - **CA-24:** Dado el rol «cuenta con perfil de técnico», cuando llama `GET /api/v1/asistente/bitacora/{solicitudId}` con datos válidos, entonces responde 200 con lo descrito en §5.
 - **CA-25:** Dada una petición sin token o con token vencido, cuando llama `GET /api/v1/asistente/bitacora/{solicitudId}`, entonces responde 401 y no ejecuta la operación.
 - **CA-26:** Dada una persona que no cumple el rol «cuenta con perfil de técnico», cuando llama `GET /api/v1/asistente/bitacora/{solicitudId}`, entonces responde 403 y no cambia nada.
@@ -269,16 +269,15 @@ Las pruebas citan el caso como `CA_052_NN` en el nombre (para `python scripts/sd
 - Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
 - Dependencias: el recurso de Azure OpenAI y el cliente de la spec 024, el filtro de datos personales y el límite diario (`uso_ia`).
 
-## Nota de enmienda (2026-11-25, propuesta, pendiente de decisión y de firma)
-- **Estado de esta enmienda:** **sin firmar y no firmable** mientras no se elija una opción.
-- **Problema.** CA-23 pide que, en el caso «recurso no disponible», `PUT /api/v1/asistente/bitacora/{solicitudId}` responda «201 con ProblemDetails y no cambia el estado». Es contradictorio (201 es creación) y R-12 solo declara 201.
-- **Evidencia del código.** La bitácora **no usa IA**: `BitacoraService.SaveAsync` solo comprueba la cuenta y la participación y guarda en la base. El contrato de la ruta declara 200, 201, 400, 401, 403, 413, 422 y 429, **no** 503, y funciona con la IA apagada (CA-18).
-- **Opción A (recomendada): retirar CA-23.** La ruta no tiene un estado propio de «recurso no disponible». No cambia código ni contrato. CA-29 se leería «cualquier ruta del asistente **que use IA**».
-- **Opción B: 503 `ai_unavailable`.** Era la recomendación anterior. Haría que guardar notas propias fallara cuando la IA está apagada, y exige cambiar el código y declarar 503 en el contrato público.
-- ¿Opción A u opción B? Decide José.
+## Nota de enmienda (2026-11-26, se retira CA-23)
+
+- **Estado de esta enmienda:** propuesta; vale desde que se firma la línea «Enmienda 2026-11-26» de la sección Aprobación. La aprobación original se conserva.
+- **CA-23 queda retirado.** `PUT /api/v1/asistente/bitacora/{solicitudId}` no usa IA: guarda notas propias, no tiene un estado de «recurso no disponible» y funciona con la IA apagada (CA-18). Su contrato no cambia.
+- **CA-29** se lee: «cualquier ruta del asistente que use IA».
+- No cambia el código ni el contrato.
 
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
-- [ ] Enmienda 2026-11-25 — nombre: ________ fecha: ________
 - [x] Sin conflicto con la constitución
+- [ ] Enmienda 2026-11-26 — nombre: ________ fecha: ________
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

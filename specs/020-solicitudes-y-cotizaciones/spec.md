@@ -307,9 +307,21 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **Etiquetas de Jira:** KNOCK-74 tiene `servicio-mensajeria`, pero la cotización vive en Mercado (módulo Requests) por compartir transacción con la solicitud; conviene corregir la etiqueta.
 - **Transacciones de DocumentDB:** la creación de la cotización y el cambio de estado de la solicitud usan una transacción; si la instancia no las admite, todo falla (el mismo riesgo que la spec 015).
 
+## Nota de enmienda (2026-11-26, estados de la solicitud y de la cotización)
+
+- **Estado de esta enmienda:** propuesta; vale desde que se firma la línea «Enmienda 2026-11-26» de la sección Aprobación. La aprobación original se conserva.
+- **Terminada.** La solicitud pasa de `cita_confirmada` a `terminada` en la misma transacción en que su visita queda `terminada`, sea al terminar la visita (spec 050, R-28) o cuando el cliente rechaza la cotización final y solo se paga la visita (spec 049, R-14). Así la spec 051 (R-14) puede dejarla `calificada`.
+- **Sin opinión.** Si pasan los 30 días sin opinión, la solicitud se queda `terminada`.
+- **Visita cancelada o sin presentarse.** Si la visita queda `cancelada`, la solicitud pasa a `cancelada` con `motivoCancelacion` `visit_cancelled`; si queda `no_presentado`, de cualquiera de las dos partes, con `visit_no_show`. Ocurre en la misma transacción. La solicitud no se reabre: el cliente crea otra. La cotización `aceptada` se queda `aceptada` como historial.
+- **Técnico suspendido.** No hay transición nueva; sigue el aviso de la spec 059. Si después la visita se cancela, aplica el punto anterior.
+- **Retirar una cotización (HU-035).** Sigue fuera de alcance. `retirada` solo se produce por eliminación de la cuenta del técnico. `rechazada` y `retirada` son estados finales.
+- **No cubre** el motivo guardado al eliminar la cuenta del cliente (spec 039, R-15): queda como está.
+- **Código pendiente:** estas transiciones todavía no están implementadas.
+
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-12
 - [x] Sin conflicto con la constitución
 - [x] Enmienda KNOCK-69 (R-09, CA-24 e índice) aprobada — nombre: José Julián Hernández Hernández fecha: 2026-11-19
 - [x] Enmienda KNOCK-185 (R-04, formato de archivoId) aprobada — nombre: José Julián Hernández Hernández fecha: 2026-11-20
+- [ ] Enmienda 2026-11-26 — nombre: ________ fecha: ________
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)
