@@ -86,6 +86,30 @@ public sealed class Spec046BusquedaHttpTests
     }
 
     [Fact]
+    public async Task Autocompletar_Sin_Acentos_Sugiere_Servicios_Y_Negocios_Solo_De_Visibles_CA_046_10()
+    {
+        await using var host = await Spec020Host.StartAsync();
+        var visible = await SeedAsync(host, negocio: "Fontanería Óscar");
+        var hidden = await SeedAsync(host, oculto: true, negocio: "Fontanería Oculta");
+        await host.Database.GetCollection<BsonDocument>("servicios_tecnico").InsertManyAsync(
+        [
+            new BsonDocument { ["tecnicoId"] = visible, ["nombre"] = "Reparación de calentador" },
+            new BsonDocument { ["tecnicoId"] = hidden, ["nombre"] = "Reparación secreta" },
+        ]);
+
+        using var services = await host.SendAsync(HttpMethod.Get, "/api/v1/tecnicos/autocompletar?q=reparacion");
+        using var businesses = await host.SendAsync(HttpMethod.Get, "/api/v1/tecnicos/autocompletar?q=fontaneria%20oscar");
+
+        var found = (await Spec020Host.ReadAsync(services)).GetProperty("sugerencias").EnumerateArray().ToList();
+        found.Should().ContainSingle();
+        found[0].GetProperty("tipo").GetString().Should().Be("servicio");
+        found[0].GetProperty("texto").GetString().Should().Be("Reparación de calentador");
+        found[0].GetProperty("id").GetString().Should().Be(visible.ToString());
+        (await Spec020Host.ReadAsync(businesses)).GetProperty("sugerencias").EnumerateArray().Select(s => s.GetProperty("texto").GetString())
+            .Should().ContainSingle().Which.Should().Be("Fontanería Óscar");
+    }
+
+    [Fact]
     public async Task Autocompletar_Con_Texto_Invalido_Responde_422_CA_046_11()
     {
         await using var host = await Spec020Host.StartAsync();
