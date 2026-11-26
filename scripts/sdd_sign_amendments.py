@@ -86,7 +86,7 @@ class Amendment:
 
     @property
     def note_sha256(self) -> str | None:
-        return sha256(self.note_text.encode("utf-8")) if self.note_text else None
+        return sha256(self.note_text) if self.note_text else None
 
 
 @dataclass(frozen=True)
@@ -554,7 +554,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
         current_note = None
         for heading, body in notes(work):
             if heading == entry["note_heading"]:
-                current_note = sha256(body.encode("utf-8"))
+                current_note = sha256(body)
         note_ok = current_note == entry["note_sha256"]
         line_ok = entry["signature_line"] in work
         if not note_ok or not line_ok:
