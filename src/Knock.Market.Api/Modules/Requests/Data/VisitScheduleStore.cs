@@ -195,6 +195,7 @@ internal sealed class VisitScheduleStore(
                 return false;
             }
 
+            await SolicitudDeLaVisita.CancelAsync(database, transaction, visit.RequestId, TransicionesDeSolicitud.VisitCancelledReason, nowUtc, token);
             await outbox.AddAsync(transaction, ClosedEvent(visit, VisitScheduleRules.Cancelled, cancelledBy, nowUtc), token);
             if (late)
             {
@@ -228,6 +229,7 @@ internal sealed class VisitScheduleStore(
                 return false;
             }
 
+            await SolicitudDeLaVisita.CancelAsync(database, transaction, visit.RequestId, TransicionesDeSolicitud.VisitNoShowReason, nowUtc, token);
             await outbox.AddAsync(transaction, ClosedEvent(visit, VisitScheduleRules.NoShow, null, nowUtc), token);
             return true;
         }, false, cancellationToken);
@@ -257,6 +259,7 @@ internal sealed class VisitScheduleStore(
                 return false;
             }
 
+            await SolicitudDeLaVisita.CancelAsync(database, transaction, visit.RequestId, TransicionesDeSolicitud.VisitNoShowReason, nowUtc, token);
             await outbox.AddAsync(transaction, OutboxMessage.Create("TecnicoNoSePresento", visit.Id.ToString(), VisitStore.Identifiers(visit), nowUtc), token);
             return true;
         }, false, cancellationToken);

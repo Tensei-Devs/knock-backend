@@ -4,6 +4,10 @@ namespace Knock.Market.Api.Modules.Requests.Domain;
 internal static class TransicionesDeSolicitud
 {
     /// <summary>Motivos que el cliente puede dar al cancelar (spec 029, R-02).</summary>
+    /// <summary>Motivos que solo escribe el sistema cuando la visita no ocurre (spec 029, enmienda 2026-11-26); la cancelación del cliente no los acepta.</summary>
+    public const string VisitCancelledReason = "visit_cancelled";
+    public const string VisitNoShowReason = "visit_no_show";
+
     public static readonly IReadOnlyList<string> CancellationReasons = ["no_longer_needed", "solved_elsewhere", "takes_too_long", "other"];
 
     /// <summary>Solicitudes cerradas sin cita: solo su dueño las ve (spec 029, R-13).</summary>
