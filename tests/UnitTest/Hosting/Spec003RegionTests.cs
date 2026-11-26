@@ -13,14 +13,14 @@ namespace Knock.UnitTest.Hosting;
 public sealed class Spec003RegionTests
 {
     [Fact]
-    public void RepositoryAppSettings_DeclaresWestUs_AndStartupAcceptsIt_CA_003_05()
+    public async Task RepositoryAppSettings_DeclaresWestUs_AndStartupAcceptsIt_CA_003_05()
     {
         var configuration = new ConfigurationBuilder().AddJsonFile(MongoTestServices.RepositoryAppSettings(), optional: false).Build();
         using var provider = MongoTestServices.Build(
             new Dictionary<string, string?> { ["ConnectionStrings:KnockMongo"] = MongoTestServices.SyntheticConnectionString() },
             withRepositoryAppSettings: true);
 
-        provider.GetRequiredService<IStartupValidator>().Validate();
+        await provider.GetRequiredService<IAsyncStartupValidator>().ValidateAsync(CancellationToken.None);
 
         configuration[KnockMongoOptions.RegionKey].Should().Be("westus");
         provider.GetRequiredService<IOptions<KnockMongoOptions>>().Value.Region.Should().Be("westus");
@@ -31,7 +31,7 @@ public sealed class Spec003RegionTests
     [InlineData("WestUS")]
     [InlineData("westus2")]
     [InlineData("")]
-    public void OtherRegion_FailsStartupNamingTheKey_CA_003_05(string region)
+    public async Task OtherRegion_FailsStartupNamingTheKey_CA_003_05(string region)
     {
         var connectionString = MongoTestServices.SyntheticConnectionString();
         using var provider = MongoTestServices.Build(new Dictionary<string, string?>
@@ -41,9 +41,9 @@ public sealed class Spec003RegionTests
             [KnockMongoOptions.RegionKey] = region,
         });
 
-        var startup = () => provider.GetRequiredService<IStartupValidator>().Validate();
+        Func<Task> startup = () => provider.GetRequiredService<IAsyncStartupValidator>().ValidateAsync(CancellationToken.None);
 
-        var message = startup.Should().Throw<OptionsValidationException>().Which.Message;
+        var message = (await startup.Should().ThrowAsync<OptionsValidationException>()).Which.Message;
         message.Should().Contain(KnockMongoOptions.RegionKey);
         message.Should().NotContain(connectionString).And.NotContain(MongoUrl.Create(connectionString).Password);
     }
