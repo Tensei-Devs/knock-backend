@@ -73,6 +73,8 @@ public sealed class Spec061OcultarOpinionTests
         after.GetProperty("resumen").GetProperty("total").GetInt32().Should().Be(0);
         var technician = await host.Database.GetCollection<BsonDocument>("tecnicos").Find(Builders<BsonDocument>.Filter.Eq("_id", visit.Technician.Id)).FirstAsync();
         technician["reputacion"]["total"].ToInt32().Should().Be(0);
+        technician["totalResenas"].ToInt32().Should().Be(0);
+        technician.Contains("calificacion").Should().BeFalse("sin opiniones visibles no ordena como si tuviera calificación");
         var review = await host.Database.GetCollection<BsonDocument>("opiniones").Find(Builders<BsonDocument>.Filter.Eq("_id", reviewId)).FirstAsync();
         review["oculta"].AsBoolean.Should().BeTrue();
         review["calificacion"].ToInt32().Should().Be(2);

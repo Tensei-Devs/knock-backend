@@ -7,7 +7,7 @@ using Knock.Identity.Api.Modules.Addresses;
 namespace Knock.Identity.Api.Modules.Account.Services;
 
 /// <summary>
-/// Tarea <c>PrepararExportacion</c> (spec 039, R-22; spec 054, R-09). Junta los datos de la persona en Identidad y en Mercado, arma el ZIP (un JSON por servicio), lo guarda en el contenedor privado
+/// Tarea <c>PrepararExportacion</c> (spec 039, R-22; spec 054, R-09). Junta los datos de la persona en Identidad y en Mercado, arma el ZIP (un JSON por servicio: identidad, mercado y mensajería, esta última solo con los mensajes propios), lo guarda en el contenedor privado
 /// <c>exportaciones</c>, deja el aviso fijo sin enlace y quita la marca de exportación en curso. Es idempotente: reintentar sobrescribe el mismo archivo. Si agota los reintentos quita la marca para que la
 /// persona pueda pedirla de nuevo. Los registros no llevan datos de la persona ni el enlace (R-26).
 /// </summary>
@@ -15,6 +15,7 @@ internal sealed partial class PrepararExportacionHandler(
     IAccountExportSource source,
     IAddressesApi addresses,
     IMarketExport market,
+    IMessagingExport messaging,
     IExportStorage storage,
     IExportNotice notice,
     IAccountStore accounts,
@@ -61,6 +62,7 @@ internal sealed partial class PrepararExportacionHandler(
         {
             [ExportArchive.IdentityFile] = JsonSerializer.Serialize(identity, _json),
             [ExportArchive.MarketFile] = await market.ExportJsonAsync(account.Sub, cancellationToken),
+            [ExportArchive.MessagingFile] = await messaging.ExportJsonAsync(account.Sub, cancellationToken),
         };
         var name = ExportArchive.BlobName(businessKey);
         await storage.SaveAsync(name, ExportArchive.Build(files), cancellationToken);

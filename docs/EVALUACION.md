@@ -1,82 +1,97 @@
 # Evaluación del backend: respuestas verificadas
 
-Fecha: 2026-11-17. Base: rama `sprint-05`. Cada respuesta indica dónde se comprueba en el repositorio. Las cifras de pruebas son **métodos de prueba** contados en el código (`[Fact]` y `[Theory]`); una `Theory` se ejecuta una vez por cada juego de datos, así que el número de casos ejecutados es mayor.
+Fecha: 2026-11-26. Base: rama `sprint-05`, que va por delante de `main`. Las cifras de pruebas y cobertura son de una corrida completa del CI en verde sobre esa rama (45854521476). Cada respuesta indica dónde se comprueba y dice también lo que **no** hay.
+
+El ambiente dev de Azure ejecuta el commit `cce78652`; `sprint-05` ya tiene cambios posteriores que todavía no están desplegados. Después del despliegue pasaron las pruebas de humo; los flujos con sesión no se probaron contra Azure.
 
 ## Infraestructura y despliegue
 
 | Pregunta | Respuesta | Dónde se comprueba |
 |---|---|---|
-| Nube | Azure: Container Apps (servicios y gateway), DocumentDB (MongoDB), Redis, Blob Storage, Key Vault, Container Registry y Application Insights; región West US. | `deploy/`, `specs/005`, `Memoria.md` |
-| ¿Se despliega en la nube? | Sí, en Azure Container Apps: gateway, identity, messaging y market. | `.github/workflows/ci-deploy.yml`, `deploy/apps/main.tf` |
-| Servicios externos fuera de Azure | Firebase Authentication de Google (verifica el token del celular; `FirebaseIdTokenVerifier`) y Firebase Cloud Messaging (avisos push, spec 037). Para el desarrollo: GitHub (código y CI) y Atlassian (Jira, solo lectura). La app se distribuye por Google Play. Azure OpenAI y la moderación de contenido son servicios de Azure. | `src/Knock.Identity.Api/Modules/Sesiones/Services/`, `specs/037` |
-| Instancias del backend | Una réplica por servicio por defecto. Para la ventana de evaluación (25-nov al 5-dic) se aplica `deploy/apps/envs/evaluacion.tfvars`: **2 réplicas por servicio** (gateway, identity, messaging y market). Redis lleva una. | `deploy/apps/variables.tf`, `deploy/apps/envs/` |
-| Load balancer | El ingreso de Azure Container Apps reparte entre réplicas; el gateway YARP enruta por servicio. | `specs/001`, `specs/006` |
+| Nube | Microsoft Azure: Container Apps, DocumentDB (API de MongoDB), Redis, Blob Storage, Key Vault, Container Registry y Application Insights. | `deploy/` |
+| ¿Está desplegado? | Sí, en el ambiente dev: gateway, identity, messaging y market. | `deploy/apps/main.tf` |
+| Servicios externos fuera de Azure | Firebase Authentication de Google (acceso por celular). Firebase Cloud Messaging está en el código, con los avisos push apagados. GitHub para el repositorio y el CI. | `src/` |
+| Arquitectura | Tres servicios (Identity, Messaging y Market) detrás de un API Gateway con YARP; cada servicio tiene su propia base de datos. | `src/`, `specs/001` |
+| Instancias | En dev, máximo una réplica por aplicación y escalan a cero cuando no hay uso. `evaluacion.tfvars` define dos réplicas, pero **no está aplicado**. | `deploy/apps/envs/` |
+| Load balancer | El ingreso de Container Apps reparte entre réplicas; con una sola réplica no hay reparto. | `deploy/apps/` |
 | IaC | Terraform (`deploy/infra`, `deploy/database`, `deploy/apps` y `deploy/modules`). | `deploy/` |
-| SSL | HTTPS termina en el ingreso de Container Apps; el gateway envía `Strict-Transport-Security`. Las llamadas entre servicios van por la red interna del entorno. | `specs/BUG-002` |
-| API o microservicios | Microservicios con una puerta de entrada: Gateway, Identity, Messaging y Market. | `src/`, `specs/001` |
-| CDN de imágenes | No hay CDN de pago. Las imágenes públicas se sirven desde un contenedor de Blob de lectura anónima con `Cache-Control` largo e inmutable; las fotos privadas viven en otra cuenta sin acceso anónimo. Motivo: Front Door cuesta 35 USD al mes y Azure CDN clásico ya no admite perfiles nuevos. | `Memoria.md` (ADR-007), `specs/032` |
-| Observabilidad | OpenTelemetry con exportador a Azure Monitor (Application Insights), registros estructurados con Serilog y redacción de datos sensibles. | `src/*/Hosting/ObservabilityExtensions.cs`, `specs/011` |
+| SSL/TLS | HTTPS termina en el ingreso de Container Apps y HTTP redirige a HTTPS. El código envía HSTS fuera de `Development`; dev corre como `Development`, así que ahí no se envía. | `src/Knock.Hosting/Security/` |
+| CDN de imágenes | **No hay CDN desplegado.** | — |
+| Observabilidad | Application Insights, Log Analytics, una alerta métrica, OpenTelemetry y registros con Serilog con redacción de datos sensibles. | `deploy/`, `src/` |
+| IA y moderación en Azure | El código integra Azure OpenAI (asistente) y Content Safety (moderación), pero **esos recursos no están desplegados ni encendidos**. El asistente responde con una plantilla; la moderación usa la lista local y lo que necesita Azure falla cerrado, así que en dev no se pueden confirmar imágenes. | `deploy/apps/main.tf`, `src/Knock.Market.Api/Modules/Moderation/` |
 
 ## Datos y caché
 
 | Pregunta | Respuesta | Dónde se comprueba |
 |---|---|---|
-| Bases de datos | MongoDB (DocumentDB) y Redis. Ambas son NoSQL; no hay base relacional. | `specs/003`, `db/` |
-| Redis | Sí. Sesiones canceladas (Identity y gateway), contadores del límite de peticiones y, en la spec 026, respaldo de SignalR. | `src/Knock.Gateway/Hosting/RedisExtensions.cs`, `specs/003` |
-| ¿JWT en Redis? | No se guarda el JWT. Redis guarda el identificador de las sesiones canceladas (`sid`) para que el gateway las rechace. | `src/Knock.Gateway/Hosting/RevokedSessions.cs`, `specs/016` |
-| Caché | Perfil de la persona (60 s), catálogo de oficios con validador `ETag` y caché del cliente móvil en tres niveles. | `specs/010`, `specs/017` |
-| Rate limit | En el gateway y en Identity y Market; el paso del contador a Redis en Identity y Market está en KNOCK-247. | `specs/006`, `docs/rate-limit-matrix.md` |
-| Paginación | Sí, por cursor (`cursor` y `nextCursor`). | `specs/010`, `specs/027` |
-| Índices | Scripts de índices y semillas en `db/`, incluidos los geoespaciales. | `db/`, `specs/003` |
-| Serializadores JSON | `System.Text.Json`; el cliente de la app se genera desde el contrato OpenAPI. | `docs/openapi.v1.json` |
-| Compresión del payload | `JsonCompressionMiddleware` con Brotli y gzip en **Identity y Market**. Nunca comprime las rutas de autenticación (riesgo BREACH). Gateway y Messaging no la llevan. | `src/Knock.Identity.Api/Hosting/JsonCompressionMiddleware.cs` |
-| Middleware | Encabezados de seguridad, correlación (`X-Correlation-Id`), redacción de registros, límite de peticiones y validación del token en el gateway. | `src/*/Hosting/` |
-| Versionamiento | Versionamiento por puntos (spec 012) con etiquetas de Git `<componente>-vX.Y.Z` calculadas por `scripts/ci/version.py`; la API se versiona por ruta (`/api/v1`). | `specs/012`, `docs/VERSIONAMIENTO.md` |
-| Logout | Sí: `POST /api/v1/auth/logout` cancela la sesión por `sid`. | `src/Knock.Identity.Api/Modules/Sesiones/Controllers/V1/LogoutController.cs` |
+| Bases de datos | Azure DocumentDB (API de MongoDB) y Redis; ambas NoSQL. | `db/` |
+| Redis y JWT | No se guarda el JWT. Redis guarda las sesiones canceladas (`sid`) para que se rechacen. | `src/Knock.Gateway/Hosting/` |
+| Logout | `POST /api/v1/auth/logout` cancela la sesión. | `src/Knock.Identity.Api/Modules/Sesiones/` |
+| Caché | Memoria del servicio, Redis y encabezados de caché en las respuestas que lo permiten; las privadas usan `no-store`. | `src/` |
+| Rate limit | Límites de peticiones en el gateway y en los servicios. | `docs/rate-limit-matrix.md`, `src/Knock.Hosting/RateLimiting/` |
+| Paginación | Por cursor (`cursor` y `nextCursor`). | `docs/openapi.publico.v1.json` |
+| Índices | Simples, compuestos, únicos, parciales, TTL y geoespaciales (`2dsphere`). | `db/` |
+| Serializador JSON | `System.Text.Json`. | `src/` |
+| Compresión | Compresión JSON compartida en Identity y Market; excluye las rutas sensibles y, en Identity, las del panel. | `src/Knock.Hosting/Http/JsonCompressionMiddleware.cs` |
+| Middleware | Encabezados de seguridad, correlación, redacción de registros, límite de peticiones y validación del token. | `src/Knock.Hosting/`, `src/*/Hosting/` |
+| Versionamiento | La API se versiona por ruta (`/api/v1`). El versionamiento por etiquetas está especificado; el repositorio **todavía no tiene etiquetas ni releases**. | `specs/012` |
+| Tiempo real | Chat con SignalR. | `src/Knock.Messaging.Api/Modules/Chat/` |
 
 ## Seguridad y flujo de trabajo
 
 | Pregunta | Respuesta | Dónde se comprueba |
 |---|---|---|
-| Herramientas en CI | Gitleaks (secretos), Semgrep (SAST), Trivy y Dockle (imágenes), Checkov (IaC y Dockerfiles), OSV y `dotnet list package --vulnerable` (dependencias), oasdiff (cambios incompatibles del contrato), Stryker (mutación, informativa) y Dependabot. | `.github/workflows/ci-pr.yml`, `.github/dependabot.yml` |
-| Herramientas en CD | Trivy y Dockle sobre cada imagen antes de publicarla, `az containerapp update` y pruebas de humo contra `/health`. | `.github/workflows/ci-deploy.yml` |
-| Vulnerabilidades conocidas | BUG-002, BUG-003 y BUG-004 (encabezados del gateway y seguridad de Messaging) y BUG-005 (registros de Market) están corregidos en el código. BUG-001 (el job de DAST no se ejecuta) sigue abierto. La evidencia en vivo de BUG-002 a BUG-004 se captura tras el despliegue. Hay una sola llave de firma del JWT compartida entre servicios y sin autenticación entre ellos. | `specs/BUG-001` a `BUG-005`, `Memoria.md` |
-| Excepciones de seguridad | Registradas con vencimiento en `security/exceptions.yaml`. | `security/exceptions.yaml` |
-| MCP | Atlassian (Jira, lectura, OAuth por persona) y GitHub CLI. Configurado en `.mcp.json`. | `docs/mcp.md`, `specs/019` |
-| Agentes de IA | 10 definiciones: api-builder, constitution-reviewer, db-builder, docs-keeper, implementer, plan-writer, security-reviewer, spec-writer, task-writer y traceability-clerk. | `.opencode/agents/` |
-| Skills | 16: ai-features, api-contract-openapi, auth-firebase-jwt, database-scripts, devsecops-audit, events-outbox, foundation-backend, postgis-geo, realtime-signalr, reuse-before-create, security-core, spec-first-writing, story-workflow, testing-strategy-backend, traceability y vertical-slice-api. | `.agents/skills/` |
-| Aprendizaje del proyecto | `Memoria.md` con una entrada por decisión, su porqué y qué evitar. | `Memoria.md` |
+| Herramientas en CI | Gitleaks, Semgrep, Checkov, Trivy, Dockle, ZAP baseline, OSV-Scanner, auditoría de paquetes NuGet, revisión de dependencias, oasdiff, jscpd, actionlint y Stryker (informativo; puede cortarse por tiempo). SonarCloud solo en `main`. | `.github/workflows/` |
+| Herramientas en CD | Al pasar el CI de `main`: acceso OIDC sin secretos guardados, Trivy, Dockle, imágenes etiquetadas con el SHA, actualización de Container Apps y pruebas de humo. No hay aprobación manual. El despliegue actual de dev se hizo a mano. | `.github/workflows/ci-deploy.yml` |
+| Porcentaje de seguridad | No existe una norma que dé un porcentaje. **Estimación propia:** 15 de 21 controles (cerca del 70 %). | Fila siguiente |
+| Controles de la estimación | **Presentes (15):** SAST, DAST, escaneo de secretos en CI, Key Vault, análisis de dependencias, escaneo de contenedores, escaneo de IaC, validación de entradas, JWT con revocación, autorización por recurso, límite de peticiones, TLS, encabezados, redacción de registros y `main` protegida. **Faltan (6):** secret scanning de GitHub, push protection, actualizaciones de seguridad de Dependabot, SBOM o firma de imágenes, DAST con sesión y WAF activo. | `.github/`, `src/`, `deploy/` |
+| Límites del DAST | ZAP corre sin sesión, así que no recorre los endpoints protegidos. Hay una regla ignorada con una excepción que vence el 2026-12-25. | `security/exceptions.yaml`, `security/zap-rules.tsv` |
+| ¿Nivel bancario o fintech? | **No.** No hay pentest, WAF activo, DAST autenticado ni firma de imágenes. | — |
+| ¿Vulnerabilidades críticas? | No se conoce ninguna. Esto no equivale a un pentest. | CI |
+| MCP | Atlassian (Jira). | `.mcp.json`, `docs/mcp.md` |
+| Agentes de IA | 7 definiciones en `.agents/agents` (en `.opencode/agents` hay 11). | `.agents/`, `.opencode/` |
+| Skills | 17 en `.agents/skills` (en `.opencode/skills` hay 25). | `.agents/`, `.opencode/` |
+| Memoria del proyecto | `Memoria.md` y 153 entradas en `docs/memoria/`. | `Memoria.md` |
+| Specs | 95 archivos `spec.md`. | `specs/` |
 
 ## Endpoints
 
-- **Contrato:** 130 endpoints en `Knock_Endpoints_CRUD.xlsx`. Las 54 specs (`specs/001` a `054`) están aprobadas; la spec BUG-001 está en borrador.
-- **Implementados al 2026-11-17:** 21 acciones de controlador (Identity 7 y Market 14) y 3 `/health`. El hub `/hubs/chat` de SignalR aún no existe.
-- **Sin pruebas ni código:** los endpoints con spec que todavía no tienen controlador (Messaging, verificación, archivos, técnicos, opiniones, asistente y otros) no tienen pruebas, porque no existe el código que probar.
+| Dato | Cifra |
+|---|---|
+| Operaciones en los contratos de los servicios | 160 |
+| De negocio | 142 (Market 78, Identity 49, Messaging 15) |
+| Internas entre servicios | 16 |
+| De salud | 2 |
 
-### Endpoints del Excel que las specs citan con otra ruta o ya no llevan
+El contrato público que consume la app está en `docs/openapi.publico.v1.json`.
 
-| ID del Excel | Ruta en el Excel | En las specs | Estado |
-|---|---|---|---|
-| COL-02 | `GET /colonias/por-punto` | `GET /api/v1/colonias/en-punto` (TT-API-07) | Implementado |
-| COL-03 | `GET /colonias/por-codigo-postal/{cp}` | `GET /api/v1/zonas/{cp?}` (spec 023) | Implementado |
-| LIS-01 | `POST /lista-espera` | `POST /api/v1/zonas/lista-espera` (spec 023) | Implementado |
-| COT-04 | `POST /cotizaciones/{id}/elegir` | `POST /api/v1/solicitudes/{id}/elegir` (spec 021) | Implementado |
-| VIS-08 | `POST /visitas/{id}/aviso-confianza` | `POST /api/v1/visitas/{id}/aviso` (spec 022) | Implementado |
-| MSJ-03 | `GET /hubs/chat` | `/hubs/chat` (spec 026) | Con spec, sin código |
-| VER-01, VER-02 | `POST /verificaciones`, `GET /verificaciones/me` | `POST` y `GET /api/v1/me/verificacion` (spec 025) | Con spec, sin código |
-| ARC-01 | `POST /archivos/subida` | `POST /api/v1/archivos/subidas` (specs 013 y 020) | Con spec, sin código |
-| CON-02 | `POST /me/contactos-confianza` | Se eliminó: los contactos de confianza no se guardan en el servidor (spec 042, D-04) | No aplica |
-| COL-01 | `GET /colonias` | Sin spec que lo defina | Pendiente de decisión |
+**¿Endpoints sin spec?** Las 142 rutas de negocio aparecen citadas en algún `spec.md`. La comprobación es una búsqueda por texto.
 
 ## Pruebas
 
-| Proyecto | Métodos de prueba | Qué cubre |
+| Tipo | Pruebas | Proyecto |
 |---|---|---|
-| `tests/UnitTest` | 452 | Reglas de negocio, validadores y servicios |
-| `tests/IntegrationTest` | 201 | Servicios completos con MongoDB, Redis y Azurite en Testcontainers |
-| `tests/DatabaseTest` | 118 | Scripts de base de datos, índices y semillas |
-| `tests/SecurityTest` | 97 | Pruebas de seguridad negativas |
-| `tests/ArchitectureTest` | 5 | Fronteras entre módulos |
-| `tests/ContractTest` | 3 | Contrato OpenAPI |
+| Unitarias (incluye 46 del proyecto de rendimiento) | 3209 | `tests/UnitTest`, `tests/PerformanceTest` |
+| Integración | 1312 | `tests/IntegrationTest` |
+| Seguridad | 581 | `tests/SecurityTest` |
+| Base de datos | 282 | `tests/DatabaseTest` |
+| Arquitectura | 65 | `tests/ArchitectureTest` |
+| Contrato | 44 | `tests/ContractTest` |
+| **Total** | **5493** | |
 
-Otras pruebas: rendimiento con k6 en `tests/perf/` (caché de oficios y dos réplicas), mutación con Stryker (`stryker-config.json`, informativa; está en revisión por la actualización de la herramienta a 5.1.0, KNOCK-282) y humo contra `/health` después de cada despliegue.
+Cobertura combinada: **82.8 % de líneas y 72.7 % de ramas** (mínimos del CI: 60 % y 50 %). Además hay guiones k6 en `tests/perf/`, mutación con Stryker y pruebas de humo en `tests/smoke/`.
+
+### Endpoints sin cada tipo de prueba
+
+Medido al buscar la ruta literal en el código de las pruebas; una ruta armada por partes puede contar como faltante. Las unitarias no se miden por endpoint.
+
+- Sin ruta literal en las pruebas de integración: 19 de 142.
+- Sin ruta literal en las pruebas de seguridad: 100 de 142.
+- Sin ruta literal en ninguna de las dos: 7.
+  - `POST /visitas/{id}/reprogramar/respuesta`
+  - `POST /visitas/{id}/terminar`
+  - `POST /me/verificacion/{id}/enviar`
+  - `POST /me/verificacion/{id}/fotos/{tipo}/confirmar`
+  - `POST /admin/verificaciones/{id}/decision`
+  - `GET /me/exportaciones/ultima`
+  - `POST /avisos/leidos`

@@ -79,17 +79,6 @@ excepciones:
     creada: 2026-11-03
     vence: 2027-01-31
     plan: sustituir la muestra por una construida en tiempo de ejecución (como se hizo en el PR #89) y retirar la excepción antes de vencer.
-  - id: EXC-006
-    herramienta: dotnet
-    regla: SYSLIB0066
-    alcance: tests/UnitTest/Knock.UnitTest.csproj
-    justificacion: >-
-      En .NET 11 la interfaz IStartupValidator está marcada como obsoleta y las pruebas de arranque de MongoDB (KnockMongoOptionsTests y
-      KnockMongoDatabasesTests) la usan por reflexión sobre el host. Se portó el código desde .NET 10 sin cambios de lógica; el aviso es solo de API obsoleta.
-    responsable: José Julián Hernández Hernández
-    creada: 2026-11-03
-    vence: 2027-01-15
-    plan: renovada el 2026-11-24 hasta 2027-01-15 (KNOCK-266). Verificado: `tests/UnitTest/Knock.UnitTest.csproj` conserva el `NoWarn` de SYSLIB0066 y 12 llamadas a `IStartupValidator` en `KnockMongoDatabasesTests`, `KnockMongoOptionsTests`, `Spec003DataClientsTests` y `Spec003RegionTests`; el aviso solo es de API obsoleta, sin cambio de comportamiento. Falta portar esas 4 clases de prueba a `IAsyncStartupValidator` y quitar el `NoWarn` (un PR de pruebas con autorización, porque hoy las pruebas del repo no se tocan); si sigue vigente el 2027-01-15, se renueva de nuevo con lo que falte.
   - id: EXC-015
     herramienta: jscpd
     regla: duplicación textual (y huella estructural de codemap)
@@ -101,7 +90,7 @@ excepciones:
     responsable: José Guillermo Rangel Hernández
     creada: 2026-11-04
     vence: 2027-01-15
-    plan: renovada el 2026-11-24 hasta 2027-01-15 (KNOCK-266). La biblioteca técnica ya existe (Knock.Hosting y Knock.Hosting.Data, spec 055): faltan por mover `ProblemDetailsExtensions`, `ProblemResponses`, `RequestBodyLimitMiddleware`, `CorsMiddleware`, el versionado, la validación, OpenAPI y el manejo de excepciones de dominio (spec 055 T-17 y T-19, un PR por pieza). Cada PR que mueve una pieza quita sus marcadores; al mover la última se retira la excepción. Si algún marcador sigue vigente el 2027-01-15, se renueva de nuevo con la lista de lo que falta.
+    plan: renovada el 2026-11-24 hasta 2027-01-15 (KNOCK-266). La biblioteca técnica ya existe (Knock.Hosting, Knock.Hosting.Data y Knock.Hosting.Mvc, spec 055): faltan por mover `ProblemDetailsExtensions`, `ProblemResponses`, `RequestBodyLimitMiddleware`, `CorsMiddleware`, la validación, OpenAPI y el manejo de excepciones de dominio (spec 055 T-17 y T-19, un PR por pieza). El 2026-11-25 se movieron `ApiVersioningExtensions` y `PrivateNoStoreAttribute` a `Knock.Hosting.Mvc` y `SecurityExtensions`/`SecuritySettings` a `Knock.Hosting`, y se quitaron sus marcadores de Identity; quedan en Identity `ValidationExtensions`, `OpenApiExtensions`, `DomainExceptionHandler`, `ModulesExtensions` y `AuthenticationExtensions`, que difieren por tipos propios de cada servicio (R-03) y no se mueven. Cada PR que mueve una pieza quita sus marcadores; al mover la última se retira la excepción. Si algún marcador sigue vigente el 2027-01-15, se renueva de nuevo con la lista de lo que falta.
   - id: EXC-011
     herramienta: checkov
     regla: CKV_AZURE_233, CKV_AZURE_237, CKV_AZURE_167, CKV_AZURE_166, CKV_AZURE_165, CKV_AZURE_164, CKV_AZURE_163, CKV_AZURE_139
@@ -302,3 +291,16 @@ excepciones:
     creada: 2026-11-23
     vence: 2027-02-18
     plan: si se elimina la reversión manual por workflow_dispatch (o se mueve a un workflow aparte sin inputs), retirar la supresión y esta excepción antes de vencer.
+  - id: EXC-032
+    herramienta: zap
+    regla: "10049"
+    alcance: security/zap-rules.tsv (job «Smoke + DAST (ZAP baseline)» de ci-pr.yml, pila efímera del runner)
+    justificacion: >-
+      La alerta informativa 10049 (Non-Storable Content) señala el encabezado Cache-Control no-store, que es intencional: la spec 009 (R-02) lo exige y SecurityHeadersMiddleware lo pone cuando la ruta no declara su propia política de caché.
+      Evidencia: run 45743925942 del PR 398 (primera ejecución en la que ZAP llegó a correr): FAIL-NEW 0, PASS 67, WARN-NEW 1 (variante 10049-1 en /, /robots.txt y /sitemap.xml; sin alertas altas, medias ni bajas).
+      ZAP solo permite ignorar por identificador de plugin, así que se silencian también las otras variantes de 10049, incluida la de contenido que se puede cachear; el no-store por omisión lo vigilan SecurityHeadersMiddlewareTests y SecurityHeadersTests, no el humo.
+      Limitación del DAST actual: escanea sin sesión desde la raíz (2 endpoints, todas las respuestas 4xx); no cubre ninguna ruta autenticada y no valida la seguridad de la API. Autorizada por José el 2026-11-25 conforme a BUG-001 TC-05.
+    responsable: José Julián Hernández Hernández
+    creada: 2026-11-25
+    vence: 2026-12-25
+    plan: revisar antes de vencer, volviendo a correr el DAST sin la línea 10049 y leyendo el informe zap_scan; retirarla si ya no aparece y, si se renueva, comprobar que solo aparece la variante 10049-1 y que el no-store sigue exigido por la spec 009 R-02, y renovar solo con nueva aprobación.

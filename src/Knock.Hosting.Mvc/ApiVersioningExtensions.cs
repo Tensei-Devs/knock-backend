@@ -1,11 +1,13 @@
 using Asp.Versioning;
 
-namespace Knock.Market.Api.Hosting;
+namespace Knock.Hosting.Mvc;
 
-internal static class ApiVersioningExtensions
+public static class ApiVersioningExtensions
 {
+    /// <summary>Versión en la ruta (<c>/api/v1/...</c>), sin versión por omisión: una ruta sin versión no existe.</summary>
     public static IServiceCollection AddKnockApiVersioning(this IServiceCollection services)
     {
+        ArgumentNullException.ThrowIfNull(services);
         services
             .AddApiVersioning(options =>
             {

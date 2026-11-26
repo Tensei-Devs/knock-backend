@@ -1,3 +1,4 @@
+using Knock.Identity.Api.Hosting.Procesos.Outbox;
 using Knock.Identity.Api.Hosting.Procesos.TareasProgramadas;
 using Knock.Identity.Api.Modules.Account.Data;
 using Knock.Identity.Api.Modules.Account.Domain;
@@ -45,6 +46,19 @@ public static class AccountModuleExtensions
         });
         services.TryAddSingleton<IMarketAccountClient>(provider => provider.GetRequiredService<MarketAccountClient>());
         services.TryAddSingleton<IMarketExport>(provider => provider.GetRequiredService<MarketAccountClient>());
+        // Mensajería (spec 039, R-22; spec 054, T-09): comparte dirección y clave con la entrega de avisos (Services:Messaging). Sin ellas la tarea se reintenta.
+        services.AddOptions<EntregaInternaOptions>().BindConfiguration(EntregaInternaOptions.SectionName);
+        services.AddHttpClient<MessagingExportClient>((provider, client) =>
+        {
+            var options = provider.GetRequiredService<IOptions<EntregaInternaOptions>>().Value;
+            if (Uri.TryCreate(options.Messaging.BaseUrl, UriKind.Absolute, out var baseAddress) && baseAddress.Scheme is "http" or "https")
+            {
+                client.BaseAddress = baseAddress;
+            }
+
+            client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+        });
+        services.TryAddSingleton<IMessagingExport>(provider => provider.GetRequiredService<MessagingExportClient>());
         services.TryAddSingleton<IExportStorage, UnavailableExportStorage>();
         services.AddSingleton<IExportNotice, OutboxExportNotice>();
         services.AddSingleton<LatestExportService>();

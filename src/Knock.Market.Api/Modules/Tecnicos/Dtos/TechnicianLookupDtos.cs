@@ -21,8 +21,7 @@ internal sealed class AutocompleteQuery
 }
 
 /// <summary>
-/// Una sugerencia de TEC-03: <c>tipo</c> es <c>oficio</c> (con su <c>clave</c>) o <c>negocio</c> (con el <c>id</c> del técnico). Los servicios con precio
-/// (spec 047) se suman cuando exista su colección.
+/// Una sugerencia de TEC-03: <c>tipo</c> es <c>oficio</c> (con su <c>clave</c>), <c>servicio</c> o <c>negocio</c> (ambos con el <c>id</c> del técnico).
 /// </summary>
 internal sealed record Suggestion(string Tipo, string Texto, string? Clave, string? Id);
 

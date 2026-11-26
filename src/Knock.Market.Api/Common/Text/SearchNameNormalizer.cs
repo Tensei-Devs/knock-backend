@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 
-namespace Knock.Market.Api.Modules.Catalog.Domain;
+namespace Knock.Market.Api.Common.Text;
 
 /// <summary>
 /// Calcula <c>nombreBusqueda</c> (spike P5): sin marcas diacríticas, en mayúsculas invariantes y con los espacios recortados y

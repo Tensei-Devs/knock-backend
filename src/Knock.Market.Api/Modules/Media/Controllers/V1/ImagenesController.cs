@@ -17,7 +17,7 @@ namespace Knock.Market.Api.Modules.Media.Controllers.V1;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/imagenes/subidas")]
 [Authorize]
-[Hosting.PrivateNoStore]
+[PrivateNoStore]
 internal sealed class ImagenesController(SubidaImagenService service) : ControllerBase
 {
     private const string _problemJson = "application/problem+json";

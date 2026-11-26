@@ -3,6 +3,7 @@ using System.Reflection;
 using Asp.Versioning;
 using FluentValidation;
 using Knock.Contracts.Conversations;
+using Knock.Hosting.Mvc;
 using Knock.IntegrationTest.Support;
 using MessagingApi::Knock.Messaging.Api.Hosting;
 using MessagingApi::Knock.Messaging.Api.Modules.Conversaciones.Domain;
