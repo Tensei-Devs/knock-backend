@@ -1,8 +1,10 @@
 using System.Net;
+using System.Text.Json;
 using AwesomeAssertions;
 using Knock.IntegrationTest.Requests;
 using Knock.IntegrationTest.Support;
 using MongoDB.Bson;
+using MongoDB.Driver;
 using Xunit;
 
 namespace Knock.IntegrationTest.Tecnicos;
@@ -108,6 +110,71 @@ public sealed class Spec046BusquedaHttpTests
         (await Spec020Host.ReadAsync(businesses)).GetProperty("sugerencias").EnumerateArray().Select(s => s.GetProperty("texto").GetString())
             .Should().ContainSingle().Which.Should().Be("Fontanería Óscar");
     }
+
+    private static async Task<IReadOnlyList<JsonElement>> SuggestAsync(Spec020Host host, string query)
+    {
+        using var response = await host.SendAsync(HttpMethod.Get, "/api/v1/tecnicos/autocompletar?q=" + Uri.EscapeDataString(query));
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        return [.. (await Spec020Host.ReadAsync(response)).GetProperty("sugerencias").EnumerateArray()];
+    }
+
+    private static Task InsertServiceAsync(Spec020Host host, ObjectId technician, string name) =>
+        host.Database.GetCollection<BsonDocument>("servicios_tecnico").InsertOneAsync(new BsonDocument { ["tecnicoId"] = technician, ["nombre"] = name });
+
+    [Fact]
+    public async Task Autocompletar_Encuentra_Un_Servicio_Creado_Por_La_Api_CA_046_10()
+    {
+        await using var host = await Spec020Host.StartAsync();
+        var id = await SeedAsync(host);
+        var sub = (await host.Database.GetCollection<BsonDocument>("tecnicos").Find(new BsonDocument("_id", id)).SingleAsync())["usuarioId"].AsString;
+        using var created = await host.SendAsync(HttpMethod.Post, "/api/v1/tecnicos/me/servicios", sub,
+            new { nombre = "Instalación de piñón", precioReferencia = 350, oficio = Spec020Host.Plumbing });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var found = await SuggestAsync(host, "pinon");
+
+        found.Should().ContainSingle();
+        found[0].GetProperty("texto").GetString().Should().Be("Instalación de piñón");
+        found[0].GetProperty("id").GetString().Should().Be(id.ToString());
+    }
+
+    [Fact]
+    public async Task Autocompletar_No_Sugiere_Servicios_De_Suspendidos_Ni_Ocultos_Por_Moderacion_CA_046_10()
+    {
+        await using var host = await Spec020Host.StartAsync();
+        var suspended = await SeedAsync(host, negocio: "Taller Uno");
+        var moderated = await SeedAsync(host, negocio: "Taller Dos");
+        var technicians = host.Database.GetCollection<BsonDocument>("tecnicos");
+        await technicians.UpdateOneAsync(new BsonDocument("_id", suspended), Builders<BsonDocument>.Update.Set("estado", "suspendido"));
+        await technicians.UpdateOneAsync(new BsonDocument("_id", moderated), Builders<BsonDocument>.Update.Set("ocultoHasta", DateTime.UtcNow.AddDays(1)));
+        await InsertServiceAsync(host, suspended, "Destape de drenaje");
+        await InsertServiceAsync(host, moderated, "Destape de tubería");
+
+        (await SuggestAsync(host, "destape")).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Autocompletar_No_Repite_Servicios_Y_Respeta_El_Maximo_De_Ocho_CA_046_10()
+    {
+        await using var host = await Spec020Host.StartAsync();
+        var first = await SeedAsync(host, negocio: "Cambio Express");
+        var second = await SeedAsync(host, negocio: "Taller Dos");
+        await InsertServiceAsync(host, first, "Cambio de válvula");
+        await InsertServiceAsync(host, second, "Cambio de valvula");
+        for (var index = 1; index <= 10; index++)
+        {
+            await InsertServiceAsync(host, first, $"Cambio de llave {index:00}");
+        }
+
+        var found = await SuggestAsync(host, "cambio de");
+
+        found.Should().HaveCount(8);
+        found.Select(s => TextWithoutAccent(s)).Should().OnlyHaveUniqueItems();
+        found.Should().OnlyContain(s => s.GetProperty("tipo").GetString() == "servicio");
+    }
+
+    private static string TextWithoutAccent(JsonElement suggestion) =>
+        suggestion.GetProperty("texto").GetString()!.Replace('á', 'a');
 
     [Fact]
     public async Task Autocompletar_Con_Texto_Invalido_Responde_422_CA_046_11()
