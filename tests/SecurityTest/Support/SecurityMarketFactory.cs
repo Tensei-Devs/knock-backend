@@ -1,7 +1,7 @@
 extern alias MarketApi;
-
 using System.Security.Cryptography;
 using Knock.IntegrationTest.Support;
+using MarketApi::Knock.Market.Api.Common.Text;
 using MarketApi::Knock.Market.Api.Modules.Catalog.Data;
 using MarketApi::Knock.Market.Api.Modules.Catalog.Domain;
 using MarketApi::Knock.Market.Api.Modules.Catalog.Services;

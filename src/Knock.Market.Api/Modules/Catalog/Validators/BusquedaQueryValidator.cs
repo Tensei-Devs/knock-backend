@@ -1,5 +1,6 @@
 using System.Globalization;
 using FluentValidation;
+using Knock.Market.Api.Common.Text;
 using Knock.Market.Api.Modules.Catalog.Domain;
 using Knock.Market.Api.Modules.Catalog.Dtos;
 using MongoDB.Bson;

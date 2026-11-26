@@ -34,7 +34,16 @@ internal static class ServiceTokenIssuer
         }
     }
 
-    public static string IssueForMarket(byte[] key, string permission, IReadOnlyDictionary<string, string> bindings, DateTime nowUtc)
+    public const string MessagingAudience = "knock-notifications";
+
+    public static string IssueForMarket(byte[] key, string permission, IReadOnlyDictionary<string, string> bindings, DateTime nowUtc) =>
+        IssueFor(MarketAudience, key, permission, bindings, nowUtc);
+
+    /// <summary>Token de servicio hacia Mensajería (<c>aud</c> <c>knock-notifications</c>, firmado con la clave <c>avisos-key-identity</c>).</summary>
+    public static string IssueForMessaging(byte[] key, string permission, IReadOnlyDictionary<string, string> bindings, DateTime nowUtc) =>
+        IssueFor(MessagingAudience, key, permission, bindings, nowUtc);
+
+    private static string IssueFor(string audience, byte[] key, string permission, IReadOnlyDictionary<string, string> bindings, DateTime nowUtc)
     {
         ArgumentNullException.ThrowIfNull(key);
         ArgumentNullException.ThrowIfNull(bindings);
@@ -51,7 +60,7 @@ internal static class ServiceTokenIssuer
         return new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
         {
             Issuer = MarketIssuer,
-            Audience = MarketAudience,
+            Audience = audience,
             Claims = claims,
             IssuedAt = nowUtc,
             NotBefore = nowUtc,

@@ -18125,7 +18125,7 @@
             ]
           }
         },
-        "description": "Una sugerencia de TEC-03: `tipo` es `oficio` (con su `clave`) o `negocio` (con el `id` del técnico). Los servicios con precio\n(spec 047) se suman cuando exista su colección."
+        "description": "Una sugerencia de TEC-03: `tipo` es `oficio` (con su `clave`), `servicio` o `negocio` (ambos con el `id` del técnico)."
       },
       "TechnicianAbsentResponse": {
         "required": [

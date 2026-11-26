@@ -36,11 +36,16 @@
   <ItemGroup>
     <ProjectReference Include="..\Knock.Contracts\Knock.Contracts.csproj" />
     <ProjectReference Include="..\Knock.Hosting\Knock.Hosting.csproj" />
+    <ProjectReference Include="..\Knock.Hosting.Mvc\Knock.Hosting.Mvc.csproj" />
     <ProjectReference Include="..\Knock.Hosting.Data\Knock.Hosting.Data.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\..\db\seeds\demo\identity\usuarios.json" Link="db\seeds\demo\identity\usuarios.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="..\..\db\seeds\demo\identity\verificaciones.json" Link="db\seeds\demo\identity\verificaciones.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Global using de las piezas MVC compartidas (spec 055): evita repetir el using en cada controlador. -->
+    <Using Include="Knock.Hosting.Mvc" />
   </ItemGroup>
 
 </Project>

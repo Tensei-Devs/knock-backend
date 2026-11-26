@@ -38,6 +38,8 @@ public sealed class Spec051OpinionesHttpTests
         var technician = await host.Database.GetCollection<BsonDocument>("tecnicos").Find(Builders<BsonDocument>.Filter.Eq("_id", visit.Technician.Id)).FirstAsync();
         technician["reputacion"]["total"].ToInt32().Should().Be(1);
         technician["reputacion"]["nivel"].AsString.Should().Be("nuevo");
+        technician["calificacion"].ToDouble().Should().Be(4.0, "la búsqueda, la lista y las oleadas ordenan por este campo");
+        technician["totalResenas"].ToInt32().Should().Be(1);
         (await host.Database.GetCollection<BsonDocument>("solicitudes").Find(Builders<BsonDocument>.Filter.Eq("_id", visit.RequestId)).FirstAsync())["estado"].AsString.Should().Be("calificada");
         (await host.CountAsync("tecnicos_confianza")).Should().Be(1);
     }

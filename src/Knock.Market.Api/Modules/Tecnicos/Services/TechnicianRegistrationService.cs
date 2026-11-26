@@ -30,7 +30,8 @@ internal sealed record NewTechnician(
     string ColoniaId,
     (double Latitude, double Longitude)? Centro,
     TechnicianProfileBody? Perfil,
-    DateTime CreadoEn);
+    DateTime CreadoEn,
+    string? ColoniaNombre = null);
 
 internal interface ITechnicianProfileStore
 {
@@ -65,7 +66,7 @@ internal sealed class TechnicianRegistrationService(
             return new RegisterTechnicianOutcome(RegisterTechnicianStatus.TradeInvalid);
         }
 
-        if (await catalog.FindNeighborhoodAsync(body.ColoniaId!, cancellationToken) is null)
+        if (await catalog.FindNeighborhoodAsync(body.ColoniaId!, cancellationToken) is not { } neighborhood)
         {
             return new RegisterTechnicianOutcome(RegisterTechnicianStatus.ColoniaNotFound);
         }
@@ -76,7 +77,7 @@ internal sealed class TechnicianRegistrationService(
         var workshop = TechnicianRules.UsesWorkshop(body.Atencion) ? WorkshopAddressCipher.Encrypt(cipher, id, body.DireccionTaller!.Trim()) : null;
         var radius = TechnicianRules.VisitsHomes(body.Atencion) ? body.RadioKm : null;
         var technician = new NewTechnician(id, sub, body.Nombre!.Trim(), trades, body.OtroOficio?.Trim(), body.Atencion!, workshop, radius,
-            ObjectId.Parse(body.ColoniaId).ToString(), center, Trimmed(body.Perfil), now);
+            ObjectId.Parse(body.ColoniaId).ToString(), center, Trimmed(body.Perfil), now, neighborhood.Nombre);
         if (!await store.InsertAsync(technician, cancellationToken))
         {
             return new RegisterTechnicianOutcome(RegisterTechnicianStatus.AlreadyTechnician);

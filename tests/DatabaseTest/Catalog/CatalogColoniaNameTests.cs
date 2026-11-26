@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Knock.DatabaseTest.Support;
+using Knock.Market.Api.Common.Text;
 using Knock.Market.Api.Modules.Catalog.Data;
 using Knock.Market.Api.Modules.Catalog.Domain;
 using Microsoft.Extensions.DependencyInjection;

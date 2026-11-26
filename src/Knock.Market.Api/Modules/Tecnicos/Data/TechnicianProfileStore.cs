@@ -162,6 +162,7 @@ internal sealed class TechnicianProfileStore(
             ["version"] = 1,
         };
         Add(document, "otroOficio", t.OtroOficio);
+        Add(document, "coloniaBaseNombre", t.ColoniaNombre);
         Add(document, "tallerDireccion", t.TallerDireccionCifrada);
         if (t.RadioKm is { } radius) document["radioAtencionKm"] = radius;
         if (t.Centro is { } center)
@@ -170,6 +171,7 @@ internal sealed class TechnicianProfileStore(
         }
 
         Add(document, "nombreNegocio", t.Perfil?.NombreNegocio);
+        TechnicianSearchFields.AddTo(document, t.Nombre, t.Perfil?.NombreNegocio);
         Add(document, "descripcion", t.Perfil?.Descripcion);
         if (t.Perfil?.Anios is { } years) document["anios"] = years;
         return document;

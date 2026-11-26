@@ -29,7 +29,7 @@ public sealed class Spec050AgendaTests
         item.GetProperty("hora").GetString().Should().NotBeNullOrEmpty();
         item.TryGetProperty("fechaHora", out _).Should().BeTrue();
         Spec020Host.CarriesValue(raw, host.ClientSub).Should().BeFalse("la agenda no lleva datos del cliente");
-        Spec020Host.CarriesValue(raw, visit.Code!).Should().BeFalse("la agenda no lleva el código de la visita");
+        Spec020Host.CarriesVisitCode(raw, visit.Code!).Should().BeFalse("la agenda no lleva el código de la visita");
         raw.Should().NotContain("Calle Ficticia");
     }
 

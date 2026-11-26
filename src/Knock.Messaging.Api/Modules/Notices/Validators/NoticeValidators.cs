@@ -40,7 +40,7 @@ internal sealed class NoticePreferenceChangeValidator : AbstractValidator<Notice
     {
         RuleFor(c => c.Tipo).Must(NoticeRules.IsKnownType).WithMessage("The type is not one of the allowed values.");
         RuleFor(c => c.Activo).NotNull().WithMessage("The value is required.");
-        RuleFor(c => c.Activo).Must(value => value is not false).WithMessage("Security notices cannot be turned off.").When(c => c.Tipo == NoticeRules.SecurityType);
+        RuleFor(c => c.Activo).Must(value => value is not false).WithMessage("Security and system notices cannot be turned off.").When(c => c.Tipo is NoticeRules.SecurityType or NoticeRules.SystemType);
     }
 }
 
