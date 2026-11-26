@@ -91,6 +91,44 @@ public sealed class Spec020RequestRulesUnitTests
     }
 
     [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    public void GroupedCursor_RoundTrips_CA_020_24(int group)
+    {
+        var id = ObjectId.GenerateNewId();
+        var when = new DateTime(2026, 11, 13, 18, 30, 0, 123, DateTimeKind.Utc);
+
+        var decoded = RequestCursor.DecodeGrouped(RequestCursor.EncodeGrouped(group, when, id));
+
+        decoded.Should().Be((group, when, id));
+    }
+
+    [Fact]
+    public void GroupedCursor_RejectsTheOldTwoValueFormatAndUnknownGroups_CA_020_24()
+    {
+        var id = ObjectId.GenerateNewId();
+        var oldFormat = RequestCursor.Encode(DateTime.UtcNow, id);
+        var unknownGroup = Microsoft.AspNetCore.WebUtilities.WebEncoders.Base64UrlEncode(System.Text.Encoding.UTF8.GetBytes($"2:1700000000000:{id}"));
+
+        foreach (var cursor in new[] { oldFormat, unknownGroup, "abc" })
+        {
+            var act = () => RequestCursor.DecodeGrouped(cursor);
+
+            act.Should().Throw<DomainException>().Which.Code.Should().Be("invalid_cursor");
+        }
+    }
+
+    [Theory]
+    [InlineData("Enviada", 0)]
+    [InlineData("Cotizando", 0)]
+    [InlineData("CitaConfirmada", 0)]
+    [InlineData("Terminada", 1)]
+    [InlineData("Calificada", 1)]
+    [InlineData("Cancelada", 1)]
+    [InlineData("Vencida", 1)]
+    public void Group_Of_State_CA_020_24(string state, int group) => RequestStates.GroupOf(Enum.Parse<RequestState>(state)).Should().Be(group);
+
+    [Theory]
     [InlineData("")]
     [InlineData("abc")]
     [InlineData("!!!")]
@@ -108,7 +146,7 @@ public sealed class Spec020RequestRulesUnitTests
     private static CreateRequestBodyValidator Validator(DateTimeOffset now) => new(new FixedTime(now));
 
     private static CreateRequestBody Body(string? dia = "2026-11-14", string? descripcion = "Se rompió el tubo debajo del fregadero", string[]? fotos = null) =>
-        new("plo", descripcion, fotos ?? [ObjectId.GenerateNewId().ToString()], dia, "tarde", ObjectId.GenerateNewId().ToString(), null);
+        new("plo", descripcion, fotos ?? [Guid.CreateVersion7().ToString("N")], dia, "tarde", ObjectId.GenerateNewId().ToString(), null);
 
     [Fact]
     public void Validator_AcceptsAValidBody_R_01()
@@ -173,16 +211,18 @@ public sealed class Spec020RequestRulesUnitTests
     }
 
     [Fact]
-    public void Validator_PhotosAreOneToFiveObjectIdsWithoutRepeats_R_04()
+    public void Validator_PhotosAreOneToFiveFileIdsWithoutRepeats_R_04()
     {
         var clock = new DateTimeOffset(2026, 11, 13, 18, 0, 0, TimeSpan.Zero);
-        var one = ObjectId.GenerateNewId().ToString();
+        var one = Guid.CreateVersion7().ToString("N");
 
         Validator(clock).TestValidate(Body(fotos: [])).ShouldHaveValidationErrorFor(x => x.Fotos);
-        Validator(clock).TestValidate(Body(fotos: [.. Enumerable.Range(0, 6).Select(_ => ObjectId.GenerateNewId().ToString())])).ShouldHaveValidationErrorFor(x => x.Fotos);
+        Validator(clock).TestValidate(Body(fotos: [.. Enumerable.Range(0, 6).Select(_ => Guid.CreateVersion7().ToString("N"))])).ShouldHaveValidationErrorFor(x => x.Fotos);
         Validator(clock).TestValidate(Body(fotos: [one, one.ToUpperInvariant()])).ShouldHaveValidationErrorFor(x => x.Fotos);
         Validator(clock).TestValidate(Body(fotos: ["no-es-un-id"])).ShouldHaveValidationErrorFor(x => x.Fotos);
-        Validator(clock).TestValidate(Body(fotos: [.. Enumerable.Range(0, 5).Select(_ => ObjectId.GenerateNewId().ToString())])).ShouldNotHaveValidationErrorFor(x => x.Fotos);
+        Validator(clock).TestValidate(Body(fotos: [ObjectId.GenerateNewId().ToString()])).ShouldHaveValidationErrorFor(x => x.Fotos);
+        Validator(clock).TestValidate(Body(fotos: [Guid.CreateVersion7().ToString("D")])).ShouldHaveValidationErrorFor(x => x.Fotos);
+        Validator(clock).TestValidate(Body(fotos: [.. Enumerable.Range(0, 5).Select(_ => Guid.CreateVersion7().ToString("N"))])).ShouldNotHaveValidationErrorFor(x => x.Fotos);
     }
 
     [Theory]

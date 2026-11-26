@@ -42,6 +42,16 @@ rules:
       - pattern: "ValidateAudience = false"
       - pattern: "RequireSignedTokens = false"
 
+  # Spec 035, R-01 y CA-08: el registro HTTP de ASP.NET Core escribe la ruta con su consulta; la petición se registra solo con UseSerilogRequestLogging.
+  # Muestra de la regla: .semgrep/muestras/HttpLogging.cs (`semgrep --config .semgrep/semgrep.yaml .semgrep/muestras --no-git-ignore`).
+  - id: knock-sin-http-logging
+    languages: [csharp]
+    severity: ERROR
+    message: UseHttpLogging/AddHttpLogging registra la dirección con su consulta (coordenadas, búsquedas, tokens). Usa UseSerilogRequestLogging con la plantilla de la ruta (spec 035).
+    pattern-either:
+      - pattern: $APP.UseHttpLogging(...)
+      - pattern: $SVC.AddHttpLogging(...)
+
   - id: knock-certificado-sin-validar
     languages: [csharp]
     severity: ERROR

@@ -1,3 +1,5 @@
+using Knock.Hosting.Data;
+using Knock.Market.Api.Common.Text;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Catalog.Domain;
 using Microsoft.Extensions.Options;
@@ -20,7 +22,7 @@ namespace Knock.Market.Api.Modules.Catalog.Data;
 internal sealed class CatalogStore(
     [FromKeyedServices(CatalogModuleExtensions.ModuleKey)] IMongoDatabase database,
     IOptions<KnockMongoOptions> mongoOptions,
-    ICatalogCache cache)
+    ICatalogCache cache) : IActiveOficios
 {
     public const string OficiosCollection = "oficios";
     public const string ColoniasCollection = "colonias";
@@ -30,6 +32,7 @@ internal sealed class CatalogStore(
     public const string NombreField = "nombre";
     public const string NombreBusquedaField = "nombreBusqueda";
     public const string ModalidadField = "modalidad";
+    public const string FrasesSugeridasField = "frasesSugeridas";
     public const string ActivoField = "activo";
     public const string CpField = "cp";
     public const string MunicipioField = "municipio";
@@ -51,6 +54,7 @@ internal sealed class CatalogStore(
         .Include(ClaveField)
         .Include(NombreField)
         .Include(ModalidadField)
+        .Include(FrasesSugeridasField)
         .Exclude(IdField);
 
     /// <summary>Desempate permanente (decisión (d)): menor <c>nombreBusqueda</c> y, si empata, menor <c>_id</c>.</summary>
@@ -98,13 +102,12 @@ internal sealed class CatalogStore(
         // La generación se captura antes de leer MongoDB: si la siembra invalida entre medias, el guardado se descarta y no resucita lo viejo.
         var generation = await cache.GetOficiosGenerationAsync(cancellationToken);
         var documents = await ActiveOficiosQuery().ToListAsync(cancellationToken);
-        var oficios = documents.Select(document => new OficioListing(
-            document[ClaveField].AsString,
-            document[NombreField].AsString,
-            document[ModalidadField].AsString)).ToList();
+        var oficios = documents.Select(ToOficioListing).ToList();
         await cache.SetOficiosIfGenerationAsync(oficios, generation, cancellationToken);
         return oficios;
     }
+
+    public Task InvalidateActiveOficiosAsync(CancellationToken cancellationToken) => cache.RemoveOficiosAsync(cancellationToken);
 
     /// <summary>Colonias cuyo polígono contiene o toca el punto (<c>$geoIntersects</c>), con el desempate; la primera o nada.</summary>
     public async Task<Colonia?> FindIntersectingAsync(GeoPosition position, CancellationToken cancellationToken) =>
@@ -163,9 +166,7 @@ internal sealed class CatalogStore(
     public async Task<OficioListing?> FindActiveOficioAsync(string clave, CancellationToken cancellationToken)
     {
         var document = await ActiveOficioQuery(clave).FirstOrDefaultAsync(cancellationToken);
-        return document is null
-            ? null
-            : new OficioListing(document[ClaveField].AsString, document[NombreField].AsString, document[ModalidadField].AsString);
+        return document is null ? null : ToOficioListing(document);
     }
 
     /// <summary>La colonia con ese <c>_id</c> (spec 020, R-02).</summary>
@@ -224,6 +225,15 @@ internal sealed class CatalogStore(
 
     private static GeoJsonPoint<GeoJson2DGeographicCoordinates> ToGeoJson(GeoPosition position) =>
         GeoJson.Point(GeoJson.Geographic(position.Longitude, position.Latitude));
+
+    /// <summary>Las frases sugeridas son opcionales en el documento: un oficio sembrado antes de la spec 045 no las trae.</summary>
+    private static OficioListing ToOficioListing(BsonDocument document) => new(
+        document[ClaveField].AsString,
+        document[NombreField].AsString,
+        document[ModalidadField].AsString,
+        document.TryGetValue(FrasesSugeridasField, out var phrases) && phrases.IsBsonArray
+            ? [.. phrases.AsBsonArray.Where(phrase => phrase.IsString).Select(phrase => phrase.AsString)]
+            : null);
 
     private static Colonia? ToColonia(BsonDocument? document) =>
         document is null

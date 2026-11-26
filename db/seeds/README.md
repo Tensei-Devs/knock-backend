@@ -36,6 +36,10 @@ Verifica el destino y el filtro antes de borrar; esta operación elimina esos do
 
 **Azure no se carga con este cargador de demo.** La entrega de Azure se hace aparte y manualmente con `db/entrega.js`; ese script aplica índices y semillas del catálogo, **no carga los diez clientes demo**. No se ha implementado aquí un cargador de esos clientes para Azure.
 
+## Demo de verificación (spec 025)
+
+`demo/identity/verificaciones.json` contiene una verificación ya decidida (`verificada`, nivel básico) para `demo-cliente-01`, porque sin la revisión de HU-067 nada llega a ese estado. Se carga al arrancar Identity con `Seed__Demo=true`, después de los clientes demo, con las mismas guardas (fuera de Production, solo host local, ningún usuario que no sea demo). No lleva CURP, fotos ni direcciones; repetir el arranque no duplica. Si el cliente demo no está cargado, la omite con un aviso.
+
 ## Demo de Mercado
 
 `demo/market/tecnicos.json` contiene tres técnicos inventados, sin cuenta ni inicio de sesión. El cargador de Market valida todo el archivo y guarda los técnicos en una transacción MongoDB, con upsert por `_id` y `demo: true`. Solo corre con `Seed:Demo=true` fuera de Production; admite exclusivamente los mismos hosts locales que Identity, rechaza SRV y no carga si hay documentos no demo en `tecnicos`. Un host local no descarta por sí mismo un túnel a otra base: verifica el destino antes de ejecutar. No usar datos reales.

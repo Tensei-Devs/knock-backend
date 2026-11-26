@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 using AwesomeAssertions;
-using Knock.Identity.Api.Common.Security;
+using Knock.Hosting.Security;
 using Knock.Identity.Api.Modules.Sesiones.Services;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
@@ -61,6 +61,22 @@ public class SessionTokenIssuerTests
         var second = issuer.Issue(_sub, _sid);
 
         first.RefreshToken.Should().NotBe(second.RefreshToken);
+    }
+
+    [Fact]
+    public void AccessToken_IssuedAgainForSameSession_DoesNotProveRecentLogin()
+    {
+        var (firstIssuer, _) = Build(new FixedTimeProvider(_now));
+        var (laterIssuer, _) = Build(new FixedTimeProvider(_now.AddHours(1)));
+        var handler = new JsonWebTokenHandler();
+
+        var first = handler.ReadJsonWebToken(firstIssuer.Issue(_sub, _sid).AccessToken);
+        var later = handler.ReadJsonWebToken(laterIssuer.Issue(_sub, _sid).AccessToken);
+
+        first.GetClaim("sid").Value.Should().Be(later.GetClaim("sid").Value);
+        first.Claims.Select(claim => claim.Type).Should().NotContain("auth_time");
+        later.Claims.Select(claim => claim.Type).Should().NotContain("auth_time");
+        first.GetClaim("iat").Value.Should().NotBe(later.GetClaim("iat").Value);
     }
 
     [Fact]

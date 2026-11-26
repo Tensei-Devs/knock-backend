@@ -33,7 +33,9 @@ internal sealed class MongoToolsContainer : IAsyncDisposable
             .WithEnvironment("KNOCK_BACKUP_MONGO_URI", documentDb.ContainerNetworkConnectionString)
             .WithResourceMapping(new FileInfo(Path.Combine(root, "deploy", "backup", "mongo-backup.sh")), BackupDirectory)
             // Los scripts de db/ (numerados y de entrega) y las semillas del catálogo que carga db/entrega.js (spec 014).
-            .WithResourceMapping(new DirectoryInfo(Path.Combine(root, "db", "seeds", "catalog")), DbDirectory + "/seeds/catalog");
+            .WithResourceMapping(new DirectoryInfo(Path.Combine(root, "db", "seeds", "catalog")), DbDirectory + "/seeds/catalog")
+            // Rellenos de una sola vez (no numerados: nada los aplica solos).
+            .WithResourceMapping(new DirectoryInfo(Path.Combine(root, "db", "relleno")), DbDirectory + "/relleno");
         foreach (var script in Directory.GetFiles(Path.Combine(root, "db"), "*.js"))
         {
             builder = builder.WithResourceMapping(new FileInfo(script), DbDirectory);

@@ -59,6 +59,8 @@ Cobertura mínima: **60 % líneas, 50 % ramas** (combinada, `check_coverage.py`)
 | Firma y procedencia | SBOM + provenance (BuildKit), Cosign keyless, verificación antes de desplegar | Deploy | Sí |
 | Excepciones | `check_exceptions.py` (vencidas, supresiones sin EXC) | PR + Local | Sí |
 
+> **Limitación del DAST de PR:** ZAP baseline escanea la pila efímera sin sesión desde la raíz. No cubre endpoints autenticados, así que un resultado en verde **no** es una validación completa de la seguridad de la API; la autorización por recurso se comprueba con las pruebas de seguridad negativa. La regla 10049 está ignorada con EXC-032.
+
 ### 3.1 Análisis estático: Semgrep es la solución y CodeQL no se usa (KNOCK-64)
 > **Decisión del líder (2026-11-06):** el análisis estático del repositorio es Semgrep. No se contrata GitHub Advanced Security (GitHub Code Security) para CodeQL. Lo que sigue describe lo que el workflow hace de verdad, leído en `.github/workflows/ci-pr.yml` y `.semgrep/semgrep.yaml`.
 

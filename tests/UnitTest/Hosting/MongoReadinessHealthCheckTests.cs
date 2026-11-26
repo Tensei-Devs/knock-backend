@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Knock.Hosting.Data;
 using Knock.Market.Api.Hosting;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MongoDB.Driver;

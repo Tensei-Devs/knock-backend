@@ -85,7 +85,12 @@ internal sealed class VisitService(VisitStore visits, RequestsStore requests, Ch
             code is null ? null : VisitRules.SafetyRule(name),
             VisitRules.CanNotify(visit.Estado),
             false,
-            null);
+            null,
+            visit.TechnicianUserId,
+            PendingReschedule(visit, now),
+            visit.FinalQuoteState,
+            visit.PhotoPermission,
+            Utc(visit.FinishedAtUtc));
     }
 
     private async Task<VisitResponse> BuildTechnicianViewAsync(VisitRecord visit, CancellationToken cancellationToken)
@@ -121,8 +126,16 @@ internal sealed class VisitService(VisitStore visits, RequestsStore requests, Ch
             null,
             null,
             VisitRules.CanArrive(visit.State, now),
-            Utc(visit.ArrivedAtUtc));
+            Utc(visit.ArrivedAtUtc),
+            null,
+            PendingReschedule(visit, now),
+            visit.FinalQuoteState,
+            visit.PhotoPermission,
+            Utc(visit.FinishedAtUtc));
     }
+
+    /// <summary>Hay una propuesta de reprogramación vigente: guardada y sin vencer (spec 050, R-25); se calcula al leer, sin escribir.</summary>
+    internal static bool PendingReschedule(VisitRecord visit, DateTime nowUtc) => visit.Proposal is { } proposal && proposal.ExpiresAtUtc > nowUtc;
 
     private async Task<TechnicianPublic?> FindTechnicianAsync(VisitRecord visit, CancellationToken cancellationToken)
     {

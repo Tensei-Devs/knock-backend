@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using FluentValidation;
+using Knock.Market.Api.Modules.Requests.Domain;
 using Knock.Market.Api.Modules.Requests.Dtos;
 
 namespace Knock.Market.Api.Modules.Requests.Validators;
@@ -40,7 +41,7 @@ internal sealed partial class CreateRequestBodyValidator : AbstractValidator<Cre
         RuleFor(x => x.Fotos).Cascade(CascadeMode.Stop)
             .NotNull().WithMessage(RequiredReason)
             .Must(photos => photos!.Count is >= 1 and <= MaxPhotos).WithMessage(FormatReason)
-            .Must(photos => photos!.All(IsObjectId)).WithMessage(FormatReason)
+            .Must(photos => photos!.All(id => PhotoIds.TryParse(id, out _))).WithMessage(FormatReason)
             .Must(photos => photos!.Select(p => p.ToUpperInvariant()).Distinct(StringComparer.Ordinal).Count() == photos!.Count).WithMessage(FormatReason);
 
         RuleFor(x => x.Dia).Cascade(CascadeMode.Stop)

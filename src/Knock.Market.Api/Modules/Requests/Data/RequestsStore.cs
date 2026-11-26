@@ -1,3 +1,4 @@
+using Knock.Hosting.Data;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Requests.Domain;
 using Microsoft.Extensions.Options;
@@ -60,6 +61,8 @@ internal sealed class RequestsStore(
             {
                 await Requests.InsertOneAsync(transaction, ToDocument(record), cancellationToken: token);
                 await outbox.AddAsync(transaction, message, token);
+                // Spec 029, R-08: la tarea de vencimiento nace en la misma transacción que la solicitud.
+                await new TareasProgramadasStore(database).ScheduleByKeyAsync(transaction, "VencerSolicitud", record.Id.ToString(), record.VenceEnUtc, record.CreadoEnUtc, token);
                 if (waves?.Value.Habilitado == true)
                 {
                     await new TareasProgramadasStore(database).ScheduleAsync(transaction, "RepartirOleada", record.Id, 1, record.CreadoEnUtc, record.CreadoEnUtc, token);
@@ -76,18 +79,40 @@ internal sealed class RequestsStore(
     }
 
     /// <summary>
-    /// Solicitudes del cliente, de la más reciente a la más antigua (<c>creadoEn</c> y <c>_id</c> descendentes). Pide una fila de más para saber si hay otra página y arma
-    /// el cursor con la última fila devuelta.
+    /// Solicitudes del cliente (spec 020, R-09 enmendada). Sin <paramref name="estado"/>: primero las activas y luego las terminadas, cada grupo de la más reciente a la más
+    /// antigua (<c>creadoEn</c> y <c>_id</c> descendentes), con dos lecturas acotadas por grupo; con <paramref name="estado"/>, una sola lectura. Pide una fila de más para saber
+    /// si hay otra página y arma el cursor (grupo, <c>creadoEn</c>, <c>_id</c>) con la última fila devuelta.
     /// </summary>
-    public async Task<RequestRecordPage> ListAsync(string clienteId, string? estado, (DateTime CreatedAtUtc, ObjectId Id)? after, int limit, CancellationToken cancellationToken)
+    public async Task<RequestRecordPage> ListAsync(string clienteId, string? estado, (int Group, DateTime CreatedAtUtc, ObjectId Id)? after, int limit, CancellationToken cancellationToken)
     {
-        var filter = Builders<BsonDocument>.Filter;
-        var conditions = new List<FilterDefinition<BsonDocument>> { filter.Eq("clienteId", clienteId) };
+        var documents = new List<BsonDocument>();
         if (estado is not null)
         {
-            conditions.Add(filter.Eq("estado", estado));
+            documents.AddRange(await ReadAsync(clienteId, [estado], after, limit + 1, cancellationToken));
+        }
+        else
+        {
+            if ((after?.Group ?? 0) == 0)
+            {
+                documents.AddRange(await ReadAsync(clienteId, [.. RequestStates.Active.Select(RequestStates.ToStored)], after, limit + 1, cancellationToken));
+            }
+
+            if (documents.Count < limit + 1)
+            {
+                var finishedAfter = after is { Group: 1 } ? after : null;
+                documents.AddRange(await ReadAsync(clienteId, [.. RequestStates.Finished.Select(RequestStates.ToStored)], finishedAfter, limit + 1 - documents.Count, cancellationToken));
+            }
         }
 
+        var page = documents.Take(limit).Select(ToRecord).ToList();
+        var next = documents.Count > limit ? RequestCursor.EncodeGrouped(RequestStates.GroupOf(page[^1].Estado), page[^1].CreadoEnUtc, page[^1].Id) : null;
+        return new RequestRecordPage(page, next);
+    }
+
+    private Task<List<BsonDocument>> ReadAsync(string clienteId, string[] states, (int Group, DateTime CreatedAtUtc, ObjectId Id)? after, int take, CancellationToken cancellationToken)
+    {
+        var filter = Builders<BsonDocument>.Filter;
+        var conditions = new List<FilterDefinition<BsonDocument>> { filter.Eq("clienteId", clienteId), filter.In("estado", states) };
         if (after is { } cursor)
         {
             conditions.Add(filter.Or(
@@ -95,13 +120,10 @@ internal sealed class RequestsStore(
                 filter.And(filter.Eq("creadoEn", cursor.CreatedAtUtc), filter.Lt("_id", cursor.Id))));
         }
 
-        var documents = await Requests.Find(filter.And(conditions), _findOptions)
+        return Requests.Find(filter.And(conditions), _findOptions)
             .Sort(Builders<BsonDocument>.Sort.Descending("creadoEn").Descending("_id"))
-            .Limit(limit + 1)
+            .Limit(take)
             .ToListAsync(cancellationToken);
-        var page = documents.Take(limit).Select(ToRecord).ToList();
-        var next = documents.Count > limit ? RequestCursor.Encode(page[^1].CreadoEnUtc, page[^1].Id) : null;
-        return new RequestRecordPage(page, next);
     }
 
     /// <summary>Cotizaciones vivas (<c>enviada</c> o <c>aceptada</c>) de cada solicitud dada; las que no tienen ninguna no salen.</summary>

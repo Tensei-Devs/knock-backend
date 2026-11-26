@@ -16,35 +16,32 @@ internal sealed partial class EjecutorDeTareasProgramadas(
 
     public async Task<bool> ExecuteOneAsync(CancellationToken cancellationToken)
     {
-        if (_handlers.Count == 0)
+        var types = _handlers.Keys.ToArray();
+        var reserved = types.Length == 0 ? null : await store.ReserveAsync(clock.GetUtcNow().UtcDateTime, cancellationToken, types);
+        if (reserved is null)
         {
             return false;
         }
 
-        var task = await store.ReserveAsync(clock.GetUtcNow().UtcDateTime, cancellationToken, _handlers.Keys.ToArray());
-        if (task is null)
-        {
-            return false;
-        }
+        await RunAsync(reserved, cancellationToken);
+        return true;
+    }
 
+    private async Task RunAsync(TareaReservada task, CancellationToken cancellationToken)
+    {
         try
         {
             await _handlers[task.Tipo].HandleAsync(task, cancellationToken);
-            if (!await store.CompleteAsync(task, clock.GetUtcNow().UtcDateTime, cancellationToken))
+            var completed = await store.CompleteAsync(task, clock.GetUtcNow().UtcDateTime, cancellationToken);
+            if (!completed)
             {
                 LeaseLost(logger, task.Id.ToString());
             }
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception error) when (error is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        catch (Exception error) when (!(error is OperationCanceledException && cancellationToken.IsCancellationRequested))
         {
             await RecordFailureAsync(task, cancellationToken);
         }
-
-        return true;
     }
 
     private async Task RecordFailureAsync(TareaReservada task, CancellationToken cancellationToken)

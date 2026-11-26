@@ -1,5 +1,6 @@
 // jscpd:ignore-start -- EXC-015
-using Knock.Identity.Api.Common.Security;
+using Knock.Hosting.Http;
+using Knock.Hosting.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
@@ -23,20 +24,7 @@ internal static class AuthenticationExtensions
             .Configure<JwtSettings>((options, settings) =>
             {
                 options.MapInboundClaims = false;
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuer = true,
-                    ValidIssuer = settings.Issuer,
-                    ValidateAudience = true,
-                    ValidAudience = settings.Audience,
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = settings.SigningKey,
-                    RequireSignedTokens = true,
-                    ValidateLifetime = true,
-                    RequireExpirationTime = true,
-                    ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
-                    ClockSkew = TimeSpan.Zero,
-                };
+                options.TokenValidationParameters = settings.ToValidationParameters();
                 options.Events = new JwtBearerEvents
                 {
                     // Mismo 401 para cualquier fallo: sin motivo en el cuerpo ni en WWW-Authenticate.

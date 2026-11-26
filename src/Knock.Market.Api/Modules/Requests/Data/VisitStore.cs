@@ -1,3 +1,4 @@
+using Knock.Hosting.Data;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Requests.Domain;
 using Microsoft.Extensions.Options;
@@ -25,10 +26,20 @@ internal sealed record VisitRecord(
     bool CodeUsed,
     int Attempts,
     bool Locked,
-    DateTime? ArrivedAtUtc)
+    DateTime? ArrivedAtUtc,
+    int Reschedules = 0,
+    RescheduleProposal? Proposal = null,
+    DateTime? FinishedAtUtc = null,
+    bool NotFinishedReported = false,
+    string? FinalQuoteState = null,
+    bool? PhotoPermission = null,
+    string? WhoMissed = null)
 {
     public VisitState State => new(Estado, Modality, Day, Locked, CodeUsed, CodeExpiresAtUtc);
 }
+
+/// <summary>Propuesta de reprogramación pendiente de la visita (spec 050, §6): quién la hizo (<c>cliente</c> o <c>tecnico</c>), la cita propuesta y cuándo vence.</summary>
+internal sealed record RescheduleProposal(DateTime ProposedAtUtc, string ProposedBy, DateTime ExpiresAtUtc);
 
 /// <summary>Resultado de registrar un intento fallido: si se aplicó (la visita seguía abierta a intentos), cuántos van y si quedó bloqueada.</summary>
 internal sealed record FailedAttempt(bool Applied, int Attempts, bool Locked);
@@ -54,7 +65,6 @@ internal sealed class VisitStore(
 {
     private const string _stateField = "estado";
     private const string _updatedField = "actualizadoEn";
-    private const int _maxConflictAttempts = 5;
 
     private static readonly string[] _openStates = [VisitRules.Confirmed, VisitRules.InProgress];
 
@@ -181,33 +191,9 @@ internal sealed class VisitStore(
         }, false, cancellationToken);
     }
 
-    /// <summary>
-    /// Corre la transacción y reintenta los conflictos de escritura entre peticiones simultáneas (código 112 o la etiqueta <c>TransientTransactionError</c>) hasta cinco veces con una espera
-    /// corta. Si el conflicto no se resuelve, devuelve <paramref name="conflictResult"/> (la petición «no se aplicó») y el llamador explica la visita con su estado actual: un conflicto
-    /// nunca sale como 500.
-    /// </summary>
-    private async Task<T> InTransactionAsync<T>(Func<IClientSessionHandle, CancellationToken, Task<T>> body, T conflictResult, CancellationToken cancellationToken)
-    {
-        for (var attempt = 1; attempt <= _maxConflictAttempts; attempt++)
-        {
-            using var session = await database.Client.StartSessionAsync(cancellationToken: cancellationToken);
-            try
-            {
-                return await session.WithTransactionAsync(body, cancellationToken: cancellationToken);
-            }
-            catch (MongoException exception) when (IsWriteConflict(exception))
-            {
-                await Task.Delay(10 * attempt, cancellationToken);
-            }
-        }
-
-        return conflictResult;
-    }
-
-    private static bool IsWriteConflict(MongoException exception) =>
-        exception.HasErrorLabel("TransientTransactionError")
-        || exception is MongoCommandException { Code: 112 }
-        || exception is MongoWriteException { WriteError.Code: 112 };
+    /// <summary>Corre la transacción con el reintento de conflictos compartido del módulo (<see cref="MarketTransactions"/>).</summary>
+    private Task<T> InTransactionAsync<T>(Func<IClientSessionHandle, CancellationToken, Task<T>> body, T conflictResult, CancellationToken cancellationToken) =>
+        MarketTransactions.RunAsync(database, body, conflictResult, cancellationToken);
 
     private static FilterDefinition<BsonDocument> OpenToAttempts(ObjectId id)
     {
@@ -230,7 +216,7 @@ internal sealed class VisitStore(
     };
 
     /// <summary>Solo identificadores: nunca el código, la dirección, el nombre ni el teléfono de nadie (R-13 y R-17).</summary>
-    private static BsonDocument Identifiers(VisitRecord visit) => new()
+    internal static BsonDocument Identifiers(VisitRecord visit) => new()
     {
         { "visitaId", visit.Id.ToString() },
         { "solicitudId", visit.RequestId.ToString() },
@@ -238,7 +224,7 @@ internal sealed class VisitStore(
         { "tecnicoUsuarioId", visit.TechnicianUserId },
     };
 
-    private static VisitRecord ToRecord(BsonDocument d) => new(
+    internal static VisitRecord ToRecord(BsonDocument d) => new(
         d["_id"].AsObjectId,
         d["solicitudId"].AsObjectId,
         d["cotizacionId"].AsObjectId,
@@ -256,5 +242,19 @@ internal sealed class VisitStore(
         d.GetValue("codigoUsado", false).AsBoolean,
         d.GetValue("intentos", 0).ToInt32(),
         d.GetValue("bloqueada", false).AsBoolean,
-        d.TryGetValue("llegadaEn", out var arrived) && arrived.IsBsonDateTime ? arrived.ToUniversalTime() : null);
+        d.TryGetValue("llegadaEn", out var arrived) && arrived.IsBsonDateTime ? arrived.ToUniversalTime() : null,
+        d.GetValue("reprogramaciones", 0).ToInt32(),
+        d.TryGetValue("propuestaReprogramacion", out var proposal) && proposal.IsBsonDocument ? ToProposal(proposal.AsBsonDocument) : null,
+        d.TryGetValue("terminadaEn", out var finished) && finished.IsBsonDateTime ? finished.ToUniversalTime() : null,
+        d.Contains("reporteNoTerminado"),
+        FinalQuoteStateOf(d),
+        d.TryGetValue("permisoPublicarFotos", out var permission) && permission.IsBoolean ? permission.AsBoolean : null,
+        WhoMissedOf(d));
+
+    private static string? WhoMissedOf(BsonDocument d) => d.TryGetValue("quienFalto", out var missed) && missed.IsString ? missed.AsString : null;
+
+    private static string? FinalQuoteStateOf(BsonDocument d) =>
+        d.TryGetValue("cotizacionFinal", out var finalQuote) && finalQuote.IsBsonDocument && finalQuote.AsBsonDocument.TryGetValue("estado", out var state) && state.IsString ? state.AsString : null;
+
+    private static RescheduleProposal ToProposal(BsonDocument d) => new(d["fechaHora"].ToUniversalTime(), d["propuestaPor"].AsString, d["venceEn"].ToUniversalTime());
 }

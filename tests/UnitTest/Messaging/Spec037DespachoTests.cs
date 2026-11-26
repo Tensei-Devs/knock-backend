@@ -1,0 +1,453 @@
+extern alias messaging;
+using AwesomeAssertions;
+using Microsoft.Extensions.Configuration;
+using Xunit;
+using AvisoCatalog = messaging::Knock.Messaging.Api.Modules.Avisos.Domain.AvisoCatalog;
+using AvisoEnApp = messaging::Knock.Messaging.Api.Modules.Avisos.Push.AvisoEnApp;
+using AvisoEvent = messaging::Knock.Messaging.Api.Modules.Avisos.Push.AvisoEvent;
+using AvisoRules = messaging::Knock.Messaging.Api.Modules.Avisos.Domain.AvisoRules;
+using DespachadorDeAvisos = messaging::Knock.Messaging.Api.Modules.Avisos.Push.DespachadorDeAvisos;
+using DispatchOutcome = messaging::Knock.Messaging.Api.Modules.Avisos.Push.DispatchOutcome;
+using IAvisosEnApp = messaging::Knock.Messaging.Api.Modules.Avisos.Push.IAvisosEnApp;
+using IDeviceTokens = messaging::Knock.Messaging.Api.Modules.Avisos.Push.IDeviceTokens;
+using IEnviadosStore = messaging::Knock.Messaging.Api.Modules.Avisos.Push.IEnviadosStore;
+using IPresenceReader = messaging::Knock.Messaging.Api.Modules.Avisos.Push.IPresenceReader;
+using IPushSender = messaging::Knock.Messaging.Api.Modules.Avisos.Push.IPushSender;
+using NoOpPushSender = messaging::Knock.Messaging.Api.Modules.Avisos.Push.NoOpPushSender;
+using PushOptions = messaging::Knock.Messaging.Api.Modules.Avisos.Push.PushOptions;
+using PushResult = messaging::Knock.Messaging.Api.Modules.Avisos.Push.PushResult;
+using WindowDecision = messaging::Knock.Messaging.Api.Modules.Avisos.Domain.WindowDecision;
+
+namespace Knock.UnitTest.Messaging;
+
+public sealed class Spec037DespachoTests
+{
+    private const string _resource = "507f1f77bcf86cd799439011";
+    private const string _conversation = "507f1f77bcf86cd799439012";
+    private const string _person = "sub-1";
+
+    [Theory]
+    [InlineData("solicitud_nueva", "cotizaciones")]
+    [InlineData("cotizacion_aceptada", "visitas")]
+    [InlineData("mensaje_nuevo", "mensajes")]
+    public void Payload_OnlyV1Fields_CA_037_04(string evento, string tipo)
+    {
+        var payload = AvisoRules.BuildPayload(evento, _resource, evento == "mensaje_nuevo" ? _conversation : null, Guid.NewGuid());
+
+        payload.Should().NotBeNull();
+        payload["tipo"].Should().Be(tipo);
+        payload["v"].Should().Be("1");
+        payload.Keys.Should().BeSubsetOf(AvisoRules.PayloadFields);
+        Guid.TryParse(payload["aviso"], out _).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("desconocido", _resource)]
+    [InlineData("solicitud_nueva", "no-es-objectid")]
+    [InlineData("solicitud_nueva", null)]
+    [InlineData("mensaje_nuevo", _resource)]
+    public void Payload_InvalidEventOrResource_IsRejected_CA_037_04(string evento, string? recurso)
+    {
+        AvisoRules.BuildPayload(evento, recurso, null, Guid.NewGuid()).Should().BeNull();
+    }
+
+    [Fact]
+    public void DeduplicationKey_SameEvent_SameKey_DifferentEvents_Differ_CA_037_03()
+    {
+        AvisoRules.DeduplicationKey("e1", _person).Should().Be(AvisoRules.DeduplicationKey("e1", _person));
+        AvisoRules.DeduplicationKey("e1", _person).Should().NotBe(AvisoRules.DeduplicationKey("e2", _person));
+        AvisoRules.DeduplicationKey("e1", _person).Should().NotBe(AvisoRules.DeduplicationKey("e1", "sub-2"));
+    }
+
+    [Fact]
+    public void Window_FirstSends_LaterWithinFiveMinutesGroups_AfterwardsSends_CA_037_05()
+    {
+        var start = new DateTime(2026, 11, 21, 12, 0, 0, DateTimeKind.Utc);
+
+        AvisoRules.DecideWindow(null, start).Should().Be(WindowDecision.Send);
+        AvisoRules.DecideWindow(start, start.AddMinutes(4).AddSeconds(59)).Should().Be(WindowDecision.Suppress);
+        AvisoRules.DecideWindow(start, start.AddMinutes(5)).Should().Be(WindowDecision.Send);
+        AvisoRules.ShouldFlushWindow(start, 2, start.AddMinutes(5)).Should().BeTrue();
+        AvisoRules.ShouldFlushWindow(start, 0, start.AddMinutes(5)).Should().BeFalse();
+        AvisoRules.ShouldFlushWindow(start, 2, start.AddMinutes(1)).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Options_AreOffByDefault_AndNoOpSenderNeverDelivers_R_10()
+    {
+        PushOptions.Read(new ConfigurationBuilder().Build()).Enabled.Should().BeFalse();
+        PushOptions.Read(new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { [PushOptions.EnabledKey] = "true" }).Build()).Enabled.Should().BeTrue();
+        (await new NoOpPushSender().SendAsync("t", new Dictionary<string, string>(), CancellationToken.None)).Should().Be(PushResult.Failed);
+    }
+
+    [Fact]
+    public async Task Dispatch_SwitchOff_DoesNothing_R_10()
+    {
+        var harness = new Harness(enabled: false);
+
+        (await harness.Dispatcher.DispatchAsync(Harness.Event("solicitud_nueva"), CancellationToken.None)).Should().Be(DispatchOutcome.Disabled);
+
+        harness.Sender.Calls.Should().Be(0);
+        harness.Store.Reserved.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Dispatch_DuplicateEvent_SendsOnce_CA_037_03()
+    {
+        var harness = new Harness();
+
+        (await harness.Dispatcher.DispatchAsync(Harness.Event("solicitud_nueva"), CancellationToken.None)).Should().Be(DispatchOutcome.Sent);
+        (await harness.Dispatcher.DispatchAsync(Harness.Event("solicitud_nueva"), CancellationToken.None)).Should().Be(DispatchOutcome.Duplicate);
+
+        harness.Sender.Calls.Should().Be(1);
+        harness.Sender.LastData!.Keys.Should().BeSubsetOf(AvisoRules.PayloadFields);
+    }
+
+    [Fact]
+    public async Task Dispatch_Presence_SuppressesNewMessage_CA_037_06()
+    {
+        var harness = new Harness { Present = true };
+
+        (await harness.Dispatcher.DispatchAsync(Harness.Message("m1"), CancellationToken.None)).Should().Be(DispatchOutcome.Present);
+
+        harness.Sender.Calls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Dispatch_NewMessageWithinWindow_IsGrouped_CA_037_05()
+    {
+        var harness = new Harness();
+        harness.Store.WindowStart = harness.Clock.GetUtcNow().UtcDateTime.AddMinutes(-1);
+
+        (await harness.Dispatcher.DispatchAsync(Harness.Message("m2"), CancellationToken.None)).Should().Be(DispatchOutcome.Grouped);
+
+        harness.Sender.Calls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Dispatch_NewMessageWithinWindow_CountsTheSuppressedMessage_R_07()
+    {
+        var harness = new Harness();
+        harness.Store.WindowStart = harness.Clock.GetUtcNow().UtcDateTime.AddMinutes(-1);
+
+        await harness.Dispatcher.DispatchAsync(Harness.Message("m3"), CancellationToken.None);
+
+        harness.Store.Suppressed.Should().Be(1);
+        harness.Store.Opened.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Dispatch_FirstNewMessage_OpensTheWindow_R_07()
+    {
+        var harness = new Harness();
+
+        (await harness.Dispatcher.DispatchAsync(Harness.Message("m4"), CancellationToken.None)).Should().Be(DispatchOutcome.Sent);
+
+        harness.Store.Opened.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Dispatch_OverThePersonHourlyLimit_IsNotSentAndIsRecordedAsLimited_CA_037_17()
+    {
+        var harness = new Harness();
+        harness.Store.Recent = PushOptions.DefaultHourlyLimit + 1;
+
+        (await harness.Dispatcher.DispatchAsync(Harness.Event("solicitud_nueva"), CancellationToken.None)).Should().Be(DispatchOutcome.Limited);
+
+        harness.Sender.Calls.Should().Be(0);
+        harness.Store.Results.Values.Should().ContainSingle().Which.Should().Be("limitado");
+    }
+
+    [Fact]
+    public async Task Dispatch_InvalidToken_IsDeleted_CA_037_08()
+    {
+        var harness = new Harness();
+        harness.Sender.Results.Enqueue(PushResult.InvalidToken);
+
+        (await harness.Dispatcher.DispatchAsync(Harness.Event("solicitud_nueva"), CancellationToken.None)).Should().Be(DispatchOutcome.Failed);
+
+        harness.Devices.Deleted.Should().ContainSingle().Which.Should().Be("device-token");
+        harness.Sender.Calls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Dispatch_FcmFailure_RetriesThreeTimesWithGrowingWaitAndRecordsFailure_CA_037_11()
+    {
+        var clock = new RecordingClock();
+        var harness = new Harness(clock: clock);
+        for (var i = 0; i < 3; i++)
+        {
+            harness.Sender.Results.Enqueue(PushResult.Failed);
+        }
+
+        (await harness.Dispatcher.DispatchAsync(Harness.Event("solicitud_nueva"), CancellationToken.None)).Should().Be(DispatchOutcome.Failed);
+
+        harness.Sender.Calls.Should().Be(DespachadorDeAvisos.MaxAttempts);
+        clock.Waits.Should().HaveCount(DespachadorDeAvisos.MaxAttempts - 1, "la espera va entre intentos, no tras el último");
+        clock.Waits.Should().BeInAscendingOrder().And.OnlyHaveUniqueItems("la espera crece en cada reintento");
+        harness.Store.Results.Values.Should().ContainSingle().Which.Should().Be("fallido");
+    }
+
+    [Fact]
+    public async Task Dispatch_TwoEventsOnTheSameResourceOneDeliveredTwice_SendsTwoNoticesNotThree_CA_037_19()
+    {
+        var harness = new Harness();
+        var second = new AvisoEvent("evt-2", "cotizacion_nueva", _person, _resource, null);
+        var first = new AvisoEvent("evt-1", "cotizacion_nueva", _person, _resource, null);
+
+        (await harness.Dispatcher.DispatchAsync(first, CancellationToken.None)).Should().Be(DispatchOutcome.Sent);
+        (await harness.Dispatcher.DispatchAsync(second, CancellationToken.None)).Should().Be(DispatchOutcome.Sent);
+        (await harness.Dispatcher.DispatchAsync(first, CancellationToken.None)).Should().Be(DispatchOutcome.Duplicate);
+
+        harness.Sender.Calls.Should().Be(2);
+        harness.Store.Reserved.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task Dispatch_UnknownEvent_IsInvalidAndNotRecorded_CA_037_04()
+    {
+        var harness = new Harness();
+
+        (await harness.Dispatcher.DispatchAsync(Harness.Event("otro"), CancellationToken.None)).Should().Be(DispatchOutcome.Invalid);
+
+        harness.Store.Reserved.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Catalog_EveryDispatchableEventHasFixedTextWithinTheLengthLimits_R_14()
+    {
+        string[] expected = ["solicitud_nueva", "solicitud_sin_tecnicos", "cotizacion_nueva", "cotizacion_aceptada", "visita_afectada", "reporte_decidido", "opinion_oculta", "tecnico_no_se_presento", "solicitud_cancelada", "solicitud_vencida", "cotizacion_vencida", "mensaje_nuevo", "exportacion_lista"];
+        AvisoCatalog.Events.Should().BeEquivalentTo(expected);
+        foreach (var evento in AvisoCatalog.Events)
+        {
+            var template = AvisoCatalog.Find(evento)!;
+            template.Title.Length.Should().BeInRange(1, AvisoCatalog.MaxTitleLength, evento);
+            template.Text.Length.Should().BeInRange(1, AvisoCatalog.MaxTextLength, evento);
+            (template.Title + template.Text).Should().NotContain("http", "el aviso no lleva enlaces (R-14)");
+        }
+
+        AvisoCatalog.Find("sesion_revocada").Should().BeNull("sesion_revocada no tiene destinatario ni aviso dentro de la app");
+    }
+
+    [Fact]
+    public async Task Dispatch_WithoutDevices_StillCreatesTheInAppNoticeAndReportsNoDevices_R_14()
+    {
+        var harness = new Harness();
+        harness.Devices.None = true;
+
+        (await harness.Dispatcher.DispatchAsync(Harness.Event("cotizacion_nueva"), CancellationToken.None)).Should().Be(DispatchOutcome.NoDevices);
+
+        var notice = harness.InApp.Created.Should().ContainSingle().Which;
+        notice.Destinatario.Should().Be(_person);
+        notice.Recurso.Should().Be(_resource);
+        notice.Tipo.Should().Be("cotizaciones");
+        notice.Plantilla.Should().Be(AvisoCatalog.Find("cotizacion_nueva"));
+        notice.CreadoEn.Should().Be(harness.Clock.GetUtcNow().UtcDateTime);
+        harness.Store.Results.Values.Should().ContainSingle().Which.Should().Be("sin_dispositivos");
+        harness.Sender.Calls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Dispatch_RepeatedEvent_CreatesTheInAppNoticeOnce_R_14()
+    {
+        var harness = new Harness();
+
+        await harness.Dispatcher.DispatchAsync(Harness.Event("solicitud_nueva"), CancellationToken.None);
+        (await harness.Dispatcher.DispatchAsync(Harness.Event("solicitud_nueva"), CancellationToken.None)).Should().Be(DispatchOutcome.Duplicate);
+
+        harness.InApp.Created.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Dispatch_PushSwitchOffOrLimited_StillCreatesTheInAppNotice_R_14()
+    {
+        var off = new Harness(enabled: false);
+        var limited = new Harness();
+        limited.Store.Recent = PushOptions.DefaultHourlyLimit + 1;
+
+        (await off.Dispatcher.DispatchAsync(Harness.Event("solicitud_nueva"), CancellationToken.None)).Should().Be(DispatchOutcome.Disabled);
+        (await limited.Dispatcher.DispatchAsync(Harness.Event("solicitud_nueva"), CancellationToken.None)).Should().Be(DispatchOutcome.Limited);
+
+        off.InApp.Created.Should().ContainSingle();
+        limited.InApp.Created.Should().ContainSingle();
+        off.Store.Reserved.Should().BeEmpty("con el interruptor apagado el push no registra nada");
+    }
+
+    [Theory]
+    [InlineData("tecnico", "tecnico")]
+    [InlineData("cliente", "cliente")]
+    [InlineData(null, "cliente")]
+    public async Task Dispatch_TheInAppNoticeKeepsTheRoleOfTheBody_R_14(string? role, string expected)
+    {
+        var harness = new Harness();
+
+        await harness.Dispatcher.DispatchAsync(new AvisoEvent("evt-1", "reporte_decidido", _person, _resource, null, role), CancellationToken.None);
+
+        harness.InApp.Created.Should().ContainSingle().Which.Rol.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task Dispatch_InvalidEvent_CreatesNoInAppNotice_R_14()
+    {
+        var harness = new Harness();
+
+        await harness.Dispatcher.DispatchAsync(Harness.Event("otro"), CancellationToken.None);
+        await harness.Dispatcher.DispatchAsync(new AvisoEvent("evt-9", "solicitud_nueva", _person, "no-es-objectid", null), CancellationToken.None);
+
+        harness.InApp.Created.Should().BeEmpty();
+    }
+
+    private sealed class Harness
+    {
+        public Harness(bool enabled = true, TimeProvider? clock = null)
+        {
+            Clock = clock ?? new FixedClock();
+            Dispatcher = new DespachadorDeAvisos(new PushOptions(enabled), Sender, Store, new Presence(this), Devices, InApp, Clock);
+        }
+
+        public bool Present { get; set; }
+
+        public TimeProvider Clock { get; }
+
+        public FakeSender Sender { get; } = new();
+
+        public FakeStore Store { get; } = new();
+
+        public FakeDevices Devices { get; } = new();
+
+        public FakeInApp InApp { get; } = new();
+
+        public DespachadorDeAvisos Dispatcher { get; }
+
+        public static AvisoEvent Event(string evento) => new("evt-1", evento, _person, _resource, null);
+
+        public static AvisoEvent Message(string eventoId) => new(eventoId, "mensaje_nuevo", _person, _resource, _conversation);
+
+        private sealed class Presence(Harness owner) : IPresenceReader
+        {
+            public Task<bool> IsPresentAsync(string person, CancellationToken cancellationToken) => Task.FromResult(owner.Present);
+        }
+    }
+
+    /// <summary>Reloj fijo cuyas esperas se cumplen de inmediato.</summary>
+    private sealed class FixedClock : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => new(2026, 11, 21, 12, 0, 0, TimeSpan.Zero);
+
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period) =>
+            base.CreateTimer(callback, state, TimeSpan.Zero, Timeout.InfiniteTimeSpan);
+    }
+
+    /// <summary>Reloj fijo que además anota cada espera pedida, para comprobar que crece.</summary>
+    private sealed class RecordingClock : TimeProvider
+    {
+        public List<TimeSpan> Waits { get; } = [];
+
+        public override DateTimeOffset GetUtcNow() => new(2026, 11, 21, 12, 0, 0, TimeSpan.Zero);
+
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            Waits.Add(dueTime);
+            return base.CreateTimer(callback, state, TimeSpan.Zero, Timeout.InfiniteTimeSpan);
+        }
+    }
+
+    private sealed class FakeSender : IPushSender
+    {
+        public int Calls { get; private set; }
+
+        public Queue<PushResult> Results { get; } = new();
+
+        public IReadOnlyDictionary<string, string>? LastData { get; private set; }
+
+        public Task<PushResult> SendAsync(string deviceToken, IReadOnlyDictionary<string, string> data, CancellationToken cancellationToken)
+        {
+            Calls++;
+            LastData = data;
+            return Task.FromResult(Results.Count > 0 ? Results.Dequeue() : PushResult.Sent);
+        }
+    }
+
+    private sealed class FakeStore : IEnviadosStore
+    {
+        public HashSet<string> Reserved { get; } = [];
+
+        public Dictionary<string, string> Results { get; } = [];
+
+        public DateTime? WindowStart { get; set; }
+
+        public int Recent { get; set; }
+
+        public int Opened { get; private set; }
+
+        public int Suppressed { get; private set; }
+
+        public Task OpenWindowAsync(string conversation, string person, DateTime nowUtc, CancellationToken cancellationToken)
+        {
+            Opened++;
+            return Task.CompletedTask;
+        }
+
+        public Task CountSuppressedAsync(string conversation, string person, CancellationToken cancellationToken)
+        {
+            Suppressed++;
+            return Task.CompletedTask;
+        }
+
+        public Task<int> CountRecentAsync(string person, DateTime sinceUtc, CancellationToken cancellationToken) => Task.FromResult(Recent);
+
+        public Task<bool> TryReserveAsync(string deduplicationKey, string evento, string tipo, CancellationToken cancellationToken) =>
+            Task.FromResult(Reserved.Add(deduplicationKey));
+
+        public Task RecordResultAsync(string deduplicationKey, string result, CancellationToken cancellationToken)
+        {
+            Results[deduplicationKey] = result;
+            return Task.CompletedTask;
+        }
+
+        public Task<DateTime?> GetWindowStartAsync(string conversation, string person, CancellationToken cancellationToken) =>
+            Task.FromResult(WindowStart);
+    }
+
+    private sealed class FakeInApp : IAvisosEnApp
+    {
+        private readonly HashSet<string> _keys = [];
+
+        public List<AvisoEnApp> Created { get; } = [];
+
+        public Task<bool> CreateAsync(AvisoEnApp aviso, CancellationToken cancellationToken)
+        {
+            if (!_keys.Add(AvisoRules.DeduplicationKey(aviso.EventoId, aviso.Destinatario)))
+            {
+                return Task.FromResult(false);
+            }
+
+            Created.Add(aviso);
+            return Task.FromResult(true);
+        }
+    }
+
+    private sealed class FakeDevices : IDeviceTokens
+    {
+        public bool None { get; set; }
+
+        public List<string> Deleted { get; } = [];
+
+        public List<string> DeletedSessions { get; } = [];
+
+        public Task DeleteBySessionAsync(string session, CancellationToken cancellationToken)
+        {
+            DeletedSessions.Add(session);
+            return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyList<string>> ListAsync(string person, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<string>>(None ? [] : ["device-token"]);
+
+        public Task DeleteAsync(string person, string deviceToken, CancellationToken cancellationToken)
+        {
+            Deleted.Add(deviceToken);
+            return Task.CompletedTask;
+        }
+    }
+}

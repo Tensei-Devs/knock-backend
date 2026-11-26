@@ -74,6 +74,31 @@ class MergeOpenApiTests(unittest.TestCase):
         merged = merge(market, identity)
         self.assertEqual(len(merged["paths"]), len(market["paths"]) + len(identity["paths"]))
 
+    def test_messaging_is_joined_and_skips_only_its_repeated_internal_routes(self) -> None:
+        messaging = contract({"/c": {}, "/health": {}, "/api/v{version}/interno/eventos": {}}, {"C": {}})
+        market = contract({"/a": {}, "/api/v{version}/interno/eventos": {}})
+        identity = contract({"/b": {}, "/health": {}})
+        merged = merge(market, identity, messaging)
+        self.assertEqual(sorted(merged["paths"]), ["/a", "/api/v{version}/interno/eventos", "/b", "/c", "/health"])
+        self.assertIn("C", merged["components"]["schemas"])
+
+    def test_messaging_repeating_a_public_route_fails(self) -> None:
+        with self.assertRaisesRegex(ValueError, "/a está en los dos"):
+            merge(contract({"/a": {}}), contract({"/b": {}}), contract({"/a": {}}))
+
+    def test_messaging_with_other_api_version_fails(self) -> None:
+        with self.assertRaisesRegex(ValueError, "Mensajería"):
+            merge(contract({}), contract({}), contract({}, version="2.0.0"))
+
+    def test_real_contracts_with_messaging_merge_without_conflicts(self) -> None:
+        def read(name: str) -> dict:
+            return json.loads((ROOT / "docs" / name).read_text(encoding="utf-8"))
+
+        market, identity, messaging = read("openapi.v1.json"), read("openapi.identity.v1.json"), read("openapi.messaging.v1.json")
+        merged = merge(market, identity, messaging)
+        public_messaging = {p for p in messaging["paths"] if p != "/health" and "/interno/" not in p}
+        self.assertTrue(public_messaging <= set(merged["paths"]))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,21 +1,21 @@
 # Tareas 054 — Bandeja de salida y tareas programadas (INT-01)
 
-> **Estado:** pendientes. En esta etapa **no se ejecutan**: se activan cuando la spec esté Aprobada y una persona lo indique.
+> **Estado:** en curso; conciliado con el código el 2026-11-23 (cada fila cita su evidencia: archivo o prueba). Lo que dice «pendiente» no tiene aún evidencia verificable.
 > «Depende de» = tareas que deben estar fusionadas antes; «Paralelo con» = tareas que se pueden trabajar a la vez.
 
 | Tarea | Qué se hace | Cubre | Depende de | Paralelo con | Responsable sugerido | Estado |
 |---|---|---|---|---|---|---|
-| T-00 | Prerrequisitos que hoy no existen y no son parte de esta spec: entrega interna de avisos y claves por emisor (spec 037), ejecutor de tareas de la spec 028 y biblioteca compartida (KNOCK-251) | §8 | — | T-01 | por asignar | pendiente |
-| T-01 | Script de `db/` con índices, índice único y TTL de las dos colecciones y prueba de base de datos | §6 · R-01, R-06, R-11 · CA-09, CA-18 | — | T-02, T-04 | por asignar | pendiente |
-| T-02 | Escritura del evento en la misma transacción, `_id` determinista y carga sin datos personales | R-02 · CA-02 a CA-04 | T-01 | T-04 | por asignar | pendiente |
-| T-03 | `ProcesadorDeOutbox` con reserva atómica, entrega a `/interno/avisos`, reintentos y `fallido` | R-03 a R-05 · CA-05 a CA-08 | T-01, T-02 | T-04 | por asignar | pendiente |
-| T-04 | Ejecutor de tareas de Identidad con `IManejadorDeTarea`, reintentos y arrendamiento | R-07, R-09 · CA-10, CA-11, CA-14, CA-15 | T-01 | T-02, T-03 | por asignar | pendiente |
-| T-05 | Catálogo cerrado de 12 tipos y plazos; tipo desconocido pasa a `fallida` | R-08 · CA-12, CA-13 | T-04 | T-03 | por asignar | pendiente |
-| T-06 | Concurrencia: dos réplicas, reserva vencida y tiempo simulado | R-10, R-12 · CA-16, CA-17, CA-19 | T-03, T-04 | — | por asignar | pendiente |
-| T-07 | Métricas, alerta, registros sin datos personales y salud independiente de la cola | R-13, R-14 · CA-20, CA-21 | T-03, T-04 | T-06 | por asignar | pendiente |
-| T-08 | Sin rutas públicas: prueba de arquitectura y de rutas del gateway | R-01 · CA-01 | T-03, T-04 | T-07 | por asignar | pendiente |
-| T-09 | Esquema de llamadas internas con `permisos` por ruta y rutas nuevas de las specs 039 y 041 | R-15 · CA-22 | T-03 | T-07 | por asignar | pendiente |
-| T-10 | Gates, `docs/observabilidad.md`, `Memoria.md` y revisión de par | §12 | todas | — | por asignar | pendiente |
+| T-00 | Prerrequisitos que hoy no existen y no son parte de esta spec: entrega interna de avisos y claves por emisor (spec 037), ejecutor de tareas de la spec 028 y biblioteca compartida (KNOCK-251) | §8 | — | T-01 | por asignar | parcial: `EntregaInternaHttp` existe en `Hosting/Procesos/Outbox`; claves por emisor por configurar |
+| T-01 | Script de `db/` con índices, índice único y TTL de las dos colecciones y prueba de base de datos | §6 · R-01, R-06, R-11 · CA-09, CA-18 | — | T-02, T-04 | por asignar | hecha: `db/054-outbox-y-tareas-programadas.js` con `Spec054OutboxScriptTests` |
+| T-02 | Escritura del evento en la misma transacción, `_id` determinista y carga sin datos personales | R-02 · CA-02 a CA-04 | T-01 | T-04 | por asignar | hecha: `OutboxStore`, `ProcesadorDeOutbox`, `EjecutorDeTareasProgramadas`, `CatalogoDeTareas` en `Hosting/Procesos`; unitarias `Spec054Tests` |
+| T-03 | `ProcesadorDeOutbox` con reserva atómica, entrega a `/interno/avisos`, reintentos y `fallido` | R-03 a R-05 · CA-05 a CA-08 | T-01, T-02 | T-04 | por asignar | hecha: `OutboxStore`, `ProcesadorDeOutbox`, `EjecutorDeTareasProgramadas`, `CatalogoDeTareas` en `Hosting/Procesos`; unitarias `Spec054Tests` |
+| T-04 | Ejecutor de tareas de Identidad con `IManejadorDeTarea`, reintentos y arrendamiento | R-07, R-09 · CA-10, CA-11, CA-14, CA-15 | T-01 | T-02, T-03 | por asignar | hecha: `OutboxStore`, `ProcesadorDeOutbox`, `EjecutorDeTareasProgramadas`, `CatalogoDeTareas` en `Hosting/Procesos`; unitarias `Spec054Tests` |
+| T-05 | Catálogo cerrado de 12 tipos y plazos; tipo desconocido pasa a `fallida` | R-08 · CA-12, CA-13 | T-04 | T-03 | por asignar | hecha: `OutboxStore`, `ProcesadorDeOutbox`, `EjecutorDeTareasProgramadas`, `CatalogoDeTareas` en `Hosting/Procesos`; unitarias `Spec054Tests` |
+| T-06 | Concurrencia: dos réplicas, reserva vencida y tiempo simulado | R-10, R-12 · CA-16, CA-17, CA-19 | T-03, T-04 | — | por asignar | parcial: reservas en `ReservasMongo`; `Spec054ReservasTests` (integración, solo CI) prueba con MongoDB real dos réplicas sobre la misma base (cada evento y cada tarea se reserva una sola vez, CA-16) y la reserva vencida que otra réplica retoma, con la dueña anterior sin poder cerrarla y tiempo simulado (CA-17); falta CA-19 |
+| T-07 | Métricas, alerta, registros sin datos personales y salud independiente de la cola | R-13, R-14 · CA-20, CA-21 | T-03, T-04 | T-06 | por asignar | parcial: sin evidencia de métricas ni alerta |
+| T-08 | Sin rutas públicas: prueba de arquitectura y de rutas del gateway | R-01 · CA-01 | T-03, T-04 | T-07 | por asignar | hecha: prueba de arquitectura `Spec054RutasTests` (CA_054_01): ningún controlador de Identidad, Mercado ni Mensajería declara rutas con `outbox` ni `tareas`, y el gateway (`appsettings.json` y `appsettings.Development.json`) no enruta ninguna ruta con `interno`, `outbox` ni `tareas`; las rutas internas sí existen en los servicios (la regla no pasa en vacío) |
+| T-09 | Esquema de llamadas internas con `permisos` por ruta y rutas nuevas de las specs 039 y 041 | R-15 · CA-22 | T-03 | T-07 | por asignar | parcial: la autenticación de servicio ya es una sola (`ServiceCredential` en `Knock.Hosting`, spec 056) y la prueba de arquitectura `Spec054RutasTests` (CA_054_22) exige que cada ruta interna de los tres servicios declare la credencial con el permiso de su ruta (`InternalServiceToken` en Identidad, política `Internal*` en Mercado y Mensajería); el comportamiento (sin permiso 403, vencida, emisor o clave ajenos 401) lo prueban `ServiceCredentialTests` (CA_056) y `Spec037InternoAvisosSeguridadTests`. Rutas existentes: `eventos`, `cuentas/{usuarioId}/...` (pendientes y eliminada) e `historial` en Mercado, con el secreto `interno-key-identity`. Falta la ruta interna de exportación de Mensajería (`/api/v1/interno/exportacion`), que depende de una pregunta abierta de la spec 039 (T-05) |
+| T-10 | Gates, `docs/observabilidad.md`, `Memoria.md` y revisión de par | §12 | todas | — | por asignar | pendiente: gates y revisión de par |
 
 ## Definición de terminado
 - Los criterios de aceptación de `spec.md` están cubiertos por pruebas en verde.

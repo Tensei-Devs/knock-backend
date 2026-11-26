@@ -24,7 +24,9 @@ permissions:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Solo los pull_request cancelan runs viejos del mismo PR; los push a ramas fijas (sprint-*, main, release, develop) terminan,
+  # porque cada merge cancelaba el run completo del push anterior. El group ya distingue PR (refs/pull/N/merge) de push (refs/heads/X).
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   DOTNET_NOLOGO: "true"
@@ -46,6 +48,7 @@ jobs:
       identity: ${{ steps.d.outputs.identity }}
       messaging: ${{ steps.d.outputs.messaging }}
       market: ${{ steps.d.outputs.market }}
+      docsonly: ${{ steps.d.outputs.docsonly }}
       spec: ${{ steps.d.outputs.spec }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -57,6 +60,7 @@ jobs:
           HEAD_REF: ${{ github.head_ref }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           EVENT_BEFORE: ${{ github.event.before }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           {
             echo "api=$([ -f Knock.slnx ] && echo true || echo false)"
@@ -77,17 +81,20 @@ jobs:
           if [ -z "$BASE_SHA" ]; then
             # Push: `before` cubre todos los commits del push, no solo el último. `before` de ceros =
             # rama nueva: no hay base y se considera que cambió todo.
-            if [ -n "$EVENT_BEFORE" ] && [ "$EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+              # Disparo manual: no hay `before` ni base; se corre todo (sin esto caía a HEAD~1 y podía omitir el API).
+              CHANGED="__ALL__"
+            elif [ -n "$EVENT_BEFORE" ] && [ "$EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
               CHANGED=$(git diff --name-only "$EVENT_BEFORE" HEAD 2>/dev/null || echo "__ALL__")
             else
-              CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "__ALL__")
+              CHANGED="__ALL__"
             fi
           fi
           # Cambios por servicio (KNOCK-202): solo se construye lo afectado. Un cambio en los
-          # contratos compartidos (Knock.Contracts) o en archivos compartidos de compilación
+          # contratos compartidos (Knock.Contracts), en las bibliotecas técnicas (Knock.Hosting, Knock.Hosting.Data y Knock.Hosting.Mvc) o en archivos compartidos de compilación
           # (Directory.Build.*, Directory.Packages.props, global.json, NuGet.config, *.sln/*.slnx,
           # *.props/*.targets) afecta a los cuatro servicios.
-          SHARED='^src/Knock\.Contracts/|^Directory\.|\.(slnx?|props|targets)$|^global\.json$|^[Nn]u[Gg]et\.config$'
+          SHARED='^src/Knock\.Contracts/|^src/Knock\.Hosting(\.Data|\.Mvc)?/|^Directory\.|\.(slnx?|props|targets)$|^global\.json$|^[Nn]u[Gg]et\.config$'
           hit() { [ "$CHANGED" = "__ALL__" ] || grep -qE "$1" <<<"$CHANGED"; }
           {
             echo "gateway=$(hit "^src/Knock\.Gateway/|$SHARED" && echo true || echo false)"
@@ -95,6 +102,15 @@ jobs:
             echo "messaging=$(hit "^src/Knock\.Messaging\.Api/|$SHARED" && echo true || echo false)"
             echo "market=$(hit "^src/Knock\.Market\.Api/|$SHARED" && echo true || echo false)"
           } >> "$GITHUB_OUTPUT"
+          # Solo documentos: ningún archivo cambiado fuera de docs/ (salvo docs/openapi*.json, que es contrato),
+          # specs/, *.md, db/README.md y Memoria.md. Con lista vacía o «__ALL__» NO es solo documentos (falla cerrado).
+          # Solo se salta el job «API — build, formato y pruebas»; contrato, SAST, Gitleaks y gobierno siguen.
+          DOCS_ONLY=false
+          if [ -n "$CHANGED" ] && [ "$CHANGED" != "__ALL__" ]             && ! grep -vE '^(docs/|specs/)|\.md$|^db/README\.md$|^Memoria\.md$' <<<"$CHANGED" | grep -q .             && ! grep -qE '^docs/openapi[^/]*\.json$' <<<"$CHANGED"; then
+            DOCS_ONLY=true
+            echo "::notice::PR solo de documentos: se omite el job API."
+          fi
+          echo "docsonly=$DOCS_ONLY" >> "$GITHUB_OUTPUT"
           if [ -n "$SPEC" ] && [ -n "$BASE_SHA" ] && ! grep -qE '^(src|tests)/' <<<"$CHANGED"; then
             echo "::notice::PR sin cambios de código ni pruebas: se omite la trazabilidad de $SPEC."
             SPEC=""
@@ -163,9 +179,9 @@ jobs:
   build-test:
     name: API — build, formato y pruebas
     needs: detect
-    if: needs.detect.outputs.api == 'true'
+    if: needs.detect.outputs.api == 'true' && needs.detect.outputs.docsonly != 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -232,7 +248,11 @@ jobs:
         run: |
           python3 scripts/export_openapi.py --no-build
           python3 scripts/export_openapi.py --no-build --service identity
-          git diff --exit-code -- docs/openapi.v1.json docs/openapi.identity.v1.json || { echo "::error::El contrato (docs/openapi.v1.json o docs/openapi.identity.v1.json) cambió: regénéralo con scripts/export_openapi.py y súbelo con el código."; exit 1; }
+          python3 scripts/export_openapi.py --no-build --service messaging
+          # Spec 034 R-13 y R-15: el contrato público sale de los tres de servicio y de las rutas del gateway (sin compilar).
+          python3 scripts/export_openapi.py --publico
+          python3 scripts/export_openapi.py --comprobar-publico
+          git diff --exit-code --name-only -- docs/openapi.v1.json docs/openapi.identity.v1.json docs/openapi.messaging.v1.json docs/openapi.publico.v1.json || { echo "::error::Los contratos listados arriba cambiaron: regénéralos con scripts/export_openapi.py (--service ... y --publico) y súbelos con el código."; exit 1; }
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
@@ -353,20 +373,29 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Contrato base vs PR
+      # Spec 034 R-15 / CA-12: oasdiff compara cada contrato de servicio con el de la rama destino. Un cambio incompatible falla,
+      # salvo con la etiqueta `contrato-incompatible`: entonces pasa y la lista de cambios queda en el resumen del PR.
+      - name: Contratos base vs PR (oasdiff)
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: |
-          git show "$BASE_SHA:docs/openapi.v1.json" > base.json 2>/dev/null || { echo "Contrato nuevo: nada que comparar"; exit 0; }
-          [ -f docs/openapi.v1.json ] || exit 0
-          docker run --rm -v "$PWD":/w -w /w tufin/oasdiff breaking base.json docs/openapi.v1.json --fail-on ERR
-      - name: Contrato de Identity base vs PR
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          git show "$BASE_SHA:docs/openapi.identity.v1.json" > base.identity.json 2>/dev/null || { echo "Contrato de Identity nuevo: nada que comparar"; exit 0; }
-          [ -f docs/openapi.identity.v1.json ] || exit 0
-          docker run --rm -v "$PWD":/w -w /w tufin/oasdiff breaking base.identity.json docs/openapi.identity.v1.json --fail-on ERR
+          permitido=false
+          if echo "$PR_LABELS" | grep -q '"contrato-incompatible"'; then permitido=true; fi
+          malos=0
+          for f in openapi.v1.json openapi.identity.v1.json openapi.messaging.v1.json openapi.publico.v1.json; do
+            [ -f "docs/$f" ] || continue
+            git show "$BASE_SHA:docs/$f" > "base.$f" 2>/dev/null || { echo "docs/$f es nuevo: nada que comparar"; continue; }
+            if ! docker run --rm -v "$PWD":/w -w /w tufin/oasdiff breaking "base.$f" "docs/$f" --fail-on ERR > "diff.$f.txt"; then
+              malos=1
+              { echo "### Cambios incompatibles en docs/$f"; echo '```'; cat "diff.$f.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+              cat "diff.$f.txt"
+            fi
+          done
+          if [ "$malos" = 1 ] && [ "$permitido" != true ]; then
+            echo "::error::Cambio incompatible en el contrato. Si es intencional, el PR necesita la etiqueta contrato-incompatible."; exit 1
+          fi
+          if [ "$malos" = 1 ]; then echo "::warning::Cambios incompatibles aceptados por la etiqueta contrato-incompatible (ver el resumen)."; fi
 
   iac:
     name: IaC, Dockerfile y workflows (Checkov)
@@ -447,13 +476,16 @@ jobs:
           persist-credentials: false
       - name: Credenciales efímeras de la pila (no se imprimen)
         run: |
-          DB=$(openssl rand -hex 24); JWT=$(openssl rand -hex 32)
-          echo "::add-mask::$DB"; echo "::add-mask::$JWT"
-          echo "CI_DB_PASSWORD=$DB" >> "$GITHUB_ENV"; echo "CI_JWT_KEY=$JWT" >> "$GITHUB_ENV"
-      - name: Levantar API + Redis + Azurite
+          for v in CI_DB_PASSWORD:hex:24 CI_REDIS_PASSWORD:hex:24 CI_JWT_KEY:b64:32 CI_KEY_A:b64:32 CI_KEY_B:b64:32 CI_KEY_C:b64:32 CI_KEY_D:b64:32 CI_KEY_E:b64:32 CI_KEY_F:b64:32 CI_BLOB_KEY:b64:32; do
+            IFS=: read -r nombre tipo largo <<<"$v"
+            if [ "$tipo" = hex ]; then valor=$(openssl rand -hex "$largo"); else valor=$(openssl rand -base64 "$largo"); fi
+            echo "::add-mask::$valor"; echo "$nombre=$valor" >> "$GITHUB_ENV"
+          done
+      - name: Levantar gateway, Identidad, Mercado, Mensajería, MongoDB (documentdb-local), Redis y Azurite
         run: |
-          docker compose -f deploy/docker-compose.ci.yml up -d --build
-          for _ in $(seq 1 40); do curl -fs http://localhost:8080/health/ready && break; sleep 3; done
+          docker compose -f deploy/docker-compose.ci.yml up -d --build --wait --wait-timeout 600             || { docker compose -f deploy/docker-compose.ci.yml ps; docker compose -f deploy/docker-compose.ci.yml logs --no-color --tail 80 gateway identity market messaging; exit 1; }
+      - name: Autoprueba del humo (TC-BUG-001-04)
+        run: bash tests/smoke/smoke_test.sh
       - name: Smoke (health, 401 sin token, headers de seguridad)
         run: bash tests/smoke/smoke.sh http://localhost:8080
       - name: ZAP baseline
@@ -484,5 +516,7 @@ jobs:
           for k, v in needs.items():
               print(f"{k}: {v['result']}")
           bad = {k: v["result"] for k, v in needs.items() if v["result"] not in ("success", "skipped")}
+          if needs["detect"]["outputs"].get("docker") == "true" and needs["detect"]["outputs"].get("dast") != "true":
+              sys.exit("BUG-001: falta deploy/docker-compose.ci.yml o tests/smoke/smoke.sh; el humo y el DAST no pueden saltarse")
           sys.exit(f"Fallaron: {bad}" if bad else 0)
           EOF

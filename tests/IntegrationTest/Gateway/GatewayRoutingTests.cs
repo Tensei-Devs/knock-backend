@@ -27,6 +27,38 @@ public sealed class GatewayRoutingTests : IAsyncLifetime, IDisposable
     private GatewayTestHost? _host;
     private HttpClient? _client;
 
+    public static TheoryData<string, string> MarketRoutes { get; } = new()
+    {
+        { "GET", "/api/v1/tecnicos/507f1f77bcf86cd799439011/servicios" },
+        { "POST", "/api/v1/tecnicos/me/servicios" },
+        { "PUT", "/api/v1/tecnicos/me/servicios/507f1f77bcf86cd799439011" },
+        { "DELETE", "/api/v1/tecnicos/me/servicios/507f1f77bcf86cd799439011" },
+        { "GET", "/api/v1/tecnicos/507f1f77bcf86cd799439011/fotos-trabajos" },
+        { "GET", "/api/v1/tecnicos/me/reputacion" },
+        { "GET", "/api/v1/agenda" },
+        { "POST", "/api/v1/visitas/507f1f77bcf86cd799439011/reprogramar" },
+        { "POST", "/api/v1/visitas/507f1f77bcf86cd799439011/reprogramar/respuesta" },
+        { "POST", "/api/v1/visitas/507f1f77bcf86cd799439011/cancelar" },
+        { "POST", "/api/v1/visitas/507f1f77bcf86cd799439011/cliente-ausente" },
+        { "POST", "/api/v1/visitas/507f1f77bcf86cd799439011/tecnico-ausente" },
+        { "POST", "/api/v1/visitas/507f1f77bcf86cd799439011/terminar" },
+        { "POST", "/api/v1/visitas/507f1f77bcf86cd799439011/no-terminado" },
+        { "PUT", "/api/v1/visitas/507f1f77bcf86cd799439011/permiso-fotos" },
+        { "POST", "/api/v1/visitas/507f1f77bcf86cd799439011/cotizacion-final" },
+        { "POST", "/api/v1/visitas/507f1f77bcf86cd799439011/cotizacion-final/decision" },
+        { "GET", "/api/v1/visitas/507f1f77bcf86cd799439011/cotizacion-final" },
+        { "GET", "/api/v1/visitas/507f1f77bcf86cd799439011/ajustes-pendientes" },
+        { "POST", "/api/v1/cotizaciones/507f1f77bcf86cd799439011/ajuste-precio" },
+        { "POST", "/api/v1/ajustes/507f1f77bcf86cd799439011/decision" },
+        { "POST", "/api/v1/solicitudes/507f1f77bcf86cd799439011/cancelar" },
+        { "POST", "/api/v1/asistente/conversaciones" },
+        { "POST", "/api/v1/asistente/resumen-chat" },
+        { "POST", "/api/v1/asistente/borrador-cotizacion" },
+        { "GET", "/api/v1/asistente/rango-precio" },
+        { "GET", "/api/v1/asistente/bitacora/507f1f77bcf86cd799439011" },
+        { "PUT", "/api/v1/asistente/bitacora/507f1f77bcf86cd799439011" },
+    };
+
     [Fact]
     public async Task MyQuotes_UsesAuthenticatedMarketRoute_CA_048_12()
     {
@@ -98,10 +130,62 @@ public sealed class GatewayRoutingTests : IAsyncLifetime, IDisposable
     [InlineData("/api/v1/solicitudes/507f1f77bcf86cd799439011/elegir")]
     [InlineData("/api/v1/visitas/507f1f77bcf86cd799439011/llegada")]
     [InlineData("/api/v1/visitas/507f1f77bcf86cd799439011/aviso")]
+    [InlineData("/api/v1/conversaciones")]
+    [InlineData("/api/v1/conversaciones/507f1f77bcf86cd799439011/mensajes")]
+    [InlineData("/api/v1/conversaciones/507f1f77bcf86cd799439011/leido")]
+    [InlineData("/api/v1/dispositivos")]
     public async Task ProtectedPost_WithoutToken_IsNotForwarded_CA_020_16(string path)
     {
         _client!.DefaultRequestHeaders.Authorization = null;
         using var response = await _client.PostAsync(new Uri(path, UriKind.Relative), content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        _requestsSeen.Should().BeEmpty();
+    }
+
+    [Theory]
+    [MemberData(nameof(MarketRoutes))]
+    public async Task MarketRoute_IsForwardedToMarketWithTheToken_KNOCK_266(string method, string path)
+    {
+        using var request = new HttpRequestMessage(new HttpMethod(method), new Uri(path, UriKind.Relative));
+        using var response = await _client!.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Headers.GetValues("X-Servicio").Should().ContainSingle().Which.Should().Be("mercado");
+        var forwarded = _requestsSeen.Should().ContainSingle().Which;
+        forwarded.Path.Should().Be(path);
+        forwarded.Method.Should().Be(method);
+        forwarded.Authorization.Should().Be(_client.DefaultRequestHeaders.Authorization!.ToString());
+    }
+
+    [Theory]
+    [MemberData(nameof(MarketRoutes))]
+    public async Task MarketRoute_WithoutToken_IsNotForwarded_KNOCK_266(string method, string path)
+    {
+        _client!.DefaultRequestHeaders.Authorization = null;
+        using var request = new HttpRequestMessage(new HttpMethod(method), new Uri(path, UriKind.Relative));
+        using var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        _requestsSeen.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task PutNoticePreferences_IsRoutedToMessagingNotIdentity_PRE_02()
+    {
+        const string path = "/api/v1/me/preferencias-avisos";
+        using var response = await _client!.PutAsync(new Uri(path, UriKind.Relative), content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Headers.GetValues("X-Servicio").Should().ContainSingle().Which.Should().Be("mensajeria");
+        _requestsSeen.Should().ContainSingle().Which.Should().Match<(string Path, string Method, string? Authorization)>(r => r.Path == path && r.Method == "PUT");
+    }
+
+    [Fact]
+    public async Task PutNoticePreferences_WithoutToken_IsNotForwarded_PRE_02()
+    {
+        _client!.DefaultRequestHeaders.Authorization = null;
+        using var response = await _client.PutAsync(new Uri("/api/v1/me/preferencias-avisos", UriKind.Relative), content: null);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         _requestsSeen.Should().BeEmpty();
@@ -162,6 +246,7 @@ public sealed class GatewayRoutingTests : IAsyncLifetime, IDisposable
     [Theory]
     [InlineData("/api/v1/auth/firebase", "identidad")]
     [InlineData("/api/v1/recuperacion-acceso", "identidad")]
+    [InlineData("/api/v1/suspension/apelacion", "identidad")]
     [InlineData("/api/v1/me", "identidad")]
     [InlineData("/api/v1/me/sesiones", "identidad")]
     [InlineData("/api/v1/me/bloqueos", "identidad")]
@@ -174,6 +259,11 @@ public sealed class GatewayRoutingTests : IAsyncLifetime, IDisposable
     [InlineData("/api/v1/zonas/cp/42800", "mercado")]
     [InlineData("/api/v1/mensajes/1", "mensajeria")]
     [InlineData("/api/v1/notificaciones", "mensajeria")]
+    [InlineData("/api/v1/conversaciones", "mensajeria")]
+    [InlineData("/api/v1/conversaciones/no-leidas", "mensajeria")]
+    [InlineData("/api/v1/conversaciones/507f1f77bcf86cd799439011/mensajes", "mensajeria")]
+    [InlineData("/api/v1/dispositivos", "mensajeria")]
+    [InlineData("/api/v1/me/preferencias-avisos", "mensajeria")]
     public async Task Request_IsRoutedToTheRightService_CA_02(string path, string expectedService)
     {
         var response = await _client!.GetAsync(new Uri(path, UriKind.Relative));
@@ -211,6 +301,31 @@ public sealed class GatewayRoutingTests : IAsyncLifetime, IDisposable
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         _correlationSeen.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData("PUT", "/api/v1/visitas/507f1f77bcf86cd799439011/tecnico-ausente")]
+    [InlineData("GET", "/api/v1/visitas/507f1f77bcf86cd799439011/tecnico-ausente")]
+    [InlineData("POST", "/api/v1/visitas/507f1f77bcf86cd799439011/ajustes-pendientes")]
+    [InlineData("DELETE", "/api/v1/visitas/507f1f77bcf86cd799439011/ajustes-pendientes")]
+    public async Task VisitRoute_WithAnotherMethod_IsNotForwarded_CA_063_10(string method, string path)
+    {
+        using var request = new HttpRequestMessage(new HttpMethod(method), new Uri(path, UriKind.Relative));
+        using var response = await _client!.SendAsync(request);
+
+        response.StatusCode.Should().BeOneOf(HttpStatusCode.NotFound, HttpStatusCode.MethodNotAllowed);
+        _requestsSeen.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task TheConversationPermissionRoute_IsNotPublishedInTheGateway_CA_030_17()
+    {
+        var path = "/api/v1/solicitudes/507f1f77bcf86cd799439011/conversacion?tecnicoId=507f1f77bcf86cd799439012";
+
+        var response = await _client!.GetAsync(new Uri(path, UriKind.Relative));
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        _requestsSeen.Should().BeEmpty("la ruta de permiso solo se llama por la red interna");
     }
 
     [Fact]

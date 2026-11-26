@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Asp.Versioning.Mvc" Version="10.2.1" />
+    <PackageReference Include="Azure.Identity" Version="1.21.0" />
     <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.10.0" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.30.1" />
     <PackageReference Include="FluentValidation" Version="12.1.1" />
@@ -23,18 +24,30 @@
     <PackageReference Include="StackExchange.Redis" Version="2.13.23" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Modules\Moderation\Services\lista-local.es-MX.txt" WithCulture="false" LogicalName="lista-local.es-MX.txt" />
+    <EmbeddedResource Include="Modules\Assistant\Prompts\*.md" LogicalName="Assistant.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Modules\Assistant\Plantillas\*.md" LogicalName="Assistant.%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="Knock.UnitTest" />
     <InternalsVisibleTo Include="Knock.IntegrationTest" />
+    <InternalsVisibleTo Include="Knock.ContractTest" />
     <InternalsVisibleTo Include="Knock.SecurityTest" />
     <InternalsVisibleTo Include="Knock.DatabaseTest" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Knock.Contracts\Knock.Contracts.csproj" />
     <ProjectReference Include="..\Knock.Hosting\Knock.Hosting.csproj" />
+    <ProjectReference Include="..\Knock.Hosting.Mvc\Knock.Hosting.Mvc.csproj" />
+    <ProjectReference Include="..\Knock.Hosting.Data\Knock.Hosting.Data.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\..\db\seeds\demo\market\tecnicos.json" Link="db\seeds\demo\market\tecnicos.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="..\..\db\seeds\demo\market\solicitudes.json" Link="db\seeds\demo\market\solicitudes.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="..\..\db\seeds\demo\market\cotizaciones.json" Link="db\seeds\demo\market\cotizaciones.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Global using de las piezas MVC compartidas (spec 055): evita repetir el using en cada controlador. -->
+    <Using Include="Knock.Hosting.Mvc" />
   </ItemGroup>
 </Project>

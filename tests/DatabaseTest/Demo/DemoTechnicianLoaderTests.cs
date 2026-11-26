@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text.Json.Nodes;
+using Knock.Hosting.Data;
 using Knock.IntegrationTest.Support;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Requests.Data;
@@ -164,17 +165,9 @@ public sealed class DemoTechnicianLoaderTests
             var database = client.GetDatabase(name);
             var options = Options.Create(new KnockMongoOptions { ConnectionString = fixture.ConnectionString });
             var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Seed:Demo"] = enabled.ToString() }).Build();
-            var loader = new DemoTechnicianSeeder(new DemoTechnicianStore(database, options), config, new FakeEnvironment { EnvironmentName = environment });
+            var loader = new DemoTechnicianSeeder(new DemoTechnicianStore(database, options), config, new DemoFakeEnvironment { EnvironmentName = environment });
             await test(database, loader, options);
         }
         finally { await client.DropDatabaseAsync(name); }
-    }
-
-    private sealed class FakeEnvironment : IHostEnvironment
-    {
-        public string EnvironmentName { get; set; } = Environments.Development;
-        public string ApplicationName { get; set; } = string.Empty;
-        public string ContentRootPath { get; set; } = string.Empty;
-        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
     }
 }

@@ -1,10 +1,13 @@
-using System.Text.RegularExpressions;
+using System.Globalization;
+using Knock.Hosting.Data;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Tecnicos.Domain;
+using Knock.Market.Api.Modules.Tecnicos.Dtos;
 using Knock.Market.Api.Modules.Tecnicos.Services;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using MongoDB.Driver.GeoJsonObjectModel;
 
 namespace Knock.Market.Api.Modules.Tecnicos.Data;
 
@@ -12,8 +15,11 @@ namespace Knock.Market.Api.Modules.Tecnicos.Data;
 internal sealed class TechnicianLookupStore(
     [FromKeyedServices(TecnicosModuleExtensions.ModuleKey)] IMongoDatabase database,
     IOptions<KnockMongoOptions> options,
-    TimeProvider clock) : ITechnicianLookupReader
+    TimeProvider clock) : ITechnicianLookupReader, ITechnicianOwnerReader
 {
+    // Se leen más coincidencias que sugerencias porque algunas son de técnicos no visibles o repiten nombre.
+    private const int _serviceCandidates = 50;
+
     private IMongoCollection<BsonDocument> Technicians => database.GetCollection<BsonDocument>(TechnicianProfileStore.CollectionName);
 
     public async Task<TechnicianCoverage?> FindCoverageAsync(ObjectId id, CancellationToken cancellationToken)
@@ -42,17 +48,99 @@ internal sealed class TechnicianLookupStore(
 
     private static string? Text(BsonDocument d, string name) => d.TryGetValue(name, out var v) && v.IsString ? v.AsString : null;
 
+    public async Task<IReadOnlyList<ServiceName>> FindServiceNamesAsync(string text, int limit, CancellationToken cancellationToken)
+    {
+        var matches = await database.GetCollection<BsonDocument>(ServiceStore.CollectionName)
+            .Find(Builders<BsonDocument>.Filter.Regex("nombre", NameRegex(text)), new FindOptions { MaxTime = options.Value.QueryMaxTime })
+            .Project(Builders<BsonDocument>.Projection.Include("nombre").Include("tecnicoId")).Sort(Builders<BsonDocument>.Sort.Ascending("nombre"))
+            .Limit(_serviceCandidates).ToListAsync(cancellationToken);
+        var valid = matches.Where(d => d.GetValue("nombre", BsonNull.Value).IsString && d.GetValue("tecnicoId", BsonNull.Value).IsObjectId).ToList();
+        if (valid.Count == 0)
+        {
+            return [];
+        }
+
+        var ids = valid.Select(d => d["tecnicoId"].AsObjectId).Distinct();
+        var visible = await Technicians.Find(Builders<BsonDocument>.Filter.In("_id", ids) & Visible(), new FindOptions { MaxTime = options.Value.QueryMaxTime })
+            .Project(Builders<BsonDocument>.Projection.Include("_id")).ToListAsync(cancellationToken);
+        var visibleIds = visible.Select(d => d["_id"].AsObjectId).ToHashSet();
+        return [.. valid.Where(d => visibleIds.Contains(d["tecnicoId"].AsObjectId))
+            .DistinctBy(d => TechnicianLookupService.Normalize(d["nombre"].AsString))
+            .Take(limit)
+            .Select(d => new ServiceName(d["tecnicoId"].AsObjectId.ToString(), d["nombre"].AsString))];
+    }
+
     public async Task<IReadOnlyList<BusinessName>> FindBusinessNamesAsync(string text, int limit, CancellationToken cancellationToken)
     {
-        var filters = Builders<BsonDocument>.Filter;
-        var now = clock.GetUtcNow().UtcDateTime;
-        // El texto ya pasó el validador (letras, números y espacios) y además se escapa: nunca se interpreta como expresión regular.
-        var filter = filters.Regex("nombreNegocio", new BsonRegularExpression(Regex.Escape(text), "i"))
-            & filters.Eq("estado", TechnicianRules.ActiveState) & filters.Eq("oculto", false)
-            & (filters.Exists("ocultoHasta", false) | filters.Lte("ocultoHasta", now));
+        var filter = Builders<BsonDocument>.Filter.Regex("nombreNegocio", NameRegex(text)) & Visible();
         var documents = await Technicians.Find(filter, new FindOptions { MaxTime = options.Value.QueryMaxTime })
             .Project(Builders<BsonDocument>.Projection.Include("nombreNegocio")).Sort(Builders<BsonDocument>.Sort.Ascending("nombreNegocio"))
             .Limit(limit).ToListAsync(cancellationToken);
         return [.. documents.Where(d => d["nombreNegocio"].IsString).Select(d => new BusinessName(d["_id"].AsObjectId.ToString(), d["nombreNegocio"].AsString))];
+    }
+
+    // El texto ya pasó el validador (letras, números y espacios) y el patrón además lo escapa.
+    private static BsonRegularExpression NameRegex(string text) => new(TechnicianLookupService.AccentInsensitivePattern(text), "i");
+
+    private FilterDefinition<BsonDocument> Visible()
+    {
+        var filters = Builders<BsonDocument>.Filter;
+        return filters.Eq("estado", TechnicianRules.ActiveState) & filters.Eq("oculto", false)
+            & (filters.Exists("ocultoHasta", false) | filters.Lte("ocultoHasta", clock.GetUtcNow().UtcDateTime));
+    }
+
+    /// <summary>TEC-02 (spec 046, R-04): técnicos visibles con filtros estructurados (oficio, colonia, distancia), «disponibleHoy» y «solo verificados».
+    /// El cursor es el <c>_id</c> del último ítem de la página, con <c>limite</c> de 20 por defecto y 50 como máximo.</summary>
+    public async Task<TechnicianListPage> FindListAsync(TechnicianListQuery query, CancellationToken cancellationToken)
+    {
+        var find = Technicians.Find(BuildFilter(query, clock.GetUtcNow().UtcDateTime), new FindOptions { MaxTime = options.Value.QueryMaxTime });
+        if (query.Orden != "distancia")
+        {
+            find = find.Sort(Builders<BsonDocument>.Sort.Combine(
+                Builders<BsonDocument>.Sort.Descending("calificacion"),
+                Builders<BsonDocument>.Sort.Descending("_id")));
+        }
+
+        var limit = int.TryParse(query.Limite, NumberStyles.Integer, CultureInfo.InvariantCulture, out var requested) && requested is >= 1 and <= TechnicianListQuery.MaxLimit
+            ? requested : TechnicianListQuery.DefaultLimit;
+        var projection = Builders<BsonDocument>.Projection.Combine(TechnicianProfileStore.ProfileFields.Select(f => Builders<BsonDocument>.Projection.Include(f)));
+        var documents = await find.Project(projection).Limit(limit + 1).ToListAsync(cancellationToken);
+        var page = documents.Take(limit).Select(TechnicianProfileStore.ToProfile).ToList();
+        return new TechnicianListPage(page, documents.Count > limit ? page[^1].Id.ToString() : null);
+    }
+
+    public async Task<IReadOnlyDictionary<string, string>> FindOwnersAsync(IReadOnlyCollection<ObjectId> technicianIds, CancellationToken cancellationToken)
+    {
+        var documents = await Technicians.Find(Builders<BsonDocument>.Filter.In("_id", technicianIds), new FindOptions { MaxTime = options.Value.QueryMaxTime })
+            .Project(Builders<BsonDocument>.Projection.Include("usuarioId")).ToListAsync(cancellationToken);
+        return documents.Where(d => d.TryGetValue("usuarioId", out var owner) && owner.IsString).ToDictionary(d => d["_id"].AsObjectId.ToString(), d => d["usuarioId"].AsString, StringComparer.Ordinal);
+    }
+
+    private static FilterDefinition<BsonDocument> BuildFilter(TechnicianListQuery query, DateTime now)
+    {
+        var filters = Builders<BsonDocument>.Filter;
+        var condition = filters.Eq("estado", TechnicianRules.ActiveState)
+            & filters.Eq("oculto", false)
+            & (filters.Exists("ocultoHasta", false) | filters.Lte("ocultoHasta", now));
+        if (query.Oficio is not null) condition &= filters.AnyIn("oficios", [query.Oficio]);
+        if (query.Colonia is not null) condition &= filters.Eq("coloniaBaseId", query.Colonia);
+        if (bool.TryParse(query.DisponibleHoy, out var disponible) && disponible) condition &= filters.Gt("disponibleHasta", now);
+        if (bool.TryParse(query.SoloVerificados, out var verificados) && verificados) condition &= filters.Ne("nivelVerificacion", TechnicianRules.NoVerification);
+        if (query.Cursor is not null) condition &= filters.Gt("_id", ObjectId.Parse(query.Cursor));
+        var position = PositionFilter(filters, query);
+        return position is null ? condition : condition & position;
+    }
+
+    private static FilterDefinition<BsonDocument>? PositionFilter(FilterDefinitionBuilder<BsonDocument> filters, TechnicianListQuery query)
+    {
+        if (query.Lat is null || query.Lng is null)
+        {
+            return null;
+        }
+
+        var point = GeoJson.Point(GeoJson.Geographic(double.Parse(query.Lng, CultureInfo.InvariantCulture), double.Parse(query.Lat, CultureInfo.InvariantCulture)));
+        return query.RadioKm is not null && int.TryParse(query.RadioKm, out var radius)
+            ? filters.NearSphere("ubicacionBase", point, radius * 1000.0)
+            : filters.NearSphere("ubicacionBase", point);
     }
 }

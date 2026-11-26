@@ -15,6 +15,9 @@ internal sealed record SeededTechnician(ObjectId Id, string Sub);
 internal static class Spec021Host
 {
     public const string TechnicianPhone = "5512345678";
+
+    /// <summary>Precio (y tope) de la cotización que siembra <see cref="SeedQuoteAsync"/> si no se indica otro.</summary>
+    public const int SeededPrice = 1000;
     public const string TechnicianWhatsApp = "5598765432";
     public const string WorkshopAddress = "Taller Ficticio 45, Colonia Piloto";
     public const string TechnicianName = "Demo Tecnico Uno";
@@ -61,7 +64,7 @@ internal static class Spec021Host
     }
 
     /// <summary>Inserta una cotización directamente (la spec 020 ya prueba el envío); <c>creadoEn</c> crece con cada llamada para que el orden de desempate sea predecible.</summary>
-    public static async Task<ObjectId> SeedQuoteAsync(this Spec020Host host, ObjectId requestId, SeededTechnician technician, string type = "fijo", int? price = 1000, int? min = null, int? max = null, int? cap = null, string day = "", string time = "10:00", string state = "enviada")
+    public static async Task<ObjectId> SeedQuoteAsync(this Spec020Host host, ObjectId requestId, SeededTechnician technician, string type = "fijo", int? price = SeededPrice, int? min = null, int? max = null, int? cap = null, string day = "", string time = "10:00", string state = "enviada")
     {
         var id = ObjectId.GenerateNewId();
         var created = DateTime.UtcNow.AddSeconds(Interlocked.Increment(ref _sequence) - 100_000);

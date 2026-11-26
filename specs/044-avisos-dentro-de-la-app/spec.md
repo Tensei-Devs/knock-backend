@@ -233,7 +233,14 @@ Las pruebas citan el caso como `CA_044_NN` en el nombre (para `python scripts/sd
 - Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
 - Dependencia: el despachador de avisos de la spec 037 es el único que crea avisos.
 
+## Nota de enmienda (2026-11-23, decisión de José)
+- **Estado de esta enmienda:** aprobada por José Julián Hernández Hernández el 2026-11-24. La aprobación de abajo es la original; la firma de esta enmienda es la línea «Enmienda» de la sección Aprobación. El trabajo de código que pide queda en `task.md` como pendiente, **desbloqueada por la firma del 2026-11-24**.
+- **Quién escribe `avisos`.** R-14 dice que el aviso «solo se crea desde el despachador de la spec 037». Se verificó que hoy **nada lo hace**: `NoticesStore` solo lee, cuenta y marca como leído, y el despachador solo envía el push. La enmienda de la spec 037 (R-14, nota del 2026-11-23) obliga al despachador a escribir en `avisos`; hasta que se implemente (037 T-10), `GET /api/v1/avisos` y el contador responden vacío y los CA que dependen de avisos existentes solo se prueban con datos sembrados.
+- El texto de los avisos sigue siendo **fijo y sin enlace** (el catálogo de la 037). Para el aviso «exportación lista» la app consulta la exportación al abrirlo (spec 039, nota de enmienda del 2026-11-23).
+- Tarea: `task.md` T-11, desbloqueada por la firma del 2026-11-24 (pendiente de código).
+
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
+- [x] Enmienda 2026-11-23 — nombre: José Julián Hernández Hernández fecha: 2026-11-24
 - [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

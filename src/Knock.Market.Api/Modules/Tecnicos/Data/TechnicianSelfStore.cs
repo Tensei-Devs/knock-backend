@@ -1,3 +1,4 @@
+using Knock.Hosting.Data;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Tecnicos.Domain;
 using Knock.Market.Api.Modules.Tecnicos.Dtos;
@@ -15,8 +16,12 @@ namespace Knock.Market.Api.Modules.Tecnicos.Data;
 internal sealed class TechnicianSelfStore(
     [FromKeyedServices(TecnicosModuleExtensions.ModuleKey)] IMongoDatabase database,
     IOptions<KnockMongoOptions> options,
-    TimeProvider clock) : ITechnicianSelfStore
+    TimeProvider clock,
+    TechnicianLookupService lookup) : ITechnicianSelfStore
 {
+    private const string _name = "nombre";
+    private const string _businessName = "nombreNegocio";
+
     private IMongoCollection<BsonDocument> Technicians => database.GetCollection<BsonDocument>(TechnicianProfileStore.CollectionName);
 
     private FindOptions Find => new() { MaxTime = options.Value.QueryMaxTime };
@@ -57,8 +62,12 @@ internal sealed class TechnicianSelfStore(
             d.TryGetValue("creadoEn", out var created) && created.IsValidDateTime ? created.ToUniversalTime() : DateTime.MinValue);
     }
 
-    public async Task<ObjectId?> SetAvailableUntilAsync(string sub, DateTime untilUtc, CancellationToken cancellationToken) =>
-        await UpdateOneAsync(sub, Builders<BsonDocument>.Update.Set("disponibleHasta", untilUtc), cancellationToken);
+    public async Task<ObjectId?> SetAvailableUntilAsync(string sub, DateTime untilUtc, CancellationToken cancellationToken)
+    {
+        var id = await UpdateOneAsync(sub, Builders<BsonDocument>.Update.Set("disponibleHasta", untilUtc), cancellationToken);
+        lookup.ForgetListCache();
+        return id;
+    }
 
     public async Task<IReadOnlyList<DayScheduleDto>?> ReadScheduleAsync(string sub, CancellationToken cancellationToken)
     {
@@ -76,7 +85,9 @@ internal sealed class TechnicianSelfStore(
             ["abierto"] = day.Abierto == true,
             ["franjas"] = new BsonArray((day.Franjas ?? []).Select(r => new BsonDocument { ["inicio"] = r.Inicio, ["fin"] = r.Fin })),
         }));
-        return await UpdateOneAsync(sub, Builders<BsonDocument>.Update.Set("horarios", days), cancellationToken);
+        var id = await UpdateOneAsync(sub, Builders<BsonDocument>.Update.Set("horarios", days), cancellationToken);
+        lookup.ForgetListCache();
+        return id;
     }
 
     public async Task UpdateAsync(ObjectId id, IReadOnlyDictionary<string, BsonValue?> changes, CancellationToken cancellationToken)
@@ -84,7 +95,29 @@ internal sealed class TechnicianSelfStore(
         var update = Builders<BsonDocument>.Update.Combine(changes.Select(change => change.Value is null
             ? Builders<BsonDocument>.Update.Unset(change.Key)
             : Builders<BsonDocument>.Update.Set(change.Key, change.Value)));
+        if (changes.ContainsKey(_name) || changes.ContainsKey(_businessName))
+        {
+            update = Builders<BsonDocument>.Update.Combine(update, await SearchFieldsAsync(id, changes, cancellationToken));
+        }
+
         await Technicians.UpdateOneAsync(Builders<BsonDocument>.Filter.Eq("_id", id), update, cancellationToken: cancellationToken);
+        lookup.ForgetListCache();
+    }
+
+    /// <summary>Recalcula los campos de búsqueda (spec 027, R-06) con el nombre y el negocio que quedan después del cambio.</summary>
+    private async Task<UpdateDefinition<BsonDocument>> SearchFieldsAsync(ObjectId id, IReadOnlyDictionary<string, BsonValue?> changes, CancellationToken cancellationToken)
+    {
+        var current = await Technicians.Find(Builders<BsonDocument>.Filter.Eq("_id", id))
+            .Project(Builders<BsonDocument>.Projection.Include(_name).Include(_businessName)).FirstOrDefaultAsync(cancellationToken) ?? [];
+        var fields = new BsonDocument();
+        TechnicianSearchFields.AddTo(fields, After(current, changes, _name) ?? string.Empty, After(current, changes, _businessName));
+        return Builders<BsonDocument>.Update.Combine(fields.Select(f => Builders<BsonDocument>.Update.Set(f.Name, f.Value)));
+    }
+
+    private static string? After(BsonDocument current, IReadOnlyDictionary<string, BsonValue?> changes, string field)
+    {
+        var value = changes.TryGetValue(field, out var changed) ? changed : current.GetValue(field, BsonNull.Value);
+        return value is { IsString: true } ? value.AsString : null;
     }
 
     private async Task<ObjectId?> UpdateOneAsync(string sub, UpdateDefinition<BsonDocument> update, CancellationToken cancellationToken)

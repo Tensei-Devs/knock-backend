@@ -49,3 +49,43 @@ variable "alert_failed_requests_threshold" {
   type        = number
   default     = 10
 }
+
+variable "enable_content_safety" {
+  description = "Crea el recurso de Azure AI Content Safety de la moderación (spec 031) en el SKU gratuito F0. **Apagado por omisión.** Cableado de Market: `enable_content_safety` en `deploy/apps` (debe valer lo mismo)."
+  type        = bool
+  default     = false
+}
+
+variable "enable_azure_openai" {
+  description = "Crea el recurso de Azure OpenAI del asistente (spec 052). **Apagado por omisión: cuesta por token.** Enciéndelo solo con permiso de José y con el tope de `azure_openai_capacity_k_tpm` revisado."
+  type        = bool
+  default     = false
+}
+
+variable "enable_curp_kek" {
+  description = "Declara en Terraform la llave maestra `curp-kek` de la verificación de identidad (spec 025). **Apagado por omisión.** En dev la llave ya existe: impórtala antes de encender (ver `main.tf`)."
+  type        = bool
+  default     = false
+}
+
+variable "azure_openai_model" {
+  description = "Modelo del despliegue. Pon uno disponible en la región y suscripción (verifícalo con `az cognitiveservices model list`); no se inventa un valor por omisión que pueda no existir."
+  type        = string
+  default     = ""
+}
+
+variable "azure_openai_model_version" {
+  type    = string
+  default = ""
+}
+
+variable "azure_openai_capacity_k_tpm" {
+  description = "Tope de tokens por minuto del despliegue, en miles (1 = 1 000 tokens por minuto). Es el límite de gasto por unidad de tiempo: con el valor por omisión, como máximo 1 000 tokens por minuto (≈ 1.4 millones al día si se usara sin parar). Súbelo solo a propósito."
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.azure_openai_capacity_k_tpm >= 1 && var.azure_openai_capacity_k_tpm <= 10
+    error_message = "El tope de tokens por minuto debe estar entre 1 y 10 (miles)."
+  }
+}

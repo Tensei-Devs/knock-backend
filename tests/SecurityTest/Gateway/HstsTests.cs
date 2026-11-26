@@ -26,7 +26,7 @@ public sealed class HstsTests
     private static readonly string[] _paths = ["/health", "/api/v1/colonias/en-punto", "/interno/secreto"];
 
     /// <summary>Un contador de peticiones de mentira: el gateway cuenta contra Redis, y estas pruebas no usan Redis.</summary>
-    private sealed class FakeCounter(long count) : GatewayHosting.IRequestCounter
+    private sealed class FakeCounter(long count) : Knock.Hosting.RateLimiting.IRequestCounter
     {
         public Task<(long Count, TimeSpan Remaining)> HitAsync(string key, TimeSpan window, CancellationToken cancellationToken) =>
             Task.FromResult((count, TimeSpan.FromSeconds(30)));
@@ -40,7 +40,7 @@ public sealed class HstsTests
             builder.UseEnvironment(environment);
             builder.UseSetting("Jwt:SigningKey", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
             builder.UseSetting("ConnectionStrings:KnockRedis", "127.0.0.1:6390,password=Kn0ck" + Convert.ToHexString(RandomNumberGenerator.GetBytes(12)));
-            builder.UseSetting("ForwardedHeaders:KnownNetworks:0", "10.0.0.0/8");
+            builder.UseSetting("ForwardedHeaders:KnownNetworks:0", "10.0.0.0/16");
             foreach (var (key, value) in settings)
             {
                 builder.UseSetting(key, value);
@@ -49,7 +49,7 @@ public sealed class HstsTests
             builder.ConfigureTestServices(services =>
             {
                 services.AddSingleton<IStartupFilter>(new RemoteIpStartupFilter());
-                services.AddSingleton<GatewayHosting.IRequestCounter>(new FakeCounter(counted));
+                services.AddSingleton<Knock.Hosting.RateLimiting.IRequestCounter>(new FakeCounter(counted));
             });
         }
     }

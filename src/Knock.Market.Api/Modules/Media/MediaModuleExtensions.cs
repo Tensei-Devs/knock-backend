@@ -1,6 +1,9 @@
 using Azure.Storage.Blobs;
 using Knock.Contracts.Moderation;
+using Knock.Hosting.Data;
+using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Media.Data;
+using Knock.Market.Api.Modules.Media.Options;
 using Knock.Market.Api.Modules.Media.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -22,18 +25,21 @@ public static class MediaModuleExtensions
             .BindConfiguration(MediaOptions.SectionName)
             .ValidateDataAnnotations()
             .ValidateOnStart();
-        services.AddSingleton(provider =>
-        {
-            var connectionString = provider.GetRequiredService<IConfiguration>().GetConnectionString(MediaOptions.ConnectionStringName);
-            return string.IsNullOrWhiteSpace(connectionString)
-                ? throw new InvalidOperationException($"ConnectionStrings:{MediaOptions.ConnectionStringName} is not configured.")
-                : new BlobServiceClient(connectionString);
-        });
-        services.AddSingleton<IMediaFileStore, BlobMediaFileStore>();
+        services.AddSingleton(ImagenesServiceCollectionExtensions.CrearClientePrivado);
+        services.AddKnockMongoDatabase(ArchivosMongo.ModuleKey);
+        services.AddSingleton<IMediaFileStore, MongoMediaFileStore>();
         services.AddSingleton<IMediaBlobStore, AzureMediaBlobStore>();
         services.AddSingleton<ImageProcessor>();
+        services.AddSingleton<MediaMetrics>();
+        services.AddOptions<ArchivosMigrationOptions>()
+            .BindConfiguration(ArchivosMigrationOptions.SectionName)
+            .Validate(ArchivosMigrationOptions.IsValid, "Media:Migracion:ContenedorOrigen is required when Media:Migracion:Habilitada is true.")
+            .ValidateOnStart();
+        services.AddSingleton<ArchivosMigrationRunner>();
+        services.AddHostedService<ArchivosMigrationService>();
         services.AddSingleton<MediaService>();
         services.AddSingleton<IMediaApi, MediaApi>();
+        services.AddImagenesPublicas();
         return services;
     }
 

@@ -9,6 +9,9 @@
 /src/Knock.Market.Api/                @AlexisBBY
 /src/Knock.Assistant.Api/             @AlexisBBY @JulianH2
 /src/Knock.Contracts/                 @GuillermoRH19 @AlexisBBY
+/src/Knock.Hosting/                   @GuillermoRH19 @AlexisBBY @JulianH2
+/src/Knock.Hosting.Data/              @GuillermoRH19 @AlexisBBY @JulianH2
+/src/Knock.Hosting.Mvc/               @GuillermoRH19 @AlexisBBY @JulianH2
 /db/                                @AlexisBBY
 /**/Migrations/                     @AlexisBBY @GuillermoRH19
 # Gobierno, seguridad y CI: solo el Tech Lead

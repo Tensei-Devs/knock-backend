@@ -2,6 +2,8 @@ using System.Net;
 using AwesomeAssertions;
 using Knock.IntegrationTest.Requests;
 using Knock.IntegrationTest.Support;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
@@ -33,6 +35,20 @@ public sealed class Spec046RegistroHttpTests
     private static Task<string> UniqueIndexAsync(Spec020Host host) =>
         Technicians(host).Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(
             Builders<BsonDocument>.IndexKeys.Ascending("usuarioId"), new CreateIndexOptions { Unique = true, Name = "usuarioId_1" }));
+
+    /// <summary>Guarda las excepciones que llegan al manejador global (no las maneja), para que un 500 diga su causa aunque el log salga vacío.</summary>
+    private sealed class ThrownExceptions : IExceptionHandler
+    {
+        private readonly System.Collections.Concurrent.ConcurrentQueue<string> _items = new();
+
+        public string Describe() => string.Join(" | ", _items.Distinct().Take(5));
+
+        public ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
+        {
+            _items.Enqueue(exception.ToString().Replace(Environment.NewLine, " ", StringComparison.Ordinal));
+            return ValueTask.FromResult(false);
+        }
+    }
 
     [Fact]
     public async Task Registro_Valido_Responde_201_Y_Guarda_El_Perfil_CA_046_01()
@@ -143,14 +159,19 @@ public sealed class Spec046RegistroHttpTests
     public async Task Dos_Registros_A_La_Vez_Dejan_Un_Solo_Perfil_CA_046_69()
     {
         using var logs = new CapturingLoggerProvider();
-        await using var host = await Spec020Host.StartAsync(configure: services => services.AddLogging(logging => logging.AddProvider(logs)));
+        var thrown = new ThrownExceptions();
+        await using var host = await Spec020Host.StartAsync(configure: services =>
+        {
+            services.AddLogging(logging => logging.AddProvider(logs));
+            services.AddSingleton<IExceptionHandler>(thrown);
+        });
         await UniqueIndexAsync(host);
         var sub = Guid.NewGuid().ToString("D");
 
         var responses = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => host.SendAsync(HttpMethod.Post, _route, sub, Body(host))));
 
         var statuses = string.Join(", ", responses.Select(r => (int)r.StatusCode));
-        var diagnostics = $"{statuses}; errores registrados por el servidor: {logs.Errors()}";
+        var diagnostics = $"{statuses}; errores registrados por el servidor: {logs.Errors()}; excepciones no controladas: {thrown.Describe()}";
         responses.Count(r => r.StatusCode == HttpStatusCode.Created).Should().Be(1, "{0}", diagnostics);
         responses.Count(r => r.StatusCode == HttpStatusCode.Conflict).Should().Be(3, "{0}", diagnostics);
         (await Technicians(host).CountDocumentsAsync(Builders<BsonDocument>.Filter.Eq("usuarioId", sub))).Should().Be(1);

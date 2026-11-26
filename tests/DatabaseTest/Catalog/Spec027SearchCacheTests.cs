@@ -15,7 +15,14 @@ public sealed class Spec027SearchCacheTests
     public async Task Cache_Usa_Redis_Y_Vence_En_30_Segundos_R_027_13()
     {
         var fixture = await RedisFixture.SharedAsync();
-        using var redis = await ConnectionMultiplexer.ConnectAsync(fixture.ConnectionString);
+
+        // La caché falla abierta: ante un timeout de Redis, `Set` no guarda y `Get` devuelve null (a propósito, spec 010). Con la configuración por omisión (5 s) un runner del CI
+        // saturado de contenedores podía agotarlo y esta prueba veía null aunque la caché esté bien. Se le da un plazo holgado para que la prueba mida la caché y no la carga de la máquina.
+        var options = ConfigurationOptions.Parse(fixture.ConnectionString);
+        options.AsyncTimeout = 60_000;
+        options.SyncTimeout = 60_000;
+        options.ConnectTimeout = 60_000;
+        using var redis = await ConnectionMultiplexer.ConnectAsync(options);
         var cache = new RedisCatalogCache(redis, Options.Create(new CatalogCacheOptions()), NullLogger<RedisCatalogCache>.Instance);
         var hash = RandomNumberGenerator.GetBytes(32);
         await cache.SetSearchAsync(hash, "synthetic", CancellationToken.None);

@@ -6,15 +6,25 @@ de1c61af882345e0a8b75cf1afbce7213e245b22:tests/IntegrationTest/Observability/Out
 de1c61af882345e0a8b75cf1afbce7213e245b22:tests/SecurityTest/Observability/SpanPrivacyTests.cs:jwt:42
 # EXC-019: cadena sintética del Mongo local (credenciales del compose) en el commit 0b7a866 de la rama de KNOCK-205; el texto se quita en un commit posterior y la excepción vence al fusionar.
 0b7a8668d4656e79e4c713c677793c931d12c1a7:tests/perf/README.md:knock-mongodb-connection-string:23
+b01139caf253946980a20337e06fc40fe9a8321d:tests/perf/README.md:knock-mongodb-connection-string:23
 # EXC-023: cadenas sintéticas de las pruebas de la guarda de host de las semillas de demo (KNOCK-40) en el commit 72c27e4 de la rama feature/KNOCK-40-demo-client-seeds; la excepción vence al fusionar esa rama o el 2026-12-04.
 72c27e461e54a21c103df1253d1daff22949a54a:tests/DatabaseTest/Demo/DemoSeedGuardTests.cs:knock-mongodb-connection-string:17
+c5e24155a82dd0c5eee21867756b2c43857f245c:tests/DatabaseTest/Demo/DemoSeedGuardTests.cs:knock-mongodb-connection-string:17
 72c27e461e54a21c103df1253d1daff22949a54a:tests/DatabaseTest/Demo/DemoSeedGuardTests.cs:knock-mongodb-connection-string:40
+c5e24155a82dd0c5eee21867756b2c43857f245c:tests/DatabaseTest/Demo/DemoSeedGuardTests.cs:knock-mongodb-connection-string:40
 # EXC-024: cadena sintética de la prueba de la guarda del cargador de técnicos demo (KNOCK-246) en el commit ee6477c de la rama feature/KNOCK-246-demo-requests-quotes; la excepción vence el 2026-12-04.
 ee6477cfda5c5555f39dc615b6be79ef38139249:tests/DatabaseTest/Demo/DemoTechnicianLoaderTests.cs:knock-mongodb-connection-string:110
+cfcca535df49443fc5026ab8fb9a968ff66d0020:tests/DatabaseTest/Demo/DemoTechnicianLoaderTests.cs:knock-mongodb-connection-string:110
 # EXC-027: cadenas sintéticas de las pruebas del panel (spec 033, KNOCK-75) en los commits 2827324 y e0b8aac, y la cadena de ejemplo citada en la entrada de Memoria.md del commit d4e6580 de la rama feature/KNOCK-75-panel-2fa-permissions y el secreto de ejemplo del estándar TOTP (RFC 6238) en be3f8c9; no son credenciales de ningún servicio.
 28273243e79a874c99d33e23fe3a8e7d38b04767:tests/UnitTest/Panel/PanelFakes.cs:knock-mongodb-connection-string:160
+ce982160b4039f1e535140d9f106dc5f80251946:tests/UnitTest/Panel/PanelFakes.cs:knock-mongodb-connection-string:160
 28273243e79a874c99d33e23fe3a8e7d38b04767:tests/UnitTest/Panel/PanelFakes.cs:knock-mongodb-connection-string:280
+ce982160b4039f1e535140d9f106dc5f80251946:tests/UnitTest/Panel/PanelFakes.cs:knock-mongodb-connection-string:280
 28273243e79a874c99d33e23fe3a8e7d38b04767:tests/UnitTest/Panel/PanelFakes.cs:knock-mongodb-connection-string:348
+ce982160b4039f1e535140d9f106dc5f80251946:tests/UnitTest/Panel/PanelFakes.cs:knock-mongodb-connection-string:348
 e0b8aac104197397959eadc41fe4398d5254c744:tests/UnitTest/Panel/Spec033AuditoriaTests.cs:knock-mongodb-connection-string:27
+dea03de437d0c9cdb3396c0d46c621f1a7e04627:tests/UnitTest/Panel/Spec033AuditoriaTests.cs:knock-mongodb-connection-string:27
 be3f8c97688c131b8b210782800200772d2adb77:tests/UnitTest/Panel/Spec033TotpDominioTests.cs:generic-api-key:160
+16b3d01f5b15d7123c0229ae0fa6465fe99e4568:tests/UnitTest/Panel/Spec033TotpDominioTests.cs:generic-api-key:160
 d4e6580e5e320bb5f16d04102e7f673e6d41f265:Memoria.md:knock-mongodb-connection-string:991
+5cd6787e9785f1b6d3fa7fb4110fea0309b755e4:Memoria.md:knock-mongodb-connection-string:991

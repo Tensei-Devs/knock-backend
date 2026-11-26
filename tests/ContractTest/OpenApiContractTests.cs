@@ -23,17 +23,7 @@ public sealed class OpenApiContractTests
 
     private static readonly HashSet<string> _httpMethods = new(["get", "put", "post", "delete", "options", "head", "patch", "trace"], StringComparer.Ordinal);
 
-    private static JsonDocument Load(string fileName)
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Knock.slnx")))
-        {
-            directory = directory.Parent;
-        }
-
-        var root = directory?.FullName ?? throw new InvalidOperationException("Knock.slnx was not found above the test output directory.");
-        return JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "docs", fileName)));
-    }
+    private static JsonDocument Load(string fileName) => OpenApiDocs.Load(fileName);
 
     private static IEnumerable<(string Path, string Method, JsonElement Operation)> Operations(JsonElement root)
     {
@@ -49,6 +39,7 @@ public sealed class OpenApiContractTests
     [Theory]
     [InlineData("openapi.v1.json")]
     [InlineData("openapi.identity.v1.json")]
+    [InlineData("openapi.messaging.v1.json")]
     public void ContractFile_IsOpenApi3WithVersionAndPaths_TC_TT_CI_02_01(string fileName)
     {
         using var document = Load(fileName);
@@ -63,6 +54,7 @@ public sealed class OpenApiContractTests
     [Theory]
     [InlineData("openapi.v1.json")]
     [InlineData("openapi.identity.v1.json")]
+    [InlineData("openapi.messaging.v1.json")]
     public void EveryOperation_DeclaresAtLeastOneResponse_TC_TT_CI_02_02(string fileName)
     {
         using var document = Load(fileName);
@@ -80,6 +72,7 @@ public sealed class OpenApiContractTests
     [Theory]
     [InlineData("openapi.v1.json")]
     [InlineData("openapi.identity.v1.json")]
+    [InlineData("openapi.messaging.v1.json")]
     public void ErrorResponsesWithABody_UseProblemDetails_TC_TT_CI_02_03(string fileName)
     {
         using var document = Load(fileName);
@@ -94,5 +87,29 @@ public sealed class OpenApiContractTests
             .ToList();
 
         Assert.Empty(errorsWithoutProblemDetails);
+    }
+
+    [Fact]
+    public void MessagingContract_ClosesConversationStateReasonAndDeviceErrors_TC_030_CONTRATO_01()
+    {
+        using var document = Load("openapi.messaging.v1.json");
+        var schemas = document.RootElement.GetProperty("components").GetProperty("schemas");
+        var view = schemas.GetProperty("ConversacionView");
+
+        static string[] Enum(JsonElement property) => [.. property.GetProperty("enum").EnumerateArray().Select(item => item.GetString()!)];
+        Assert.Equal(["abierta", "cerrada"], Enum(view.GetProperty("properties").GetProperty("estado")));
+        Assert.Equal(
+            ["request_cancelled", "request_expired", "other_quote_chosen", "dismissed", "service_finished"],
+            Enum(view.GetProperty("properties").GetProperty("motivoCierre")));
+        Assert.Equal("string", view.GetProperty("properties").GetProperty("avisoSeguridad").GetProperty("type").GetString());
+        var required = view.GetProperty("required").EnumerateArray().Select(item => item.GetString()).ToList();
+        Assert.Contains("avisoSeguridad", required);
+        Assert.DoesNotContain("motivoCierre", required);
+
+        var devices = document.RootElement.GetProperty("paths").GetProperty("/api/v{version}/dispositivos").GetProperty("post").GetProperty("responses");
+        foreach (var code in new[] { "200", "201", "400", "401", "409", "422", "429", "503" })
+        {
+            Assert.True(devices.TryGetProperty(code, out _), $"POST /dispositivos should declare {code}.");
+        }
     }
 }

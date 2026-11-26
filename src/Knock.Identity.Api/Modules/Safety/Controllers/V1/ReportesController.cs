@@ -4,6 +4,7 @@ using Knock.Identity.Api.Modules.Safety.Dtos;
 using Knock.Identity.Api.Modules.Safety.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Knock.Identity.Api.Modules.Safety.Controllers.V1;
 
@@ -23,6 +24,7 @@ internal sealed class ReportesController(ReportService service) : ControllerBase
     /// que no existe, o <c>report_content_rejected</c>; 503 <c>report_moderation_unavailable</c> si la moderación no responde. Con motivo de peligro la respuesta lleva el aviso de llamar al 911.
     /// </summary>
     [HttpPost("api/v{version:apiVersion}/reportes")]
+    [EnableRateLimiting(IdentityRateLimits.ReportPolicy)]
     [RequestSizeLimit(CreateReportBody.MaxBodyBytes)]
     [ProducesResponseType<ReportCreated>(StatusCodes.Status201Created)]
     [ProducesResponseType<ReportCreated>(StatusCodes.Status200OK)]
@@ -46,6 +48,7 @@ internal sealed class ReportesController(ReportService service) : ControllerBase
 
     /// <summary>Los reportes que hizo quien llama, del más reciente al más antiguo, con paginación por cursor. Nunca lleva datos de la otra parte.</summary>
     [HttpGet("api/v{version:apiVersion}/reportes/me")]
+    [EnableRateLimiting(IdentityRateLimits.SafetyReadPolicy)]
     [ProducesResponseType<ReportPage>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, _problemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]
@@ -59,6 +62,7 @@ internal sealed class ReportesController(ReportService service) : ControllerBase
 
     /// <summary>Apela la decisión de un reporte, una sola vez. 200; 403 si no es una de las dos partes; 409 <c>appeal_not_allowed</c> sin decisión o con una apelación previa.</summary>
     [HttpPost("api/v{version:apiVersion}/reportes/{id}/apelacion")]
+    [EnableRateLimiting(IdentityRateLimits.ReportPolicy)]
     [RequestSizeLimit(AppealBody.MaxBodyBytes)]
     [ProducesResponseType<AppealResult>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, _problemJson)]

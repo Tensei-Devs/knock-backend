@@ -20,7 +20,7 @@ internal sealed class MeCambioNumeroController(PhoneChangeService phoneChange) :
 
     /// <summary>USR-03. Comprueba que el número nuevo no pertenece a otra cuenta, antes de que la app gaste un SMS de Firebase.</summary>
     [HttpPost]
-    [EnableRateLimiting(RateLimitingExtensions.PhoneChangeCheckPolicy)]
+    [EnableRateLimiting(IdentityRateLimits.PhoneChangeCheckPolicy)]
     [RequestSizeLimit(MaxBodyBytes)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
@@ -43,7 +43,7 @@ internal sealed class MeCambioNumeroController(PhoneChangeService phoneChange) :
 
     /// <summary>USR-04. Confirma el cambio con el token de Firebase del número nuevo, cambia el celular y cierra las demás sesiones.</summary>
     [HttpPost("confirmar")]
-    [EnableRateLimiting(RateLimitingExtensions.PhoneChangeConfirmPolicy)]
+    [EnableRateLimiting(IdentityRateLimits.PhoneChangeConfirmPolicy)]
     [RequestSizeLimit(MaxBodyBytes)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]

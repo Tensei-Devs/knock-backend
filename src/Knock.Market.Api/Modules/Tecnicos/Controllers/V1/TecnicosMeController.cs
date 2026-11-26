@@ -15,7 +15,7 @@ namespace Knock.Market.Api.Modules.Tecnicos.Controllers.V1;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/tecnicos/me")]
 [Authorize]
-internal sealed class TecnicosMeController(MyTechnicianService service) : ControllerBase
+internal sealed class TecnicosMeController(MyTechnicianService service, TechnicianReputationService reputations) : ControllerBase
 {
     private const string _problemJson = TechnicianProblems.ProblemJson;
 
@@ -86,6 +86,19 @@ internal sealed class TecnicosMeController(MyTechnicianService service) : Contro
         Response.Headers.CacheControl = "private, no-store";
         var schedule = await service.SetScheduleAsync(Subject(), body.Horarios!, cancellationToken);
         return schedule is null ? Rule(StatusCodes.Status404NotFound, code: null) : Ok(new ScheduleBody(schedule));
+    }
+
+    /// <summary>Reputación propia (TEC-13): promedio, distribución por estrellas y nivel; una cuenta sin perfil de técnico recibe 404.</summary>
+    [HttpGet("reputacion")]
+    [ProducesResponseType<ReputationResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, _problemJson)]
+    public async Task<IActionResult> Reputation(CancellationToken cancellationToken)
+    {
+        Response.Headers.CacheControl = "private, no-store";
+        var reputation = await reputations.GetOwnAsync(Subject(), cancellationToken);
+        return reputation is null ? Rule(StatusCodes.Status404NotFound, code: null) : Ok(reputation);
     }
 
     private string Subject() => User.FindFirst("sub")?.Value ?? string.Empty;

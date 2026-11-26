@@ -15,7 +15,7 @@ internal sealed record ChooseOutcome(ChooseStatus Status, Appointment? Appointme
 /// Elegir una cotización (spec 021, HU-033): delega la transacción atómica en <see cref="ChoiceStore"/> y arma la cita con el contacto público del técnico y el lugar
 /// (la dirección del cliente descifrada para él, o la del taller). El código de visita no se devuelve (R-17) y nada de esto se registra (R-19).
 /// </summary>
-internal sealed class ChooseQuoteService(ChoiceStore choices, FieldCipher cipher, TimeProvider clock)
+internal sealed class ChooseQuoteService(ChoiceStore choices, FieldCipher cipher, TimeProvider clock, MarketReferenceCache reference)
 {
     private const string _domicile = "domicilio";
 
@@ -35,6 +35,9 @@ internal sealed class ChooseQuoteService(ChoiceStore choices, FieldCipher cipher
         {
             return new ChooseOutcome(result.Status);
         }
+
+        // Una cotización más aceptada cambia la referencia de mercado (spec 048, R-06).
+        reference.Invalidate();
 
         // La elección ya está confirmada: de aquí en adelante ningún fallo puede devolver un error (ni 500 ni 503), porque repetir daría 409. Lo que no se pueda leer o descifrar
         // sale ausente y la app lo pide con la visita (spec 022).
@@ -65,7 +68,8 @@ internal sealed class ChooseQuoteService(ChoiceStore choices, FieldCipher cipher
                     technician?.VerificationLevel ?? QuoteComparer.NoVerification,
                     technician?.Phone,
                     technician?.WhatsApp),
-                new AppointmentPlace(visit.Modality, address)));
+                new AppointmentPlace(visit.Modality, address),
+                visit.TechnicianUserId));
     }
 
     private string? TryDecryptAddress(ChosenVisit visit)

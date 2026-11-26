@@ -2,6 +2,7 @@ extern alias MarketApi;
 
 using System.Net;
 using AwesomeAssertions;
+using Knock.IntegrationTest.Support;
 using MarketApi::Knock.Market.Api.Common.TareasProgramadas;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
@@ -87,7 +88,66 @@ public sealed class Spec028RepartoTests
         var clock = new TestClock();
         await using var host = await StartAsync(clock, false);
         await CreateAsync(host);
-        (await Tasks(host).CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(0);
+        (await Tasks(host).CountDocumentsAsync(new BsonDocument("tipo", new BsonDocument("$ne", "VencerSolicitud")))).Should().Be(0, "solo queda la tarea de vencimiento de la spec 029");
+    }
+
+    [Fact]
+    public async Task EventsAndTasks_CarryNoPersonalData_CA_028_17()
+    {
+        var clock = new TestClock();
+        await using var host = await StartAsync(clock, true);
+        var technicianIds = new List<string>();
+        for (var i = 0; i < 6; i++)
+        {
+            var technician = Technician(host, clock, i);
+            technicianIds.Add(technician["usuarioId"].AsString);
+            await host.Database.GetCollection<BsonDocument>("tecnicos").InsertOneAsync(technician);
+        }
+        await CreateAsync(host);
+        await RunAsync(host);
+        var stored = (await Outbox(host).Find(FilterDefinition<BsonDocument>.Empty).ToListAsync())
+            .Concat(await Tasks(host).Find(FilterDefinition<BsonDocument>.Empty).ToListAsync())
+            .Select(x => x.ToJson())
+            .ToList();
+        stored.Should().NotBeEmpty();
+        var forbidden = new List<string> { Spec020Host.Description, Spec020Host.Address, host.ClientSub };
+        forbidden.AddRange(technicianIds);
+        foreach (var document in stored)
+        {
+            foreach (var value in forbidden)
+            {
+                document.Should().NotContain(value);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Reparto_Registros_Y_Eventos_Sin_Datos_Personales_CA_028_17()
+    {
+        const string name = "NombreFicticioOleadas";
+        const string phone = "5500000099";
+        var forbidden = new List<string> { Spec020Host.Description, Spec020Host.Address, name, phone };
+        var output = await ConsoleCapture.RunAsync(async () =>
+        {
+            var clock = new TestClock();
+            await using var host = await StartAsync(clock, true);
+            forbidden.Add(host.ClientSub);
+            var technician = Technician(host, clock, 0);
+            forbidden.Add(technician["usuarioId"].AsString);
+            technician["nombre"] = name;
+            technician["telefono"] = phone;
+            await host.Database.GetCollection<BsonDocument>("tecnicos").InsertOneAsync(technician);
+            await CreateAsync(host);
+            await RunAsync(host);
+            var events = await Outbox(host).Find(new BsonDocument("tipo", "SolicitudEnviadaATecnico")).ToListAsync();
+            events.Should().ContainSingle();
+            foreach (var value in forbidden)
+            {
+                events[0].ToJson().Should().NotContain(value);
+            }
+        });
+        output.Should().NotBeNullOrWhiteSpace();
+        foreach (var value in forbidden) output.Should().NotContain(value);
     }
 
     [Fact]

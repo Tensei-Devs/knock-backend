@@ -1,5 +1,6 @@
 using AwesomeAssertions;
-using Knock.Market.Api.Hosting;
+using Knock.Hosting.Security;
+using Microsoft.Extensions.Configuration;
 using Xunit;
 
 namespace Knock.UnitTest.Hosting;
@@ -8,7 +9,7 @@ public class SecuritySettingsValidationTests
 {
     private static SecuritySettings Valid() => new()
     {
-        Hsts = new HstsSettings { MaxAge = TimeSpan.FromDays(365), IncludeSubDomains = true },
+        Hsts = new HstsPolicySettings { MaxAge = TimeSpan.FromDays(365), IncludeSubDomains = true },
         Https = new HttpsSettings { RedirectPort = null },
         Cors = new CorsSettings { AllowedOrigins = ["https://panel.example.test"], PreflightMaxAge = TimeSpan.FromMinutes(10) },
     };
@@ -111,5 +112,24 @@ public class SecuritySettingsValidationTests
         var message = SecuritySettingsValidator.Errors(settings).Should().ContainSingle().Subject;
 
         message.Should().Contain("Security:Cors:AllowedOrigins:0").And.NotContain("secret-path");
+    }
+
+    [Fact]
+    public void AllowedOriginsBindFromConfiguration_AfterTheMoveToTheSharedLibrary_CA_055_12()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Security:Cors:AllowedOrigins:0"] = "https://panel.example.test",
+                ["Security:Cors:AllowedOrigins:1"] = "http://localhost:4200",
+                ["Security:Cors:PreflightMaxAge"] = "00:10:00",
+            })
+            .Build();
+
+        var settings = configuration.GetSection(SecuritySettings.SectionName).Get<SecuritySettings>();
+
+        settings.Should().NotBeNull();
+        settings.Cors.AllowedOrigins.Should().Equal("https://panel.example.test", "http://localhost:4200");
+        settings.Cors.PreflightMaxAge.Should().Be(TimeSpan.FromMinutes(10));
     }
 }

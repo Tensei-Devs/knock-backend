@@ -1,0 +1,6 @@
+# 2026-11-24 · KNOCK-60 · El despachador crea el aviso dentro de la app
+
+- **Qué cambió:** `DespachadorDeAvisos` crea siempre el aviso en la colección `avisos` (spec 037 R-14 y R-11, spec 044 T-11) antes de decidir el push: no depende del interruptor del push, de los dispositivos (`NoDevices`), de la presencia, de la ventana ni del límite por hora. Texto fijo del catálogo (`AvisoCatalog`), `destino { pantalla, id }` con el recurso propio de la persona, `comoRol` del cuerpo (`cliente` si el tipo no distingue rol), `venceEn` a 30 días. Idempotente por `eventoId` y destinatario: lectura previa, `KeyedGate` por clave e índice único parcial `eventoId_1_usuarioId_1` (script `db/044-avisos-dentro-de-la-app.js` y `NoticesStore.EnsureIndexesAsync`).
+- **Por qué:** hasta hoy nada escribía `avisos` y `GET /api/v1/avisos` respondía siempre vacío.
+- **A evitar:** poner el aviso detrás del retorno por `NoDevices` o del interruptor del push; guardar enlaces o datos de la otra parte; duplicar por reintento del emisor; que Avisos dependa de Notices (CA-037-10: por eso la retención de 30 días se repite como constante).
+- **Pendiente:** el tipo `sistema` no está en `NoticeRules.Types` de la spec 044 (lista de preferencias); `mensaje_nuevo` no entra por la ruta interna; el rol de `reporte_decidido` (sin rol) se guarda como `cliente`. Anotado para José.

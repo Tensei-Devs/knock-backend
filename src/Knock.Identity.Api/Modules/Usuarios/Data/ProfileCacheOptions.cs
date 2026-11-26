@@ -1,3 +1,4 @@
+using Knock.Hosting.Http;
 using Microsoft.Extensions.Options;
 
 namespace Knock.Identity.Api.Modules.Usuarios.Data;
@@ -19,18 +20,12 @@ internal sealed class ProfileCacheOptions
 }
 
 /// <summary>Valida <see cref="ProfileCacheOptions"/> al arrancar. Los mensajes nombran la clave, nunca el valor.</summary>
-internal sealed class ProfileCacheOptionsValidator : IValidateOptions<ProfileCacheOptions>
+internal sealed class ProfileCacheOptionsValidator()
+    : CacheLifetimeOptionsValidator<ProfileCacheOptions>(ProfileCacheOptions.LifetimeKey, ProfileCacheOptions.MinimumLifetimeSeconds, ProfileCacheOptions.MaximumLifetimeSeconds)
 {
-    // jscpd:ignore-start -- EXC-018
-    public ValidateOptionsResult Validate(string? name, ProfileCacheOptions options)
+    protected override int? LifetimeSeconds(ProfileCacheOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
-        if (options.ProfileLifetimeSeconds is not (>= ProfileCacheOptions.MinimumLifetimeSeconds and <= ProfileCacheOptions.MaximumLifetimeSeconds))
-        {
-            return ValidateOptionsResult.Fail($"{ProfileCacheOptions.LifetimeKey} must be an integer from {ProfileCacheOptions.MinimumLifetimeSeconds} to {ProfileCacheOptions.MaximumLifetimeSeconds} (seconds).");
-        }
-
-        return ValidateOptionsResult.Success;
+        return options.ProfileLifetimeSeconds;
     }
-    // jscpd:ignore-end -- EXC-018
 }

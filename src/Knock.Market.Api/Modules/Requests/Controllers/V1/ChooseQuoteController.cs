@@ -1,9 +1,7 @@
-using Asp.Versioning;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Requests.Domain;
 using Knock.Market.Api.Modules.Requests.Dtos;
 using Knock.Market.Api.Modules.Requests.Services;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
@@ -13,17 +11,13 @@ namespace Knock.Market.Api.Modules.Requests.Controllers.V1;
 /// Elegir una cotización (spec 021, HU-033): la solicitud pasa a <c>cita_confirmada</c>, se crea la visita y se revela el contacto público del técnico y el lugar. Recibe,
 /// valida el formato y delega en <see cref="ChooseQuoteService"/>; no toca MongoDB. Nunca se cachea (<c>Cache-Control: private, no-store</c>).
 /// </summary>
-[ApiController]
-[ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/solicitudes/{id}/elegir")]
-[Authorize]
-[PrivateNoStore]
-internal sealed class ChooseQuoteController(ChooseQuoteService service) : BusinessRuleController
+internal sealed class ChooseQuoteController(ChooseQuoteService service) : PrivateRequestsController
 {
     /// <summary>Elige la cotización de una solicitud propia; la elección y sus efectos ocurren en una sola transacción.</summary>
     [HttpPost]
     [RequestSizeLimit(ChooseQuoteBody.MaxBodyBytes)]
-    [EnableRateLimiting(RateLimitingExtensions.ChooseQuotePolicy)]
+    [EnableRateLimiting(MarketRateLimits.ChooseQuotePolicy)]
     [ProducesResponseType<Appointment>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, ProblemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, ProblemJson)]

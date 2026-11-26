@@ -23,12 +23,17 @@ public static class PanelModuleExtensions
         services.AddSingleton<IPanelActivacionesStore>(provider => provider.GetRequiredService<PanelActivacionesStore>());
         services.AddSingleton<PanelAuditoriaStore>();
         services.AddSingleton<IPanelAuditoriaStore>(provider => provider.GetRequiredService<PanelAuditoriaStore>());
+        services.AddSingleton<IPanelAuditoriaUnica>(provider => provider.GetRequiredService<PanelAuditoriaStore>());
+        services.AddSingleton<IPanelAuditoriaEnTransaccion>(provider => provider.GetRequiredService<PanelAuditoriaStore>());
         services.AddSingleton<IPanelDesafios, RedisPanelDesafios>();
         services.AddSingleton<IPanelCuentaCache, RedisPanelCuentaCache>();
         services.AddSingleton<IPanelSidCanceller, RedisPanelSidCanceller>();
         services.AddHttpContextAccessor();
         services.AddSingleton<PanelIpHasher>();
         services.AddSingleton<AuditoriaPanel>();
+        services.AddSingleton<OpinionModeradaConsumer>();
+        services.AddSingleton<CambioDeOficioConsumer>();
+        services.AddSingleton<IPanelApi, PanelApi>();
         services.AddSingleton(provider => PanelSettings.Create(provider.GetRequiredService<IConfiguration>(), provider.GetRequiredService<IHostEnvironment>()));
         services.AddOptions<PanelTotpOptions>().BindConfiguration(PanelTotpOptions.SectionName);
         services.AddSingleton(provider => PanelTotpKeys.CreateOrThrow(provider.GetRequiredService<IOptions<PanelTotpOptions>>().Value));
@@ -39,7 +44,8 @@ public static class PanelModuleExtensions
         services.AddSingleton<AccesoPanelService>();
         services.AddSingleton<ActivacionPanelService>();
         services.AddSingleton<SesionPanelCicloService>();
-        services.AddSingleton<IAuthorizationHandler, PermisoPanelHandler>();
+        services.AddSingleton<PermisoPanelHandler>();
+        services.AddSingleton<IAuthorizationHandler>(provider => provider.GetRequiredService<PermisoPanelHandler>());
         services.AddSingleton<IAuthorizationPolicyProvider, PanelPolicyProvider>();
         services.AddSingleton<IAuthorizationMiddlewareResultHandler, PanelAuthorizationResultHandler>();
         services.AddAuthentication().AddJwtBearer(PanelBearer.Scheme, _ => { });

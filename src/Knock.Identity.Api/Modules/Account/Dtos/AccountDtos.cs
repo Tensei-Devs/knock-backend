@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Knock.Identity.Api.Modules.Account.Dtos;
 
 /// <summary>Cuerpo de <c>POST /me/cambio-numero</c> (USR-03). El campo es anulable a propósito: si falta, el validador responde 422 en su campo.</summary>
@@ -26,3 +28,9 @@ internal sealed record DeleteAccountRequest(string? Confirmacion = null, string?
 
 /// <summary>Eliminación programada (USR-10): cuándo vence la gracia de 7 días.</summary>
 internal sealed record DeletionScheduledResponse(DateTime EliminarEn);
+
+/// <summary>Última exportación de la persona (spec 039, USR-06b): <c>estado</c> es <c>en_preparacion</c>, <c>lista</c> o <c>vencida</c>; <c>enlace</c> y <c>venceEn</c> solo en <c>lista</c> (enlace de 24 horas, nunca guardado).</summary>
+internal sealed record LatestExportResponse(
+    string Estado,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Enlace,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] DateTime? VenceEn);

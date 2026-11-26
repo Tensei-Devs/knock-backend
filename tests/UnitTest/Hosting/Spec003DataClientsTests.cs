@@ -5,6 +5,8 @@ extern alias messaging;
 using System.Net;
 using System.Security.Cryptography;
 using AwesomeAssertions;
+using Knock.Hosting.Health;
+using Knock.Hosting.Redis;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server.Features;
@@ -17,7 +19,6 @@ using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using StackExchange.Redis;
 using Xunit;
-using MarketHosting = Knock.Market.Api.Hosting;
 
 namespace Knock.UnitTest.Hosting;
 
@@ -33,13 +34,13 @@ public sealed class Spec003DataClientsTests
     private static readonly Dictionary<string, Service> _services = new()
     {
         ["Identity"] = new(s => identity::Knock.Identity.Api.Hosting.DataExtensions.AddKnockData(s),
-            e => identity::Knock.Identity.Api.Hosting.HealthExtensions.MapKnockReadiness(e), "Identity", Redis: true),
+            e => HealthExtensions.MapKnockReadiness(e), "Identity", Redis: true),
         ["Messaging"] = new(s => messaging::Knock.Messaging.Api.Hosting.DataExtensions.AddKnockData(s),
-            e => messaging::Knock.Messaging.Api.Hosting.HealthExtensions.MapKnockReadiness(e), "Messaging", Redis: false),
+            e => HealthExtensions.MapKnockReadiness(e, true), "Messaging", Redis: false),
         ["Gateway"] = new(s => gateway::Knock.Gateway.Hosting.DataExtensions.AddKnockData(s),
-            e => gateway::Knock.Gateway.Hosting.HealthExtensions.MapKnockReadiness(e), MongoKey: null, Redis: true),
+            e => HealthExtensions.MapKnockReadiness(e, true), MongoKey: null, Redis: true),
         // Market registra Redis a demanda del módulo que lo use (spec 003); aquí se prueba ese registro.
-        ["Market"] = new(s => MarketHosting.RedisExtensions.AddKnockRedis(s), Map: null, MongoKey: null, Redis: true),
+        ["Market"] = new(s => RedisExtensions.AddKnockRedis(s, "knock-api"), Map: null, MongoKey: null, Redis: true),
     };
 
     public static TheoryData<string> AllServices() => [.. _services.Keys];
@@ -116,12 +117,12 @@ public sealed class Spec003DataClientsTests
 
     [Theory]
     [MemberData(nameof(AllServices))]
-    public void ValidConfiguration_PassesStartupValidation_AndMongoUsesTheConfiguredDatabase(string name)
+    public async Task ValidConfiguration_PassesStartupValidation_AndMongoUsesTheConfiguredDatabase(string name)
     {
         var service = _services[name];
         using var provider = Build(service, ValidConfiguration(service));
 
-        provider.GetRequiredService<IStartupValidator>().Validate();
+        await provider.GetRequiredService<IAsyncStartupValidator>().ValidateAsync(CancellationToken.None);
 
         if (service.MongoKey is not null)
         {
@@ -135,29 +136,29 @@ public sealed class Spec003DataClientsTests
 
     [Theory]
     [MemberData(nameof(RedisServices))]
-    public void RedisConnectionWithoutPassword_FailsStartupWithoutRevealingIt_CA_003_03(string name)
+    public async Task RedisConnectionWithoutPassword_FailsStartupWithoutRevealingIt_CA_003_03(string name)
     {
         var service = _services[name];
         var values = ValidConfiguration(service);
         values["ConnectionStrings:KnockRedis"] = $"{_secretHost}:6379,abortConnect=false";
         using var provider = Build(service, values);
 
-        var startup = () => provider.GetRequiredService<IStartupValidator>().Validate();
+        Func<Task> startup = () => provider.GetRequiredService<IAsyncStartupValidator>().ValidateAsync(CancellationToken.None);
 
-        var message = startup.Should().Throw<OptionsValidationException>().Which.Message;
+        var message = (await startup.Should().ThrowAsync<OptionsValidationException>()).Which.Message;
         message.Should().Contain("ConnectionStrings:KnockRedis").And.Contain("password");
         message.Should().NotContain(_secretHost);
     }
 
     [Theory]
     [MemberData(nameof(InvalidRedisSettings))]
-    public void InvalidRedisSetting_FailsStartupNamingTheKeyOnly(string name, string key, string? value) =>
-        AssertStartupFails(_services[name], key, value);
+    public async Task InvalidRedisSetting_FailsStartupNamingTheKeyOnly(string name, string key, string? value) =>
+        await AssertStartupFails(_services[name], key, value);
 
     [Theory]
     [MemberData(nameof(InvalidMongoSettings))]
-    public void InvalidMongoSetting_FailsStartupNamingTheKeyOnly(string name, string key, string? value) =>
-        AssertStartupFails(_services[name], key, value);
+    public async Task InvalidMongoSetting_FailsStartupNamingTheKeyOnly(string name, string key, string? value) =>
+        await AssertStartupFails(_services[name], key, value);
 
     [Theory]
     [MemberData(nameof(AllServices))]
@@ -190,7 +191,7 @@ public sealed class Spec003DataClientsTests
     private static string[] Expected(Service service) =>
         [.. (service.MongoKey is null ? Array.Empty<string>() : ["mongodb"]), .. (service.Redis ? ["redis"] : Array.Empty<string>())];
 
-    private static void AssertStartupFails(Service service, string key, string? value)
+    private static async Task AssertStartupFails(Service service, string key, string? value)
     {
         var values = ValidConfiguration(service);
         var secrets = values.Where(entry => entry.Key.StartsWith("ConnectionStrings:", StringComparison.Ordinal))
@@ -198,9 +199,9 @@ public sealed class Spec003DataClientsTests
         values[key] = value;
         using var provider = Build(service, values);
 
-        var startup = () => provider.GetRequiredService<IStartupValidator>().Validate();
+        Func<Task> startup = () => provider.GetRequiredService<IAsyncStartupValidator>().ValidateAsync(CancellationToken.None);
 
-        var message = startup.Should().Throw<OptionsValidationException>().Which.Message;
+        var message = (await startup.Should().ThrowAsync<OptionsValidationException>()).Which.Message;
         message.Should().Contain(key);
         message.Should().NotContain(_secretHost);
         foreach (var secret in secrets)

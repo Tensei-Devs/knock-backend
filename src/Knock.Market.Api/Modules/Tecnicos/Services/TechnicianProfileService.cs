@@ -22,7 +22,8 @@ internal sealed record TechnicianProfileRecord(
     string Estado,
     bool Oculto,
     DateTime? OcultoHasta,
-    DateTime? DisponibleHasta);
+    DateTime? DisponibleHasta,
+    string? UsuarioId = null);
 
 internal interface ITechnicianProfileReader
 {
@@ -66,7 +67,7 @@ internal sealed class TechnicianProfileService(ITechnicianProfileReader reader, 
             : null;
         return new TechnicianProfileResponse(record.Id.ToString(), record.Nombre, record.NombreNegocio, record.FotoUrl, record.Verificacion,
             record.Calificacion is { } rating ? Math.Round(rating, 1, MidpointRounding.AwayFromZero) : null, record.Anios, Shorten(record.Descripcion),
-            record.Oficios, detail);
+            record.Oficios, detail, withDetail ? record.UsuarioId : null);
     }
 
     /// <summary>Quita el perfil de la caché de esta réplica; lo llaman las escrituras del perfil (TEC-08 y TEC-09).</summary>

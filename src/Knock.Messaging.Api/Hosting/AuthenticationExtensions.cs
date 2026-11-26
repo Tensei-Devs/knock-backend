@@ -1,6 +1,9 @@
 // jscpd:ignore-start -- EXC-021: copia de src/Knock.Market.Api/Hosting/AuthenticationExtensions.cs (KNOCK-241) más la comprobación de sesión cancelada; se unifica en la biblioteca técnica de KNOCK-251.
 using System.Security.Claims;
 using Knock.Contracts.Sessions;
+using Knock.Hosting.Http;
+using Knock.Hosting.Redis;
+using Knock.Hosting.Security;
 using Knock.Messaging.Api.Common.Errors;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -40,31 +43,19 @@ internal static class AuthenticationExtensions
     public static IServiceCollection AddKnockAuthentication(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
-        services.AddKnockRedis();
+        services.AddKnockRedis("knock-messaging");
         services.AddSingleton<IRevokedSessions, RedisRevokedSessions>();
         services.AddSingleton(sp => JwtSettingsFactory.Create(
             sp.GetRequiredService<IConfiguration>(),
             sp.GetRequiredService<IHostEnvironment>()));
 
-        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer().AddInternalNoticeScheme();
+        services.AddKnockInternalNoticeAuthentication();
         services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
             .Configure<JwtSettings>((options, settings) =>
             {
                 options.MapInboundClaims = false;
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuer = true,
-                    ValidIssuer = settings.Issuer,
-                    ValidateAudience = true,
-                    ValidAudience = settings.Audience,
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = settings.SigningKey,
-                    RequireSignedTokens = true,
-                    ValidateLifetime = true,
-                    RequireExpirationTime = true,
-                    ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
-                    ClockSkew = TimeSpan.Zero,
-                };
+                options.TokenValidationParameters = settings.ToValidationParameters();
                 options.Events = new JwtBearerEvents
                 {
                     OnMessageReceived = AcceptHubTokenFromQuery,

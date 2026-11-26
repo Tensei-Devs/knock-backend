@@ -1,5 +1,6 @@
 using System.Globalization;
 using Knock.Contracts.Catalog;
+using Knock.Hosting.Data;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Requests.Domain;
 using Knock.Market.Api.Modules.Requests.Services;
@@ -75,7 +76,7 @@ internal sealed class MongoQuoteRequestReader(
     {
         if (!ObjectId.TryParse(id, out var objectId)) return null;
         var filter = Builders<BsonDocument>.Filter.Eq("_id", objectId);
-        var projection = Builders<BsonDocument>.Projection.Include("oficioClave").Include("coloniaId").Include("estado").Include("venceEn").Include("dia");
+        var projection = Builders<BsonDocument>.Projection.Include("oficioClave").Include("coloniaId").Include("estado").Include("venceEn").Include("dia").Include("clienteId");
         var doc = await database.GetCollection<BsonDocument>("solicitudes")
             .Find(filter, new FindOptions { MaxTime = options.Value.QueryMaxTime }).Project(projection).FirstOrDefaultAsync(cancellationToken);
         if (doc is null) return null;
@@ -85,7 +86,8 @@ internal sealed class MongoQuoteRequestReader(
             return null;
         }
         var center = await catalog.FindNeighborhoodCenterAsync(colonia, cancellationToken);
-        return new QuoteRequestSnapshot(trade, colonia, state, expiry, day, center?.Latitude, center?.Longitude);
+        var clientId = doc.TryGetValue("clienteId", out var client) && client.IsString ? client.AsString : string.Empty;
+        return new QuoteRequestSnapshot(trade, colonia, state, expiry, day, center?.Latitude, center?.Longitude, clientId);
     }
 
     private static bool TryRead(BsonDocument doc, out string trade, out string colonia, out RequestState state, out DateTimeOffset expiry, out DateOnly day)

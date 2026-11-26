@@ -1,6 +1,9 @@
 using Knock.Contracts.Conversations;
+using Knock.Contracts.Moderation;
 using Knock.Messaging.Api.Modules.Chat.Options;
 using Knock.Messaging.Api.Modules.Conversaciones.Data;
+using Knock.Messaging.Api.Modules.Conversaciones.Services;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
 namespace Knock.Messaging.Api.Modules.Conversaciones;
@@ -25,6 +28,24 @@ public static class ConversacionesModuleExtensions
                 client.Timeout = TimeSpan.FromSeconds(options.TiempoLimiteSegundos);
             })
             .RemoveAllLoggers();
+        services.AddOptions<ConversacionesOptions>().BindConfiguration(ConversacionesOptions.SectionName).ValidateOnStart();
+        services.AddSingleton<IValidateOptions<ConversacionesOptions>, ConversacionesOptionsValidator>();
+        services.AddSingleton<ConversacionesStore>();
+        services.AddSingleton<IConversacionesApi>(provider => provider.GetRequiredService<ConversacionesStore>());
+        services.AddSingleton<MensajesStore>();
+        services.AddSingleton<IMensajesStore>(provider => provider.GetRequiredService<MensajesStore>());
+        services.AddOptions<ModeracionMensajeriaOptions>().BindConfiguration(ModeracionMensajeriaOptions.SectionName).ValidateOnStart();
+        services.AddSingleton<IValidateOptions<ModeracionMensajeriaOptions>, ModeracionMensajeriaOptionsValidator>();
+        // Falla cerrado por omisión; el modo sin moderación solo existe con el interruptor encendido (y solo en Development).
+        services.TryAddSingleton<IContentModerator>(provider => provider.GetRequiredService<IOptions<ModeracionMensajeriaOptions>>().Value.PermitirSinModeracion
+            ? new ModeradorSinRevision()
+            : new ModeradorNoDisponible());
+        services.AddScoped<EnvioDeMensajeService>();
+        services.AddScoped<AccesoAConversacionService>();
+        services.AddSingleton<INotificadorEnVivo, NotificadorEnVivo>();
+        services.AddScoped<ConversacionService>();
+        services.AddScoped<LecturaService>();
+        services.AddScoped<CierrePorEleccionService>();
         return services;
     }
 }

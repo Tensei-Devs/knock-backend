@@ -5,7 +5,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using IdentityApi::Knock.Identity.Api.Modules.Safety.Data;
+using IdentityApi::Knock.Identity.Api.Modules.Safety.Services;
 using Knock.Contracts.Moderation;
+using Knock.Contracts.Safety;
 using Knock.IntegrationTest.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -50,6 +52,8 @@ internal sealed class SafetyHost : IAsyncDisposable
     public string Caller { get; } = Guid.NewGuid().ToString("D");
 
     public FakeModerator Moderator { get; }
+
+    public IMongoCollection<BsonDocument> Outbox => _factory.Database.GetCollection<BsonDocument>("outbox");
 
     public IMongoCollection<BsonDocument> Blocks => _factory.Database.GetCollection<BsonDocument>("bloqueos");
 

@@ -1,6 +1,7 @@
 extern alias identity;
 using System.Security.Cryptography;
 using System.Text;
+using Knock.Hosting.Data;
 using Knock.IntegrationTest.Support;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
@@ -13,7 +14,7 @@ using MongoDB.Driver;
 using Xunit;
 using DemoClientSeeder = identity::Knock.Identity.Api.Modules.Usuarios.Services.DemoClientSeeder;
 using IProfileCache = identity::Knock.Identity.Api.Modules.Usuarios.Data.IProfileCache;
-using KnockMongoOptions = identity::Knock.Identity.Api.Hosting.KnockMongoOptions;
+using KnockMongoOptions = Knock.Hosting.Data.KnockMongoOptions;
 using PhoneProtectionKeys = identity::Knock.Identity.Api.Modules.Sesiones.Services.PhoneProtectionKeys;
 using PhoneProtectionOptions = identity::Knock.Identity.Api.Modules.Sesiones.Services.PhoneProtectionOptions;
 using PhoneProtector = identity::Knock.Identity.Api.Modules.Sesiones.Services.PhoneProtector;
@@ -25,6 +26,7 @@ namespace Knock.DatabaseTest.Demo;
 
 public sealed class DemoSeedLoaderTests
 {
+    private static readonly string[] _uniqueFields = ["sub", "celularHash"];
     private static readonly string _path = Path.Combine(CatalogTestDatabase.SeedsDirectory, "demo", "identity", "usuarios.json");
 
     [Fact]
@@ -190,6 +192,30 @@ public sealed class DemoSeedLoaderTests
         });
     }
 
+    [Fact]
+    public async Task FiveConcurrentLoads_WithAllUniqueIndexes_KeepTenUsersAndVersions_CA_038_11()
+    {
+        await WithDatabase(async (database, seeder, _) =>
+        {
+            var users = database.GetCollection<BsonDocument>("usuarios");
+            foreach (var field in _uniqueFields)
+            {
+                await users.Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(
+                    Builders<BsonDocument>.IndexKeys.Ascending(field), new CreateIndexOptions { Unique = true }));
+            }
+
+            await Task.WhenAll(Enumerable.Range(0, 5).Select(_ => seeder.SeedAsync(_path, CancellationToken.None)));
+            var result = await users.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+            Assert.Equal(10, result.Count);
+            Assert.Equal(10, result.Select(user => user["celularHash"]).Distinct().Count());
+            Assert.Equal(10, result.Select(user => user["sub"]).Distinct().Count());
+            await seeder.SeedAsync(_path, CancellationToken.None);
+            var final = await users.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+            Assert.Equal(10, final.Count);
+            Assert.All(result, before => Assert.Equal(before["version"], Assert.Single(final, user => user["_id"] == before["_id"])["version"]));
+        });
+    }
+
     [Theory]
     [InlineData("_id")]
     [InlineData("sub")]
@@ -348,7 +374,7 @@ public sealed class DemoSeedLoaderTests
             var store = new UsuariosStore(database, Options.Create(new KnockMongoOptions { ConnectionString = connection ?? fixture.ConnectionString }));
             var cache = new FakeCache();
             var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Seed:Demo"] = enabled.ToString() }).Build();
-            await test(database, new DemoClientSeeder(store, protector, cache, cache.Logger, configuration, new FakeEnvironment { EnvironmentName = environment }), key, cache);
+            await test(database, new DemoClientSeeder(store, protector, cache, cache.Logger, configuration, new DemoFakeEnvironment { EnvironmentName = environment }), key, cache);
         }
         finally
         {
@@ -382,13 +408,5 @@ public sealed class DemoSeedLoaderTests
         {
             lock (Messages) { Messages.Add(formatter(state, exception)); }
         }
-    }
-
-    private sealed class FakeEnvironment : IHostEnvironment
-    {
-        public string EnvironmentName { get; set; } = Environments.Development;
-        public string ApplicationName { get; set; } = string.Empty;
-        public string ContentRootPath { get; set; } = string.Empty;
-        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
     }
 }

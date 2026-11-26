@@ -1,3 +1,4 @@
+using Knock.Hosting.Data;
 using Knock.Market.Api.Common.Crypto;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Tecnicos.Data;
@@ -20,6 +21,7 @@ public static class TecnicosModuleExtensions
         services.TryAddSingleton<FieldCipher>();
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<ITechnicianProfileStore, TechnicianProfileStore>();
+        services.AddScoped<ITecnicosApi, TecnicosApi>();
         services.AddScoped<TechnicianRegistrationService>();
         services.AddMemoryCache();
         services.AddScoped<ITechnicianProfileReader, TechnicianProfileStore>();
@@ -28,9 +30,26 @@ public static class TecnicosModuleExtensions
         services.AddScoped<ITechnicianSelfStore, TechnicianSelfStore>();
         services.AddScoped<MyTechnicianService>();
         services.AddScoped<ITechnicianLookupReader, TechnicianLookupStore>();
+        services.AddScoped<ITechnicianOwnerReader, TechnicianLookupStore>();
+        services.AddScoped<TechnicianBlockFilter>();
+        services.AddSingleton<TechnicianReadCache>();
+        services.AddScoped<ITechnicianMapReader, TechnicianMapStore>();
+        services.AddScoped<TechnicianMapService>();
+        services.AddScoped<ITechnicianExploreReader, TechnicianExploreStore>();
+        services.AddScoped<TechnicianExploreService>();
         services.AddScoped<TechnicianLookupService>();
         services.AddScoped<TrabajoStore>();
         services.AddScoped<TecnicoTrabajoService>();
+        services.AddScoped<IServiceStore, ServiceStore>();
+        services.AddScoped<IReputationReader, TechnicianReputationStore>();
+        services.AddScoped<TechnicianReputationService>();
+        services.AddScoped<IWorkPhotoReader, WorkPhotoStore>();
+        services.AddScoped<TechnicianWorkPhotoService>();
+        services.AddScoped<ServiceService>();
+        services.AddScoped<TechnicianAccountStore>();
+        services.AddScoped<ITecnicosApi, TecnicosApi>();
+        services.AddScoped<ITechnicianModerationStore, TechnicianModerationStore>();
+        services.AddScoped<TechnicianHideService>();
         return services;
     }
 }

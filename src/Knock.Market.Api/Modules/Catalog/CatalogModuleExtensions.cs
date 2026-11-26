@@ -1,4 +1,6 @@
 using Knock.Contracts.Catalog;
+using Knock.Hosting.Data;
+using Knock.Hosting.Redis;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Catalog.Data;
 using Knock.Market.Api.Modules.Catalog.Services;
@@ -30,12 +32,13 @@ public static class CatalogModuleExtensions
         }
         else
         {
-            services.AddKnockRedis();
+            services.AddKnockRedis(Knock.Market.Api.Hosting.MarketRedis.ClientName);
             services.AddSingleton<RedisCatalogCache>();
             services.AddSingleton<ICatalogCache>(sp => sp.GetRequiredService<RedisCatalogCache>());
             services.AddSingleton<ISearchResponseCache>(sp => sp.GetRequiredService<RedisCatalogCache>());
         }
         services.AddSingleton<CatalogStore>();
+        services.AddSingleton<IActiveOficios>(sp => sp.GetRequiredService<CatalogStore>());
         services.AddOptions<SearchCursorOptions>().BindConfiguration(SearchCursorOptions.SectionName).ValidateOnStart();
         services.AddSingleton<IPostConfigureOptions<SearchCursorOptions>, DevelopmentSearchCursorKey>();
         services.AddSingleton<IValidateOptions<SearchCursorOptions>, SearchCursorOptionsValidator>();
@@ -57,6 +60,12 @@ public static class CatalogModuleExtensions
         services.AddScoped<CatalogSeeder>();
         services.AddScoped<OficioQueries>();
         services.AddScoped<ZonaService>();
+        services.AddSingleton<CatalogAdminStore>();
+        services.AddSingleton<CatalogAdminService>();
+        services.AddSingleton<ITradeAdminStore, TradeAdminStore>();
+        services.AddSingleton<TradeAdminService>();
+        services.AddSingleton<ITradeRequestStore, TradeRequestStore>();
+        services.AddSingleton<TradeRequestService>();
         return services;
     }
 }
