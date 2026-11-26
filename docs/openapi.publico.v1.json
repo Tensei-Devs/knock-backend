@@ -26424,7 +26424,10 @@
             "type": "string"
           },
           "comoRol": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "titulo": {
             "type": "string"
@@ -26441,7 +26444,7 @@
             "format": "date-time"
           }
         },
-        "description": "Un aviso tal como lo ve la persona (R-10): sin códigos de visita, direcciones ni datos sensibles."
+        "description": "Un aviso tal como lo ve la persona (R-10); `ComoRol` es nulo en los avisos comunes a ambos roles: sin códigos de visita, direcciones ni datos sensibles."
       },
       "OficioResponse": {
         "required": [
