@@ -319,9 +319,28 @@ Las pruebas citan el caso como `CA_039_NN` en el nombre (para `python scripts/sd
 - **Sin cambio en Azure.** El `IExportStorage` real (contenedor `exportaciones`) sigue detrás del interruptor apagado y de Terraform; mientras tanto `GET /me/exportaciones/ultima` en estado `lista` responde 503.
 - Tarea: `task.md` T-05 y T-11 (parte de Mensajería); `054` T-09 (ruta interna de exportación).
 
+## Nota de enmienda (2026-11-26, rutas internas de la cuenta en Mercado)
+
+- **Estado de esta enmienda:** propuesta **SIN FIRMA**; vale desde que se firma la línea «Enmienda 2026-11-26 (rutas internas)» de la sección Aprobación. La aprobación original y las enmiendas ya firmadas se conservan.
+- **Momento de redacción:** se redacta el 2026-11-26, **después** de que las rutas y su código existen (`docs/openapi.v1.json` de `origin/develop`). Solo describe lo que hay; no pide código.
+- **Rutas de R-24 y R-25 en Mercado** (`InternalAccountController`). Las llama Identidad con su token de servicio: emisor `knock-identity`, `aud` `knock-market`, permiso `cuenta` y claim `usuarioId` igual al de la ruta (hasta 64 caracteres). Otra persona o una ruta que no coincide: `403 service_not_allowed`. El gateway no las publica. Respuestas con `Cache-Control: private, no-store`.
+
+| Método y ruta | Qué hace | Respuestas |
+|---|---|---|
+| `GET /api/v1/interno/cuentas/{usuarioId}/pendientes` | R-24: visitas `confirmada` de la persona y cotizaciones `enviada` que hizo como técnico, con conteo total e identificadores (máximo 50 por grupo, los más recientes), y si tiene una visita `en_curso` | `200` `{ appointmentTotal, appointmentIds, quoteTotal, quoteIds, visitInProgress }`; `401`; `403` |
+| `POST /api/v1/interno/cuentas/{usuarioId}/cancelaciones` | R-25: cierra sus solicitudes abiertas (motivo `account_deleted`) y retira sus cotizaciones pendientes | `204`; `401`; `403` |
+| `POST /api/v1/interno/cuentas/{usuarioId}/eliminada` | R-25, evento `CuentaEliminada`: cancela como tardías las visitas `confirmada`, repite las cancelaciones y anonimiza sus datos y su perfil de técnico (sobre las opiniones, ver abajo) | `202`; `401`; `403`; repetir no cambia nada |
+
+- `GET /api/v1/interno/cuentas/{usuarioId}/exportacion` **ya está nombrada** en la nota del 2026-11-24 (R-22) para Mensajería y Mercado; esta enmienda no la repite ni la cambia.
+- **CA-E01:** Dado un token sin el permiso `cuenta` o con un `usuarioId` distinto del de la ruta, cuando llama cualquiera de las tres rutas, entonces no se lee ni cambia nada y responde `403` (sin token válido, `401`).
+- Cubierto hoy por `tests/IntegrationTest/Requests/Spec039MercadoCuentaTests.cs` (no se ejecutó al redactar).
+- **Decisión pendiente:** `eliminada` no anonimiza opiniones: la única implementación encontrada del puerto `IOpinionAnonymizer` es la vacía (`NoOpinionsToAnonymize`). Confirmar si falta código o si lo cubre otra spec.
+- **Decisión pendiente:** en `sprint-05` no se encontró en Mensajería la ruta `exportacion` que fija la nota del 2026-11-24 (tampoco está en `docs/openapi.messaging.v1.json` de `origin/develop`); confirmar en qué PR está.
+
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
 - [x] Enmienda 2026-11-23 — nombre: José Julián Hernández Hernández fecha: 2026-11-24
 - [x] Enmienda 2026-11-24 — nombre: José Julián Hernández Hernández fecha: 2026-11-26
 - [x] Sin conflicto con la constitución
+- [ ] Enmienda 2026-11-26 (rutas internas) — nombre: ______ fecha: ______
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)
