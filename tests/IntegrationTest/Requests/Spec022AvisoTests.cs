@@ -56,6 +56,6 @@ public sealed class Spec022AvisoTests
         (await host.VisitDocAsync(visit.VisitId))["avisosEnviados"].AsInt32.Should().Be(3);
         var events = await host.Database.GetCollection<BsonDocument>("outbox").Find(Builders<BsonDocument>.Filter.Eq("tipo", "AvisoConfianzaPreparado")).ToListAsync();
         events.Should().HaveCount(3);
-        events.Should().OnlyContain(e => !e.ToJson().Contains(Spec021Host.TechnicianName) && !e.ToJson().Contains("Contraté") && !Spec020Host.CarriesValue(e.ToJson(), visit.Code!));
+        events.Should().OnlyContain(e => !e.ToJson().Contains(Spec021Host.TechnicianName) && !e.ToJson().Contains("Contraté") && !Spec020Host.CarriesVisitCode(e.ToJson(), visit.Code!));
     }
 }
