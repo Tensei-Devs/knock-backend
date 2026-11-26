@@ -291,3 +291,16 @@ excepciones:
     creada: 2026-11-23
     vence: 2027-02-18
     plan: si se elimina la reversión manual por workflow_dispatch (o se mueve a un workflow aparte sin inputs), retirar la supresión y esta excepción antes de vencer.
+  - id: EXC-032
+    herramienta: zap
+    regla: "10049"
+    alcance: security/zap-rules.tsv (job «Smoke + DAST (ZAP baseline)» de ci-pr.yml, pila efímera del runner)
+    justificacion: >-
+      La alerta informativa 10049 (Non-Storable Content) señala el encabezado Cache-Control no-store, que es intencional: la spec 009 (R-02) lo exige y SecurityHeadersMiddleware lo pone cuando la ruta no declara su propia política de caché.
+      Evidencia: run 45743925942 del PR 398 (primera ejecución en la que ZAP llegó a correr): FAIL-NEW 0, PASS 67, WARN-NEW 1 (variante 10049-1 en /, /robots.txt y /sitemap.xml; sin alertas altas, medias ni bajas).
+      ZAP solo permite ignorar por identificador de plugin, así que se silencian también las otras variantes de 10049, incluida la de contenido que se puede cachear; el no-store por omisión lo vigilan SecurityHeadersMiddlewareTests y SecurityHeadersTests, no el humo.
+      Limitación del DAST actual: escanea sin sesión desde la raíz (2 endpoints, todas las respuestas 4xx); no cubre ninguna ruta autenticada y no valida la seguridad de la API. Autorizada por José el 2026-11-25 conforme a BUG-001 TC-05.
+    responsable: José Julián Hernández Hernández
+    creada: 2026-11-25
+    vence: 2026-12-25
+    plan: revisar antes de vencer, volviendo a correr el DAST sin la línea 10049 y leyendo el informe zap_scan; retirarla si ya no aparece y, si se renueva, comprobar que solo aparece la variante 10049-1 y que el no-store sigue exigido por la spec 009 R-02, y renovar solo con nueva aprobación.
