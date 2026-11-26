@@ -31,7 +31,7 @@ public sealed class KnockMongoOptionsTests
     }
 
     [Fact]
-    public void MaxPoolSizeComesFromConfigurationAndIsValidated_TC_TT_BD_06_13()
+    public async Task MaxPoolSizeComesFromConfigurationAndIsValidated_TC_TT_BD_06_13()
     {
         var connectionString = MongoTestServices.SyntheticConnectionString();
         MongoUrl.Create(connectionString).MaxConnectionPoolSize.Should().Be(100, "la cadena pide 100 para que se vea quién manda");
@@ -41,7 +41,7 @@ public sealed class KnockMongoOptionsTests
             [_maxPoolSizeKey] = "7",
         });
 
-        provider.GetRequiredService<IStartupValidator>().Validate();
+        await provider.GetRequiredService<IAsyncStartupValidator>().ValidateAsync(CancellationToken.None);
         var client = provider.GetRequiredService<IMongoClient>();
 
         client.Settings.MaxConnectionPoolSize.Should().Be(7);
@@ -55,7 +55,7 @@ public sealed class KnockMongoOptionsTests
     [InlineData("veinte")]
     [InlineData("20.5")]
     [InlineData("")]
-    public void MaxPoolSizeMissingOutOfRangeOrNotNumeric_FailsStartupNamingTheKey_TC_TT_BD_06_13(string? value)
+    public async Task MaxPoolSizeMissingOutOfRangeOrNotNumeric_FailsStartupNamingTheKey_TC_TT_BD_06_13(string? value)
     {
         var connectionString = MongoTestServices.SyntheticConnectionString();
         using var provider = MongoTestServices.Build(new Dictionary<string, string?>
@@ -64,9 +64,9 @@ public sealed class KnockMongoOptionsTests
             [_maxPoolSizeKey] = value,
         });
 
-        var startup = () => provider.GetRequiredService<IStartupValidator>().Validate();
+        Func<Task> startup = () => provider.GetRequiredService<IAsyncStartupValidator>().ValidateAsync(CancellationToken.None);
 
-        var message = startup.Should().Throw<OptionsValidationException>().Which.Message;
+        var message = (await startup.Should().ThrowAsync<OptionsValidationException>()).Which.Message;
         message.Should().Contain(_maxPoolSizeKey);
         message.Should().NotContain(connectionString).And.NotContain(MongoUrl.Create(connectionString).Password);
     }
@@ -80,7 +80,7 @@ public sealed class KnockMongoOptionsTests
     }
 
     [Fact]
-    public void TimeoutsMissingFromConfiguration_UseTheDefaults_TC_TT_BD_06_13()
+    public async Task TimeoutsMissingFromConfiguration_UseTheDefaults_TC_TT_BD_06_13()
     {
         using var provider = MongoTestServices.Build(new Dictionary<string, string?>
         {
@@ -88,7 +88,7 @@ public sealed class KnockMongoOptionsTests
             [_maxPoolSizeKey] = "7",
         });
 
-        provider.GetRequiredService<IStartupValidator>().Validate();
+        await provider.GetRequiredService<IAsyncStartupValidator>().ValidateAsync(CancellationToken.None);
         var settings = provider.GetRequiredService<IMongoClient>().Settings;
 
         settings.ServerSelectionTimeout.Should().Be(TimeSpan.FromSeconds(5));
@@ -98,7 +98,7 @@ public sealed class KnockMongoOptionsTests
     }
 
     [Fact]
-    public void TimeoutsComeFromConfigurationAndRepositoryAppSettingsFixesThem_TC_TT_BD_06_13()
+    public async Task TimeoutsComeFromConfigurationAndRepositoryAppSettingsFixesThem_TC_TT_BD_06_13()
     {
         using var provider = MongoTestServices.Build(new Dictionary<string, string?>
         {
@@ -111,7 +111,7 @@ public sealed class KnockMongoOptionsTests
         });
         var configuration = new ConfigurationBuilder().AddJsonFile(MongoTestServices.RepositoryAppSettings(), optional: false).Build();
 
-        provider.GetRequiredService<IStartupValidator>().Validate();
+        await provider.GetRequiredService<IAsyncStartupValidator>().ValidateAsync(CancellationToken.None);
         var settings = provider.GetRequiredService<IMongoClient>().Settings;
 
         settings.ServerSelectionTimeout.Should().Be(TimeSpan.FromSeconds(3));
@@ -126,7 +126,7 @@ public sealed class KnockMongoOptionsTests
 
     [Theory]
     [MemberData(nameof(InvalidTimeouts))]
-    public void TimeoutZeroNegativeOverSixtySecondsOrNotInteger_FailsStartupNamingTheKey_TC_TT_BD_06_13(string key, string value)
+    public async Task TimeoutZeroNegativeOverSixtySecondsOrNotInteger_FailsStartupNamingTheKey_TC_TT_BD_06_13(string key, string value)
     {
         var connectionString = MongoTestServices.SyntheticConnectionString();
         using var provider = MongoTestServices.Build(new Dictionary<string, string?>
@@ -136,9 +136,9 @@ public sealed class KnockMongoOptionsTests
             [key] = value,
         });
 
-        var startup = () => provider.GetRequiredService<IStartupValidator>().Validate();
+        Func<Task> startup = () => provider.GetRequiredService<IAsyncStartupValidator>().ValidateAsync(CancellationToken.None);
 
-        var message = startup.Should().Throw<OptionsValidationException>().Which.Message;
+        var message = (await startup.Should().ThrowAsync<OptionsValidationException>()).Which.Message;
         message.Should().Contain(key);
         message.Should().NotContain(connectionString).And.NotContain(MongoUrl.Create(connectionString).Password);
     }

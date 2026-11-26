@@ -9,7 +9,7 @@ namespace Knock.UnitTest.Hosting;
 public sealed class KnockMongoDatabasesTests
 {
     [Fact]
-    public void ModulesGetTheirDatabaseByNameFromOneSharedClient_TC_TT_BD_06_18()
+    public async Task ModulesGetTheirDatabaseByNameFromOneSharedClient_TC_TT_BD_06_18()
     {
         // Catalog → market sale del appsettings.json del repositorio; Identity → identity solo existe en esta prueba.
         using var provider = MongoTestServices.Build(
@@ -22,7 +22,7 @@ public sealed class KnockMongoDatabasesTests
             "Catalog",
             "Identity");
 
-        provider.GetRequiredService<IStartupValidator>().Validate();
+        await provider.GetRequiredService<IAsyncStartupValidator>().ValidateAsync(CancellationToken.None);
         var catalog = provider.GetRequiredKeyedService<IMongoDatabase>("Catalog");
         var identity = provider.GetRequiredKeyedService<IMongoDatabase>("Identity");
 
@@ -37,7 +37,7 @@ public sealed class KnockMongoDatabasesTests
     [InlineData("")]
     [InlineData("iden tity")]
     [InlineData("market.catalog")]
-    public void ModuleWithoutValidDatabaseKey_FailsStartupNamingTheKey_TC_TT_BD_06_18(string? database)
+    public async Task ModuleWithoutValidDatabaseKey_FailsStartupNamingTheKey_TC_TT_BD_06_18(string? database)
     {
         using var provider = MongoTestServices.Build(
             new Dictionary<string, string?>
@@ -49,9 +49,9 @@ public sealed class KnockMongoDatabasesTests
             "Catalog",
             "Identity");
 
-        var startup = () => provider.GetRequiredService<IStartupValidator>().Validate();
+        Func<Task> startup = () => provider.GetRequiredService<IAsyncStartupValidator>().ValidateAsync(CancellationToken.None);
 
-        var message = startup.Should().Throw<OptionsValidationException>().Which.Message;
+        var message = (await startup.Should().ThrowAsync<OptionsValidationException>()).Which.Message;
         message.Should().Contain("Mongo:Databases:Identity");
         message.Should().NotContain("Mongo:Databases:Catalog", "Catalog sí tiene su base");
     }
