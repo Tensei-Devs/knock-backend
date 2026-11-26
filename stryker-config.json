@@ -11,6 +11,7 @@
       "**/Knock.Gateway/**/*.cs",
       "**/Knock.Hosting/**/*.cs",
       "**/Knock.Hosting.Data/**/*.cs",
+      "**/Knock.Hosting.Mvc/**/*.cs",
       "!**/obj/**",
       "!**/bin/**",
       "!**/*.g.cs",

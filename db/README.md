@@ -9,3 +9,9 @@ Reglas para un script nuevo:
 - Usa el número de su spec. Si ese número ya existe, escoge un nombre que ordene después del existente (por ejemplo, con `z-`) cuando dependa de él.
 - No renombres un script ya entregado: las pruebas de `tests/DatabaseTest/Scripts` y `Memoria.md` lo citan por nombre.
 - Sus nombres de nivel superior (`const`) no deben repetirse entre scripts, porque corren en el mismo ámbito (`load()`).
+
+## Rellenos de una sola vez (`db/relleno/`)
+
+Son migraciones de datos que corre una persona. No están numerados y viven en una subcarpeta a propósito: ni `db/entrega.js` ni el bucle de despliegue los aplican. Por omisión solo simulan; escriben únicamente con `KNOCK_APLICAR=si`, y su salida no lleva nombres.
+
+- `relleno/tecnicos-busqueda.js` (specs 027, 028, 046 y 051): completa en los técnicos ya guardados `nombrePublico`, `palabrasBusqueda`, `calificacion`, `totalResenas` y `coloniaBaseNombre`. No toca cuentas eliminadas. Antes de aplicarlo: respaldo revisado y la simulación leída. No escribe `trabajosTerminados` (falta la regla).

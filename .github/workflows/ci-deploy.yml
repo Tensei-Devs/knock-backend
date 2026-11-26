@@ -75,10 +75,10 @@ jobs:
           else
             CHANGED="__ALL__"
           fi
-          # Un cambio en los contratos compartidos (Knock.Contracts), en las bibliotecas técnicas (Knock.Hosting y Knock.Hosting.Data) o en archivos compartidos
+          # Un cambio en los contratos compartidos (Knock.Contracts), en las bibliotecas técnicas (Knock.Hosting, Knock.Hosting.Data y Knock.Hosting.Mvc) o en archivos compartidos
           # de compilación (Directory.Build.*, Directory.Packages.props, global.json,
           # NuGet.config, *.sln/*.slnx, *.props/*.targets) afecta a los cuatro servicios.
-          SHARED='^src/Knock\.Contracts/|^src/Knock\.Hosting(\.Data)?/|^Directory\.|\.(slnx?|props|targets)$|^global\.json$|^[Nn]u[Gg]et\.config$'
+          SHARED='^src/Knock\.Contracts/|^src/Knock\.Hosting(\.Data|\.Mvc)?/|^Directory\.|\.(slnx?|props|targets)$|^global\.json$|^[Nn]u[Gg]et\.config$'
           hit() { [ "$CHANGED" = "__ALL__" ] || grep -qE "$1" <<<"$CHANGED"; }
           {
             echo "gateway=$(hit "^src/Knock\.Gateway/|$SHARED" && echo true || echo false)"

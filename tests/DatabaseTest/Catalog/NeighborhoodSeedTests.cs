@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Knock.DatabaseTest.Support;
 using Knock.IntegrationTest.Support;
+using Knock.Market.Api.Common.Text;
 using Knock.Market.Api.Modules.Catalog;
 using Knock.Market.Api.Modules.Catalog.Domain;
 using Knock.Market.Api.Modules.Catalog.Services;

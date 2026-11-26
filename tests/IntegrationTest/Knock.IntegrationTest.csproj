@@ -32,6 +32,7 @@
     <Compile Include="..\ContractTest\Support\ContractReader.cs" Link="Contract\Support\ContractReader.cs" />
     <Compile Include="..\ContractTest\Support\SchemaValidator.cs" Link="Contract\Support\SchemaValidator.cs" />
     <Compile Include="..\ContractTest\OpenApiDocs.cs" Link="Contract\Support\OpenApiDocs.cs" />
+    <Compile Include="..\ContractTest\Support\ServiceContractHosts.cs" Link="Hosting\Support\ServiceContractHosts.cs" />
   </ItemGroup>
 
   <ItemGroup>

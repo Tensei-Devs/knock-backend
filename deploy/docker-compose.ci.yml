@@ -6,7 +6,7 @@
 x-servicio: &servicio
   restart: "no"
   depends_on:
-    documentdb: { condition: service_started }
+    documentdb: { condition: service_healthy }
     redis: { condition: service_healthy }
     azurite: { condition: service_started }
   environment: &entorno
@@ -31,6 +31,13 @@ services:
       - ${CI_DB_USER:-knock}
       - --password
       - ${CI_DB_PASSWORD:?CI_DB_PASSWORD is required}
+    # El puerto TLS abre antes de que el servidor acepte comandos (DocumentDbFixture, WaitUntilReadyAsync).
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/10260"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 45s
 
   redis:
     image: redis:7.2-alpine@sha256:2c933526722b4126a61d5c170f766dc159adf97682f0b1cbbc27b1666ba96d84
@@ -71,8 +78,8 @@ services:
       test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /health/ready HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && head -n 1 <&3 | grep -q ' 200 '"]
       interval: 10s
       timeout: 5s
-      retries: 12
-      start_period: 15s
+      retries: 24
+      start_period: 60s
 
   market:
     <<: *servicio

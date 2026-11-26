@@ -1,10 +1,9 @@
-// jscpd:ignore-start -- EXC-015
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.Extensions.Options;
 
-namespace Knock.Identity.Api.Hosting;
+namespace Knock.Hosting.Security;
 
-internal static class SecurityExtensions
+public static class SecurityExtensions
 {
     /// <summary>
     /// Opciones de <c>Security:*</c> (validadas al arrancar, sin valores por defecto en código), HSTS sin <c>preload</c>, redirección 308 a HTTPS
@@ -32,4 +31,3 @@ internal static class SecurityExtensions
         return builder;
     }
 }
-// jscpd:ignore-end

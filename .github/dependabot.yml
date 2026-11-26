@@ -1,10 +1,10 @@
 version: 2
 updates:
   - package-ecosystem: nuget
+    open-pull-requests-limit: 0 # pausado (KNOCK-266): sin PR de actualización de versión hasta cerrar el backend
     directory: "/"
     target-branch: develop
     schedule: {interval: weekly, day: monday, time: "08:00", timezone: America/Mexico_City}
-    open-pull-requests-limit: 8
     labels: [dependencias]
     commit-message: {prefix: "build(deps)"}
     # Decisión del revisor (KNOCK-20): xunit se queda en la versión 2. Dependabot no propone saltos de versión mayor de xunit.
@@ -16,6 +16,7 @@ updates:
       efcore: {patterns: ["Microsoft.EntityFrameworkCore*", "Npgsql*"], update-types: [minor, patch]}
       pruebas: {patterns: ["xunit*", "AwesomeAssertions", "Moq", "Testcontainers*", "NetArchTest*", "coverlet*"]}
   - package-ecosystem: github-actions
+    open-pull-requests-limit: 0 # pausado (KNOCK-266): sin PR de actualización de versión hasta cerrar el backend
     directory: "/"
     target-branch: develop
     schedule: {interval: weekly, day: monday, time: "08:00", timezone: America/Mexico_City}
@@ -24,6 +25,7 @@ updates:
     groups:
       actions: {patterns: ["*"]}
   - package-ecosystem: docker
+    open-pull-requests-limit: 0 # pausado (KNOCK-266): sin PR de actualización de versión hasta cerrar el backend
     directory: "/src/Knock.Api"
     target-branch: develop
     schedule: {interval: weekly, day: monday, time: "08:00", timezone: America/Mexico_City}
