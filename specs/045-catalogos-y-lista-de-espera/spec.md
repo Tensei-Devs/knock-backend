@@ -309,6 +309,6 @@ Las pruebas citan el caso como `CA_045_NN` en el nombre (para `python scripts/sd
 
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
-- [ ] Enmienda 2026-11-25 — nombre: ________ fecha: ________
+- [x] Enmienda 2026-11-25 — nombre: José Julián Hernández Hernández fecha: 2026-11-26
 - [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

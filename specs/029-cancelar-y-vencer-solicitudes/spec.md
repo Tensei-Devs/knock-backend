@@ -223,5 +223,5 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
 - [x] Sin conflicto con la constitución
-- [ ] Enmienda 2026-11-26 — nombre: ________ fecha: ________
+- [x] Enmienda 2026-11-26 — nombre: José Julián Hernández Hernández fecha: 2026-11-26
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

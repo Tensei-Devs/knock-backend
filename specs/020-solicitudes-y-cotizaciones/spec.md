@@ -323,5 +323,5 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - [x] Sin conflicto con la constitución
 - [x] Enmienda KNOCK-69 (R-09, CA-24 e índice) aprobada — nombre: José Julián Hernández Hernández fecha: 2026-11-19
 - [x] Enmienda KNOCK-185 (R-04, formato de archivoId) aprobada — nombre: José Julián Hernández Hernández fecha: 2026-11-20
-- [ ] Enmienda 2026-11-26 — nombre: ________ fecha: ________
+- [x] Enmienda 2026-11-26 — nombre: José Julián Hernández Hernández fecha: 2026-11-26
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)
