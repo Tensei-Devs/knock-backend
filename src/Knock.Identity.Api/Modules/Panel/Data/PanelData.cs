@@ -65,6 +65,8 @@ internal static class PanelAuditValues
     public const string TotpReiniciado = "totp_reiniciado";
     public const string OpinionOcultada = "opinion_ocultada";
     public const string OpinionMostrada = "opinion_mostrada";
+    public const string OficioCreado = "oficio_creado";
+    public const string OficioEditado = "oficio_editado";
 }
 
 /// <summary>Resultado de consumir una invitación de activación (R-29).</summary>

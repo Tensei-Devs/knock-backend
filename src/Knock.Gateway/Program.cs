@@ -2,6 +2,7 @@ using Knock.Contracts.Correlation;
 using Knock.Gateway.Hosting;
 using Knock.Hosting.ForwardedHeaders;
 using Knock.Hosting.Health;
+using Knock.Hosting.Http;
 using Knock.Hosting.Lifecycle;
 using Knock.Hosting.Logging;
 using Knock.Hosting.Observability;
@@ -22,7 +23,7 @@ builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
 // y `anonymous` deja pasar (specs 009 y 015).
 builder.Services.AddReverseProxy().LoadFromConfig(builder.Configuration.GetSection("ReverseProxy")).AddKnockForwardedHeadersTransform();
 builder.Services
-    .AddKnockGatewayProblemDetails()
+    .AddKnockProblemDetails(new KnockProblemDetailsOptions { ExposeExceptionDetail = false })
     .AddKnockHsts()
     .AddKnockForwardedHeaders()
     .AddKnockGatewayCors(builder.Configuration)

@@ -565,6 +565,12 @@
           "Knock.Hosting": "[1.0.0, )",
           "MongoDB.Driver": "[3.14.0, )"
         }
+      },
+      "knock.hosting.mvc": {
+        "type": "Project",
+        "dependencies": {
+          "Asp.Versioning.Mvc": "[10.2.1, )"
+        }
       }
     }
   }

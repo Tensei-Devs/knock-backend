@@ -23,6 +23,19 @@ public class HostingLibraryBoundaryTests
     /// <summary>Piezas de la etapa 2 (R-08, KNOCK-280): el limitador vive en la biblioteca; el gateway conserva solo sus middlewares.</summary>
     private static readonly string[] _stage2Types = ["SharedRateLimiter", "RedisRequestCounter", "RateLimitingExtensions", "IRequestCounter"];
 
+    /// <summary>Piezas de la etapa 3 (R-08, KNOCK-281) ya movidas: si vuelven a aparecer en un servicio, es una copia nueva (R-09).</summary>
+    private static readonly string[] _stage3Types =
+    [
+        "LoggingExtensions", "ObservabilityExtensions", "RedisExtensions", "HealthExtensions", "MongoExtensions", "SecurityHeadersMiddleware", "HstsExtensions", "JwtSettings",
+        "JsonCompressionMiddleware", "ProblemResponses", "ProblemDetailsExtensions", "RequestBodyLimitMiddleware", "CorsMiddleware",
+        "SecurityExtensions", "SecuritySettings", "SecuritySettingsValidator",
+    ];
+
+    private const string _mvcLibrary = "Knock.Hosting.Mvc";
+
+    /// <summary>Piezas que dependen de MVC (KNOCK-266, enmienda de 055 pendiente de firma): viven en <c>Knock.Hosting.Mvc</c>; los servicios no las vuelven a definir.</summary>
+    private static readonly string[] _mvcTypes = ["ApiVersioningExtensions"];
+
     public static TheoryData<string> Projects
     {
         get
@@ -80,6 +93,45 @@ public class HostingLibraryBoundaryTests
     [MemberData(nameof(Projects))]
     public void Servicios_Sin_Copias_De_La_Etapa_2_CA_055_11(string project) =>
         Assembly.Load(project).GetTypes().Select(t => t.Name).Should().NotContain(_stage2Types);
+
+    [Theory]
+    [MemberData(nameof(Projects))]
+    public void Servicios_Sin_Copias_Del_Catalogo_CA_055_12(string project) =>
+        Assembly.Load(project).GetTypes().Select(t => t.Name).Should().NotContain(_stage3Types);
+
+    [Theory]
+    [InlineData("Knock.Identity.Api", false)]
+    [InlineData("Knock.Market.Api", true)]
+    [InlineData("Knock.Messaging.Api", true)]
+    public void Servicios_Sin_Copias_De_Las_Piezas_De_Mvc_CA_055_12(string project, bool alsoPrivateNoStore)
+    {
+        // El PrivateNoStoreAttribute de Identidad es otro (filtro de recurso de Direcciones) y no es copia del de Mercado y Mensajería.
+        var forbidden = alsoPrivateNoStore ? [.. _mvcTypes, "PrivateNoStoreAttribute"] : _mvcTypes;
+        var assembly = Assembly.Load(project);
+
+        assembly.GetTypes().Select(t => t.Name).Should().NotContain(forbidden);
+        assembly.GetReferencedAssemblies().Select(a => a.Name).Should().Contain(_mvcLibrary);
+    }
+
+    [Fact]
+    public void Gateway_Y_Hosting_No_Dependen_De_Mvc_CA_055_12()
+    {
+        // Separar Knock.Hosting.Mvc evita que el gateway (sin controladores) arrastre Asp.Versioning.Mvc.
+        foreach (var name in new[] { _library, "Knock.Gateway", "Knock.Hosting.Data" })
+        {
+            Assembly.Load(name).GetReferencedAssemblies().Select(a => a.Name).Should().NotContain([_mvcLibrary, "Asp.Versioning.Mvc", "Asp.Versioning.Http"], name);
+        }
+    }
+
+    [Fact]
+    public void Hosting_Mvc_No_Referencia_Servicios_Ni_Contratos_Ni_Datos_CA_055_01()
+    {
+        var assembly = Assembly.Load(_mvcLibrary);
+
+        assembly.GetReferencedAssemblies().Select(a => a.Name).Should().NotContain([.. _projects, "Knock.Contracts", "Knock.Hosting.Data", "MongoDB.Driver"]);
+        Types.InAssembly(assembly).ShouldNot().Inherit<ControllerBase>().GetResult().IsSuccessful.Should().BeTrue();
+        Types.InAssembly(assembly).That().ResideInNamespaceContaining(".Modules.").GetTypes().Should().BeEmpty();
+    }
 
     [Fact]
     public void Sin_MongoDB_En_Hosting_Ni_Gateway_CA_055_13()

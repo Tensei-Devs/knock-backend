@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Knock.Hosting.Http;
 using Knock.Messaging.Api.Hosting;
 using Knock.Messaging.Api.Modules.Notices.Dtos;
 using Knock.Messaging.Api.Modules.Notices.Services;

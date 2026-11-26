@@ -32,6 +32,7 @@ public static class PanelModuleExtensions
         services.AddSingleton<PanelIpHasher>();
         services.AddSingleton<AuditoriaPanel>();
         services.AddSingleton<OpinionModeradaConsumer>();
+        services.AddSingleton<CambioDeOficioConsumer>();
         services.AddSingleton<IPanelApi, PanelApi>();
         services.AddSingleton(provider => PanelSettings.Create(provider.GetRequiredService<IConfiguration>(), provider.GetRequiredService<IHostEnvironment>()));
         services.AddOptions<PanelTotpOptions>().BindConfiguration(PanelTotpOptions.SectionName);

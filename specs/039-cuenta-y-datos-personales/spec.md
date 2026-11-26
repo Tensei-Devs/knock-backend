@@ -311,8 +311,17 @@ Las pruebas citan el caso como `CA_039_NN` en el nombre (para `python scripts/sd
 - **CA-35:** donde dice «recibe un aviso con un enlace de 24 horas» debe leerse «recibe un aviso fijo sin enlace y, al abrirlo, la app obtiene un enlace de 24 horas con `GET /api/v1/me/exportaciones/ultima`».
 - Tarea: `task.md` T-15, desbloqueada por la firma del 2026-11-24 (pendiente de código). Requiere también el tipo `exportacion_lista` en la spec 037 (T-10 y el catálogo cerrado de `AvisoRules`).
 
+## Nota de enmienda (2026-11-24, decisión de José, pendiente de firma)
+- **Estado de esta enmienda:** **sin firmar**. Propuesta para validación de José Julián Hernández Hernández; no habilita nada por sí sola. El código ya está en un PR aparte (Nivel C) que se fusiona solo después de esta firma. La firma es la línea «Enmienda 2026-11-24» de la sección Aprobación.
+- **R-22: qué lleva `mensajeria.json`.** El ZIP trae un JSON por servicio: `identidad.json`, `mercado.json` y `mensajeria.json`. `mensajeria.json` contiene **únicamente los mensajes que la persona escribió**, agrupados por conversación y con su rol en ella (`cliente` o `tecnico`): identificador del mensaje, texto (ya con el contacto ocultado, como se guardó), si se ocultó un contacto y fecha. **No** lleva los mensajes de la otra parte, ni su identificador, ni el `autorId`. Es coherente con «contiene solo datos propios».
+- **Ruta interna de Mensajería.** Identidad lee esos datos con `GET /api/v1/interno/cuentas/{usuarioId}/exportacion` de Mensajería (la spec 054 R-15 la nombra `/api/v1/interno/exportacion`; se fija este nombre porque sigue el de Mercado, `/interno/cuentas/{usuarioId}/exportacion`). Token de servicio de la spec 037: emisor `knock-identity`, clave `avisos-key-identity`, `aud` `knock-notifications`, `exp` de 1 minuto, `permisos` con `exportacion` y el claim `usuarioId` igual al de la ruta; un token de otra persona, sin el permiso o de otro emisor responde 403 `service_not_allowed`. Fuera del gateway, sin caché. Si Mensajería no responde, la tarea falla y se reintenta: nunca se guarda un ZIP sin `mensajeria.json`.
+- **Límites.** Hasta 1000 conversaciones por rol y 5000 mensajes propios por conversación; los mensajes ya vencen a los 180 días (spec 030, R-21). No hay índice nuevo: se usan los de conversaciones por `clienteId`/`tecnicoUsuarioId` y el de mensajes por conversación.
+- **Sin cambio en Azure.** El `IExportStorage` real (contenedor `exportaciones`) sigue detrás del interruptor apagado y de Terraform; mientras tanto `GET /me/exportaciones/ultima` en estado `lista` responde 503.
+- Tarea: `task.md` T-05 y T-11 (parte de Mensajería); `054` T-09 (ruta interna de exportación).
+
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
 - [x] Enmienda 2026-11-23 — nombre: José Julián Hernández Hernández fecha: 2026-11-24
+- [x] Enmienda 2026-11-24 — nombre: José Julián Hernández Hernández fecha: 2026-11-26
 - [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

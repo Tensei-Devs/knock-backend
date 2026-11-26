@@ -182,7 +182,7 @@ public static class ObservabilityExtensions
 
 /// <summary>
 /// Anota en el span de la petición la excepción no controlada (tipo, mensaje y pila redactados) y no la maneja: la respuesta sigue
-/// siendo la de ProblemDetailsExtensions. La instrumentación no ve las excepciones que atiende <c>UseExceptionHandler</c>.
+/// siendo la de ProblemResponses.AddKnockProblemDetails. La instrumentación no ve las excepciones que atiende <c>UseExceptionHandler</c>.
 /// </summary>
 internal sealed class TelemetryExceptionRecorder : IExceptionHandler
 {

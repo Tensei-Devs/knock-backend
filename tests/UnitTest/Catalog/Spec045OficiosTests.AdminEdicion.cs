@@ -19,18 +19,15 @@ public sealed partial class Spec045OficiosTests
 
     private sealed class AdminTradesControllerFixture
     {
-        public AdminTradesControllerFixture(string? sub = "cuenta-de-prueba", FakeAudit? audit = null)
+        public AdminTradesControllerFixture(string? sub = "cuenta-de-prueba")
         {
             Store.Trades.Add(Trade("plomeria", "Plomería"));
-            Audit = audit ?? new FakeAudit();
-            Controller = Admin(AdminService(Store, Catalog, Audit), sub);
+            Controller = Admin(AdminService(Store, Catalog), sub);
         }
 
         public FakeTradeAdminStore Store { get; } = new();
 
         public FakeActiveOficios Catalog { get; } = new();
-
-        public FakeAudit Audit { get; }
 
         public Knock.Market.Api.Modules.Catalog.Controllers.V1.AdminTradesController Controller { get; }
     }
@@ -52,18 +49,16 @@ public sealed partial class Spec045OficiosTests
     }
 
     [Fact]
-    public async Task Update_LeavesTheAuditEntryWithTheChangedFields_CA_045_14_CA_045_35()
+    public async Task Update_LeavesTheAuditEventWithWhoWhenAndWhich_InTheSameWriteAsTheChange_CA_045_14_CA_045_35()
     {
         var fixture = new AdminTradesControllerFixture(sub: "panel-7");
 
         await PutAsync(fixture, "plomeria", Edit() with { VisitaMaxima = 600, Activo = false });
 
-        var entry = fixture.Audit.Entries.Should().ContainSingle().Subject;
-        entry.Subject.Should().Be("panel-7");
-        entry.Action.Should().Be("trade.update");
-        entry.Resource.Should().Be("plomeria");
-        entry.Changes.Keys.Should().BeEquivalentTo("visitaMaxima", "activo");
-        entry.Changes["activo"].Should().Be("false");
+        var audit = fixture.Store.Audits.Should().ContainSingle().Subject;
+        audit.PanelSubject.Should().Be("panel-7");
+        audit.Created.Should().BeFalse();
+        audit.AtUtc.Should().Be(_now.UtcDateTime);
     }
 
     [Fact]
@@ -134,7 +129,7 @@ public sealed partial class Spec045OficiosTests
         ((ProblemDetails)problem.Value!).Extensions["errors"].Should().BeOfType<Dictionary<string, string[]>>().Which.Should().ContainKey("clave");
         fixture.Store.Trades.Single().Clave.Should().Be("plomeria");
         fixture.Store.Trades.Single().Nombre.Should().Be("Plomería");
-        fixture.Audit.Entries.Should().BeEmpty();
+        fixture.Store.Audits.Should().BeEmpty();
     }
 
     [Fact]
@@ -148,17 +143,7 @@ public sealed partial class Spec045OficiosTests
         thrown.Kind.Should().Be(DomainErrorKind.NotFound);
         thrown.Code.Should().Be(TradeErrorCodes.TradeNotFoundCode);
         fixture.Catalog.Invalidations.Should().Be(0);
-    }
-
-    [Fact]
-    public async Task Update_WithoutTheAuditTrail_Answers503AndChangesNothing_CA_045_35()
-    {
-        var fixture = new AdminTradesControllerFixture(audit: new FakeAudit(available: false));
-
-        var result = await PutAsync(fixture, "plomeria", Edit() with { Nombre = "Otro" });
-
-        result.Should().BeOfType<ObjectResult>().Which.StatusCode.Should().Be(503);
-        fixture.Store.Trades.Single().Nombre.Should().Be("Plomería");
+        fixture.Store.Audits.Should().BeEmpty("un oficio que no existe no deja evento");
     }
 
     [Fact]

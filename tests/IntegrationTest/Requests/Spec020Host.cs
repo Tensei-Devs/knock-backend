@@ -194,10 +194,21 @@ internal sealed class Spec020Host : IAsyncDisposable
     /// <summary>True si algún valor escalar (texto o número) del JSON es exactamente <paramref name="value"/>. Robusto ante ids aleatorios y fechas, a diferencia de buscar la subcadena en el cuerpo crudo.</summary>
     public static bool CarriesValue(string json, string value) => CarriesValue(JsonElement.Parse(json), value);
 
-    private static bool CarriesValue(JsonElement element, string value) => element.ValueKind switch
+    /// <summary>
+    /// Como <see cref="CarriesValue(string, string)"/> para el código de visita, de 4 dígitos al azar: no cuenta <c>precio</c> ni <c>tope</c> cuando valen justo el monto sembrado
+    /// (<see cref="Spec021Host.SeededPrice"/>). Con el código «1000» el precio legítimo parecía una fuga (fallo intermitente de CA_022_02). En esos campos cualquier otro número,
+    /// y en los demás cualquier valor, sigue contando.
+    /// </summary>
+    public static bool CarriesVisitCode(string json, string code) => CarriesValue(JsonElement.Parse(json), code, IsSeededAmount);
+
+    private static bool IsSeededAmount(JsonProperty property) =>
+        property.Name is "precio" or "tope" && property.Value.ValueKind == JsonValueKind.Number
+        && property.Value.GetRawText() == Spec021Host.SeededPrice.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    private static bool CarriesValue(JsonElement element, string value, Func<JsonProperty, bool>? ignore = null) => element.ValueKind switch
     {
-        JsonValueKind.Object => element.EnumerateObject().Any(p => CarriesValue(p.Value, value)),
-        JsonValueKind.Array => element.EnumerateArray().Any(item => CarriesValue(item, value)),
+        JsonValueKind.Object => element.EnumerateObject().Any(p => ignore?.Invoke(p) != true && CarriesValue(p.Value, value, ignore)),
+        JsonValueKind.Array => element.EnumerateArray().Any(item => CarriesValue(item, value, ignore)),
         JsonValueKind.String => element.GetString() == value,
         JsonValueKind.Number => element.GetRawText() == value,
         _ => false,

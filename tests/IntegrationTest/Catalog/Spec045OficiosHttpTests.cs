@@ -16,7 +16,7 @@ using Xunit;
 namespace Knock.IntegrationTest.Catalog;
 
 /// <summary>
-/// Spec 045 sobre HTTP real con MongoDB (y la puerta de permisos y la auditoría del panel reemplazadas): detalle público de un oficio (OFI-02), administración del catálogo (OFI-03 a OFI-05) y «Otro oficio»
+/// Spec 045 sobre HTTP real con MongoDB (y la puerta de permisos del panel reemplazada): detalle público de un oficio (OFI-02), administración del catálogo (OFI-03 a OFI-05) y «Otro oficio»
 /// (OFP-01). Corre solo en CI (Docker). Solo datos ficticios.
 /// </summary>
 public sealed class Spec045OficiosHttpTests
@@ -26,36 +26,16 @@ public sealed class Spec045OficiosHttpTests
     private const string _requests = "/api/v1/oficios-pedidos";
     private static readonly byte[] _panelKey = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
 
-    private sealed class RecordingAudit(bool available) : IPanelAuditTrail
-    {
-        public List<PanelAuditEntry> Entries { get; } = [];
-
-        public Task<bool> RecordAsync(PanelAuditEntry entry, CancellationToken cancellationToken)
-        {
-            if (available)
-            {
-                Entries.Add(entry);
-            }
-
-            return Task.FromResult(available);
-        }
-    }
-
-    private static async Task<(Spec020Host Host, FakePanelGate Gate, RecordingAudit Audit)> StartAsync(bool auditAvailable = true)
+    private static async Task<(Spec020Host Host, FakePanelGate Gate, IMongoCollection<BsonDocument> Outbox)> StartAsync()
     {
         var gate = new FakePanelGate();
-        var audit = new RecordingAudit(auditAvailable);
         var host = await Spec020Host.StartAsync(
             new Dictionary<string, string?> { [PanelAuthentication.KeyConfigurationKey] = Convert.ToBase64String(_panelKey) },
-            services =>
-            {
-                services.AddSingleton<IPanelPermissionGate>(gate);
-                services.AddSingleton<IPanelAuditTrail>(audit);
-            });
+            services => services.AddSingleton<IPanelPermissionGate>(gate));
         // El host de pruebas no corre el sembrador, que es quien crea el índice único de la clave natural.
         await host.Database.GetCollection<BsonDocument>("oficios").Indexes.CreateOneAsync(
             new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("clave"), new CreateIndexOptions { Unique = true }));
-        return (host, gate, audit);
+        return (host, gate, host.Database.GetCollection<BsonDocument>("outbox"));
     }
 
     private static string PanelToken(string? audience = PanelAuthentication.DefaultAudience) =>
@@ -176,9 +156,9 @@ public sealed class Spec045OficiosHttpTests
     }
 
     [Fact]
-    public async Task Create_Returns201_Audits_AndTheRepeatedKeyIs409_CA_045_08_CA_045_13_CA_045_41()
+    public async Task Create_Returns201_LeavesOneAuditEventInTheOutbox_AndTheRepeatedKeyIs409WithoutAnother_CA_045_08_CA_045_13_CA_045_35_CA_045_41()
     {
-        var (host, _, audit) = await StartAsync();
+        var (host, _, outbox) = await StartAsync();
         await using var disposable = host;
 
         using var created = await PanelAsync(host, HttpMethod.Post, _admin, PanelToken(), NewTrade());
@@ -189,20 +169,32 @@ public sealed class Spec045OficiosHttpTests
         repeated.StatusCode.Should().Be(HttpStatusCode.Conflict);
         (await Spec020Host.ReadAsync(repeated)).GetProperty("code").GetString().Should().Be("trade_key_taken");
         (await host.Database.GetCollection<BsonDocument>("oficios").CountDocumentsAsync(Builders<BsonDocument>.Filter.Eq("clave", "gas"))).Should().Be(1);
-        audit.Entries.Should().NotBeEmpty().And.OnlyContain(e => e.Subject == "panel-de-prueba" && e.Action == "trade.create");
+        var events = await outbox.Find(Builders<BsonDocument>.Filter.Eq("tipo", "CambioDeOficio")).ToListAsync();
+        var audit = events.Should().ContainSingle("la clave repetida revierte su transacción y no deja un segundo evento").Subject;
+        audit["estado"].AsString.Should().Be("pendiente");
+        audit["datos"].AsBsonDocument.Names.Should().BeEquivalentTo("oficioClave", "accion", "porId");
+        audit["datos"]["oficioClave"].AsString.Should().Be("gas");
+        audit["datos"]["accion"].AsString.Should().Be("creado");
+        audit["datos"]["porId"].AsString.Should().Be("panel-de-prueba");
     }
 
     [Fact]
-    public async Task Create_WithoutTheAuditTrail_Answers503AndWritesNothing_CA_045_35()
+    public async Task Update_LeavesOneAuditEventWithoutValues_AndAnUnknownTradeLeavesNone_CA_045_14_CA_045_19_CA_045_35()
     {
-        var (host, _, _) = await StartAsync(auditAvailable: false);
+        var (host, _, outbox) = await StartAsync();
         await using var disposable = host;
 
-        using var response = await PanelAsync(host, HttpMethod.Post, _admin, PanelToken(), NewTrade());
+        using var updated = await PanelAsync(host, HttpMethod.Put, $"{_admin}/plo", PanelToken(), new { nombre = "Plomería secreta", topePorcentaje = 40 });
+        using var unknown = await PanelAsync(host, HttpMethod.Put, $"{_admin}/no-existe", PanelToken(), new { nombre = "X" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
-        (await Spec020Host.ReadAsync(response)).GetProperty("code").GetString().Should().Be("panel_audit_unavailable");
-        (await host.Database.GetCollection<BsonDocument>("oficios").CountDocumentsAsync(Builders<BsonDocument>.Filter.Eq("clave", "gas"))).Should().Be(0);
+        updated.StatusCode.Should().Be(HttpStatusCode.OK);
+        unknown.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var events = await outbox.Find(Builders<BsonDocument>.Filter.Eq("tipo", "CambioDeOficio")).ToListAsync();
+        var audit = events.Should().ContainSingle().Subject;
+        audit["datos"]["oficioClave"].AsString.Should().Be("plo");
+        audit["datos"]["accion"].AsString.Should().Be("editado");
+        audit["datos"]["porId"].AsString.Should().Be("panel-de-prueba");
+        audit.ToJson().Should().NotContain("secreta", "el evento lleva identificadores, nunca los valores del oficio");
     }
 
     [Fact]

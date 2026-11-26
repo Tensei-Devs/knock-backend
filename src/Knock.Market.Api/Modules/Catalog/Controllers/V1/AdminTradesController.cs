@@ -34,8 +34,8 @@ internal sealed class AdminTradesController(TradeAdminService service) : Control
         await service.ListAsync(cancellationToken);
 
     /// <summary>
-    /// Alta de un oficio (OFI-04): 201 con el oficio creado. La clave repetida responde 409 <c>trade_key_taken</c>; un cuerpo ilegible, 400; un valor inválido, 422. Deja la auditoría del panel antes de escribir:
-    /// sin ella responde 503 <c>panel_audit_unavailable</c> y no cambia nada.
+    /// Alta de un oficio (OFI-04): 201 con el oficio creado. La clave repetida responde 409 <c>trade_key_taken</c>; un cuerpo ilegible, 400; un valor inválido, 422. La auditoría del panel se escribe en la misma transacción que el
+    /// oficio (bandeja de salida) y llega a Identidad después, con reintentos.
     /// </summary>
     [HttpPost]
     [RequestSizeLimit(TradeBodies.MaxBodyBytes)]
@@ -47,7 +47,6 @@ internal sealed class AdminTradesController(TradeAdminService service) : Control
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status413PayloadTooLarge, _problemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity, _problemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, _problemJson)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable, _problemJson)]
     public async Task<IActionResult> Create([FromBody] CreateTradeBody body, CancellationToken cancellationToken)
     {
         if (User.FindFirst("sub")?.Value is not { Length: > 0 } subject)
@@ -55,15 +54,8 @@ internal sealed class AdminTradesController(TradeAdminService service) : Control
             return Unauthorized();
         }
 
-        try
-        {
-            var created = await service.CreateAsync(subject, body, cancellationToken);
-            return Created(new Uri($"/api/v1/oficios/{created.Clave}", UriKind.Relative), created);
-        }
-        catch (DomainException exception) when (exception.Code == TradeErrorCodes.AuditUnavailableCode)
-        {
-            return AuditUnavailable();
-        }
+        var created = await service.CreateAsync(subject, body, cancellationToken);
+        return Created(new Uri($"/api/v1/oficios/{created.Clave}", UriKind.Relative), created);
     }
 
     /// <summary>
@@ -80,7 +72,6 @@ internal sealed class AdminTradesController(TradeAdminService service) : Control
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status413PayloadTooLarge, _problemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity, _problemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, _problemJson)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable, _problemJson)]
     public async Task<IActionResult> Update([FromRoute] TradeKeyRoute route, [FromBody] UpdateTradeBody body, CancellationToken cancellationToken)
     {
         if (User.FindFirst("sub")?.Value is not { Length: > 0 } subject)
@@ -93,14 +84,7 @@ internal sealed class AdminTradesController(TradeAdminService service) : Control
             return KeyCannotChange();
         }
 
-        try
-        {
-            return Ok(await service.UpdateAsync(subject, route.Clave!, body, cancellationToken));
-        }
-        catch (DomainException exception) when (exception.Code == TradeErrorCodes.AuditUnavailableCode)
-        {
-            return AuditUnavailable();
-        }
+        return Ok(await service.UpdateAsync(subject, route.Clave!, body, cancellationToken));
     }
 
     private ObjectResult KeyCannotChange()
@@ -109,12 +93,5 @@ internal sealed class AdminTradesController(TradeAdminService service) : Control
         problem.Extensions["code"] = ErrorCodes.ValidationFailedCode;
         problem.Extensions["errors"] = new Dictionary<string, string[]> { ["clave"] = [ValidationFilter.GenericReason] };
         return new ObjectResult(problem) { StatusCode = StatusCodes.Status422UnprocessableEntity, ContentTypes = { _problemJson } };
-    }
-
-    private ObjectResult AuditUnavailable()
-    {
-        var problem = ProblemDetailsFactory.CreateProblemDetails(HttpContext, StatusCodes.Status503ServiceUnavailable, "Service Unavailable");
-        problem.Extensions["code"] = TradeErrorCodes.AuditUnavailableCode;
-        return new ObjectResult(problem) { StatusCode = StatusCodes.Status503ServiceUnavailable, ContentTypes = { _problemJson } };
     }
 }

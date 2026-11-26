@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/Knock.Contracts/Knock.Contracts.csproj" />
     <Project Path="src/Knock.Hosting/Knock.Hosting.csproj" />
+    <Project Path="src/Knock.Hosting.Mvc/Knock.Hosting.Mvc.csproj" />
     <Project Path="src/Knock.Hosting.Data/Knock.Hosting.Data.csproj" />
     <Project Path="src/Knock.Gateway/Knock.Gateway.csproj" />
     <Project Path="src/Knock.Identity.Api/Knock.Identity.Api.csproj" />

@@ -1,3 +1,5 @@
+using Knock.Market.Api.Common.Text;
+
 namespace Knock.Market.Api.Modules.Catalog.Domain;
 
 internal sealed record SearchTrade(string Key, string Name);

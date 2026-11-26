@@ -97,7 +97,7 @@ internal sealed class TecnicosController(TechnicianRegistrationService registrat
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, _problemJson)]
     public async Task<IActionResult> List([FromQuery] TechnicianListQuery query, CancellationToken cancellationToken)
     {
-        var outcome = await lookup.SearchAsync(query, cancellationToken);
+        var outcome = await lookup.SearchAsync(query, User.FindFirst("sub")?.Value, cancellationToken);
         return outcome.Status switch
         {
             TechnicianListStatus.Ok => Ok(outcome.Response),

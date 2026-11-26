@@ -11926,7 +11926,7 @@
         "tags": [
           "AdminTrades"
         ],
-        "summary": "Alta de un oficio (OFI-04): 201 con el oficio creado. La clave repetida responde 409 `trade_key_taken`; un cuerpo ilegible, 400; un valor inválido, 422. Deja la auditoría del panel antes de escribir:\nsin ella responde 503 `panel_audit_unavailable` y no cambia nada.",
+        "summary": "Alta de un oficio (OFI-04): 201 con el oficio creado. La clave repetida responde 409 `trade_key_taken`; un cuerpo ilegible, 400; un valor inválido, 422. La auditoría del panel se escribe en la misma transacción que el\noficio (bandeja de salida) y llega a Identidad después, con reintentos.",
         "parameters": [
           {
             "name": "version",
@@ -12096,30 +12096,6 @@
           },
           "429": {
             "description": "Too Many Requests",
-            "headers": {
-              "X-Correlation-Id": {
-                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Retry-After": {
-                "description": "Segundos que el cliente debe esperar antes de reintentar.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            },
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
             "headers": {
               "X-Correlation-Id": {
                 "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
@@ -12328,30 +12304,6 @@
           },
           "429": {
             "description": "Too Many Requests",
-            "headers": {
-              "X-Correlation-Id": {
-                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Retry-After": {
-                "description": "Segundos que el cliente debe esperar antes de reintentar.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            },
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
             "headers": {
               "X-Correlation-Id": {
                 "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
@@ -18173,7 +18125,7 @@
             ]
           }
         },
-        "description": "Una sugerencia de TEC-03: `tipo` es `oficio` (con su `clave`) o `negocio` (con el `id` del técnico). Los servicios con precio\n(spec 047) se suman cuando exista su colección."
+        "description": "Una sugerencia de TEC-03: `tipo` es `oficio` (con su `clave`), `servicio` o `negocio` (ambos con el `id` del técnico)."
       },
       "TechnicianAbsentResponse": {
         "required": [

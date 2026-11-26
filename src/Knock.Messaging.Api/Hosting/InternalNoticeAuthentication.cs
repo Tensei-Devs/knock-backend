@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Knock.Hosting.Http;
 using Knock.Hosting.Security;
 using Knock.Messaging.Api.Common.Errors;
 using Microsoft.AspNetCore.Authentication;

@@ -9,4 +9,7 @@ public interface IRequestsApi
 
     /// <summary>Si la solicitud llegó al técnico (el <paramref name="userId"/> del token) y, si ya se cerró, cuándo (spec 052, R-21: la bitácora se borra 30 días después del cierre). Un identificador mal formado o ajeno no participa.</summary>
     Task<(bool Participates, DateTime? ClosedAtUtc)> GetTechnicianAccessAsync(string solicitudId, string userId, CancellationToken cancellationToken);
+
+    /// <summary>De <paramref name="others"/>, las personas con un bloqueo en cualquier sentido con <paramref name="person"/> (spec 043, R-16: el bloqueo corta en ambos sentidos). Una sola consulta a la proyección <c>bloqueos</c>.</summary>
+    Task<IReadOnlySet<string>> BlockedWithAsync(string person, IEnumerable<string> others, CancellationToken cancellationToken);
 }

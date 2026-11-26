@@ -1,4 +1,5 @@
 // jscpd:ignore-start -- EXC-015
+using Knock.Hosting.Http;
 using Knock.Identity.Api.Common.Errors;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.WebUtilities;

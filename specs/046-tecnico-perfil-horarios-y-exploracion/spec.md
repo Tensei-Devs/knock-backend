@@ -392,7 +392,16 @@ Las pruebas citan el caso como `CA_046_NN` en el nombre (para `python scripts/sd
 - Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
 - Dependencias: almacén de búsqueda de la spec 027, elegibilidad de la 028 y la insignia de verificación de la 025. TEC-12 (resumen) ya lo cubre la spec 036 con `/tecnicos/me/trabajo`.
 
+## Nota de enmienda (2026-11-26, índices y búsqueda implementados)
+
+- **Estado de esta enmienda:** propuesta; vale desde que se firma la línea «Enmienda 2026-11-26» de la sección Aprobación. La aprobación original se conserva.
+- **§6, índices.** Donde dice 2dsphere en `ubicacion` se lee `ubicacionBase` (`db/027`, igual que la spec 027). El compuesto es `oficios + estado + oculto` (`db/027`) y `oficios + estado + oculto + disponibleHasta` (`db/028`). `usuarioId` sigue único.
+- **Texto.** No hay índice de texto en `tecnicos`. El autocompletar (R-08) sugiere oficios, servicios y negocios comparando sin distinguir acentos ni mayúsculas.
+- **Orden por reputación.** Usa el campo `calificacion`, sin índice dedicado.
+- Esta enmienda no cubre la paginación por cursor de `GET /api/v1/tecnicos` con orden por calificación o distancia, que se revisa como defecto aparte.
+
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
 - [x] Sin conflicto con la constitución
+- [x] Enmienda 2026-11-26 — nombre: José Julián Hernández Hernández fecha: 2026-11-26
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

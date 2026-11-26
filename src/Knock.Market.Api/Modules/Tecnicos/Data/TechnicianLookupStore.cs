@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text.RegularExpressions;
 using Knock.Hosting.Data;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Tecnicos.Domain;
@@ -16,8 +15,11 @@ namespace Knock.Market.Api.Modules.Tecnicos.Data;
 internal sealed class TechnicianLookupStore(
     [FromKeyedServices(TecnicosModuleExtensions.ModuleKey)] IMongoDatabase database,
     IOptions<KnockMongoOptions> options,
-    TimeProvider clock) : ITechnicianLookupReader
+    TimeProvider clock) : ITechnicianLookupReader, ITechnicianOwnerReader
 {
+    // Se leen más coincidencias que sugerencias porque algunas son de técnicos no visibles o repiten nombre.
+    private const int _serviceCandidates = 50;
+
     private IMongoCollection<BsonDocument> Technicians => database.GetCollection<BsonDocument>(TechnicianProfileStore.CollectionName);
 
     public async Task<TechnicianCoverage?> FindCoverageAsync(ObjectId id, CancellationToken cancellationToken)
@@ -46,18 +48,45 @@ internal sealed class TechnicianLookupStore(
 
     private static string? Text(BsonDocument d, string name) => d.TryGetValue(name, out var v) && v.IsString ? v.AsString : null;
 
+    public async Task<IReadOnlyList<ServiceName>> FindServiceNamesAsync(string text, int limit, CancellationToken cancellationToken)
+    {
+        var matches = await database.GetCollection<BsonDocument>(ServiceStore.CollectionName)
+            .Find(Builders<BsonDocument>.Filter.Regex("nombre", NameRegex(text)), new FindOptions { MaxTime = options.Value.QueryMaxTime })
+            .Project(Builders<BsonDocument>.Projection.Include("nombre").Include("tecnicoId")).Sort(Builders<BsonDocument>.Sort.Ascending("nombre"))
+            .Limit(_serviceCandidates).ToListAsync(cancellationToken);
+        var valid = matches.Where(d => d.GetValue("nombre", BsonNull.Value).IsString && d.GetValue("tecnicoId", BsonNull.Value).IsObjectId).ToList();
+        if (valid.Count == 0)
+        {
+            return [];
+        }
+
+        var ids = valid.Select(d => d["tecnicoId"].AsObjectId).Distinct();
+        var visible = await Technicians.Find(Builders<BsonDocument>.Filter.In("_id", ids) & Visible(), new FindOptions { MaxTime = options.Value.QueryMaxTime })
+            .Project(Builders<BsonDocument>.Projection.Include("_id")).ToListAsync(cancellationToken);
+        var visibleIds = visible.Select(d => d["_id"].AsObjectId).ToHashSet();
+        return [.. valid.Where(d => visibleIds.Contains(d["tecnicoId"].AsObjectId))
+            .DistinctBy(d => TechnicianLookupService.Normalize(d["nombre"].AsString))
+            .Take(limit)
+            .Select(d => new ServiceName(d["tecnicoId"].AsObjectId.ToString(), d["nombre"].AsString))];
+    }
+
     public async Task<IReadOnlyList<BusinessName>> FindBusinessNamesAsync(string text, int limit, CancellationToken cancellationToken)
     {
-        var filters = Builders<BsonDocument>.Filter;
-        var now = clock.GetUtcNow().UtcDateTime;
-        // El texto ya pasó el validador (letras, números y espacios) y además se escapa: nunca se interpreta como expresión regular.
-        var filter = filters.Regex("nombreNegocio", new BsonRegularExpression(Regex.Escape(text), "i"))
-            & filters.Eq("estado", TechnicianRules.ActiveState) & filters.Eq("oculto", false)
-            & (filters.Exists("ocultoHasta", false) | filters.Lte("ocultoHasta", now));
+        var filter = Builders<BsonDocument>.Filter.Regex("nombreNegocio", NameRegex(text)) & Visible();
         var documents = await Technicians.Find(filter, new FindOptions { MaxTime = options.Value.QueryMaxTime })
             .Project(Builders<BsonDocument>.Projection.Include("nombreNegocio")).Sort(Builders<BsonDocument>.Sort.Ascending("nombreNegocio"))
             .Limit(limit).ToListAsync(cancellationToken);
         return [.. documents.Where(d => d["nombreNegocio"].IsString).Select(d => new BusinessName(d["_id"].AsObjectId.ToString(), d["nombreNegocio"].AsString))];
+    }
+
+    // El texto ya pasó el validador (letras, números y espacios) y el patrón además lo escapa.
+    private static BsonRegularExpression NameRegex(string text) => new(TechnicianLookupService.AccentInsensitivePattern(text), "i");
+
+    private FilterDefinition<BsonDocument> Visible()
+    {
+        var filters = Builders<BsonDocument>.Filter;
+        return filters.Eq("estado", TechnicianRules.ActiveState) & filters.Eq("oculto", false)
+            & (filters.Exists("ocultoHasta", false) | filters.Lte("ocultoHasta", clock.GetUtcNow().UtcDateTime));
     }
 
     /// <summary>TEC-02 (spec 046, R-04): técnicos visibles con filtros estructurados (oficio, colonia, distancia), «disponibleHoy» y «solo verificados».
@@ -78,6 +107,13 @@ internal sealed class TechnicianLookupStore(
         var documents = await find.Project(projection).Limit(limit + 1).ToListAsync(cancellationToken);
         var page = documents.Take(limit).Select(TechnicianProfileStore.ToProfile).ToList();
         return new TechnicianListPage(page, documents.Count > limit ? page[^1].Id.ToString() : null);
+    }
+
+    public async Task<IReadOnlyDictionary<string, string>> FindOwnersAsync(IReadOnlyCollection<ObjectId> technicianIds, CancellationToken cancellationToken)
+    {
+        var documents = await Technicians.Find(Builders<BsonDocument>.Filter.In("_id", technicianIds), new FindOptions { MaxTime = options.Value.QueryMaxTime })
+            .Project(Builders<BsonDocument>.Projection.Include("usuarioId")).ToListAsync(cancellationToken);
+        return documents.Where(d => d.TryGetValue("usuarioId", out var owner) && owner.IsString).ToDictionary(d => d["_id"].AsObjectId.ToString(), d => d["usuarioId"].AsString, StringComparer.Ordinal);
     }
 
     private static FilterDefinition<BsonDocument> BuildFilter(TechnicianListQuery query, DateTime now)

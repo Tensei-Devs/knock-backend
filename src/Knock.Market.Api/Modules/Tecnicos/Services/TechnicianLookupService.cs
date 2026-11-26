@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using Knock.Contracts.Catalog;
 using Knock.Market.Api.Modules.Catalog;
 using Knock.Market.Api.Modules.Tecnicos.Domain;
@@ -23,11 +24,17 @@ internal sealed record TechnicianCoverage(
 /// <summary>Nombre de negocio de un técnico visible, para el autocompletado (TEC-03).</summary>
 internal sealed record BusinessName(string Id, string Nombre);
 
+/// <summary>Nombre de un servicio de un técnico visible, para el autocompletado (TEC-03). <paramref name="TecnicoId"/> es el técnico que lo ofrece.</summary>
+internal sealed record ServiceName(string TecnicoId, string Nombre);
+
 internal interface ITechnicianLookupReader
 {
     Task<TechnicianCoverage?> FindCoverageAsync(ObjectId id, CancellationToken cancellationToken);
 
-    /// <summary>Hasta <paramref name="limit"/> negocios de técnicos visibles cuyo nombre contiene <paramref name="text"/> (sin mayúsculas).</summary>
+    /// <summary>Hasta <paramref name="limit"/> servicios de técnicos visibles cuyo nombre contiene <paramref name="text"/> (sin mayúsculas ni acentos), sin nombres repetidos.</summary>
+    Task<IReadOnlyList<ServiceName>> FindServiceNamesAsync(string text, int limit, CancellationToken cancellationToken);
+
+    /// <summary>Hasta <paramref name="limit"/> negocios de técnicos visibles cuyo nombre contiene <paramref name="text"/> (sin mayúsculas ni acentos).</summary>
     Task<IReadOnlyList<BusinessName>> FindBusinessNamesAsync(string text, int limit, CancellationToken cancellationToken);
 
     Task<TechnicianListPage> FindListAsync(TechnicianListQuery query, CancellationToken cancellationToken);
@@ -52,7 +59,8 @@ internal sealed class TechnicianLookupService(
     INeighborhoodCenterCatalog centers,
     IMemoryCache cache,
     TimeProvider clock,
-    TechnicianReadCache? readCache = null)
+    TechnicianReadCache? readCache = null,
+    TechnicianBlockFilter? blockFilter = null)
 {
     public const int MaxSuggestions = 8;
 
@@ -120,6 +128,12 @@ internal sealed class TechnicianLookupService(
             .Take(MaxSuggestions).ToList();
         if (trades.Count < MaxSuggestions)
         {
+            var services = await reader.FindServiceNamesAsync(text.Trim(), MaxSuggestions - trades.Count, cancellationToken);
+            trades.AddRange(services.Select(s => new Suggestion("servicio", s.Nombre, null, s.TecnicoId)));
+        }
+
+        if (trades.Count < MaxSuggestions)
+        {
             var businesses = await reader.FindBusinessNamesAsync(text.Trim(), MaxSuggestions - trades.Count, cancellationToken);
             trades.AddRange(businesses.Select(b => new Suggestion("negocio", b.Nombre, null, b.Id)));
         }
@@ -142,6 +156,21 @@ internal sealed class TechnicianLookupService(
         return string.Join(' ', builder.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries));
     }
 
+    /// <summary>Patrón para buscar <paramref name="text"/> dentro de un nombre sin distinguir acentos: cada vocal y la «n» aceptan sus variantes acentuadas.
+    /// El texto se normaliza y se escapa, así que nunca se interpreta como expresión regular. Se usa con la opción de ignorar mayúsculas.</summary>
+    internal static string AccentInsensitivePattern(string text) =>
+        string.Concat(Normalize(text).Select(c => c switch
+        {
+            'A' => "[aAáÁàÀäÄâÂ]",
+            'E' => "[eEéÉèÈëËêÊ]",
+            'I' => "[iIíÍìÌïÏîÎ]",
+            'O' => "[oOóÓòÒöÖôÔ]",
+            'U' => "[uUúÚùÙüÜûÛ]",
+            'N' => "[nNñÑ]",
+            ' ' => @"\s+",
+            _ => Regex.Escape(c.ToString()),
+        }));
+
     internal static double DistanceKm(double lat1, double lon1, double lat2, double lon2)
     {
         static double Radians(double degrees) => degrees * Math.PI / 180.0;
@@ -153,7 +182,22 @@ internal sealed class TechnicianLookupService(
 
     /// <summary>TEC-02 (spec 046, R-04): filtros estructurados, orden y cursor por página. La caché de la réplica dura
     /// 30 segundos por consulta; su clave no lleva datos de otra persona, y se invalida al escribir (R-07).</summary>
-    public async Task<TechnicianListOutcome> SearchAsync(TechnicianListQuery query, CancellationToken cancellationToken)
+    public Task<TechnicianListOutcome> SearchAsync(TechnicianListQuery query, CancellationToken cancellationToken) => SearchAsync(query, null, cancellationToken);
+
+    /// <summary>Igual, y con sesión quita a los técnicos con un bloqueo en cualquier sentido con <paramref name="viewer"/> (spec 043, R-16), después de la caché compartida.</summary>
+    public async Task<TechnicianListOutcome> SearchAsync(TechnicianListQuery query, string? viewer, CancellationToken cancellationToken)
+    {
+        var outcome = await SearchSharedAsync(query, cancellationToken);
+        if (blockFilter is null || outcome.Response is not { } response || string.IsNullOrWhiteSpace(viewer))
+        {
+            return outcome;
+        }
+
+        var hidden = await blockFilter.HiddenAsync(viewer, response.Tecnicos.Select(t => t.Id), cancellationToken);
+        return hidden.Count == 0 ? outcome : outcome with { Response = response with { Tecnicos = [.. response.Tecnicos.Where(t => !hidden.Contains(t.Id))] } };
+    }
+
+    private async Task<TechnicianListOutcome> SearchSharedAsync(TechnicianListQuery query, CancellationToken cancellationToken)
     {
         var key = CacheKey(query);
         if (cache.TryGetValue(key, out TechnicianListResponse? cached) && cached is not null)

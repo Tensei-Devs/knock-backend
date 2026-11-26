@@ -3732,6 +3732,176 @@
         }
       }
     },
+    "/api/v{version}/interno/cambios-de-oficio": {
+      "post": {
+        "tags": [
+          "InternalTradeChanged"
+        ],
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TradeChangedEventBody"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TradeChangedEventBody"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TradeChangedEventBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Segundos que el cliente debe esperar antes de reintentar.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Segundos que el cliente debe esperar antes de reintentar.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v{version}/panel/activacion": {
       "post": {
         "tags": [
@@ -9746,6 +9916,49 @@
         },
         "description": "La apelación tal como la ve la persona (spec 060, R-09): estado y fechas, nunca el texto de la revisión ni quién resolvió."
       },
+      "TradeChangedEventBody": {
+        "required": [
+          "eventoId",
+          "tipo",
+          "oficioClave",
+          "accion",
+          "porId"
+        ],
+        "type": "object",
+        "properties": {
+          "eventoId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tipo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "oficioClave": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "accion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "porId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Cuerpo de `POST /api/v1/interno/cambios-de-oficio` (spec 045, R-20): `CambioDeOficio` que Mercado entrega desde su bandeja de salida. Solo identificadores: nunca los valores del oficio. Cualquier otro\ncampo queda en Dictionary&lt;string, JsonElement&gt;? TradeChangedEventBody.Extra y el validador lo rechaza con 422."
+      },
       "UpdateAddressRequest": {
         "type": "object",
         "properties": {
@@ -10275,6 +10488,9 @@
     },
     {
       "name": "InternalPanelPermission"
+    },
+    {
+      "name": "InternalTradeChanged"
     },
     {
       "name": "Knock.Identity.Api"

@@ -352,7 +352,15 @@ internal sealed class ReviewStore(
             { "distribucion", new BsonDocument(summary.Distribucion.Select(x => new BsonElement(x.Key, x.Value))) },
             { "nivel", ReviewRules.LevelOf(summary.Total, summary.Promedio ?? 0) },
         };
-        await Technicians.UpdateOneAsync(session, Builders<BsonDocument>.Filter.Eq(_id, technicianId), Builders<BsonDocument>.Update.Set("reputacion", reputation), cancellationToken: cancellationToken);
+        await Technicians.UpdateOneAsync(session, Builders<BsonDocument>.Filter.Eq(_id, technicianId), ReputationUpdate(reputation, summary), cancellationToken: cancellationToken);
+    }
+
+    /// <summary>La reputación y, en la misma escritura, <c>calificacion</c> y <c>totalResenas</c>: los campos por los que ordenan y que muestran la búsqueda (specs 027 y 028), la lista, Explorar y el mapa
+    /// (spec 046). Sin opiniones visibles no hay <c>calificacion</c>, igual que un técnico nuevo.</summary>
+    private static UpdateDefinition<BsonDocument> ReputationUpdate(BsonDocument reputation, ReviewSummary summary)
+    {
+        var update = Builders<BsonDocument>.Update.Set("reputacion", reputation).Set("totalResenas", summary.Total);
+        return summary.Promedio is { } average ? update.Set(_stars, average) : update.Unset(_stars);
     }
 
     /// <summary>Buzón de salida en la misma transacción; el evento solo lleva identificadores (R-19).</summary>

@@ -1,4 +1,6 @@
+using Knock.Hosting.Concurrency;
 using Knock.Hosting.Data;
+using Knock.Market.Api.Common.Text;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Catalog.Domain;
 using Microsoft.Extensions.Options;
@@ -42,17 +44,23 @@ internal sealed record TradeChanges(
     int? VisitaMaxima,
     bool? Activo);
 
+/// <summary>
+/// Quién y cuándo del cambio que el almacén deja en la bandeja de salida como <c>CambioDeOficio</c> (spec 045, R-20): <paramref name="PanelSubject"/> es el <c>sub</c> de la persona del panel y <paramref name="Created"/>
+/// distingue alta (<see langword="true"/>) de edición. Solo identificadores: ningún valor del oficio viaja en el evento.
+/// </summary>
+internal sealed record TradeAuditEvent(string PanelSubject, bool Created, DateTime AtUtc);
+
 /// <summary>Lo que el panel necesita de la colección <c>oficios</c>; existe para probar el servicio con dobles sin MongoDB.</summary>
 internal interface ITradeAdminStore
 {
     /// <summary>Todos los oficios, activos e inactivos, por nombre normalizado y, a igual valor, por clave.</summary>
     Task<IReadOnlyList<AdminTrade>> ListAllAsync(CancellationToken cancellationToken);
 
-    /// <summary>Crea el oficio; <see langword="false"/> si ya existe uno con esa clave (índice único), sin cambiar nada.</summary>
-    Task<bool> InsertAsync(NewTrade trade, CancellationToken cancellationToken);
+    /// <summary>Crea el oficio y escribe <c>CambioDeOficio</c> en la misma transacción; <see langword="false"/> si ya existe uno con esa clave (índice único), sin escribir nada.</summary>
+    Task<bool> InsertAsync(NewTrade trade, TradeAuditEvent audit, CancellationToken cancellationToken);
 
-    /// <summary>Aplica los cambios al oficio con esa clave y devuelve cómo quedó, o <see langword="null"/> si no existe. Nunca cambia la clave.</summary>
-    Task<AdminTrade?> UpdateAsync(string clave, TradeChanges changes, CancellationToken cancellationToken);
+    /// <summary>Aplica los cambios al oficio con esa clave y escribe <c>CambioDeOficio</c> en la misma transacción; devuelve cómo quedó, o <see langword="null"/> si no existe (sin evento). Nunca cambia la clave.</summary>
+    Task<AdminTrade?> UpdateAsync(string clave, TradeChanges changes, TradeAuditEvent audit, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -65,6 +73,12 @@ internal sealed class TradeAdminStore(
 {
     /// <summary>Tope de seguridad de la lista: el catálogo real tiene unas decenas de oficios.</summary>
     public const int MaxListed = 500;
+
+    /// <summary>Evento de la bandeja de salida que audita un alta o una edición del catálogo (spec 045, R-20); Mercado lo entrega a la auditoría del panel de Identidad.</summary>
+    public const string TradeChangedEvent = "CambioDeOficio";
+    public const string CreatedAction = "creado";
+    public const string EditedAction = "editado";
+    public const string OutboxCollection = "outbox";
 
     private const string _percentageField = "topePorcentaje";
     private const string _fixedPercentageField = "topeFijoPorcentaje";
@@ -87,9 +101,10 @@ internal sealed class TradeAdminStore(
         return [.. documents.Select(ToAdminTrade)];
     }
 
-    public async Task<bool> InsertAsync(NewTrade trade, CancellationToken cancellationToken)
+    public async Task<bool> InsertAsync(NewTrade trade, TradeAuditEvent audit, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(trade);
+        ArgumentNullException.ThrowIfNull(audit);
         var document = new BsonDocument
         {
             { CatalogStore.ClaveField, trade.Clave },
@@ -106,18 +121,23 @@ internal sealed class TradeAdminStore(
         };
         try
         {
-            await Oficios.InsertOneAsync(document, cancellationToken: cancellationToken);
-            return true;
+            return await KeyedGate.RunAsync($"oficio:{trade.Clave}", () => WriteWithAuditAsync(async (transaction, token) =>
+            {
+                await Oficios.InsertOneAsync(transaction, document, cancellationToken: token);
+                await AddAuditAsync(transaction, trade.Clave, audit, token);
+                return true;
+            }, cancellationToken), cancellationToken);
         }
-        catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        catch (MongoException exception) when (IsDuplicateKey(exception))
         {
             return false;
         }
     }
 
-    public async Task<AdminTrade?> UpdateAsync(string clave, TradeChanges changes, CancellationToken cancellationToken)
+    public async Task<AdminTrade?> UpdateAsync(string clave, TradeChanges changes, TradeAuditEvent audit, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(changes);
+        ArgumentNullException.ThrowIfNull(audit);
         var update = Builders<BsonDocument>.Update.Inc(CatalogStore.VersionField, 1);
         if (changes.Nombre is not null)
         {
@@ -132,13 +152,50 @@ internal sealed class TradeAdminStore(
         if (changes.VisitaMaxima is { } maxVisit) { update = update.Set(_maxVisitField, maxVisit); }
         if (changes.Activo is { } active) { update = update.Set(CatalogStore.ActivoField, active); }
 
-        var updated = await Oficios.FindOneAndUpdateAsync(
-            Builders<BsonDocument>.Filter.Eq(CatalogStore.ClaveField, clave),
-            update,
-            new FindOneAndUpdateOptions<BsonDocument> { ReturnDocument = ReturnDocument.After, Projection = _projection },
-            cancellationToken);
+        var updated = await KeyedGate.RunAsync($"oficio:{clave}", () => WriteWithAuditAsync(async (transaction, token) =>
+        {
+            var result = await Oficios.FindOneAndUpdateAsync(
+                transaction,
+                Builders<BsonDocument>.Filter.Eq(CatalogStore.ClaveField, clave),
+                update,
+                new FindOneAndUpdateOptions<BsonDocument> { ReturnDocument = ReturnDocument.After, Projection = _projection },
+                token);
+            if (result is not null)
+            {
+                await AddAuditAsync(transaction, clave, audit, token);
+            }
+
+            return result;
+        }, cancellationToken), cancellationToken);
         return updated is null ? null : ToAdminTrade(updated);
     }
+
+    private async Task<T> WriteWithAuditAsync<T>(Func<IClientSessionHandle, CancellationToken, Task<T>> write, CancellationToken cancellationToken)
+    {
+        using var session = await database.Client.StartSessionAsync(cancellationToken: cancellationToken);
+        return await session.WithTransactionAsync(write, cancellationToken: cancellationToken);
+    }
+
+    /// <summary>Escribe <c>CambioDeOficio</c> en la bandeja de salida (misma base y misma transacción que el oficio). Solo identificadores: quién, qué acción y la clave del oficio; nunca sus valores.</summary>
+    private Task AddAuditAsync(IClientSessionHandle transaction, string clave, TradeAuditEvent audit, CancellationToken cancellationToken) =>
+        database.GetCollection<BsonDocument>(OutboxCollection).InsertOneAsync(
+            transaction,
+            new BsonDocument
+            {
+                { "_id", $"{TradeChangedEvent}:{ObjectId.GenerateNewId()}" },
+                { "tipo", TradeChangedEvent },
+                { "agregadoId", clave },
+                { "datos", new BsonDocument { { "oficioClave", clave }, { "accion", audit.Created ? CreatedAction : EditedAction }, { "porId", audit.PanelSubject } } },
+                { "estado", "pendiente" },
+                { "intentos", 0 },
+                { "creadoEn", audit.AtUtc },
+            },
+            cancellationToken: cancellationToken);
+
+    private static bool IsDuplicateKey(MongoException exception) =>
+        exception is MongoWriteException { WriteError.Category: ServerErrorCategory.DuplicateKey }
+        || exception is MongoCommandException { Code: 11000 }
+        || (exception.InnerException is MongoException inner && IsDuplicateKey(inner));
 
     internal static AdminTrade ToAdminTrade(BsonDocument document) => new(
         document[CatalogStore.ClaveField].AsString,

@@ -1,3 +1,4 @@
+using Knock.Hosting.Http;
 using Knock.Identity.Api.Hosting;
 using Knock.Identity.Api.Modules.Panel.Data;
 using Knock.Identity.Api.Modules.Panel.Services;

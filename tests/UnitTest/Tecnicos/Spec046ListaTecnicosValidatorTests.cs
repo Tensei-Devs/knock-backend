@@ -64,6 +64,9 @@ public sealed class Spec046ListaTecnicosValidatorTests
 
         public Task<TechnicianCoverage?> FindCoverageAsync(ObjectId id, CancellationToken cancellationToken) => Task.FromResult<TechnicianCoverage?>(null);
 
+        public Task<IReadOnlyList<ServiceName>> FindServiceNamesAsync(string text, int limit, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<ServiceName>>([]);
+
         public Task<IReadOnlyList<BusinessName>> FindBusinessNamesAsync(string text, int limit, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<BusinessName>>([]);
 
