@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using Knock.Contracts.Pagination;
+using Knock.Market.Api.Common.Text;
 
 namespace Knock.Market.Api.Modules.Catalog.Domain;
 

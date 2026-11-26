@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Knock.Market.Api.Common.Text;
 
 namespace Knock.Market.Api.Modules.Catalog.Domain;
 

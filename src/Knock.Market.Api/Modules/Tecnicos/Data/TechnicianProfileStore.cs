@@ -170,6 +170,7 @@ internal sealed class TechnicianProfileStore(
         }
 
         Add(document, "nombreNegocio", t.Perfil?.NombreNegocio);
+        TechnicianSearchFields.AddTo(document, t.Nombre, t.Perfil?.NombreNegocio);
         Add(document, "descripcion", t.Perfil?.Descripcion);
         if (t.Perfil?.Anios is { } years) document["anios"] = years;
         return document;
