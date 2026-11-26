@@ -8,11 +8,13 @@ WORKDIR /src
 COPY global.json Directory.Build.props .editorconfig ./
 COPY src/Knock.Contracts/Knock.Contracts.csproj src/Knock.Contracts/packages.lock.json src/Knock.Contracts/
 COPY src/Knock.Hosting/Knock.Hosting.csproj src/Knock.Hosting/packages.lock.json src/Knock.Hosting/
+COPY src/Knock.Hosting.Mvc/Knock.Hosting.Mvc.csproj src/Knock.Hosting.Mvc/packages.lock.json src/Knock.Hosting.Mvc/
 COPY src/Knock.Hosting.Data/Knock.Hosting.Data.csproj src/Knock.Hosting.Data/packages.lock.json src/Knock.Hosting.Data/
 COPY src/Knock.Identity.Api/Knock.Identity.Api.csproj src/Knock.Identity.Api/packages.lock.json src/Knock.Identity.Api/
 RUN dotnet restore src/Knock.Identity.Api/Knock.Identity.Api.csproj --locked-mode
 COPY src/Knock.Contracts/ src/Knock.Contracts/
 COPY src/Knock.Hosting/ src/Knock.Hosting/
+COPY src/Knock.Hosting.Mvc/ src/Knock.Hosting.Mvc/
 COPY src/Knock.Hosting.Data/ src/Knock.Hosting.Data/
 COPY src/Knock.Identity.Api/ src/Knock.Identity.Api/
 COPY db/seeds/demo/identity/usuarios.json db/seeds/demo/identity/verificaciones.json db/seeds/demo/identity/

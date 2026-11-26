@@ -1,14 +1,14 @@
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Net.Http.Headers;
 
-namespace Knock.Messaging.Api.Hosting;
+namespace Knock.Hosting.Mvc;
 
 /// <summary>
-/// <c>Cache-Control: private, no-store</c> en toda respuesta del controller (spec 030, R-20): las conversaciones y los contadores son datos personales que cambian al escribir, y no
-/// llevan <c>ETag</c>. Se fija al empezar la acción.
+/// <c>Cache-Control: private, no-store</c> en toda respuesta del controller (specs 020 R-18 y 030 R-20): los datos son personales y cambian al escribir, y no llevan <c>ETag</c>.
+/// Se fija al empezar la acción.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
-internal sealed class PrivateNoStoreAttribute : ActionFilterAttribute
+public sealed class PrivateNoStoreAttribute : ActionFilterAttribute
 {
     public const string Value = "private, no-store";
 

@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Security.Claims;
 using AwesomeAssertions;
+using Knock.Hosting.Mvc;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Catalog.Controllers.V1;
 using Knock.Market.Api.Modules.Catalog.Dtos;
