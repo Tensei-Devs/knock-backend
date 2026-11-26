@@ -178,16 +178,17 @@ class PublicContractError(Exception):
 
 
 def route_regex(pattern: str) -> re.Pattern[str]:
-    """Patrón de ruta de YARP -> expresión regular: `{**x}` = cualquier resto, `{x}` = un segmento."""
-    parts = []
+    """Patrón de ruta de YARP -> expresión regular: `{**x}` = cero o más segmentos al final (incluida la ruta raíz, como en
+    el enrutamiento de ASP.NET Core), `{x}` = un segmento."""
+    expression = ""
     for segment in pattern.strip("/").split("/"):
         if segment.startswith("{**"):
-            parts.append(".*")
+            expression += "(?:/.*)?"
         elif segment.startswith("{") and segment.endswith("}"):
-            parts.append("[^/]+")
+            expression += "/[^/]+"
         else:
-            parts.append(re.escape(segment))
-    return re.compile("^/" + "/".join(parts) + "$")
+            expression += "/" + re.escape(segment)
+    return re.compile("^" + expression + "$")
 
 
 def gateway_routes(settings: dict) -> list[tuple[str, re.Pattern[str], set[str] | None]]:
