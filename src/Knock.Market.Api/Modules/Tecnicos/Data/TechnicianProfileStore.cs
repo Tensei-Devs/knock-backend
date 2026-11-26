@@ -162,6 +162,7 @@ internal sealed class TechnicianProfileStore(
             ["version"] = 1,
         };
         Add(document, "otroOficio", t.OtroOficio);
+        Add(document, "coloniaBaseNombre", t.ColoniaNombre);
         Add(document, "tallerDireccion", t.TallerDireccionCifrada);
         if (t.RadioKm is { } radius) document["radioAtencionKm"] = radius;
         if (t.Centro is { } center)

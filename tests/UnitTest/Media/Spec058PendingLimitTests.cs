@@ -92,7 +92,9 @@ public sealed class Spec058PendingLimitTests
         using var listener = new MeterListener();
         listener.InstrumentPublished = (instrument, meterListener) =>
         {
-            if (instrument.Meter.Name == MediaMetrics.MeterName)
+            // Solo los instrumentos de este arnés: cada MediaMetrics crea un medidor con el mismo nombre, y escuchar por nombre mezclaba las
+            // mediciones de pruebas en paralelo, que además escribían a la vez en la lista y podían perder una.
+            if (instrument == harness.Metrics.FilesCreated || instrument == harness.Metrics.UploadsRejectedByLimit)
             {
                 meterListener.EnableMeasurementEvents(instrument);
             }
@@ -129,6 +131,8 @@ public sealed class Spec058PendingLimitTests
         }
 
         public Counting Files { get; } = new();
+
+        public MediaMetrics Metrics => _metrics;
 
         public ManualClock Clock { get; } = new(_start);
 

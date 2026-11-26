@@ -186,6 +186,7 @@ public sealed class Spec027BusquedaCierreTests
 
         byBusiness.GetProperty("items").EnumerateArray().Select(i => i.GetProperty("nombre").GetString()).Should().ContainSingle().Which.Should().Be("Ramona Núñez");
         byNewName.GetProperty("items").GetArrayLength().Should().Be(1);
+        byNewName.GetProperty("items")[0].GetProperty("coloniaBase").GetString().Should().Be("Colonia Ficticia");
         stored["palabrasBusqueda"].AsBsonArray.Select(x => x.AsString).Should().Equal(_renamedWords);
     }
 
