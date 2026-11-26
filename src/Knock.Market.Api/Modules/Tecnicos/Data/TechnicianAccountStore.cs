@@ -1,3 +1,4 @@
+using Knock.Market.Api.Modules.Tecnicos.Domain;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Driver;
@@ -40,7 +41,8 @@ internal sealed class TechnicianAccountStore([FromKeyedServices(TecnicosModuleEx
         await Technicians.UpdateOneAsync(
             f.Eq("_id", profile["_id"]),
             Builders<BsonDocument>.Update.Set("estado", "eliminado").Set("oculto", true).Set("nombre", "Técnico eliminado")
-                .Unset("nombreNegocio").Unset("descripcion").Unset("fotoUrl").Unset("tallerDireccion").Unset("ubicacionBase").Unset("otroOficio"),
+                .Unset("nombreNegocio").Unset("descripcion").Unset("fotoUrl").Unset("tallerDireccion").Unset("ubicacionBase").Unset("otroOficio")
+                .Unset(TechnicianSearchFields.PublicName).Unset(TechnicianSearchFields.Words),
             cancellationToken: cancellationToken);
         await database.GetCollection<BsonDocument>(WorkPhotoStore.CollectionName).DeleteManyAsync(f.Eq("tecnicoId", profile["_id"]), cancellationToken);
     }

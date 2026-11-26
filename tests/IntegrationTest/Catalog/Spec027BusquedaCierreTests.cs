@@ -23,6 +23,9 @@ namespace Knock.IntegrationTest.Catalog;
 /// </summary>
 public sealed class Spec027BusquedaCierreTests
 {
+    private static readonly string[] _renamedWords = ["ramona", "nuñez", "tuberias", "centella"];
+    private static readonly string[] _plumbing = ["plo"];
+
     [Fact]
     public async Task Sinonimo_Con_Error_Y_Variantes_Dan_El_Mismo_Resultado_CA_027_02()
     {
@@ -150,6 +153,40 @@ public sealed class Spec027BusquedaCierreTests
         second.StatusCode.Should().Be(HttpStatusCode.OK);
         second.Headers.CacheControl!.MaxAge.Should().Be(TimeSpan.FromSeconds(30));
         (await second.Content.ReadAsStringAsync()).Should().Be(firstBody, "la segunda llega de la caché sin consultar MongoDB");
+    }
+
+    [Fact]
+    public async Task Un_Tecnico_Registrado_Por_La_Api_Se_Encuentra_Por_Su_Nombre_Y_Al_Cambiarlo_CA_027_04()
+    {
+        using var factory = await MarketApiFactory.CreateAsync();
+        var colonia = await SeedAsync(factory);
+        // El alta de técnico lee el nombre y el código postal de la colonia; la semilla de la búsqueda no los necesita.
+        await factory.Database.GetCollection<BsonDocument>("colonias")
+            .UpdateOneAsync(new BsonDocument("_id", colonia), Builders<BsonDocument>.Update.Set("nombre", "Colonia Ficticia").Set("cp", "42800").Set("municipio", "Municipio Ficticio").Set("estado", "Estado Ficticio"));
+        await factory.Database.GetCollection<BsonDocument>("tecnicos")
+            .Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Geo2DSphere("ubicacionBase")));
+        using var client = WaitlistHttp.SignedIn(factory);
+        using var registered = await client.PostAsJsonAsync(new Uri("/api/v1/tecnicos", UriKind.Relative), new
+        {
+            nombre = "Ramona Núñez",
+            oficios = _plumbing,
+            atencion = "domicilio",
+            radioKm = 5,
+            coloniaId = colonia.ToString(),
+            perfil = new { nombreNegocio = "Destapes Relámpago" },
+            aceptaTerminos = true,
+        });
+        registered.StatusCode.Should().Be(HttpStatusCode.Created, await registered.Content.ReadAsStringAsync());
+
+        var byBusiness = await SearchAsync(client, "relampago", colonia);
+        using var renamed = await client.PutAsJsonAsync(new Uri("/api/v1/tecnicos/me", UriKind.Relative), new { nombreNegocio = "Tuberías Centella" });
+        renamed.StatusCode.Should().Be(HttpStatusCode.OK, await renamed.Content.ReadAsStringAsync());
+        var byNewName = await SearchAsync(client, "centella", colonia);
+        var stored = await factory.Database.GetCollection<BsonDocument>("tecnicos").Find(FilterDefinition<BsonDocument>.Empty).SingleAsync();
+
+        byBusiness.GetProperty("items").EnumerateArray().Select(i => i.GetProperty("nombre").GetString()).Should().ContainSingle().Which.Should().Be("Ramona Núñez");
+        byNewName.GetProperty("items").GetArrayLength().Should().Be(1);
+        stored["palabrasBusqueda"].AsBsonArray.Select(x => x.AsString).Should().Equal(_renamedWords);
     }
 
     private static async Task<JsonElement> SearchAsync(HttpClient client, string query, ObjectId colonia)
