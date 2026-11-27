@@ -40,7 +40,8 @@ var app = builder.Build();
 app.UseForwardedHeaders();
 app.UseKnockCorrelationId();
 // Detrás del ingreso la petición llega como HTTP y UseHsts no respondería: el encabezado lo fija el middleware (BUG-002).
-app.UseKnockSecurityHeaders(new SecurityHeadersOptions { StrictTransportSecurity = app.Services.GetRequiredService<IOptions<HstsSettings>>().Value.HeaderValue });
+var hsts = app.Services.GetRequiredService<IOptions<HstsSettings>>().Value;
+app.UseKnockSecurityHeaders(new SecurityHeadersOptions { StrictTransportSecurity = hsts.HeaderValue, SendStrictTransportSecurityInDevelopment = hsts.SendInDevelopment });
 app.UseExceptionHandler();
 app.UseSerilogRequestLogging(LoggingExtensions.ConfigureRequestLogging);
 app.UseRouting();

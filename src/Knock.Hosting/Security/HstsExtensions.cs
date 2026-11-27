@@ -15,6 +15,9 @@ public sealed class HstsSettings
 
     public bool IncludeSubDomains { get; set; } = true;
 
+    /// <summary>Envía el encabezado también en Development, para el ambiente de desarrollo desplegado con HTTPS; nunca a <c>localhost</c> (BUG-002, enmienda 2026-11-27). Apagado por omisión.</summary>
+    public bool SendInDevelopment { get; set; }
+
     /// <summary>Valor del encabezado <c>Strict-Transport-Security</c>: siempre en segundos enteros y sin <c>preload</c>.</summary>
     public string HeaderValue =>
         $"max-age={((long)MaxAge.TotalSeconds).ToString(CultureInfo.InvariantCulture)}{(IncludeSubDomains ? "; includeSubDomains" : string.Empty)}";

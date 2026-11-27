@@ -123,6 +123,38 @@ public sealed class HstsTests
         custom.Headers.GetValues("Strict-Transport-Security").Single().Should().Be("max-age=600").And.NotContain("preload");
     }
 
+    private static readonly Dictionary<string, string?> _sendInDevelopment = new() { ["Security:Hsts:SendInDevelopment"] = "true" };
+
+    [Fact]
+    public async Task DevelopmentWithTheOption_SendsHstsToARemoteHost_CA_BUG_002_E01()
+    {
+        await using var host = new GatewayHstsFactory("Development", _sendInDevelopment, counted: 1);
+        using var client = host.CreateClient();
+        client.BaseAddress = new Uri("http://gateway.dev.example/");
+
+        using var response = await GetAsync(client, "/health", _trusted, "https");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Headers.GetValues("Strict-Transport-Security").Should().ContainSingle().Which.Should().Be(_expected).And.NotContain("preload");
+    }
+
+    [Theory]
+    [InlineData(true, "http://localhost/")]
+    [InlineData(true, "http://127.0.0.1:8080/")]
+    [InlineData(true, "http://[::1]:8080/")]
+    [InlineData(false, "http://gateway.dev.example/")]
+    public async Task DevelopmentWithALocalHostOrWithoutTheOption_DoesNotSendHsts_CA_BUG_002_E02(bool sendInDevelopment, string baseAddress)
+    {
+        await using var host = new GatewayHstsFactory("Development", sendInDevelopment ? _sendInDevelopment : _noSettings, counted: 1);
+        using var client = host.CreateClient();
+        client.BaseAddress = new Uri(baseAddress);
+
+        using var response = await GetAsync(client, "/health", _trusted, "https");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Headers.Contains("Strict-Transport-Security").Should().BeFalse();
+    }
+
     [Fact]
     public async Task Development_DoesNotSendHsts_TC_BUG_002_04()
     {
