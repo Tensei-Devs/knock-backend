@@ -39,6 +39,8 @@ public static class AssistantModuleExtensions
         services.AddSingleton<AsistenteService>();
         services.AddSingleton<RangoPrecioService>();
         services.AddSingleton<BitacoraService>();
+        services.AddSingleton<FechadoDeBitacoras>();
+        services.AddHostedService<FechadoDeBitacorasHostedService>();
         var options = configuration.GetSection(AssistantOptions.SectionName).Get<AssistantOptions>() ?? new AssistantOptions();
         if (options.Habilitado)
         {

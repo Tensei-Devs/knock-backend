@@ -32,4 +32,11 @@ internal sealed class AsistenteSolicitudesReal(IServiceScopeFactory scopes) : IS
         var (participates, closedAtUtc) = await api.GetTechnicianAccessAsync(solicitudId, sub, cancellationToken);
         return new RequestAccess(participates, closedAtUtc);
     }
+
+    public async Task<IReadOnlyDictionary<string, DateTime>> GetClosedAtAsync(IReadOnlyCollection<string> solicitudIds, CancellationToken cancellationToken)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+        var api = scope.ServiceProvider.GetService<IRequestsApi>();
+        return api is null ? new Dictionary<string, DateTime>() : await api.GetClosedAtAsync(solicitudIds, cancellationToken);
+    }
 }
