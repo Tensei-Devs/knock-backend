@@ -130,7 +130,7 @@ internal sealed class VisitStore(
 
             await Visits.UpdateOneAsync(transaction, Builders<BsonDocument>.Filter.Eq("_id", visit.Id), Builders<BsonDocument>.Update.Set("bloqueada", true), cancellationToken: token);
             await outbox.AddAsync(transaction, OutboxMessage.Create("VisitaBloqueada", visit.Id.ToString(), Identifiers(visit), nowUtc), token);
-            await outbox.AddAsync(transaction, ClosedEvent(visit, VisitCloseReason.Blocked, nowUtc), token);
+            await outbox.AddAsync(transaction, ClosedEvent(visit, wasBlocked: false, VisitCloseReason.Blocked, nowUtc), token);
             return new FailedAttempt(true, attempts, true);
         }, new FailedAttempt(false, visit.Attempts, visit.Locked), cancellationToken);
     }
@@ -154,8 +154,8 @@ internal sealed class VisitStore(
                 VisitCloseReason.Finished => (filter.Eq(_stateField, VisitRules.InProgress), update.Set(_stateField, "terminada").Set("terminadaEn", nowUtc)),
                 _ => (filter.Eq(_stateField, VisitRules.Confirmed) & filter.Eq("bloqueada", false), update.Set("bloqueada", true)),
             };
-            var changed = await Visits.UpdateOneAsync(transaction, filter.Eq("_id", visit.Id) & condition, change.Set(_updatedField, nowUtc), cancellationToken: token);
-            if (changed.MatchedCount != 1)
+            var before = await Visits.FindOneAndUpdateAsync(transaction, filter.Eq("_id", visit.Id) & condition, change.Set(_updatedField, nowUtc), cancellationToken: token);
+            if (before is null)
             {
                 return false;
             }
@@ -168,7 +168,7 @@ internal sealed class VisitStore(
                 _ => Task.CompletedTask,
             };
             await follow;
-            await outbox.AddAsync(transaction, ClosedEvent(visit, reason, nowUtc), token);
+            await outbox.AddAsync(transaction, ClosedEvent(visit, WasBlocked(before), reason, nowUtc), token);
             return true;
         }, false, cancellationToken);
     }
@@ -209,11 +209,17 @@ internal sealed class VisitStore(
         return filter.Eq("_id", id) & filter.Eq(_stateField, VisitRules.Confirmed) & filter.Eq("bloqueada", false) & filter.Eq("codigoUsado", false) & filter.Lt("intentos", VisitRules.MaxAttempts);
     }
 
-    private static OutboxMessage ClosedEvent(VisitRecord visit, VisitCloseReason reason, DateTime nowUtc) => OutboxMessage.Create(
-        "VisitaCerrada",
-        visit.Id.ToString(),
-        new BsonDocument { { "visitaId", visit.Id.ToString() }, { "motivo", Reason(reason) } },
-        nowUtc);
+    /// <summary>
+    /// <c>VisitaCerrada</c> versionado (spec 054, R-02): una visita se cierra como mucho dos veces, al bloquearse y después al salir de <c>confirmada</c>; la versión es 2 solo si ya
+    /// estaba bloqueada antes de este cambio.
+    /// </summary>
+    internal static OutboxMessage ClosedMessage(ObjectId visitId, bool wasBlocked, BsonDocument payload, DateTime nowUtc) =>
+        OutboxMessage.CreateVersion("VisitaCerrada", visitId.ToString(), wasBlocked ? 2 : 1, payload, nowUtc);
+
+    internal static bool WasBlocked(BsonDocument visit) => visit.GetValue("bloqueada", false).AsBoolean;
+
+    private static OutboxMessage ClosedEvent(VisitRecord visit, bool wasBlocked, VisitCloseReason reason, DateTime nowUtc) =>
+        ClosedMessage(visit.Id, wasBlocked, new BsonDocument { { "visitaId", visit.Id.ToString() }, { "motivo", Reason(reason) } }, nowUtc);
 
     private static string Reason(VisitCloseReason reason) => reason switch
     {

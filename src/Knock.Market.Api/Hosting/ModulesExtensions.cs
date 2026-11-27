@@ -29,8 +29,15 @@ internal static class ModulesExtensions
         services.AddHttpClient(EntregaOpinionModerada.MessagingClientName).RemoveAllLoggers();
         services.AddScoped<IEntregaDeBandeja, EntregaOpinionModerada>();
         services.AddScoped<IEntregaDeBandeja, EntregaTecnicoNoSePresento>();
+        services.AddScoped<IEntregaDeBandeja, EntregaCotizacionElegida>();
+        services.AddScoped<IEntregaDeBandeja, EntregaVisitaAfectada>();
         services.AddHttpClient(EntregaCambioDeOficio.ClientName).RemoveAllLoggers();
         services.AddScoped<IEntregaDeBandeja, EntregaCambioDeOficio>();
+        foreach (var notice in AvisosDeSolicitud.All.Concat(AvisosDeVisita.All).Concat(AvisosDePrecio.All))
+        {
+            services.AddScoped<IEntregaDeBandeja>(provider => ActivatorUtilities.CreateInstance<EntregaAvisoDeSolicitud>(provider, notice));
+        }
+
         services.AddScoped<DespachadorDeBandeja>();
         services.AddHostedService<BandejaHostedService>();
         services.AddKnockVigilanciaDeProcesos();

@@ -1,3 +1,4 @@
+using Knock.Market.Api.Common.Bandeja;
 using Knock.Market.Api.Common.TareasProgramadas;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -48,7 +49,8 @@ internal sealed class TareasProgramadasStore(IMongoDatabase database) : ITareasP
 
     public async Task<bool> CompleteAsync(TareaReservada task, DateTime now, CancellationToken cancellationToken) =>
         (await _tasks.UpdateOneAsync(Owned(task), Builders<BsonDocument>.Update.Set("estado", "hecha")
-            .Set("actualizadoEn", now).Unset("reservadaHasta").Unset("reservaId"), cancellationToken: cancellationToken)).ModifiedCount == 1;
+            .Set("actualizadoEn", now).Set(LimpiezaDeProcesos.Field, LimpiezaDeProcesos.LimpiarEn(now, failed: false))
+            .Unset("reservadaHasta").Unset("reservaId"), cancellationToken: cancellationToken)).ModifiedCount == 1;
 
     public async Task<bool> FailAsync(TareaReservada task, DateTime now, CancellationToken cancellationToken)
     {
@@ -59,6 +61,10 @@ internal sealed class TareasProgramadasStore(IMongoDatabase database) : ITareasP
         {
             int[] delays = [5, 30, 120, 600];
             update = update.Set("programadaPara", now.AddSeconds(delays[attempts - 1]));
+        }
+        else
+        {
+            update = update.Set(LimpiezaDeProcesos.Field, LimpiezaDeProcesos.LimpiarEn(now, failed: true));
         }
 
         return (await _tasks.UpdateOneAsync(Owned(task), update, cancellationToken: cancellationToken)).ModifiedCount == 1;
