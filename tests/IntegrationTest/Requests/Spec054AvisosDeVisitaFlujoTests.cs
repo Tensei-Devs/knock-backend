@@ -47,7 +47,7 @@ public sealed class Spec054AvisosDeVisitaFlujoTests
         await DispatchAllAsync(host);
 
         var visitTypes = new HashSet<string> { "reprogramacion_propuesta", "visita_reprogramada", "reprogramacion_sin_cambio", "cliente_ausente", "visita_cancelada" };
-        var notices = handler.Requests.Select(x => Notice(x.Body)).Where(x => visitTypes.Contains(x.Type)).ToList();
+        var notices = handler.Requests.Where(x => x.Path == "/api/v1/interno/avisos").Select(x => Notice(x.Body)).Where(x => visitTypes.Contains(x.Type)).ToList();
         var client = host.ClientSub;
         var sub = rescheduled.Technician.Sub;
         var visit = rescheduled.VisitId.ToString();
