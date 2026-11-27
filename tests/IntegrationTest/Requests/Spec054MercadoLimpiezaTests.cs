@@ -68,7 +68,7 @@ public sealed class Spec054MercadoLimpiezaTests
         (await store.FailAsync(last! with { Intentos = 4 }, _now, CancellationToken.None)).Should().BeTrue();
 
         (await FindAsync(tasks, done!.Id))["limpiarEn"].ToUniversalTime().Should().Be(_now.AddDays(14));
-        (await FindAsync(tasks, last!.Id))["limpiarEn"].ToUniversalTime().Should().Be(_now.AddDays(90));
+        (await FindAsync(tasks, last.Id))["limpiarEn"].ToUniversalTime().Should().Be(_now.AddDays(90));
         (await FindAsync(tasks, retried!.Id)).Contains("limpiarEn").Should().BeFalse("sigue pendiente de reintento");
         await client.DropDatabaseAsync(databaseName);
     }

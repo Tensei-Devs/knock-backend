@@ -19,7 +19,7 @@ public sealed class Spec054EntregasDeMercadoTests
     [Fact]
     public async Task CotizacionElegida_Goes_To_Messaging_Events_With_Only_The_Closed_Body_CA_054_05()
     {
-        using var handler = new Capture(HttpStatusCode.Accepted);
+        using var handler = new CapturaDeEntregas(HttpStatusCode.Accepted);
         var message = Chosen();
         var delivery = ChosenDelivery(handler);
 
@@ -35,7 +35,7 @@ public sealed class Spec054EntregasDeMercadoTests
     [Fact]
     public async Task VisitaAfectada_Goes_To_Messaging_Notices_With_The_Client_And_The_Visit_CA_054_05()
     {
-        using var handler = new Capture(HttpStatusCode.Accepted);
+        using var handler = new CapturaDeEntregas(HttpStatusCode.Accepted);
         var message = Affected();
         var delivery = AffectedDelivery(handler);
 
@@ -51,7 +51,7 @@ public sealed class Spec054EntregasDeMercadoTests
     [Fact]
     public async Task Without_Address_Or_Key_Retries_And_Missing_Data_Is_Final_CA_054_06()
     {
-        using var handler = new Capture(HttpStatusCode.Accepted);
+        using var handler = new CapturaDeEntregas(HttpStatusCode.Accepted);
         var empty = new BsonDocument();
 
         (await ChosenDelivery(handler, configured: false).DeliverAsync(Chosen(), CancellationToken.None)).Should().Be(ResultadoDeEntrega.Reintentable);
@@ -77,11 +77,11 @@ public sealed class Spec054EntregasDeMercadoTests
         { "visitaId", _visit },
     }, "lease", 0);
 
-    private static EntregaCotizacionElegida ChosenDelivery(Capture handler, bool configured = true) =>
-        new(new Factory(handler), Configuration(configured), Options.Create(new BandejaOptions()), TimeProvider.System);
+    private static EntregaCotizacionElegida ChosenDelivery(CapturaDeEntregas handler, bool configured = true) =>
+        new(handler, Configuration(configured), Options.Create(new BandejaOptions()), TimeProvider.System);
 
-    private static EntregaVisitaAfectada AffectedDelivery(Capture handler, bool configured = true) =>
-        new(new Factory(handler), Configuration(configured), Options.Create(new BandejaOptions()), TimeProvider.System);
+    private static EntregaVisitaAfectada AffectedDelivery(CapturaDeEntregas handler, bool configured = true) =>
+        new(handler, Configuration(configured), Options.Create(new BandejaOptions()), TimeProvider.System);
 
     private static IConfiguration Configuration(bool configured)
     {
@@ -96,22 +96,4 @@ public sealed class Spec054EntregasDeMercadoTests
     }
 
     private static List<(string, string)> Claims(string token) => [.. new JsonWebTokenHandler().ReadJsonWebToken(token).Claims.Select(c => (c.Type, c.Value))];
-
-    private sealed record Sent(string Path, string Body, string Token);
-
-    private sealed class Factory(HttpMessageHandler handler) : IHttpClientFactory
-    {
-        public HttpClient CreateClient(string name) => new(handler, disposeHandler: false);
-    }
-
-    private sealed class Capture(HttpStatusCode answer) : HttpMessageHandler
-    {
-        public List<Sent> Sent { get; } = [];
-
-        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            Sent.Add(new Sent(request.RequestUri!.AbsolutePath, await request.Content!.ReadAsStringAsync(cancellationToken), request.Headers.Authorization!.Parameter!));
-            return new HttpResponseMessage(answer);
-        }
-    }
 }
