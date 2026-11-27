@@ -187,4 +187,4 @@ Que el teléfono de cada persona reciba un aviso de Knock cuando pasa algo en su
 - [x] Enmienda 2026-11-24 — nombre: José Julián Hernández Hernández fecha: 2026-11-24
 - [x] Enmienda 2026-11-23 — nombre: José Julián Hernández Hernández fecha: 2026-11-24
 - [x] Sin conflicto con la constitución
-- [ ] Enmienda 2026-11-27 — nombre: ______ fecha: ______
+- [x] Enmienda 2026-11-27 — nombre: José Julián Hernández Hernández fecha: 2026-11-27

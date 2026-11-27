@@ -84,5 +84,5 @@ Decisiones tomadas en la revisión del 2026-11-04. Quien aprueba la spec las ace
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-12
 - [x] Sin conflicto con la constitución
-- [ ] Enmienda 2026-11-27 — nombre: ______ fecha: ______
+- [x] Enmienda 2026-11-27 — nombre: José Julián Hernández Hernández fecha: 2026-11-27
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

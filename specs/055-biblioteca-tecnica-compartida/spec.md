@@ -251,6 +251,6 @@ Las tomó el agente con el criterio de la constitución. El Tech Lead puede camb
 - [x] Revisor 1 - nombre: José Julián Hernández Hernández fecha: 2026-11-19
 - [x] Revisor 2 (enmienda a la constitución, §11) - nombre: Ángel Alexis Blas Castillo fecha: 2026-11-17
 - [x] Enmienda 2026-11-24 - nombre: José Julián Hernández Hernández fecha: 2026-11-24
-- [ ] Enmienda 2026-11-25 — nombre: ________ fecha: ________
+- [x] Enmienda 2026-11-25 — nombre: José Julián Hernández Hernández fecha: 2026-11-27
 - [x] Sin conflicto con la constitución (con la enmienda 1.2.0)
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

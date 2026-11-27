@@ -112,5 +112,5 @@ No aplica: la pila del CI arranca con bases vacías y se destruye con `down -v` 
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-20
 - [x] Sin conflicto con la constitución
-- [ ] Enmienda 2026-11-27 — nombre: ______ fecha: ______
+- [x] Enmienda 2026-11-27 — nombre: José Julián Hernández Hernández fecha: 2026-11-27
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Firmada (tras el merge)
