@@ -30,6 +30,7 @@ internal sealed class VisitScheduleStore(
     private const string _stateField = "estado";
     private const string _updatedField = "actualizadoEn";
     private const string _proposalField = "propuestaReprogramacion";
+    private const string _proposalCountField = "propuestas";
     private const char _cursorSeparator = '|';
 
     private static readonly string[] _openStates = [VisitRules.Confirmed, VisitRules.InProgress];
@@ -73,20 +74,21 @@ internal sealed class VisitScheduleStore(
         return MarketTransactions.RunAsync(database, async (transaction, token) =>
         {
             var filter = Builders<BsonDocument>.Filter;
-            var changed = await Visits.UpdateOneAsync(
+            var version = await ChangeProposalAsync(
                 transaction,
                 filter.Eq("_id", visit.Id) & filter.Eq(_stateField, VisitRules.Confirmed) & filter.Exists(_proposalField, false) & filter.Not(filter.Gte("reprogramaciones", VisitScheduleRules.MaxReschedules)),
                 Builders<BsonDocument>.Update
                     .Set(_proposalField, new BsonDocument { { "fechaHora", proposedUtc }, { "propuestaPor", proposedBy }, { "venceEn", expiresUtc } })
+                    .Inc(_proposalCountField, 1)
                     .Set(_updatedField, nowUtc),
-                cancellationToken: token);
-            if (changed.MatchedCount != 1)
+                token);
+            if (version is not { } number)
             {
                 return false;
             }
 
-            await outbox.AddAsync(transaction, OutboxMessage.Create("ReprogramacionPropuesta", visit.Id.ToString(), VisitStore.Identifiers(visit), nowUtc), token);
-            await new TareasProgramadasStore(database).ScheduleByKeyAsync(transaction, VisitScheduleRules.ProposalExpiryTask, visit.Id.ToString(), expiresUtc, nowUtc, token);
+            await outbox.AddAsync(transaction, ProposalEvent("ReprogramacionPropuesta", visit, number, nowUtc), token);
+            await new TareasProgramadasStore(database).ScheduleByKeyAsync(transaction, VisitScheduleRules.ProposalExpiryTask, $"{visit.Id}:{number}", expiresUtc, nowUtc, token);
             return true;
         }, false, cancellationToken);
     }
@@ -111,13 +113,13 @@ internal sealed class VisitScheduleStore(
                 update = update.Set("codigoVenceEn", VisitCodeFactory.ExpiresAt(newDay));
             }
 
-            var changed = await Visits.UpdateOneAsync(transaction, Pending(visit, responderRole, nowUtc), update, cancellationToken: token);
-            if (changed.MatchedCount != 1)
+            var version = await ChangeProposalAsync(transaction, Pending(visit, responderRole, nowUtc), update, token);
+            if (version is not { } number)
             {
                 return false;
             }
 
-            await outbox.AddAsync(transaction, OutboxMessage.Create("VisitaReprogramada", visit.Id.ToString(), VisitStore.Identifiers(visit), nowUtc), token);
+            await outbox.AddAsync(transaction, ProposalEvent("VisitaReprogramada", visit, number, nowUtc), token);
             return true;
         }, false, cancellationToken);
     }
@@ -128,17 +130,13 @@ internal sealed class VisitScheduleStore(
         ArgumentNullException.ThrowIfNull(visit);
         return MarketTransactions.RunAsync(database, async (transaction, token) =>
         {
-            var changed = await Visits.UpdateOneAsync(
-                transaction,
-                Pending(visit, responderRole, nowUtc),
-                Builders<BsonDocument>.Update.Unset(_proposalField).Set(_updatedField, nowUtc),
-                cancellationToken: token);
-            if (changed.MatchedCount != 1)
+            var version = await ChangeProposalAsync(transaction, Pending(visit, responderRole, nowUtc), Builders<BsonDocument>.Update.Unset(_proposalField).Set(_updatedField, nowUtc), token);
+            if (version is not { } number)
             {
                 return false;
             }
 
-            await outbox.AddAsync(transaction, OutboxMessage.Create("ReprogramacionRechazada", visit.Id.ToString(), VisitStore.Identifiers(visit), nowUtc), token);
+            await outbox.AddAsync(transaction, ProposalEvent("ReprogramacionRechazada", visit, number, nowUtc), token);
             return true;
         }, false, cancellationToken);
     }
@@ -156,17 +154,17 @@ internal sealed class VisitScheduleStore(
         return await MarketTransactions.RunAsync(database, async (transaction, token) =>
         {
             var filter = Builders<BsonDocument>.Filter;
-            var changed = await Visits.UpdateOneAsync(
+            var version = await ChangeProposalAsync(
                 transaction,
                 filter.Eq("_id", visitId) & filter.Lte($"{_proposalField}.venceEn", nowUtc),
                 Builders<BsonDocument>.Update.Unset(_proposalField).Set(_updatedField, nowUtc),
-                cancellationToken: token);
-            if (changed.MatchedCount != 1)
+                token);
+            if (version is not { } number)
             {
                 return false;
             }
 
-            await outbox.AddAsync(transaction, OutboxMessage.Create("ReprogramacionVencida", visitId.ToString(), VisitStore.Identifiers(visit), nowUtc), token);
+            await outbox.AddAsync(transaction, ProposalEvent("ReprogramacionVencida", visit, number, nowUtc), token);
             return true;
         }, false, cancellationToken);
     }
@@ -180,7 +178,7 @@ internal sealed class VisitScheduleStore(
         ArgumentNullException.ThrowIfNull(visit);
         return MarketTransactions.RunAsync(database, async (transaction, token) =>
         {
-            var changed = await Visits.UpdateOneAsync(
+            var before = await Visits.FindOneAndUpdateAsync(
                 transaction,
                 Builders<BsonDocument>.Filter.Eq("_id", visit.Id) & Builders<BsonDocument>.Filter.Eq(_stateField, VisitRules.Confirmed),
                 Builders<BsonDocument>.Update
@@ -190,12 +188,12 @@ internal sealed class VisitScheduleStore(
                     .Unset(_proposalField)
                     .Set(_updatedField, nowUtc),
                 cancellationToken: token);
-            if (changed.MatchedCount != 1)
+            if (before is null)
             {
                 return false;
             }
 
-            await outbox.AddAsync(transaction, ClosedEvent(visit, VisitScheduleRules.Cancelled, cancelledBy, nowUtc), token);
+            await outbox.AddAsync(transaction, ClosedEvent(visit, VisitStore.WasBlocked(before), VisitScheduleRules.Cancelled, cancelledBy, nowUtc), token);
             if (late)
             {
                 await outbox.AddAsync(transaction, OutboxMessage.Create("CancelacionTardia", visit.Id.ToString(), VisitStore.Identifiers(visit), nowUtc), token);
@@ -214,7 +212,7 @@ internal sealed class VisitScheduleStore(
         ArgumentNullException.ThrowIfNull(visit);
         return MarketTransactions.RunAsync(database, async (transaction, token) =>
         {
-            var changed = await Visits.UpdateOneAsync(
+            var before = await Visits.FindOneAndUpdateAsync(
                 transaction,
                 Builders<BsonDocument>.Filter.Eq("_id", visit.Id) & Builders<BsonDocument>.Filter.Eq(_stateField, VisitRules.Confirmed),
                 Builders<BsonDocument>.Update
@@ -223,12 +221,12 @@ internal sealed class VisitScheduleStore(
                     .Unset(_proposalField)
                     .Set(_updatedField, nowUtc),
                 cancellationToken: token);
-            if (changed.MatchedCount != 1)
+            if (before is null)
             {
                 return false;
             }
 
-            await outbox.AddAsync(transaction, ClosedEvent(visit, VisitScheduleRules.NoShow, null, nowUtc), token);
+            await outbox.AddAsync(transaction, ClosedEvent(visit, VisitStore.WasBlocked(before), VisitScheduleRules.NoShow, null, nowUtc), token);
             return true;
         }, false, cancellationToken);
     }
@@ -273,7 +271,21 @@ internal sealed class VisitScheduleStore(
             & filter.Gt($"{_proposalField}.venceEn", nowUtc);
     }
 
-    private static OutboxMessage ClosedEvent(VisitRecord visit, string reason, string? by, DateTime nowUtc)
+    /// <summary>
+    /// Cambia la propuesta y devuelve su número (cuántas propuestas lleva la visita, contando esta), que versiona sus eventos y su tarea; solo hay una pendiente a la vez.
+    /// <see langword="null"/> si la condición no se cumple. Una propuesta guardada antes de llevar la cuenta vale 0.
+    /// </summary>
+    private async Task<int?> ChangeProposalAsync(IClientSessionHandle transaction, FilterDefinition<BsonDocument> condition, UpdateDefinition<BsonDocument> update, CancellationToken cancellationToken)
+    {
+        var options = new FindOneAndUpdateOptions<BsonDocument> { ReturnDocument = ReturnDocument.After };
+        var after = await Visits.FindOneAndUpdateAsync(transaction, condition, update, options, cancellationToken);
+        return after?.GetValue(_proposalCountField, 0).ToInt32();
+    }
+
+    private static OutboxMessage ProposalEvent(string type, VisitRecord visit, int version, DateTime nowUtc) =>
+        OutboxMessage.CreateVersion(type, visit.Id.ToString(), version, VisitStore.Identifiers(visit), nowUtc);
+
+    private static OutboxMessage ClosedEvent(VisitRecord visit, bool wasBlocked, string reason, string? by, DateTime nowUtc)
     {
         var payload = new BsonDocument { { "visitaId", visit.Id.ToString() }, { "motivo", reason } };
         if (by is not null)
@@ -285,7 +297,7 @@ internal sealed class VisitScheduleStore(
             payload.Add("quienFalto", VisitScheduleRules.ClientAbsent);
         }
 
-        return OutboxMessage.Create("VisitaCerrada", visit.Id.ToString(), payload, nowUtc);
+        return VisitStore.ClosedMessage(visit.Id, wasBlocked, payload, nowUtc);
     }
 
     private static AgendaRow ToRow(BsonDocument d) => new(
