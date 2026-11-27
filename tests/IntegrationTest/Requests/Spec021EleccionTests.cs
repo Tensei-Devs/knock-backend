@@ -122,7 +122,7 @@ public sealed class Spec021EleccionTests
     }
 
     [Fact]
-    public async Task Falla_De_Transaccion_CA_021_17()
+    public async Task Falla_De_Transaccion_CA_021_17_CA_054_02()
     {
         await using var host = await Spec020Host.StartAsync();
         var (requestId, quotes, _) = await host.QuotedRequestAsync(2);
@@ -145,6 +145,7 @@ public sealed class Spec021EleccionTests
         using var retried = await host.ChooseAsync(requestId, quotes[0]);
         retried.StatusCode.Should().Be(HttpStatusCode.OK);
         (await host.CountAsync("visitas")).Should().Be(1);
+        (await host.CountAsync("outbox", Builders<BsonDocument>.Filter.Eq("tipo", "VisitaConfirmada"))).Should().Be(1, "el cambio y su evento quedan juntos");
     }
 
     [Fact]
