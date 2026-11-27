@@ -1,3 +1,4 @@
 # BUG-001 (TC-BUG-001-05): reglas de ZAP baseline. Formato: <id de alerta>	<IGNORE|WARN|FAIL>	<motivo>
 # Toda regla IGNORE o WARN debe citar su EXC-NNN de security/exceptions.yaml con vencimiento. Sin reglas: toda alerta de riesgo alto o medio falla el job.
 10049	IGNORE	(Non-Storable Content: no-store intencional, spec 009 R-02; EXC-032, vence 2026-12-25)
+90004	IGNORE	(Cross-Origin-Resource-Policy ausente: TT-API-06 excluye los encabezados Cross-Origin-*; EXC-033, vence 2026-12-25)

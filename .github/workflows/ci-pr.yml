@@ -538,11 +538,15 @@ jobs:
           persist-credentials: false
       - name: Credenciales efímeras de la pila (no se imprimen)
         run: |
-          for v in CI_DB_PASSWORD:hex:24 CI_REDIS_PASSWORD:hex:24 CI_JWT_KEY:b64:32 CI_KEY_A:b64:32 CI_KEY_B:b64:32 CI_KEY_C:b64:32 CI_KEY_D:b64:32 CI_KEY_E:b64:32 CI_KEY_F:b64:32 CI_BLOB_KEY:b64:32; do
+          for v in CI_DB_PASSWORD:hex:24 CI_REDIS_PASSWORD:hex:24 CI_JWT_KEY:b64:32 CI_KEY_A:b64:32 CI_KEY_B:b64:32 CI_KEY_C:b64:32 CI_KEY_D:b64:32 CI_KEY_E:b64:32 CI_KEY_F:b64:32 CI_KEY_G:b64:32 CI_BLOB_KEY:b64:32; do
             IFS=: read -r nombre tipo largo <<<"$v"
             if [ "$tipo" = hex ]; then valor=$(openssl rand -hex "$largo"); else valor=$(openssl rand -base64 "$largo"); fi
             echo "::add-mask::$valor"; echo "$nombre=$valor" >> "$GITHUB_ENV"
           done
+      - name: Datos ficticios (índices y catálogo de ejemplo con db/entrega.js)
+        run: |
+          docker compose -f deploy/docker-compose.ci.yml up -d --wait --wait-timeout 300 documentdb redis
+          docker compose -f deploy/docker-compose.ci.yml run -T seed
       - name: Levantar gateway, Identidad, Mercado, Mensajería, MongoDB (documentdb-local), Redis y Azurite
         run: |
           docker compose -f deploy/docker-compose.ci.yml up -d --build --wait --wait-timeout 600             || { docker compose -f deploy/docker-compose.ci.yml ps; docker compose -f deploy/docker-compose.ci.yml logs --no-color --tail 80 gateway identity market messaging; exit 1; }
@@ -557,6 +561,23 @@ jobs:
           rules_file_name: security/zap-rules.tsv
           allow_issue_writing: false
           fail_action: true
+      # KNOCK-266: segundo escaneo, también pasivo y con las mismas reglas, sobre una lista de rutas con y sin sesión.
+      - name: Sesiones ficticias para ZAP (llave efímera del job)
+        run: python3 tests/smoke/dast_sesion.py dast-sesion.json
+      - name: ZAP baseline con rutas y sesión ficticia
+        uses: zaproxy/action-baseline@de8ad967d3548d44ef623df22cf95c3b0baf8b25 # v0.15.0
+        with:
+          target: http://localhost:8080
+          rules_file_name: security/zap-rules.tsv
+          cmd_options: --hook /zap/wrk/tests/smoke/zap_rutas.py -P 8099
+          artifact_name: zap_scan_sesion
+          allow_issue_writing: false
+          fail_action: true
+      # Si ZAP no encuentra el hook solo avisa y termina en verde: sin el resumen de rutas, el paso falla.
+      - name: Comprobar que ZAP recorrió las rutas
+        run: |
+          test -s dast-rutas.txt || { echo "::error::ZAP no recorrió las rutas de tests/smoke/zap_rutas.py"; exit 1; }
+          cat dast-rutas.txt
       - name: Apagar
         if: always()
         run: docker compose -f deploy/docker-compose.ci.yml down -v

@@ -304,3 +304,16 @@ excepciones:
     creada: 2026-11-25
     vence: 2026-12-25
     plan: revisar antes de vencer, volviendo a correr el DAST sin la línea 10049 y leyendo el informe zap_scan; retirarla si ya no aparece y, si se renueva, comprobar que solo aparece la variante 10049-1 y que el no-store sigue exigido por la spec 009 R-02, y renovar solo con nueva aprobación.
+  - id: EXC-033
+    herramienta: zap
+    regla: "90004"
+    alcance: security/zap-rules.tsv (job «Smoke + DAST (ZAP baseline)» de ci-pr.yml, pila efímera del runner)
+    justificacion: >-
+      La alerta baja 90004 (variante 90004-1) señala que falta el encabezado Cross-Origin-Resource-Policy. La spec specs/_legacy/TT-API-06-pipeline-de-seguridad-headers-hsts-cors/spec.md (§4, tabla de encabezados, y duda 1) decidió no incluir encabezados Cross-Origin-* porque no tienen efecto en respuestas JSON y no se quiere dar falsa sensación de control.
+      Evidencia: run 45934676512 del PR 409, segundo escaneo (86 URL): FAIL-NEW 0, PASS 66, WARN-NEW 1 (90004 en /health, /health/ready, /api/v1/oficios, /api/v1/oficios/ele y la ficha de un técnico de demostración); el primer escaneo no la reporta.
+      ZAP solo permite ignorar por identificador de plugin, así que se silencian también las otras variantes de 90004 (Cross-Origin-Embedder-Policy y Cross-Origin-Opener-Policy), en los dos escaneos.
+      Decisión delegada por el responsable y tomada el 2026-11-26.
+    responsable: José Julián Hernández Hernández
+    creada: 2026-11-26
+    vence: 2026-12-25
+    plan: revisar antes de vencer, volviendo a correr el DAST sin la línea 90004 y leyendo el informe zap_scan_sesion; retirarla si ya no aparece o si una spec aprobada agrega el encabezado y, si se renueva, comprobar que solo aparece la variante 90004-1 en respuestas JSON, y renovar solo con nueva aprobación.
