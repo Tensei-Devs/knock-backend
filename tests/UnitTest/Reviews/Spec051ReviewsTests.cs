@@ -219,6 +219,8 @@ public sealed class Spec051ReviewsTests : IDisposable
 
     private sealed class FakeStore : IReviewStore
     {
+        public Task AnonymizeByAuthorAsync(string clientId, CancellationToken cancellationToken) => throw new NotSupportedException();
+
         public ReviewVisit Visit { get; set; } = new(ObjectId.GenerateNewId(), ObjectId.GenerateNewId(), _client, ObjectId.GenerateNewId(), "terminada", _now.AddDays(-2));
 
         public StoredReview? Review { get; set; }

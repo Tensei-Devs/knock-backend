@@ -105,7 +105,6 @@ public static class RequestsModuleExtensions
     private static IServiceCollection AddAccountDataAndDemoServices(this IServiceCollection services)
     {
         services.AddScoped<AccountDataStore>();
-        services.TryAddScoped<IOpinionAnonymizer, NoOpinionsToAnonymize>();
         services.AddScoped<AccountDataService>();
         services.AddScoped<DemoTechnicianStore>();
         services.AddScoped<DemoTechnicianSeeder>();
