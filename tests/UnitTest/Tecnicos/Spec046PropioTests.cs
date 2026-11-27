@@ -28,17 +28,18 @@ public sealed class Spec046PropioTests : IDisposable
     private static List<DayScheduleDto> Week() =>
         [.. ScheduleRules.Days.Select(d => d == "lunes" ? Open(d, ("09:00", "13:00"), ("15:00", "19:00")) : new DayScheduleDto(d, false, []))];
 
+    private readonly FieldCipher _cipher = new(Options.Create(new FieldEncryptionOptions
+    {
+        ActiveVersion = "1",
+        Keys = new Dictionary<string, string> { ["1"] = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)) },
+    }));
+
     private (MyTechnicianService Service, FakeSelfStore Store) Create(OwnTechnician? own, string[]? photoHosts = null)
     {
         var store = new FakeSelfStore(own);
-        var cipher = new FieldCipher(Options.Create(new FieldEncryptionOptions
-        {
-            ActiveVersion = "1",
-            Keys = new Dictionary<string, string> { ["1"] = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)) },
-        }));
         var clock = new FixedClock(_now);
         var profiles = new TechnicianProfileService(new NoReader(), _cache, clock);
-        var service = new MyTechnicianService(store, new FakeTradeCatalog(), cipher, profiles,
+        var service = new MyTechnicianService(store, new FakeTradeCatalog(), _cipher, profiles,
             Options.Create(new TecnicosOptions { HostsFoto = photoHosts ?? ["files.knock.test"] }), clock);
         return (service, store);
     }
@@ -127,6 +128,45 @@ public sealed class Spec046PropioTests : IDisposable
         (await service.SetScheduleAsync("sub-1", Week(), CancellationToken.None)).Should().BeNull();
     }
 
+    [Theory]
+    [InlineData("taller", true)]
+    [InlineData("ambos", true)]
+    [InlineData("domicilio", false)]
+    public async Task La_Direccion_Del_Taller_Solo_Sale_Con_Taller_O_Ambos_CA_046_73(string attention, bool shown)
+    {
+        var own = new OwnTechnician(ObjectId.GenerateNewId(), attention, true, 5);
+        var (service, store) = Create(own);
+        store.StoredWorkshop = WorkshopAddressCipher.Encrypt(_cipher, own.Id, "Calle Ficticia 9, Colonia Piloto");
+
+        var profile = await service.GetProfileAsync("sub-1", CancellationToken.None);
+
+        profile!.DireccionTaller.Should().Be(shown ? "Calle Ficticia 9, Colonia Piloto" : null);
+        profile.Id.Should().Be(own.Id.ToString());
+        profile.FotoUrl.Should().Be("https://files.knock.test/foto.jpg");
+        store.Changes.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(true, "Calle Ficticia 9, Colonia Piloto")]
+    [InlineData(false, null)]
+    public async Task Un_Valor_Sin_Cifrar_Solo_Sale_En_Las_Semillas_De_Demostracion_CA_046_74(bool demo, string? expected)
+    {
+        var (service, store) = Create(new OwnTechnician(ObjectId.GenerateNewId(), "taller", true, null));
+        store.StoredWorkshop = "Calle Ficticia 9, Colonia Piloto";
+        store.Demo = demo;
+
+        var profile = await service.GetProfileAsync("sub-1", CancellationToken.None);
+
+        profile!.DireccionTaller.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task Perfil_Propio_De_Quien_No_Es_Tecnico_Es_No_Encontrado_CA_046_72()
+    {
+        var (service, _) = Create(null);
+        (await service.GetProfileAsync("sub-1", CancellationToken.None)).Should().BeNull();
+    }
+
     [Fact]
     public async Task Cambiar_Solo_La_Descripcion_No_Toca_Lo_Demas_CA_046_61()
     {
@@ -210,11 +250,20 @@ public sealed class Spec046PropioTests : IDisposable
 
         public IReadOnlyDictionary<string, BsonValue?>? Changes { get; private set; }
 
+        public string? StoredWorkshop { get; set; }
+
+        public bool Demo { get; set; }
+
         public Task<OwnTechnician?> FindOwnAsync(string sub, CancellationToken cancellationToken) => Task.FromResult(own);
 
         public Task<TechnicianResponse?> ReadOwnAsync(string sub, CancellationToken cancellationToken) =>
             Task.FromResult<TechnicianResponse?>(own is null ? null : new TechnicianResponse(own.Id.ToString(), "Ana", ["plo"], null, own.Atencion ?? "", own.RadioKm,
                 "6adfe980511e3d878359ca07", null, null, null, "activo", "ninguno", false, _now.UtcDateTime));
+
+        public async Task<StoredOwnProfile?> ReadOwnProfileAsync(string sub, CancellationToken cancellationToken) =>
+            await ReadOwnAsync(sub, cancellationToken) is { } profile
+                ? new StoredOwnProfile(profile, "https://files.knock.test/foto.jpg", StoredWorkshop, Demo)
+                : null;
 
         public Task<ObjectId?> SetAvailableUntilAsync(string sub, DateTime untilUtc, CancellationToken cancellationToken)
         {
