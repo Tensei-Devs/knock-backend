@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Knock.Market.Api.Modules.Requests.Data;
+using Knock.Market.Api.Modules.Requests.Dtos;
 using Knock.Market.Api.Modules.Requests.Services;
 using MongoDB.Bson;
 using Xunit;
@@ -11,16 +12,43 @@ public sealed class Spec050VisitFieldsTests
 {
     private static readonly DateTime _now = new(2026, 11, 23, 12, 0, 0, DateTimeKind.Utc);
 
-    private static VisitRecord Visit(RescheduleProposal? proposal) =>
+    private static VisitRecord Visit(RescheduleProposal? proposal, string state = "confirmada", bool locked = false) =>
         new(ObjectId.GenerateNewId(), ObjectId.GenerateNewId(), ObjectId.GenerateNewId(), "client", "technician", ObjectId.GenerateNewId(), "domicilio", "2026-11-24", "10:00",
-            500, 600, "confirmada", null, null, false, 0, false, null, Proposal: proposal);
+            500, 600, state, null, null, false, 0, locked, null, Proposal: proposal);
+
+    private static RescheduleProposal Proposal(TimeSpan expiresIn, string by = "cliente") => new(_now.AddDays(1), by, _now + expiresIn);
+
+    [Theory]
+    [InlineData("cliente", false)]
+    [InlineData("tecnico", false)]
+    [InlineData("cliente", true)]
+    public void CurrentProposal_OfAConfirmedVisit_SaysWhenWhoAndUntilWhen_CA_050_46_CA_050_56(string by, bool locked)
+    {
+        var view = VisitService.CurrentProposal(Visit(Proposal(TimeSpan.FromHours(5), by), locked: locked), _now);
+
+        view.Should().Be(new VisitRescheduleProposal(new DateTimeOffset(_now.AddDays(1), TimeSpan.Zero), by, new DateTimeOffset(_now.AddHours(5), TimeSpan.Zero)));
+    }
 
     [Fact]
-    public void PendingReschedule_IsTrueOnlyForAProposalThatHasNotExpired_CA_050_46()
+    public void CurrentProposal_WithoutAProposalOrExpired_IsNull_CA_050_46_CA_050_57()
     {
-        VisitService.PendingReschedule(Visit(null), _now).Should().BeFalse();
-        VisitService.PendingReschedule(Visit(new RescheduleProposal(_now.AddDays(1), "cliente", _now.AddHours(5))), _now).Should().BeTrue();
-        VisitService.PendingReschedule(Visit(new RescheduleProposal(_now.AddDays(1), "cliente", _now.AddSeconds(-1))), _now).Should().BeFalse();
+        VisitService.CurrentProposal(Visit(null), _now).Should().BeNull();
+        VisitService.CurrentProposal(Visit(Proposal(TimeSpan.FromSeconds(-1))), _now).Should().BeNull();
+        VisitService.CurrentProposal(Visit(Proposal(TimeSpan.Zero)), _now).Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("en_curso")]
+    [InlineData("terminada")]
+    [InlineData("no_terminada")]
+    [InlineData("cancelada")]
+    [InlineData("no_presentado")]
+    public void CurrentProposal_OutsideConfirmed_IsNullAndKeepsTheStoredOne_CA_050_58(string state)
+    {
+        var visit = Visit(Proposal(TimeSpan.FromHours(5)), state);
+
+        VisitService.CurrentProposal(visit, _now).Should().BeNull();
+        visit.Proposal.Should().NotBeNull();
     }
 
     [Fact]
