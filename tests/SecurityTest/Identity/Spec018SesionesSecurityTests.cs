@@ -28,7 +28,7 @@ public class Spec018SesionesSecurityTests
     public async Task Sin_Token_No_Revoca_CA_018_08()
     {
         var hosts = await SecurityHosts.SharedAsync();
-        var (sub, userId) = await SeedPersonAsync(hosts);
+        var (sub, userId) = await SeededPerson.CreateAsync(hosts);
         var session = await SeedSessionAsync(hosts, sub, userId);
 
         using var response = await SecureHttp.SendAsync(hosts.IdentityClient, HttpMethod.Delete, $"{_route}/{session}");
@@ -41,8 +41,8 @@ public class Spec018SesionesSecurityTests
     public async Task Sesion_Ajena_Responde_El_Mismo_404_Que_Una_Inexistente_Y_No_Cambia()
     {
         var hosts = await SecurityHosts.SharedAsync();
-        var (ownerSub, ownerId) = await SeedPersonAsync(hosts);
-        var (attackerSub, attackerId) = await SeedPersonAsync(hosts);
+        var (ownerSub, ownerId) = await SeededPerson.CreateAsync(hosts);
+        var (attackerSub, attackerId) = await SeededPerson.CreateAsync(hosts);
         var victim = await SeedSessionAsync(hosts, ownerSub, ownerId);
         var current = await SeedSessionAsync(hosts, ownerSub, ownerId);
         var attackerSession = await SeedSessionAsync(hosts, attackerSub, attackerId);
@@ -61,24 +61,6 @@ public class Spec018SesionesSecurityTests
         using var own = await SecureHttp.SendAsync(hosts.IdentityClient, HttpMethod.Delete, $"{_route}/{victim}", bearer: TokenForge.Valid(ownerSub, current.ToString()));
         own.StatusCode.Should().Be(HttpStatusCode.NoContent);
         (await ReadAsync(hosts, victim))["revocada"].AsBoolean.Should().BeTrue();
-    }
-
-    private static async Task<(string Sub, ObjectId UserId)> SeedPersonAsync(SecurityHosts hosts)
-    {
-        var sub = TokenForge.Sub();
-        var id = ObjectId.GenerateNewId();
-        await hosts.Identity.Users.InsertOneAsync(new BsonDocument
-        {
-            ["_id"] = id,
-            ["sub"] = sub,
-            ["celularHash"] = new BsonBinaryData(Guid.NewGuid().ToByteArray()),
-            ["estado"] = "activa",
-            ["esTecnico"] = false,
-            ["perfilCompleto"] = false,
-            ["creadoEn"] = DateTime.UtcNow,
-            ["version"] = 1,
-        });
-        return (sub, id);
     }
 
     private static async Task<ObjectId> SeedSessionAsync(SecurityHosts hosts, string sub, ObjectId userId)

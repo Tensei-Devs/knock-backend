@@ -34,8 +34,8 @@ public class Spec040DireccionesSecurityTests
     public async Task Direccion_Ajena_Responde_404_Y_No_Cambia_CA_040_09_CA_040_15()
     {
         var hosts = await SecurityHosts.SharedAsync();
-        var (ownerSub, ownerId) = await SeedPersonAsync(hosts);
-        var (attackerSub, _) = await SeedPersonAsync(hosts);
+        var (ownerSub, ownerId) = await SeededPerson.CreateAsync(hosts);
+        var (attackerSub, _) = await SeededPerson.CreateAsync(hosts);
         var addresses = hosts.Identity.Database.GetCollection<BsonDocument>(_collection);
         var address = ObjectId.GenerateNewId();
         await addresses.InsertOneAsync(new BsonDocument
@@ -62,23 +62,5 @@ public class Spec040DireccionesSecurityTests
         using var own = await SecureHttp.SendAsync(hosts.IdentityClient, HttpMethod.Delete, $"{_route}/{address}", bearer: TokenForge.Valid(ownerSub));
         own.StatusCode.Should().Be(HttpStatusCode.NoContent);
         (await addresses.CountDocumentsAsync(filter)).Should().Be(0);
-    }
-
-    private static async Task<(string Sub, ObjectId UserId)> SeedPersonAsync(SecurityHosts hosts)
-    {
-        var sub = TokenForge.Sub();
-        var id = ObjectId.GenerateNewId();
-        await hosts.Identity.Users.InsertOneAsync(new BsonDocument
-        {
-            ["_id"] = id,
-            ["sub"] = sub,
-            ["celularHash"] = new BsonBinaryData(Guid.NewGuid().ToByteArray()),
-            ["estado"] = "activa",
-            ["esTecnico"] = false,
-            ["perfilCompleto"] = false,
-            ["creadoEn"] = DateTime.UtcNow,
-            ["version"] = 1,
-        });
-        return (sub, id);
     }
 }
