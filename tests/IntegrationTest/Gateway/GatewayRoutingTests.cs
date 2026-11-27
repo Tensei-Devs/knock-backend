@@ -77,7 +77,7 @@ public sealed class GatewayRoutingTests : IAsyncLifetime, IDisposable
 
         using var response = await _client.GetAsync(new Uri("/api/v1/tecnicos/me", UriKind.Relative));
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized, "la ruta anónima /tecnicos/{id} no la atiende");
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized, "la ruta anónima del perfil público no la atiende");
         _requestsSeen.Should().BeEmpty();
     }
 
