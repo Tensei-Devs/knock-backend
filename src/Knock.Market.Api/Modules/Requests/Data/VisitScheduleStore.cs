@@ -87,7 +87,7 @@ internal sealed class VisitScheduleStore(
                 return false;
             }
 
-            await outbox.AddAsync(transaction, ProposalEvent("ReprogramacionPropuesta", visit, number, nowUtc), token);
+            await outbox.AddAsync(transaction, ProposalEvent("ReprogramacionPropuesta", visit, number, nowUtc, proposedBy), token);
             await new TareasProgramadasStore(database).ScheduleByKeyAsync(transaction, VisitScheduleRules.ProposalExpiryTask, $"{visit.Id}:{number}", expiresUtc, nowUtc, token);
             return true;
         }, false, cancellationToken);
@@ -136,7 +136,7 @@ internal sealed class VisitScheduleStore(
                 return false;
             }
 
-            await outbox.AddAsync(transaction, ProposalEvent("ReprogramacionRechazada", visit, number, nowUtc), token);
+            await outbox.AddAsync(transaction, ProposalEvent("ReprogramacionRechazada", visit, number, nowUtc, visit.Proposal?.ProposedBy), token);
             return true;
         }, false, cancellationToken);
     }
@@ -164,7 +164,7 @@ internal sealed class VisitScheduleStore(
                 return false;
             }
 
-            await outbox.AddAsync(transaction, ProposalEvent("ReprogramacionVencida", visit, number, nowUtc), token);
+            await outbox.AddAsync(transaction, ProposalEvent("ReprogramacionVencida", visit, number, nowUtc, visit.Proposal?.ProposedBy), token);
             return true;
         }, false, cancellationToken);
     }
@@ -205,8 +205,8 @@ internal sealed class VisitScheduleStore(
     }
 
     /// <summary>
-    /// Marca la visita <c>confirmada</c> como <c>no_presentado</c> con <c>quienFalto = cliente</c>, sin penalización, y escribe <c>VisitaCerrada</c> (el cliente recibe el aviso)
-    /// en la misma transacción. <see langword="false"/> si la visita ya no estaba <c>confirmada</c>.
+    /// Marca la visita <c>confirmada</c> como <c>no_presentado</c> con <c>quienFalto = cliente</c>, sin penalización, y escribe <c>VisitaCerrada</c> y <c>ClienteAusente</c> (el aviso al
+    /// cliente, spec 054) en la misma transacción. <see langword="false"/> si la visita ya no estaba <c>confirmada</c>.
     /// </summary>
     public Task<bool> MarkClientAbsentAsync(VisitRecord visit, DateTime nowUtc, CancellationToken cancellationToken)
     {
@@ -229,6 +229,7 @@ internal sealed class VisitScheduleStore(
 
             await SolicitudDeLaVisita.CancelAsync(database, transaction, visit.RequestId, TransicionesDeSolicitud.VisitNoShowReason, nowUtc, token);
             await outbox.AddAsync(transaction, ClosedEvent(visit, VisitStore.WasBlocked(before), VisitScheduleRules.NoShow, null, nowUtc), token);
+            await outbox.AddAsync(transaction, OutboxMessage.Create("ClienteAusente", visit.Id.ToString(), VisitStore.Identifiers(visit), nowUtc), token);
             return true;
         }, false, cancellationToken);
     }
@@ -285,8 +286,17 @@ internal sealed class VisitScheduleStore(
         return after?.GetValue(_proposalCountField, 0).ToInt32();
     }
 
-    private static OutboxMessage ProposalEvent(string type, VisitRecord visit, int version, DateTime nowUtc) =>
-        OutboxMessage.CreateVersion(type, visit.Id.ToString(), version, VisitStore.Identifiers(visit), nowUtc);
+    /// <summary><paramref name="proposedBy"/> es el rol de quien propuso (<c>propuestaPor</c>, spec 054): el aviso lo necesita porque la propuesta se borra de la visita.</summary>
+    private static OutboxMessage ProposalEvent(string type, VisitRecord visit, int version, DateTime nowUtc, string? proposedBy = null)
+    {
+        var data = VisitStore.Identifiers(visit);
+        if (proposedBy is not null)
+        {
+            data.Add("propuestaPor", proposedBy);
+        }
+
+        return OutboxMessage.CreateVersion(type, visit.Id.ToString(), version, data, nowUtc);
+    }
 
     private static OutboxMessage ClosedEvent(VisitRecord visit, bool wasBlocked, string reason, string? by, DateTime nowUtc)
     {

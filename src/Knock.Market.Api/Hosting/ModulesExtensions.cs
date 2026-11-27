@@ -32,7 +32,7 @@ internal static class ModulesExtensions
         services.AddScoped<IEntregaDeBandeja, EntregaVisitaAfectada>();
         services.AddHttpClient(EntregaCambioDeOficio.ClientName).RemoveAllLoggers();
         services.AddScoped<IEntregaDeBandeja, EntregaCambioDeOficio>();
-        foreach (var notice in AvisosDeSolicitud.All)
+        foreach (var notice in AvisosDeSolicitud.All.Concat(AvisosDeVisita.All).Concat(AvisosDePrecio.All))
         {
             services.AddScoped<IEntregaDeBandeja>(provider => ActivatorUtilities.CreateInstance<EntregaAvisoDeSolicitud>(provider, notice));
         }

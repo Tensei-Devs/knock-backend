@@ -27,6 +27,25 @@ internal sealed class DestinatariosDeAvisoStore(
     public Task<string?> VisitAsync(string requestId, string quoteId, CancellationToken cancellationToken) =>
         ReadOfRequestAsync("visitas", requestId, ("cotizacionId", quoteId), "_id", cancellationToken);
 
+    public async Task<PersonasDeVisita?> VisitPeopleAsync(string visitId, CancellationToken cancellationToken)
+    {
+        if (!ObjectId.TryParse(visitId, out var visit))
+        {
+            return null;
+        }
+
+        var found = await database.GetCollection<BsonDocument>(ChoiceStore.VisitsCollection)
+            .Find(Builders<BsonDocument>.Filter.Eq("_id", visit), new FindOptions { MaxTime = options.Value.QueryMaxTime })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (found is null)
+        {
+            return null;
+        }
+
+        var by = found.TryGetValue("cancelacion", out var cancellation) && cancellation.IsBsonDocument ? DatosDeAviso.Text(cancellation.AsBsonDocument, "por") : null;
+        return new PersonasDeVisita(DatosDeAviso.Text(found, _technicianUserField), by);
+    }
+
     private Task<string?> ReadOfRequestAsync(string collection, string requestId, (string Field, string Id) other, string field, CancellationToken cancellationToken)
     {
         if (!ObjectId.TryParse(requestId, out var request) || !ObjectId.TryParse(other.Id, out var second))
