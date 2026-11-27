@@ -67,6 +67,7 @@ internal sealed class VisitService(VisitStore visits, RequestsStore requests, Ch
         var place = visit.Modality == VisitRules.Domicile
             ? new VisitPlace(visit.Modality, await ClientAddressAsync(visit, cancellationToken))
             : new VisitPlace(visit.Modality, technician?.WorkshopAddress);
+        var proposal = CurrentProposal(visit, now);
         return new VisitResponse(
             visit.Id.ToString(),
             "cliente",
@@ -87,10 +88,11 @@ internal sealed class VisitService(VisitStore visits, RequestsStore requests, Ch
             false,
             null,
             visit.TechnicianUserId,
-            PendingReschedule(visit, now),
+            proposal is not null,
             visit.FinalQuoteState,
             visit.PhotoPermission,
-            Utc(visit.FinishedAtUtc));
+            Utc(visit.FinishedAtUtc),
+            proposal);
     }
 
     private async Task<VisitResponse> BuildTechnicianViewAsync(VisitRecord visit, CancellationToken cancellationToken)
@@ -108,6 +110,7 @@ internal sealed class VisitService(VisitStore visits, RequestsStore requests, Ch
             place = new VisitPlace(visit.Modality, (await FindTechnicianAsync(visit, cancellationToken))?.WorkshopAddress);
         }
 
+        var proposal = CurrentProposal(visit, now);
         return new VisitResponse(
             visit.Id.ToString(),
             "tecnico",
@@ -128,14 +131,21 @@ internal sealed class VisitService(VisitStore visits, RequestsStore requests, Ch
             VisitRules.CanArrive(visit.State, now),
             Utc(visit.ArrivedAtUtc),
             null,
-            PendingReschedule(visit, now),
+            proposal is not null,
             visit.FinalQuoteState,
             visit.PhotoPermission,
-            Utc(visit.FinishedAtUtc));
+            Utc(visit.FinishedAtUtc),
+            proposal);
     }
 
-    /// <summary>Hay una propuesta de reprogramación vigente: guardada y sin vencer (spec 050, R-25); se calcula al leer, sin escribir.</summary>
-    internal static bool PendingReschedule(VisitRecord visit, DateTime nowUtc) => visit.Proposal is { } proposal && proposal.ExpiresAtUtc > nowUtc;
+    /// <summary>
+    /// La propuesta de reprogramación vigente, o <see langword="null"/> (spec 050, R-36): la visita sigue <c>confirmada</c> (también si está bloqueada), la propuesta
+    /// está guardada y no ha vencido. Se calcula al leer, sin escribir ni borrar la guardada.
+    /// </summary>
+    internal static VisitRescheduleProposal? CurrentProposal(VisitRecord visit, DateTime nowUtc) =>
+        visit.Estado == VisitRules.Confirmed && visit.Proposal is { } proposal && proposal.ExpiresAtUtc > nowUtc
+            ? new VisitRescheduleProposal(new DateTimeOffset(proposal.ProposedAtUtc, TimeSpan.Zero), proposal.ProposedBy, new DateTimeOffset(proposal.ExpiresAtUtc, TimeSpan.Zero))
+            : null;
 
     private async Task<TechnicianPublic?> FindTechnicianAsync(VisitRecord visit, CancellationToken cancellationToken)
     {
