@@ -28,7 +28,7 @@ public sealed class Spec020CotizacionesCierreTests
             responses.Where(x => x.StatusCode != HttpStatusCode.Created).Should().OnlyContain(x => x.StatusCode == HttpStatusCode.Conflict);
             foreach (var conflict in responses.Where(x => x.StatusCode == HttpStatusCode.Conflict)) await QuoteHttp.Code(conflict, "quote_duplicate");
             (await factory.Quotes.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(1);
-            var messages = await factory.Database.GetCollection<BsonDocument>("outbox").CountDocumentsAsync(Builders<BsonDocument>.Filter.Eq("solicitudId", id));
+            var messages = await factory.Database.GetCollection<BsonDocument>("outbox").CountDocumentsAsync(Builders<BsonDocument>.Filter.Eq("datos.solicitudId", id.ToString()));
             messages.Should().Be(1, "solo la cotización guardada emite evento");
         }
         finally { foreach (var response in responses) response.Dispose(); }
