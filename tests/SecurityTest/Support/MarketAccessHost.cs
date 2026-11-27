@@ -76,19 +76,20 @@ internal sealed class MarketAccessHost
 
     private static readonly Lazy<Task<MarketAccessHost>> _shared = new(StartAsync);
 
+    private readonly SecurityMarketFactory _factory;
     private readonly WebApplicationFactory<MarketApi::Knock.Market.Api.Modules.Catalog.Data.CatalogStore> _app;
-    private readonly string _databaseName;
 
-    private MarketAccessHost(WebApplicationFactory<MarketApi::Knock.Market.Api.Modules.Catalog.Data.CatalogStore> app, string databaseName)
+    private MarketAccessHost(SecurityMarketFactory factory, WebApplicationFactory<MarketApi::Knock.Market.Api.Modules.Catalog.Data.CatalogStore> app)
     {
+        _factory = factory;
         _app = app;
-        _databaseName = databaseName;
         Client = app.CreateClient();
     }
 
     public HttpClient Client { get; }
 
-    private IMongoDatabase Database => _app.Services.GetRequiredService<IMongoClient>().GetDatabase(_databaseName);
+    // La base del catálogo es la misma para todos los módulos que se configuran abajo.
+    private IMongoDatabase Database => _factory.Database;
 
     private FieldCipher Cipher => _app.Services.GetRequiredService<FieldCipher>();
 
@@ -217,7 +218,7 @@ internal sealed class MarketAccessHost
             ["enviadoEn"] = DateTime.UtcNow,
         });
 
-    /// <summary>Todo lo que una ruta de la escena podría escribir, como texto: dos fotos iguales significan que nada cambió.</summary>
+    /// <summary>Lo que una ruta de la escena podría escribir, como texto: dos fotos iguales significan que nada cambió.</summary>
     public async Task<string> SnapshotAsync(MarketScene scene)
     {
         var filter = Builders<BsonDocument>.Filter;
@@ -257,7 +258,7 @@ internal sealed class MarketAccessHost
 
     private Task InsertAsync(string collection, BsonDocument document) => Database.GetCollection<BsonDocument>(collection).InsertOneAsync(document);
 
-    private Task UpdateAsync(string collection, ObjectId id, UpdateDefinition<BsonDocument> update) =>
+    private Task<UpdateResult> UpdateAsync(string collection, ObjectId id, UpdateDefinition<BsonDocument> update) =>
         Database.GetCollection<BsonDocument>(collection).UpdateOneAsync(Builders<BsonDocument>.Filter.Eq("_id", id), update);
 
     private static async Task<MarketAccessHost> StartAsync()
@@ -280,7 +281,7 @@ internal sealed class MarketAccessHost
             services.AddSingleton<IVisitPhotos>(new ReadyVisitPhotos());
             services.AddSingleton<IRequestPhotos>(new UnavailableRequestPhotos());
         }));
-        var host = new MarketAccessHost(app, name);
+        var host = new MarketAccessHost(factory, app);
         await MongoCollections.CreateIfMissingAsync(host.Database, _requests, _quotes, _visits, _adjustments, _sends, _outbox, "tareas_programadas");
         return host;
     }
