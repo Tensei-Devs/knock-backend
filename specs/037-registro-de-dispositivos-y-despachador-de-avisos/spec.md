@@ -159,9 +159,32 @@ Que el teléfono de cada persona reciba un aviso de Knock cuando pasa algo en su
 - **Sin duplicar R-14:** la regla de creación, idempotencia, texto fijo y vencimiento es la de R-14 de la nota anterior (2026-11-23, segunda); esta enmienda solo aclara que no depende de los dispositivos.
 - Tarea: `task.md` T-10 amplía su alcance (aviso creado antes del retorno por `NoDevices`, con prueba sin dispositivos); 044 T-11 verifica ese caso de punta a punta. Pendiente de la firma de esta enmienda.
 
+## Nota de enmienda (2026-11-27, avisos de solicitudes, nombres y vencimiento)
+
+- **Estado de esta enmienda:** PROPUESTA SIN FIRMA; vale desde que se firma la línea «Enmienda 2026-11-27» de la sección Aprobación. La aprobación original y las enmiendas ya firmadas se conservan.
+- **Motivo:** al entregar los eventos de Mercado como avisos faltan tres definiciones: qué aviso produce cada evento, quién recibe `cotizacion_vencida` y qué nombres mandan entre esta spec (`solicitud_cancelada`, `solicitud_vencida`) y la spec 024 de la app (`request_cancelled`, `request_expired`).
+- **Correspondencia (R-11 y §4):**
+
+| Evento de Mercado | Aviso | Recibe | `recurso` |
+|---|---|---|---|
+| `SolicitudEnviadaATecnico` | `solicitud_nueva` | el técnico del envío | solicitud |
+| `SolicitudSinTecnicos` | `solicitud_sin_tecnicos` | la persona dueña | solicitud |
+| `CotizacionEnviada` | `cotizacion_nueva` | la persona dueña | solicitud |
+| `CotizacionAceptada` | `cotizacion_aceptada` | el técnico elegido | visita |
+| `SolicitudCancelada` | `solicitud_cancelada` | cada técnico de `tecnicosAvisar` | solicitud |
+| `SolicitudVencida` | `solicitud_vencida` | la persona dueña | solicitud |
+| `SolicitudVencida` | `cotizacion_vencida` | cada técnico de `tecnicosAvisar` | solicitud |
+
+- **Nombres:** mandan los del catálogo del servidor, que son los únicos que Mensajería acepta. La spec 024 de la app debe cambiar `request_cancelled` por `solicitud_cancelada` y `request_expired` por `solicitud_vencida` en sus nombres de aviso (los códigos de error con esos nombres en las rutas de cotizaciones no cambian). Ese cambio va en el repositorio de la app.
+- **Entrega incompleta:** si falta el destinatario o el recurso de una persona, se avisa a las demás y el mensaje queda `fallido`. Un `SolicitudCancelada` o `SolicitudVencida` sin técnicos que avisar no llama a Mensajería por ellos.
+- **Eventos atrasados:** al encender la bandeja se entregan los que sigan `pendiente`, con el límite por persona de R-12; no se agrega un filtro por antigüedad. No se reenvía `cotizacion_vencida` de los vencimientos que ya quedaron `entregado`. Los `CotizacionEnviada` anteriores sin `datos` no se migran.
+- **CA-21:** Dada una solicitud que vence con dos cotizaciones enviadas, cuando la bandeja entrega `SolicitudVencida`, entonces la persona dueña recibe `solicitud_vencida` y cada uno de los dos técnicos recibe `cotizacion_vencida`, y repetir la entrega no duplica ninguno.
+- **CA-22:** Dado un técnico de `tecnicosAvisar` cuya persona no se puede resolver, cuando se entrega, entonces los demás reciben su aviso y el mensaje queda `fallido`.
+
 ## Aprobación
 
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-12
 - [x] Enmienda 2026-11-24 — nombre: José Julián Hernández Hernández fecha: 2026-11-24
 - [x] Enmienda 2026-11-23 — nombre: José Julián Hernández Hernández fecha: 2026-11-24
 - [x] Sin conflicto con la constitución
+- [x] Enmienda 2026-11-27 — nombre: José Julián Hernández Hernández fecha: 2026-11-27

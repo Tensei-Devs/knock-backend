@@ -64,7 +64,19 @@ Ninguna respuesta del gateway desplegado incluye `Strict-Transport-Security`, au
 2. **Configuración de HSTS en el gateway.** Hoy solo Identidad y Mercado tienen `Security:Hsts` (`SecuritySettings`); el gateway no. Propuesta: agregar la misma sección al gateway con los valores por defecto de `docs/security-headers.md` (365 días, `includeSubDomains`, sin `preload`) y la validación de que sea mayor que cero.
 3. **Despliegue.** El cierre del bug exige un despliegue del gateway; lo hace el líder.
 
+## Nota de enmienda (2026-11-27, HSTS en el ambiente de desarrollo desplegado)
+
+- **Estado de esta enmienda:** PROPUESTA SIN FIRMA; vale desde que se firma la línea «Enmienda 2026-11-27» de la sección Aprobación. La aprobación original y las enmiendas ya firmadas se conservan.
+- **Motivo:** el ambiente `dev` desplegado corre con el entorno `Development` y por eso no envía `Strict-Transport-Security`, aunque se atiende por HTTPS. Pasarlo a `Production` hoy dejaría el chat sin envío de mensajes, porque Mensajería aún no tiene la moderación de la spec 031.
+- Se agrega `Security:Hsts:SendInDevelopment` (booleano, por omisión `false`) en el gateway. Con `true`, el encabezado se envía también en `Development`, con los mismos valores de TC-BUG-002-03, salvo cuando el nombre de host de la petición es `localhost`, `127.0.0.1` o `::1`.
+- TC-BUG-002-04 se lee: «Dado el entorno Development sin esa opción, o una petición a `localhost`, no se envía». Fuera de `Development` nada cambia.
+- Terraform define la variable solo en el perfil del ambiente desplegado de desarrollo. La aplica una persona.
+- **CA-E01:** Dado `Development` con la opción activa y un host que no es local, cuando responde el gateway, entonces la respuesta lleva `Strict-Transport-Security` sin `preload`.
+- **CA-E02:** Dado `Development` con la opción activa y el host `localhost`, o con la opción apagada, entonces no se envía.
+- Los navegadores recuerdan el encabezado hasta un año para ese host y sus subdominios: retirar la opción no lo borra de quien ya lo recibió.
+
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-10
 - [x] Sin conflicto con la constitución
+- [x] Enmienda 2026-11-27 — nombre: José Julián Hernández Hernández fecha: 2026-11-27
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Firmada (tras el merge)
