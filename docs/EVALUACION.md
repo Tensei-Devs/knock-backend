@@ -70,7 +70,7 @@ Contados en los tres contratos OpenAPI por servicio.
 | Internas entre servicios | 17 (14 rutas distintas; algunas existen en más de un servicio) | 16 |
 | `/health` | 2 | 2 |
 
-Fuera de esa cuenta: `/health` del gateway, `/health/ready` y el hub `/hubs/chat`. El contrato público que consume la app (`docs/openapi.publico.v1.json`) tiene 130 operaciones. Que una ruta exista no significa que su función esté habilitada.
+Fuera de esa cuenta: `/health` del gateway, `/health/ready` y el hub `/hubs/chat`. El contrato público que consume la app (`docs/openapi.publico.v1.json`) tenía 130 operaciones en `75d5ad0e`; el PR #400 le agrega las 11 rutas raíz del gateway que faltaban (141). Que una ruta exista no significa que su función esté habilitada.
 
 **¿Endpoints sin spec?** Las 142 rutas de negocio aparecen citadas en algún `spec.md`. La comprobación es una búsqueda por texto: no demuestra que cada spec sea anterior a su endpoint.
 
