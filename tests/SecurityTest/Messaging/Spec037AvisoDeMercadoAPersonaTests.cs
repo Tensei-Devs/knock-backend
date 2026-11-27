@@ -70,7 +70,8 @@ public sealed class Spec037AvisoDeMercadoAPersonaTests
 
             var stored = await market.GetCollection<BsonDocument>("outbox").Find(FilterDefinition<BsonDocument>.Empty).SingleAsync();
             stored["estado"].AsString.Should().Be("entregado");
-            var notice = (await SecureHttp.ReadJsonAsync(list)).GetProperty("items").EnumerateArray().ToList().Should().ContainSingle().Subject;
+            System.Text.Json.JsonElement[] notices = [.. (await SecureHttp.ReadJsonAsync(list)).GetProperty("items").EnumerateArray()];
+            var notice = notices.Should().ContainSingle().Subject;
             notice.GetProperty("titulo").GetString().Should().Be("Nueva cotización");
             notice.GetProperty("comoRol").GetString().Should().Be("cliente");
             notice.GetProperty("destino").GetProperty("id").GetString().Should().Be(request.ToString());
