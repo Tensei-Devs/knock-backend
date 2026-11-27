@@ -160,6 +160,14 @@ internal sealed class VisitStore(
                 return false;
             }
 
+            var follow = reason switch
+            {
+                VisitCloseReason.Finished => SolicitudDeLaVisita.FinishAsync(database, transaction, visit.RequestId, nowUtc, token),
+                VisitCloseReason.Cancelled => SolicitudDeLaVisita.CancelAsync(database, transaction, visit.RequestId, TransicionesDeSolicitud.VisitCancelledReason, nowUtc, token),
+                VisitCloseReason.NoShow => SolicitudDeLaVisita.CancelAsync(database, transaction, visit.RequestId, TransicionesDeSolicitud.VisitNoShowReason, nowUtc, token),
+                _ => Task.CompletedTask,
+            };
+            await follow;
             await outbox.AddAsync(transaction, ClosedEvent(visit, WasBlocked(before), reason, nowUtc), token);
             return true;
         }, false, cancellationToken);

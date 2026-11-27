@@ -273,6 +273,7 @@ internal sealed class FinalQuoteStore([FromKeyedServices(RequestsModuleExtension
             await outbox.AddAsync(transaction, OutboxMessage.Create(eventType, visit.Id.ToString(), VisitStore.Identifiers(visit), nowUtc), token);
             if (closes)
             {
+                await SolicitudDeLaVisita.FinishAsync(database, transaction, visit.RequestId, nowUtc, token);
                 await outbox.AddAsync(transaction, VisitStore.ClosedMessage(visit.Id, wasBlocked: false, new BsonDocument { { "visitaId", visit.Id.ToString() }, { "motivo", "terminada" } }, nowUtc), token);
             }
 
