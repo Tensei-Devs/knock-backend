@@ -7,12 +7,21 @@ namespace Knock.Market.Api.Modules.Assistant.Data;
 /// <summary>Bitácora del técnico (spec 052, §6). <c>TecnicoId</c> es el <c>sub</c> del token; <c>VenceEn</c> es el cierre de la solicitud más 30 días (null mientras siga abierta).</summary>
 internal sealed record BitacoraRecord(string SolicitudId, string TecnicoId, IReadOnlyList<string> Sabe, IReadOnlyList<string> PorConfirmar, IReadOnlyList<string> QueLlevar, DateTime ActualizadaEn, DateTime? VenceEn);
 
+/// <summary>Una bitácora que todavía no tiene fecha de borrado. <paramref name="Id"/> sirve de cursor para recorrerlas.</summary>
+internal sealed record BitacoraSinFecha(string Id, string SolicitudId);
+
 internal interface IBitacoraStore
 {
     /// <summary>Crea o reemplaza la bitácora del par solicitud y técnico; verdadero si la creó. El índice único impide duplicados (CA-39).</summary>
     Task<bool> UpsertAsync(BitacoraRecord log, CancellationToken cancellationToken);
 
     Task<BitacoraRecord?> FindAsync(string solicitudId, string tecnicoId, CancellationToken cancellationToken);
+
+    /// <summary>Hasta <paramref name="limit"/> bitácoras sin <c>venceEn</c>, en orden, después de <paramref name="afterId"/>.</summary>
+    Task<IReadOnlyList<BitacoraSinFecha>> ListWithoutExpiryAsync(string? afterId, int limit, CancellationToken cancellationToken);
+
+    /// <summary>Pone <c>venceEn</c> a las bitácoras de la solicitud que no lo tengan; repetirlo no cambia nada.</summary>
+    Task SetExpiryAsync(string solicitudId, DateTime venceEn, CancellationToken cancellationToken);
 }
 
 /// <summary>Único punto con MongoDB de las bitácoras; todas las consultas filtran por el <c>sub</c> del token (R-23).</summary>
@@ -72,6 +81,32 @@ internal sealed class BitacoraStore(IMongoDatabase database) : IBitacoraStore
             [.. doc["queLlevar"].AsBsonArray.Select(v => v.AsString)],
             doc["actualizadaEn"].ToUniversalTime(),
             expires);
+    }
+
+    public async Task<IReadOnlyList<BitacoraSinFecha>> ListWithoutExpiryAsync(string? afterId, int limit, CancellationToken cancellationToken)
+    {
+        var f = Builders<BsonDocument>.Filter;
+        var filter = f.Eq("venceEn", BsonNull.Value);
+        if (afterId is not null)
+        {
+            filter &= f.Gt("_id", ObjectId.Parse(afterId));
+        }
+
+        var found = await Collection.Find(filter)
+            .Sort(Builders<BsonDocument>.Sort.Ascending("_id"))
+            .Limit(limit)
+            .Project(Builders<BsonDocument>.Projection.Include("solicitudId"))
+            .ToListAsync(cancellationToken);
+        return [.. found.Select(d => new BitacoraSinFecha(d["_id"].AsObjectId.ToString(), d["solicitudId"].AsObjectId.ToString()))];
+    }
+
+    public Task SetExpiryAsync(string solicitudId, DateTime venceEn, CancellationToken cancellationToken)
+    {
+        var f = Builders<BsonDocument>.Filter;
+        return Collection.UpdateManyAsync(
+            f.Eq("solicitudId", ObjectId.Parse(solicitudId)) & f.Eq("venceEn", BsonNull.Value),
+            Builders<BsonDocument>.Update.Set("venceEn", venceEn),
+            cancellationToken: cancellationToken);
     }
 
     private static FilterDefinition<BsonDocument> Filter(string solicitudId, string tecnicoId) =>

@@ -46,6 +46,17 @@ internal sealed class FakeConversaciones(ConversationAccessStatus status = Conve
 internal sealed class FakeSolicitudes(bool participates = true, DateTime? closed = null) : ISolicitudesAsistente
 {
     public Task<RequestAccess> GetAccessAsync(string solicitudId, string sub, CancellationToken cancellationToken) => Task.FromResult(new RequestAccess(participates, closed));
+
+    /// <summary>Cierres que ocurren después de guardar la bitácora, por solicitud.</summary>
+    public Dictionary<string, DateTime> Closures { get; } = [];
+
+    public List<int> ClosureQueries { get; } = [];
+
+    public Task<IReadOnlyDictionary<string, DateTime>> GetClosedAtAsync(IReadOnlyCollection<string> solicitudIds, CancellationToken cancellationToken)
+    {
+        ClosureQueries.Add(solicitudIds.Count);
+        return Task.FromResult<IReadOnlyDictionary<string, DateTime>>(Closures.Where(x => solicitudIds.Contains(x.Key)).ToDictionary(StringComparer.Ordinal));
+    }
 }
 
 internal sealed class FakeReferencia : IReferenciaMercado
@@ -72,6 +83,23 @@ internal sealed class MemoryBitacoras : IBitacoraStore
 
     public Task<BitacoraRecord?> FindAsync(string solicitudId, string tecnicoId, CancellationToken cancellationToken) =>
         Task.FromResult(_items.TryGetValue((solicitudId, tecnicoId), out var log) ? log : null);
+
+    public Task<IReadOnlyList<BitacoraSinFecha>> ListWithoutExpiryAsync(string? afterId, int limit, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<BitacoraSinFecha>>([.. _items.Values.Where(x => x.VenceEn is null)
+            .Select(x => new BitacoraSinFecha($"{x.SolicitudId}|{x.TecnicoId}", x.SolicitudId))
+            .Where(x => afterId is null || string.CompareOrdinal(x.Id, afterId) > 0)
+            .OrderBy(x => x.Id, StringComparer.Ordinal)
+            .Take(limit)]);
+
+    public Task SetExpiryAsync(string solicitudId, DateTime venceEn, CancellationToken cancellationToken)
+    {
+        foreach (var (key, log) in _items.Where(x => x.Key.Item1 == solicitudId && x.Value.VenceEn is null).ToList())
+        {
+            _items[key] = log with { VenceEn = venceEn };
+        }
+
+        return Task.CompletedTask;
+    }
 }
 
 internal sealed class FixedClock(DateTimeOffset now) : TimeProvider
@@ -179,6 +207,44 @@ public sealed class Spec052BitacoraTests
         (await service.SaveAsync("sub-t", _solicitud, _body, default)).Status.Should().Be(AssistantStatus.Created);
         (await service.SaveAsync("sub-t", _solicitud, _body with { Sabe = ["Otra"] }, default)).Status.Should().Be(AssistantStatus.Ok);
         (await service.GetAsync("sub-t", _solicitud, default)).Value!.Sabe.Should().Equal("Otra");
+    }
+
+    [Fact]
+    public async Task Guardada_Antes_Del_Cierre_Recibe_Fecha_De_Borrado_Al_Cerrarse_CA_052_34()
+    {
+        const string stillOpen = "76543210fedcba9876543210";
+        var store = new MemoryBitacoras();
+        var requests = new FakeSolicitudes();
+        var service = new BitacoraService(new FakeCuentas(), requests, store, new FixedClock(_now));
+        await service.SaveAsync("sub-t", _solicitud, _body, default);
+        await service.SaveAsync("sub-t", stillOpen, _body, default);
+        (await store.FindAsync(_solicitud, "sub-t", default))!.VenceEn.Should().BeNull("la solicitud sigue abierta");
+
+        var closedAt = _now.UtcDateTime.AddDays(2);
+        requests.Closures[_solicitud] = closedAt;
+        await new FechadoDeBitacoras(requests, store).RunAsync(default);
+
+        (await store.FindAsync(_solicitud, "sub-t", default))!.VenceEn.Should().Be(closedAt.AddDays(30));
+        (await store.FindAsync(stillOpen, "sub-t", default))!.VenceEn.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Las_Abiertas_No_Impiden_Revisar_El_Resto_CA_052_34()
+    {
+        var store = new MemoryBitacoras();
+        var requests = new FakeSolicitudes();
+        var service = new BitacoraService(new FakeCuentas(), requests, store, new FixedClock(_now));
+        var ids = Enumerable.Range(0, FechadoDeBitacoras.Lote + 5).Select(i => i.ToString("x24", System.Globalization.CultureInfo.InvariantCulture)).ToList();
+        foreach (var id in ids)
+        {
+            await service.SaveAsync("sub-t", id, _body, default);
+        }
+
+        requests.Closures[ids[^1]] = _now.UtcDateTime;
+        await new FechadoDeBitacoras(requests, store).RunAsync(default);
+
+        (await store.FindAsync(ids[^1], "sub-t", default))!.VenceEn.Should().Be(_now.UtcDateTime.AddDays(30));
+        requests.ClosureQueries.Should().Equal(FechadoDeBitacoras.Lote, 5);
     }
 
     [Fact]
