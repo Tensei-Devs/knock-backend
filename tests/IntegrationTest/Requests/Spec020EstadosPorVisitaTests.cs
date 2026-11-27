@@ -123,6 +123,37 @@ public sealed class Spec020EstadosPorVisitaTests
         (await RequestAsync(host, requestId))["estado"].AsString.Should().Be("enviada");
     }
 
+    [Fact]
+    public async Task Tecnico_Elegido_Sigue_Viendo_La_Solicitud_Cancelada_Por_La_Visita_Y_Otro_Recibe_404_CA_029_10()
+    {
+        await using var host = await Spec050Host.StartAsync();
+        var visit = await host.VisitAtAsync(TimeSpan.FromDays(3));
+        var other = await host.SeedPublicTechnicianAsync();
+        (await host.PostAsync(visit.VisitId, "cancelar", host.ClientSub, new { motivo = Spec050Host.Reason })).Dispose();
+
+        using var chosen = await host.SendAsync(HttpMethod.Get, $"/api/v1/solicitudes/{visit.RequestId}", visit.Technician.Sub);
+        using var stranger = await host.SendAsync(HttpMethod.Get, $"/api/v1/solicitudes/{visit.RequestId}", other.Sub);
+
+        chosen.StatusCode.Should().Be(HttpStatusCode.OK);
+        var json = await Spec020Host.ReadAsync(chosen);
+        json.GetProperty("estado").GetString().Should().Be("cancelada");
+        (json.TryGetProperty("direccion", out var address) && address.ValueKind != System.Text.Json.JsonValueKind.Null).Should().BeFalse("el técnico nunca recibe la dirección");
+        stranger.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Terminar_Y_Opinar_Deja_La_Solicitud_Calificada()
+    {
+        await using var host = await Spec050Host.StartAsync();
+        var visit = await host.InProgressVisitAsync();
+        (await host.PostAsync(visit.VisitId, "terminar", visit.Technician.Sub, Spec050Host.FinishBody())).Dispose();
+
+        using var review = await host.SendAsync(HttpMethod.Post, $"/api/v1/visitas/{visit.VisitId}/opinion", host.ClientSub, new { calificacion = 5 });
+
+        review.StatusCode.Should().Be(HttpStatusCode.Created);
+        (await RequestAsync(host, visit.RequestId))["estado"].AsString.Should().Be("calificada");
+    }
+
     private static Task<BsonDocument> RequestAsync(Spec020Host host, ObjectId requestId) => host.OneAsync("solicitudes", requestId);
 
     private static async Task AssertCancelledAsync(Spec020Host host, ConfirmedVisit visit, string reason)
