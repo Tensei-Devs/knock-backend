@@ -17,7 +17,7 @@ public sealed class Spec064EntregaAvisoTecnicoTests
     [Fact]
     public async Task Delivers_To_Messaging_With_The_Notice_Permission_And_Only_Identifiers_CA_064_08()
     {
-        using var handler = new Capture(HttpStatusCode.Accepted);
+        using var handler = new CapturaDeEntregas(HttpStatusCode.Accepted);
         var message = Message();
 
         (await Delivery(handler).DeliverAsync(message, CancellationToken.None)).Should().Be(ResultadoDeEntrega.Aceptado);
@@ -33,9 +33,9 @@ public sealed class Spec064EntregaAvisoTecnicoTests
     [Fact]
     public async Task Without_Address_Or_Key_Stays_For_Retry_And_A_Rejection_Is_Final_CA_064_08()
     {
-        using var ok = new Capture(HttpStatusCode.Accepted);
-        using var unavailable = new Capture(HttpStatusCode.ServiceUnavailable);
-        using var forbidden = new Capture(HttpStatusCode.Forbidden);
+        using var ok = new CapturaDeEntregas(HttpStatusCode.Accepted);
+        using var unavailable = new CapturaDeEntregas(HttpStatusCode.ServiceUnavailable);
+        using var forbidden = new CapturaDeEntregas(HttpStatusCode.Forbidden);
 
         (await Delivery(ok, withMessaging: false).DeliverAsync(Message(), CancellationToken.None)).Should().Be(ResultadoDeEntrega.Reintentable);
         (await Delivery(unavailable).DeliverAsync(Message(), CancellationToken.None)).Should().Be(ResultadoDeEntrega.Reintentable);
@@ -54,7 +54,7 @@ public sealed class Spec064EntregaAvisoTecnicoTests
             { "tecnicoUsuarioId", "tech-user" },
         }, "lease", 0);
 
-    private static EntregaTecnicoNoSePresento Delivery(Capture handler, bool withMessaging = true)
+    private static EntregaTecnicoNoSePresento Delivery(CapturaDeEntregas handler, bool withMessaging = true)
     {
         var settings = new Dictionary<string, string?>();
         if (withMessaging)
@@ -63,24 +63,6 @@ public sealed class Spec064EntregaAvisoTecnicoTests
             settings["Services:Messaging:InternalKey"] = _key;
         }
 
-        return new EntregaTecnicoNoSePresento(new Factory(handler), new ConfigurationBuilder().AddInMemoryCollection(settings).Build(), Options.Create(new BandejaOptions()), TimeProvider.System);
-    }
-
-    private sealed record Sent(string Path, string Body, string Token);
-
-    private sealed class Factory(HttpMessageHandler handler) : IHttpClientFactory
-    {
-        public HttpClient CreateClient(string name) => new(handler, disposeHandler: false);
-    }
-
-    private sealed class Capture(HttpStatusCode answer) : HttpMessageHandler
-    {
-        public List<Sent> Sent { get; } = [];
-
-        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            Sent.Add(new Sent(request.RequestUri!.AbsolutePath, await request.Content!.ReadAsStringAsync(cancellationToken), request.Headers.Authorization!.Parameter!));
-            return new HttpResponseMessage(answer);
-        }
+        return new EntregaTecnicoNoSePresento(handler, new ConfigurationBuilder().AddInMemoryCollection(settings).Build(), Options.Create(new BandejaOptions()), TimeProvider.System);
     }
 }

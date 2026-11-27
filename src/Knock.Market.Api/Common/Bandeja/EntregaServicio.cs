@@ -49,6 +49,12 @@ internal static class EntregaServicio
         });
     }
 
+    /// <summary>Envía a Mensajería con la clave de Mercado (<c>Services:Messaging</c>); sin dirección o sin clave queda para reintento.</summary>
+    public static Task<ResultadoDeEntrega> PostToMessagingAsync(IHttpClientFactory clients, IConfiguration configuration, TimeSpan timeout, TimeProvider clock, (string Path, string Permission) route, object body, CancellationToken cancellationToken) =>
+        ReadBaseUri(configuration, EntregaOpinionModerada.MessagingBaseUrlConfigurationKey) is { } baseUri && ReadKey(configuration, EntregaOpinionModerada.MessagingKeyConfigurationKey) is { } key
+            ? PostAsync(clients, EntregaOpinionModerada.MessagingClientName, timeout, new Uri(baseUri, route.Path), IssueToken(key, EntregaOpinionModerada.MessagingAudience, route.Permission, clock), body, cancellationToken)
+            : Task.FromResult(ResultadoDeEntrega.Reintentable);
+
     public static async Task<ResultadoDeEntrega> PostAsync(IHttpClientFactory clients, string clientName, TimeSpan timeout, Uri uri, string token, object body, CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, uri) { Content = JsonContent.Create(body) };

@@ -48,6 +48,7 @@ public static class RequestsModuleExtensions
         services.AddOptions<FieldEncryptionOptions>().BindConfiguration(FieldEncryptionOptions.SectionName);
         services.AddSingleton<FieldCipher>();
         services.AddScoped<IOutbox, MongoOutbox>();
+        services.AddScoped<IDestinatariosDeAviso, DestinatariosDeAvisoStore>();
         services.AddScoped<CandidatosStore>();
         services.AddScoped<EnviosStore>();
         services.AddScoped<BlockProjectionStore>();
