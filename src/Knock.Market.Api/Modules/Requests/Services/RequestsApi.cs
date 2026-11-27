@@ -12,6 +12,9 @@ internal sealed class RequestsApi(TechnicianAccessStore access, IBlockLookup blo
     public Task<(bool Participates, DateTime? ClosedAtUtc)> GetTechnicianAccessAsync(string solicitudId, string userId, CancellationToken cancellationToken) =>
         access.GetAsync(solicitudId, userId, cancellationToken);
 
+    public Task<IReadOnlyDictionary<string, DateTime>> GetClosedAtAsync(IReadOnlyCollection<string> solicitudIds, CancellationToken cancellationToken) =>
+        access.GetClosedAtAsync(solicitudIds, cancellationToken);
+
     public Task<IReadOnlySet<string>> BlockedWithAsync(string person, IEnumerable<string> others, CancellationToken cancellationToken) =>
         blocks.BlockedWithAsync(person, others, cancellationToken);
 }

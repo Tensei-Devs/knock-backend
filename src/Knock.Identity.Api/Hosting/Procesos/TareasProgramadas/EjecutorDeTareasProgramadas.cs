@@ -1,3 +1,4 @@
+using Knock.Hosting.Procesos;
 using Knock.Identity.Api.Hosting.Procesos.Reintentos;
 
 namespace Knock.Identity.Api.Hosting.Procesos.TareasProgramadas;
@@ -25,7 +26,8 @@ internal sealed partial class EjecutorDeTareasProgramadas(
 
         if (!_handlers.TryGetValue(task.Tipo, out var handler))
         {
-            await store.AbortAsync(task, clock.GetUtcNow().UtcDateTime, cancellationToken);
+            var aborted = await store.AbortAsync(task, clock.GetUtcNow().UtcDateTime, cancellationToken);
+            Record(task, ProcesosMetrics.Outcome(aborted, succeeded: false, lastFailure: true, ProcesosMetrics.Hecha, ProcesosMetrics.Fallida));
             UnknownType(logger, task.Tipo, task.Id.ToString());
             return true;
         }
@@ -33,7 +35,9 @@ internal sealed partial class EjecutorDeTareasProgramadas(
         try
         {
             await handler.HandleAsync(task, cancellationToken);
-            if (!await store.CompleteAsync(task, clock.GetUtcNow().UtcDateTime, cancellationToken))
+            var completed = await store.CompleteAsync(task, clock.GetUtcNow().UtcDateTime, cancellationToken);
+            Record(task, ProcesosMetrics.Outcome(completed, succeeded: true, lastFailure: false, ProcesosMetrics.Hecha, ProcesosMetrics.Fallida));
+            if (!completed)
             {
                 LeaseLost(logger, task.Id.ToString());
             }
@@ -52,15 +56,21 @@ internal sealed partial class EjecutorDeTareasProgramadas(
 
     private async Task RecordFailureAsync(TareaReservada task, CancellationToken cancellationToken)
     {
-        if (!await store.FailAsync(task, clock.GetUtcNow().UtcDateTime, cancellationToken))
+        var owned = await store.FailAsync(task, clock.GetUtcNow().UtcDateTime, cancellationToken);
+        var lastFailure = task.Intentos + 1 >= PoliticaDeReintentos.MaxIntentos;
+        Record(task, ProcesosMetrics.Outcome(owned, succeeded: false, lastFailure, ProcesosMetrics.Hecha, ProcesosMetrics.Fallida));
+        if (!owned)
         {
             LeaseLost(logger, task.Id.ToString());
         }
-        else if (task.Intentos + 1 >= PoliticaDeReintentos.MaxIntentos)
+        else if (lastFailure)
         {
             HandlerFailed(logger, task.Tipo, task.Id.ToString());
         }
     }
+
+    private void Record(TareaReservada task, string outcome) =>
+        ProcesosMetrics.RecordAttempt(logger, ProcesosMetrics.Tareas, task.Tipo, task.Id.ToString(), task.Intentos + 1, outcome);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Scheduled task lease lost: {TaskId}")]
     private static partial void LeaseLost(ILogger logger, string taskId);

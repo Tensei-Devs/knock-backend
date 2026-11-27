@@ -17162,6 +17162,112 @@
       }
     },
     "/api/v{version}/tecnicos/me": {
+      "get": {
+        "tags": [
+          "TecnicosMe"
+        ],
+        "summary": "Perfil propio (TEC-15), con la foto y la dirección del taller; una cuenta sin perfil de técnico recibe 404.",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyTechnicianProfileResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyTechnicianProfileResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyTechnicianProfileResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Segundos que el cliente debe esperar antes de reintentar.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
       "put": {
         "tags": [
           "TecnicosMe"
@@ -26224,6 +26330,109 @@
           }
         }
       },
+      "MyTechnicianProfileResponse": {
+        "required": [
+          "id",
+          "nombre",
+          "oficios",
+          "otroOficio",
+          "atencion",
+          "radioKm",
+          "coloniaId",
+          "nombreNegocio",
+          "descripcion",
+          "anios",
+          "estado",
+          "verificacion",
+          "disponibleHoy",
+          "creadoEn",
+          "fotoUrl",
+          "direccionTaller"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "oficios": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "otroOficio": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "atencion": {
+            "type": "string"
+          },
+          "radioKm": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "coloniaId": {
+            "type": "string"
+          },
+          "nombreNegocio": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "descripcion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "anios": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "verificacion": {
+            "type": "string"
+          },
+          "disponibleHoy": {
+            "type": "boolean"
+          },
+          "creadoEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fotoUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "direccionTaller": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Respuesta de `GET /tecnicos/me` (spec 046, TEC-15, R-55 y R-56). `direccionTaller` solo tiene valor con taller o ambos."
+      },
       "NeighborhoodAtPointColoniaResponse": {
         "required": [
           "id",
@@ -30083,6 +30292,28 @@
         },
         "description": "Lugar de la visita: `domicilio` o `taller`, con su dirección."
       },
+      "VisitRescheduleProposal": {
+        "required": [
+          "fechaHora",
+          "propuestaPor",
+          "venceEn"
+        ],
+        "type": "object",
+        "properties": {
+          "fechaHora": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "propuestaPor": {
+            "type": "string"
+          },
+          "venceEn": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "description": "Propuesta de reprogramación vigente, igual para las dos partes (spec 050, R-35): fecha propuesta, quién la propone (`cliente` o `tecnico`) y cuándo vence, en UTC."
+      },
       "VisitResponse": {
         "required": [
           "id",
@@ -30233,6 +30464,16 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "propuestaReprogramacion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/VisitRescheduleProposal"
+              }
+            ]
           }
         },
         "description": "Vista de la visita (spec 022, R-02 y R-05). `Rol` es `cliente` o `tecnico` y decide qué campos vienen: `Tecnico`, `Codigo`,\n`CodigoVenceEn`, `MotivoCodigo`, `ReglaSeguridad` y `PuedeAvisar` solo en la del cliente; `Cliente` y `LlegadaEn` solo en la del técnico.\nEl código nunca llega al técnico: `Codigo` (cuatro dígitos) solo sale en domicilio, en `confirmada` o `en_curso`, sin usar, sin vencer y sin\nbloqueo; cuando falta, `MotivoCodigo` dice por qué (`usado`, `vencido`, `bloqueada` o `no_aplica`)."

@@ -282,8 +282,27 @@ Las pruebas citan el caso como `CA_049_NN` en el nombre (para `python scripts/sd
 - **Largo del motivo del ajuste: de 10 a 300 caracteres, no de 8 a 300.** El texto original decía 8 en R-08 (reglas de `motivo`), en R-15 y en la tabla de campos de §6; el código aplica 10 (`FinalQuoteRules.MinReason = 10`, usado por `FinalQuoteValidators`, con su comentario «PARA VALIDACIÓN DE JOSÉ») y `docs/endpoints.md` ya dice 10. El 8 que sí vale es el de `descripcion` de la cotización final (R-13, `MinDescription = 8`), que no cambia. Las dos reglas cercanas con motivo de 8 a 300 son de otras specs (050 R-26 y 061 R-01) y tampoco cambian.
 - **Tabla criterio → prueba (§4.1):** se reemplazan los nombres que no existían por los de las pruebas de #352 (`Spec049CotizacionFinalTests`, `Spec049AjusteTests` y `Spec049TransversalesTests`). Quedan como previstos hasta que #352 se fusione con el CI en verde.
 
+## Nota de enmienda (2026-11-27, avisos de cotización final y de ajuste de precio)
+
+- **Estado de esta enmienda:** PROPUESTA SIN FIRMA; vale desde que se firma la línea «Enmienda 2026-11-27» de la sección Aprobación. La aprobación original y las enmiendas ya firmadas se conservan.
+- **Motivo:** R-17 pide estos avisos, pero el catálogo cerrado de la spec 037 no tiene sus tipos y los eventos no se entregan.
+- Se agregan al catálogo de la spec 037, con `recurso` = `visitaId` y categoría `visitas`. El texto es fijo, sin precios ni texto de las personas.
+
+| Evento de Mercado | Aviso | Recibe (`rol`) | Título | Texto |
+|---|---|---|---|---|
+| `CotizacionFinalEnviada` | `cotizacion_final_nueva` | la persona cliente (`cliente`) | Cotización final | Tienes una cotización final por revisar. Responde antes de que venza. |
+| `CotizacionFinalDecidida` y `CotizacionFinalVencida` | `cotizacion_final_respondida` | el técnico (`tecnico`) | Cotización final respondida | Tu cotización final ya tiene respuesta. Revisa la visita. |
+| `AjustePrecioPropuesto` | `ajuste_precio_nuevo` | la persona cliente (`cliente`) | Cambio de precio propuesto | Te proponen un cambio de precio. Revísalo y responde antes de que venza. |
+| `AjustePrecioDecidido` y `AjustePrecioVencido` | `ajuste_precio_respondido` | el técnico (`tecnico`) | Cambio de precio respondido | Tu propuesta de cambio de precio ya tiene respuesta. Revisa la visita. |
+
+- El destinatario sale de los `datos` del evento; en `AjustePrecioDecidido` y `AjustePrecioVencido`, que no lo llevan, se lee de la visita al entregar. Los eventos no cambian de forma.
+- La app muestra el texto del aviso dentro de la app que crea el servidor. Para el aviso en el teléfono, la spec 024 de la app debe agregar estos nombres; mientras no los conozca, abre la pestaña de su tipo.
+- **CA-35:** Dado cada evento de la tabla, cuando la bandeja lo entrega, entonces solo la persona indicada recibe el aviso indicado, con la visita como `recurso`, y repetirlo no lo duplica.
+- **CA-36:** Dado un aviso de esta enmienda, cuando se inspeccionan la petición interna y el aviso guardado, entonces no contienen precios, motivos, descripciones ni datos de la otra parte.
+
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
 - [x] Enmienda 2026-11-23 — nombre: José Julián Hernández Hernández fecha: 2026-11-24
 - [x] Sin conflicto con la constitución
+- [x] Enmienda 2026-11-27 — nombre: José Julián Hernández Hernández fecha: 2026-11-27
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

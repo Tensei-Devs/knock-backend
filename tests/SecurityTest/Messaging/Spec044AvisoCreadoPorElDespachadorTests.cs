@@ -20,7 +20,7 @@ public sealed class Spec044AvisoCreadoPorElDespachadorTests
     private const string _counter = "/api/v1/avisos/no-leidos/contador";
 
     [Fact]
-    public async Task AcceptedEvent_AppearsInTheListAndTheCounterOfTheRecipientOnly_WithoutDevices_R_14()
+    public async Task AcceptedEvent_AppearsInTheListAndTheCounterOfTheRecipientOnly_WithoutDevices_R_14_CA_054_08()
     {
         var fixture = await DocumentDbFixture.SharedAsync();
         var name = "s044_e2e_" + Convert.ToHexString(RandomNumberGenerator.GetBytes(8));

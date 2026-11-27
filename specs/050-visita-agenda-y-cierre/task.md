@@ -19,6 +19,7 @@
 | T-11 | Transversales: `sub` del token, registros sin datos personales, 429 y 413, sin `Idempotency-Key` | R-31 a R-34 · CA-52 a CA-55 | T-02 a T-10 | T-12 | por asignar | hecha: `Spec050TransversalesTests` (integración, CA_050_52 a CA_050_55; las corre el CI) |
 | T-12 | OpenAPI, `docs/endpoints.md` y `docs/rate-limit-matrix.md` | §5 | T-02 a T-10 | T-11 | por asignar | hecha: OpenAPI con las rutas, filas de la agenda y las visitas (incluido `no-terminado`) en `docs/endpoints.md` y la sección «Visitas, cotización final y agenda» de `docs/rate-limit-matrix.md` |
 | T-13 | Gates, `Memoria.md` y revisión de par | §12 | todas | — | por asignar | parcial: entrada de memoria en `docs/memoria/`; falta la revisión de par y que el CI confirme las pruebas de integración en verde |
+| T-14 | `propuestaReprogramacion` en la vista de la visita y bandera en falso fuera de `confirmada`: DTO, servicio, contrato, documentación y pruebas | R-35 a R-37 · CA-56 a CA-59 (enmienda del 2026-11-27) | T-04 | — | por asignar | hecha en rama (KNOCK-266): CA-56 a CA-58 con unitarias (`Spec050VisitFieldsTests`); CA-56 a CA-59 por HTTP en `Spec050PropuestaVisibleTests` (integración, solo CI); sin token en `Spec050PropuestaVisibleSeguridadTests` |
 
 ## Definición de terminado
 - Los criterios de aceptación de `spec.md` están cubiertos por pruebas en verde.

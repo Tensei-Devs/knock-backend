@@ -6,10 +6,13 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using AwesomeAssertions;
+using Knock.Contracts.Moderation;
 using Knock.IntegrationTest.Support;
 using MarketApi::Knock.Market.Api.Modules.Media.Data;
 using MarketApi::Knock.Market.Api.Modules.Media.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using SkiaSharp;
 using Xunit;
 
 namespace Knock.IntegrationTest.Media;
@@ -22,10 +25,12 @@ public sealed class Spec032HttpTests
 {
     private const string _ruta = "/api/v1/imagenes/subidas";
 
-    private static MarketApiFactory Crear() => MarketApiFactory.CreateOffline(services =>
+    private static MarketApiFactory Crear(byte[]? subido = null) => MarketApiFactory.CreateOffline(services =>
     {
         var reloj = TimeProvider.System;
-        services.AddSingleton<IAlmacenBlob>(new AlmacenDoble());
+        services.RemoveAll<IContentModerator>();
+        services.AddSingleton<IContentModerator>(new ModeradorQuePermite());
+        services.AddSingleton<IAlmacenBlob>(new AlmacenDoble(subido));
         services.AddSingleton<ISubidasImagenStore>(new SubidasImagenMemoriaStore());
         services.AddSingleton(new LimitesImagen(new ContadorVentanaMemoria(reloj), new ContadorVentanaMemoria(reloj)));
     });
@@ -62,6 +67,33 @@ public sealed class Spec032HttpTests
         cuerpo.GetProperty("metodo").GetString().Should().Be("PUT");
         cuerpo.GetProperty("id").GetString().Should().HaveLength(32);
         cuerpo.GetProperty("urlSubida").GetString().Should().StartWith("https://");
+    }
+
+    [Fact]
+    public async Task La_Confirmacion_Queda_Fuera_De_La_Compresion_CA_010_E03()
+    {
+        // La emisión responde 201 y la compresión solo toca los 200: la confirmación es la que probaría una exclusión ausente, con Vary: Accept-Encoding aunque pese menos de 1 KB.
+        using var factory = Crear(subido: Jpeg());
+        using var client = Autenticado(factory, "persona-1");
+        client.DefaultRequestHeaders.AcceptEncoding.ParseAdd("gzip, br");
+        using var emitida = await Publicar(client, """{"proposito":"trabajo","tipoContenido":"image/jpeg","tamanoBytes":1000}""");
+        var id = (await emitida.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString();
+
+        using var confirmada = await client.PostAsync(new Uri($"{_ruta}/{id}/confirmar", UriKind.Relative), null);
+
+        confirmada.StatusCode.Should().Be(HttpStatusCode.OK);
+        confirmada.Content.Headers.ContentEncoding.Should().BeEmpty();
+        confirmada.Headers.Vary.Should().NotContain("Accept-Encoding");
+        emitida.Content.Headers.ContentEncoding.Should().BeEmpty();
+    }
+
+    private static byte[] Jpeg()
+    {
+        using var bitmap = new SKBitmap(200, 100);
+        bitmap.Erase(SKColors.Red);
+        using var imagen = SKImage.FromBitmap(bitmap);
+        using var datos = imagen.Encode(SKEncodedImageFormat.Jpeg, 90);
+        return datos.ToArray();
     }
 
     [Theory]
@@ -115,7 +147,16 @@ public sealed class Spec032HttpTests
         ajena.Headers.CacheControl!.NoStore.Should().BeTrue();
     }
 
-    private sealed class AlmacenDoble : IAlmacenBlob
+    private sealed class ModeradorQuePermite : IContentModerator
+    {
+        public Task<ModerationResult> ReviewTextAsync(string text, CancellationToken cancellationToken) =>
+            Task.FromResult(new ModerationResult(ModerationOutcome.Allowed));
+
+        public Task<ModerationResult> ReviewImageAsync(ReadOnlyMemory<byte> image, CancellationToken cancellationToken) =>
+            Task.FromResult(new ModerationResult(ModerationOutcome.Allowed));
+    }
+
+    private sealed class AlmacenDoble(byte[]? subido) : IAlmacenBlob
     {
         public Task<EnlaceSubida> CrearEnlaceSubidaAsync(string nombreBlob, string tipoContenido, CancellationToken cancellationToken) =>
             Task.FromResult(new EnlaceSubida(
@@ -123,9 +164,10 @@ public sealed class Spec032HttpTests
                 DateTimeOffset.UtcNow.AddMinutes(5),
                 new Dictionary<string, string> { ["x-ms-blob-type"] = "BlockBlob", ["Content-Type"] = tipoContenido }));
 
-        public Task<PropiedadesBlob?> ObtenerPropiedadesAsync(string nombreBlob, CancellationToken cancellationToken) => Task.FromResult<PropiedadesBlob?>(null);
+        public Task<PropiedadesBlob?> ObtenerPropiedadesAsync(string nombreBlob, CancellationToken cancellationToken) =>
+            Task.FromResult(subido is null ? null : new PropiedadesBlob(subido.Length, "etag"));
 
-        public Task<byte[]?> DescargarAsync(string nombreBlob, PropiedadesBlob esperado, int maximoBytes, CancellationToken cancellationToken) => Task.FromResult<byte[]?>(null);
+        public Task<byte[]?> DescargarAsync(string nombreBlob, PropiedadesBlob esperado, int maximoBytes, CancellationToken cancellationToken) => Task.FromResult(subido);
 
         public Task<bool> PublicarAsync(string ruta, byte[] bytes, CancellationToken cancellationToken) => Task.FromResult(true);
 

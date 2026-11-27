@@ -43,7 +43,21 @@ internal sealed class TechnicianSelfStore(
     {
         var projection = Builders<BsonDocument>.Projection.Exclude("tallerDireccion").Exclude("contactoPublico").Exclude("ubicacionBase");
         var d = await Technicians.Find(Owner(sub), Find).Project(projection).FirstOrDefaultAsync(cancellationToken);
-        if (d is null) return null;
+        return d is null ? null : ToResponse(d);
+    }
+
+    public async Task<StoredOwnProfile?> ReadOwnProfileAsync(string sub, CancellationToken cancellationToken)
+    {
+        var projection = Builders<BsonDocument>.Projection.Exclude("contactoPublico").Exclude("ubicacionBase");
+        var d = await Technicians.Find(Owner(sub), Find).Project(projection).FirstOrDefaultAsync(cancellationToken);
+        return d is null
+            ? null
+            : new StoredOwnProfile(ToResponse(d), Text(d, "fotoUrl"), Text(d, "tallerDireccion"),
+                d.TryGetValue("demo", out var demo) && demo.IsBoolean && demo.AsBoolean);
+    }
+
+    private TechnicianResponse ToResponse(BsonDocument d)
+    {
         var until = d.TryGetValue("disponibleHasta", out var available) && available.IsValidDateTime ? available.ToUniversalTime() : (DateTime?)null;
         return new TechnicianResponse(
             d["_id"].AsObjectId.ToString(),

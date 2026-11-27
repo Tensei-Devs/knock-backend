@@ -1,8 +1,15 @@
 using AwesomeAssertions;
+using Knock.Hosting.Procesos;
+using Knock.Identity.Api.Hosting.Procesos;
 using Knock.Identity.Api.Hosting.Procesos.Outbox;
 using Knock.Identity.Api.Hosting.Procesos.Reintentos;
 using Knock.Identity.Api.Hosting.Procesos.TareasProgramadas;
+using Knock.Identity.Api.Modules.Account.Data;
+using Knock.UnitTest.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Xunit;
@@ -161,6 +168,21 @@ public sealed class Spec054Tests
     }
 
     [Fact]
+    public async Task Eliminacion_Cancelada_La_Tarea_Queda_Hecha_Sin_Efecto_CA_054_15()
+    {
+        var rig = Spec039EliminarCuentaTests.Build("activa", null, _now);
+        var store = new FakeTasks(new FakeTask("EliminarCuenta", _now));
+        var handler = new RekeyedHandler(rig.Handler, AccountOutbox.DeletionKey(rig.Store.Accounts.Single().Sub, _now));
+
+        (await Executor(store, handler).ExecuteOneAsync(CancellationToken.None)).Should().BeTrue();
+
+        store.Single.Estado.Should().Be("hecha");
+        rig.Store.Erased.Should().BeEmpty();
+        rig.Trust.Purged.Should().BeEmpty();
+        rig.Outbox.AccountDeleted.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task Tarea_Aun_No_Vencida_No_Se_Ejecuta_CA_054_19()
     {
         var store = new FakeTasks(new FakeTask("CerrarPeriodoDeOpinion", _now.AddDays(30)));
@@ -212,6 +234,58 @@ public sealed class Spec054Tests
         store.Single.Estado.Should().Be("pendiente");
     }
 
+    [Fact]
+    public async Task Entrega_Y_Tarea_Dejan_Metrica_Y_Registro_CA_054_20()
+    {
+        var eventId = $"cotizacion_nueva:{Guid.NewGuid():N}:1";
+        var task = new FakeTask("VencerSolicitud", _now);
+        var unknown = new FakeTask("Inventada", _now);
+        var logger = new ProcesosRegistro<ProcesadorDeOutbox>();
+        var processor = new ProcesadorDeOutbox(new FakeOutbox(Event() with { Id = eventId }), new FixedDelivery(ResultadoDeEntrega.Aceptado), new FixedTime(_now), logger);
+        using var measurements = new ProcesosMedidas();
+
+        await processor.ProcessOneAsync(CancellationToken.None);
+        await Executor(new FakeTasks(task), new CountingHandler("VencerSolicitud", fail: true)).ExecuteOneAsync(CancellationToken.None);
+        await Executor(new FakeTasks(unknown)).ExecuteOneAsync(CancellationToken.None);
+
+        var published = ProcesosMetrics.Identificador(eventId);
+        var delivered = measurements.Of(ProcesosMetrics.AttemptsInstrument, published).Should().ContainSingle().Subject;
+        delivered["resultado"].Should().Be("entregado");
+        delivered["intento"].Should().Be(1);
+        measurements.Of(ProcesosMetrics.AttemptsInstrument, task.Row.Id).Should().ContainSingle().Which["resultado"].Should().Be("reintento");
+        measurements.Of(ProcesosMetrics.AttemptsInstrument, unknown.Row.Id).Should().ContainSingle().Which["resultado"].Should().Be("fallida");
+        logger.Entries.Should().ContainSingle().Which.Should().Contain(published).And.Contain("entregado");
+    }
+
+    [Theory]
+    [InlineData("CuentaEliminada", true)]
+    [InlineData("sesion_revocada", false)]
+    [InlineData("exportacion_lista", false)]
+    public async Task Los_Registros_Y_Las_Metricas_No_Llevan_Sub_Sid_Ni_Usuario_CA_054_20(string tipo, bool accepted)
+    {
+        var personal = Guid.NewGuid().ToString("D");
+        var eventId = OutboxReglas.BuildId(tipo, personal, 1);
+        var logger = new ProcesosRegistro<ProcesadorDeOutbox>();
+        var result = accepted ? ResultadoDeEntrega.Aceptado : ResultadoDeEntrega.Rechazado;
+        var processor = new ProcesadorDeOutbox(new FakeOutbox(Event() with { Id = eventId }), new FixedDelivery(result), new FixedTime(_now), logger);
+        using var measurements = new ProcesosMedidas();
+
+        await processor.ProcessOneAsync(CancellationToken.None);
+
+        var tags = measurements.Of(ProcesosMetrics.AttemptsInstrument, ProcesosMetrics.Identificador(eventId)).Should().ContainSingle().Subject;
+        tags.Values.Should().NotContain(x => x != null && x.ToString()!.Contains(personal, StringComparison.Ordinal));
+        logger.Entries.Should().NotBeEmpty().And.NotContain(x => x.Contains(personal, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Salud_No_Depende_De_La_Cola_CA_054_21()
+    {
+        var services = new ServiceCollection().AddProcesosDeFondo();
+
+        services.Should().NotContain(x => x.ServiceType == typeof(IConfigureOptions<HealthCheckServiceOptions>));
+        services.Should().Contain(x => x.ServiceType == typeof(IConsultaDeAlertas));
+    }
+
     private static EventoDeOutbox Event() => new("cotizacion_nueva:abc:1", "cotizacion_nueva", "messaging", new BsonDocument { ["destinatarioId"] = "u1" });
 
     private static ProcesadorDeOutbox Processor(FakeOutbox store, ResultadoDeEntrega result) =>
@@ -233,6 +307,14 @@ public sealed class Spec054Tests
     private sealed class ThrowingDelivery : IEntregaInterna
     {
         public Task<ResultadoDeEntrega> DeliverAsync(OutboxReservado evento, CancellationToken cancellationToken) => throw new HttpRequestException("down");
+    }
+
+    /// <summary>Entrega al manejador real la clave de negocio que el almacén de mentira no guarda.</summary>
+    private sealed class RekeyedHandler(IManejadorDeTarea inner, string key) : IManejadorDeTarea
+    {
+        public string Tipo => inner.Tipo;
+
+        public Task HandleAsync(TareaReservada task, CancellationToken cancellationToken) => inner.HandleAsync(task with { ClaveNegocio = key }, cancellationToken);
     }
 
     private sealed class CountingHandler(string tipo, bool fail = false) : IManejadorDeTarea

@@ -127,7 +127,7 @@ public sealed class Spec020CotizacionesTests
         quote.GetProperty("estado").GetString().Should().Be("enviada");
         var request = await factory.Requests.Find(Builders<BsonDocument>.Filter.Eq("_id", id)).SingleAsync();
         request["estado"].AsString.Should().Be("cotizando");
-        var message = await factory.Database.GetCollection<BsonDocument>("outbox").Find(Builders<BsonDocument>.Filter.Eq("solicitudId", id)).SingleAsync();
+        var message = await factory.Database.GetCollection<BsonDocument>("outbox").Find(Builders<BsonDocument>.Filter.Eq("datos.solicitudId", id.ToString())).SingleAsync();
         message["tipo"].AsString.Should().Be("CotizacionEnviada");
     }
 

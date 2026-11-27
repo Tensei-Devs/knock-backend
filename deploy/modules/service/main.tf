@@ -101,6 +101,15 @@ resource "azurerm_container_app" "this" {
         }
       }
 
+      # Con identidad asignada por el usuario, `DefaultAzureCredential` necesita saber cuál usar; sin esto intenta la identidad de sistema, que no existe.
+      dynamic "env" {
+        for_each = var.set_identity_client_id ? [1] : []
+        content {
+          name  = "AZURE_CLIENT_ID"
+          value = azurerm_user_assigned_identity.this.client_id
+        }
+      }
+
       dynamic "env" {
         for_each = var.enable_app_insights ? [1] : []
         content {

@@ -10,8 +10,14 @@ namespace Knock.Hosting.Security;
 /// </summary>
 public sealed record SecurityHeadersOptions
 {
-    /// <summary>Valor de <c>Strict-Transport-Security</c>; <c>null</c> no lo envía. En Development nunca se envía: fijaría HSTS en <c>localhost</c> del navegador de quien desarrolla.</summary>
+    /// <summary>
+    /// Valor de <c>Strict-Transport-Security</c>; <c>null</c> no lo envía. En Development solo se envía con <see cref="SendStrictTransportSecurityInDevelopment"/>: fijaría HSTS en
+    /// <c>localhost</c> del navegador de quien desarrolla.
+    /// </summary>
     public string? StrictTransportSecurity { get; init; }
+
+    /// <summary>En Development envía el encabezado cuando el nombre de host de la petición no es local (BUG-002, enmienda 2026-11-27). Fuera de Development no cambia nada.</summary>
+    public bool SendStrictTransportSecurityInDevelopment { get; init; }
 
     /// <summary>En Development, y solo para <c>/scalar</c> y <c>/openapi</c>, la CSP estricta no se aplica (el resto sí).</summary>
     public bool RelaxContentSecurityPolicyForApiDocsInDevelopment { get; init; }
@@ -28,7 +34,12 @@ public sealed class SecurityHeadersMiddleware(RequestDelegate next, IHostEnviron
 
     private static readonly string[] _leakyHeaders = ["Server", "X-Powered-By", "X-AspNet-Version"];
 
-    private readonly string? _strictTransportSecurity = environment.IsDevelopment() ? null : options.StrictTransportSecurity;
+    private static readonly string[] _localHosts = ["localhost", "127.0.0.1", "[::1]", "::1"];
+
+    private readonly string? _strictTransportSecurity =
+        environment.IsDevelopment() && !options.SendStrictTransportSecurityInDevelopment ? null : options.StrictTransportSecurity;
+
+    private readonly bool _skipsLocalHosts = environment.IsDevelopment();
 
     public Task InvokeAsync(HttpContext context)
     {
@@ -52,7 +63,7 @@ public sealed class SecurityHeadersMiddleware(RequestDelegate next, IHostEnviron
             headers.ContentSecurityPolicy = ContentSecurityPolicy;
         }
 
-        if (_strictTransportSecurity is not null)
+        if (_strictTransportSecurity is not null && !(_skipsLocalHosts && _localHosts.Contains(context.Request.Host.Host, StringComparer.OrdinalIgnoreCase)))
         {
             headers.StrictTransportSecurity = _strictTransportSecurity;
         }

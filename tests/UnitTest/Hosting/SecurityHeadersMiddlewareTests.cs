@@ -102,6 +102,16 @@ public sealed class SecurityHeadersMiddlewareTests
         services.ContainsKey("Strict-Transport-Security").Should().BeFalse();
     }
 
+    [Fact]
+    public async Task Hsts_TheDevelopmentOption_ChangesNothingOutsideDevelopment_CA_BUG_002_E02()
+    {
+        var options = new SecurityHeadersOptions { StrictTransportSecurity = _hsts, SendStrictTransportSecurityInDevelopment = true };
+
+        var production = await SendAsync("Production", options, "/health");
+
+        production.StrictTransportSecurity.ToString().Should().Be(_hsts);
+    }
+
     [Theory]
     [InlineData("Development", true, "/scalar/index.html", false)]
     [InlineData("Development", true, "/openapi/v1.json", false)]
