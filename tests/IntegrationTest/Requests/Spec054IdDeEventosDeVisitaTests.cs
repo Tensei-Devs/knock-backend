@@ -25,7 +25,7 @@ public sealed class Spec054IdDeEventosDeVisitaTests
     private const string _expiryTask = "VencerPropuestaDeReprogramacion";
 
     [Fact]
-    public async Task Tras_Rechazar_Se_Puede_Proponer_Y_Rechazar_Otra_Vez_CA_054_03()
+    public async Task Tras_Rechazar_Se_Puede_Proponer_Y_Rechazar_Otra_Vez_CA_054_03_CA_054_24()
     {
         await using var host = await Spec050Host.StartAsync();
         var visit = await host.VisitAtAsync(TimeSpan.FromDays(3));

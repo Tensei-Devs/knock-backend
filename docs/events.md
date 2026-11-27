@@ -6,11 +6,11 @@ Mercado lo inserta en `outbox` dentro de la transacción que guarda la cotizaci�
 
 ## Eventos de Mercado en el buzón de salida (specs 020, 021 y 022)
 
-Mercado escribe cada evento en `outbox` en la misma transacción que el cambio de negocio, con `_id` determinista `{tipo}:{agregadoId}` (un reintento no lo duplica), `estado = pendiente` y `datos` con solo identificadores y datos no personales: nunca descripción, dirección, código, nombre ni teléfono. Insertar el documento no demuestra la entrega: el despachador de Mercado (spec 054, apagado sin `Bandeja:Habilitada`) solo toma los tipos con entrega registrada y los demás quedan `pendiente`. Tienen entrega `CambioDeOficio`, `CotizacionElegida`, `OpinionModerada`, `ReporteNoTerminadoCreado`, `TecnicoNoSePresento`, `visita_afectada` y los seis avisos de la tabla siguiente.
+Mercado escribe cada evento en `outbox` en la misma transacción que el cambio de negocio, con `_id` determinista `{tipo}:{agregadoId}` (un reintento no lo duplica), `estado = pendiente` y `datos` con solo identificadores y datos no personales: nunca descripción, dirección, código, nombre ni teléfono. Insertar el documento no demuestra la entrega: el despachador de Mercado (spec 054, apagado sin `Bandeja:Habilitada`) solo toma los tipos con entrega registrada y los demás quedan `pendiente`. Tienen entrega `CambioDeOficio`, `CotizacionElegida`, `OpinionModerada`, `ReporteNoTerminadoCreado`, `TecnicoNoSePresento`, `visita_afectada` y los eventos de las tres tablas de avisos de abajo.
 
-**Hechos que se repiten sobre la misma visita (spec 054, R-02):** su `_id` es `{tipo}:{visitaId}:{version}` y `agregadoId` sigue siendo la visita. En `ReprogramacionPropuesta`, `VisitaReprogramada`, `ReprogramacionRechazada` y `ReprogramacionVencida` (spec 050, R-25; `datos` como los de `VisitaEnCurso`) la versión es el número de la propuesta (`propuestas` en la visita), y la tarea `VencerPropuestaDeReprogramacion` usa `claveNegocio = {visitaId}:{n}`. En `VisitaCerrada` es 1, o 2 si la visita ya se había cerrado al bloquearse. Ninguno de los cinco tiene entrega registrada. Los documentos anteriores conservan su `_id` y no se reescriben.
+**Hechos que se repiten sobre la misma visita (spec 054, R-02):** su `_id` es `{tipo}:{visitaId}:{version}` y `agregadoId` sigue siendo la visita. En `ReprogramacionPropuesta`, `VisitaReprogramada`, `ReprogramacionRechazada` y `ReprogramacionVencida` (spec 050, R-25; `datos` como los de `VisitaEnCurso`) la versión es el número de la propuesta (`propuestas` en la visita), y la tarea `VencerPropuestaDeReprogramacion` usa `claveNegocio = {visitaId}:{n}`. En `VisitaCerrada` es 1, o 2 si la visita ya se había cerrado al bloquearse. `VisitaCerrada` no tiene entrega registrada; los cuatro de reprogramación sí (tabla de avisos de la visita). `ReprogramacionPropuesta`, `ReprogramacionRechazada` y `ReprogramacionVencida` agregan a `datos` `propuestaPor` (`cliente` o `tecnico`). Los documentos anteriores conservan su `_id` y no se reescriben.
 
-**Avisos de solicitudes (spec 037, R-11):** cada uno va a `POST /api/v1/interno/avisos` de Mensajería con `eventoId` = `_id` del mensaje, una petición por persona, y solo identificadores. La persona y la visita se leen de Mercado al entregar; la forma de los eventos no cambia.
+**Avisos de solicitudes (spec 037, R-11):** cada uno va a `POST /api/v1/interno/avisos` de Mensajería con `eventoId` = `_id` del mensaje, una petición por persona, y solo identificadores. En esta tabla la persona y la visita se leen de Mercado al entregar; la forma de los eventos no cambia.
 
 | Evento | Aviso | Recibe (`rol`) | `recurso` |
 |---|---|---|---|
@@ -21,7 +21,31 @@ Mercado escribe cada evento en `outbox` en la misma transacción que el cambio d
 | `SolicitudCancelada` | `solicitud_cancelada` | cada técnico de `tecnicosAvisar` (`tecnico`) | solicitud |
 | `SolicitudVencida` | `solicitud_vencida` | la persona dueña (`cliente`) | solicitud |
 
-El aviso `cotizacion_vencida` a los técnicos de `tecnicosAvisar` de `SolicitudVencida` **no** se entrega: las specs del servidor no dicen qué evento lo produce.
+| `SolicitudVencida` | `cotizacion_vencida` | cada técnico de `tecnicosAvisar` (`tecnico`) | solicitud |
+
+**Avisos de la visita (spec 054, enmienda del 2026-11-27):** `recurso` = `visitaId`, categoría `visitas`. Las personas salen de `datos`; quién canceló se lee de la visita (`cancelacion.por`).
+
+| Evento | Aviso | Recibe |
+|---|---|---|
+| `ReprogramacionPropuesta` | `reprogramacion_propuesta` | la parte que no propuso |
+| `VisitaReprogramada` | `visita_reprogramada` | las dos partes |
+| `ReprogramacionRechazada`, `ReprogramacionVencida` | `reprogramacion_sin_cambio` | quien propuso |
+| `CancelacionTardia` | `visita_cancelada` | la parte que no canceló |
+| `ClienteAusente` | `cliente_ausente` | la persona cliente |
+| `VisitaTerminada` | `visita_terminada` | la persona cliente |
+
+`ClienteAusente` es un evento nuevo (`_id` `ClienteAusente:{visitaId}`; `datos` `visitaId`, `solicitudId`, `clienteId`, `tecnicoUsuarioId`) que se escribe en la misma transacción que marca la ausencia, además de `VisitaCerrada`. Sin aviso por decisión de la enmienda: cancelación con más de 24 horas, `CotizacionRechazada`, `CotizacionRetirada`, `VisitaConfirmada`, `VisitaEnCurso`, `OpinionCreada`, `PermisoFotosCambiado` y `AvisoConfianzaPreparado`. Un evento de reprogramación anterior sin `propuestaPor` no se migra: queda `fallido` (`VisitaReprogramada` no lo necesita).
+
+**Avisos de cotización final y de ajuste de precio (spec 049, enmienda del 2026-11-27):** `recurso` = `visitaId`, categoría `visitas`; sin precios, motivos ni descripciones. Los eventos no cambian de forma; en `AjustePrecioDecidido` y `AjustePrecioVencido` el técnico se lee de la visita.
+
+| Evento | Aviso | Recibe (`rol`) |
+|---|---|---|
+| `CotizacionFinalEnviada` | `cotizacion_final_nueva` | la persona cliente (`cliente`) |
+| `CotizacionFinalDecidida`, `CotizacionFinalVencida` | `cotizacion_final_respondida` | el técnico (`tecnico`) |
+| `AjustePrecioPropuesto` | `ajuste_precio_nuevo` | la persona cliente (`cliente`) |
+| `AjustePrecioDecidido`, `AjustePrecioVencido` | `ajuste_precio_respondido` | el técnico (`tecnico`) |
+
+Si falta el destinatario o el recurso de una persona, se avisa a las demás y el mensaje queda `fallido`. Al encender la bandeja se entregan los eventos que sigan `pendiente`, sin filtro por antigüedad; no se reenvía `cotizacion_vencida` de los vencimientos que ya quedaron `entregado`.
 
 **Limpieza (spec 054, R-11):** al quedar `entregado` o `hecha`, Mercado escribe `limpiarEn` a 14 días; al quedar `fallido` o `fallida`, a 90. Lo borra el índice TTL de `db/054`. Los documentos que ya estaban en un estado terminal sin ese campo no se rellenan.
 
