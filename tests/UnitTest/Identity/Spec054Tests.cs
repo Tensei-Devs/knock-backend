@@ -1,8 +1,14 @@
 using AwesomeAssertions;
+using Knock.Hosting.Procesos;
+using Knock.Identity.Api.Hosting.Procesos;
 using Knock.Identity.Api.Hosting.Procesos.Outbox;
 using Knock.Identity.Api.Hosting.Procesos.Reintentos;
 using Knock.Identity.Api.Hosting.Procesos.TareasProgramadas;
+using Knock.UnitTest.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Xunit;
@@ -210,6 +216,37 @@ public sealed class Spec054Tests
         (await Executor(store).ExecuteOneAsync(CancellationToken.None)).Should().BeFalse();
 
         store.Single.Estado.Should().Be("pendiente");
+    }
+
+    [Fact]
+    public async Task Entrega_Y_Tarea_Dejan_Metrica_Y_Registro_CA_054_20()
+    {
+        var eventId = $"cotizacion_nueva:{Guid.NewGuid():N}:1";
+        var task = new FakeTask("VencerSolicitud", _now);
+        var unknown = new FakeTask("Inventada", _now);
+        var logger = new ProcesosRegistro<ProcesadorDeOutbox>();
+        var processor = new ProcesadorDeOutbox(new FakeOutbox(Event() with { Id = eventId }), new FixedDelivery(ResultadoDeEntrega.Aceptado), new FixedTime(_now), logger);
+        using var measurements = new ProcesosMedidas();
+
+        await processor.ProcessOneAsync(CancellationToken.None);
+        await Executor(new FakeTasks(task), new CountingHandler("VencerSolicitud", fail: true)).ExecuteOneAsync(CancellationToken.None);
+        await Executor(new FakeTasks(unknown)).ExecuteOneAsync(CancellationToken.None);
+
+        var delivered = measurements.Of(ProcesosMetrics.AttemptsInstrument, eventId).Should().ContainSingle().Subject;
+        delivered["resultado"].Should().Be("entregado");
+        delivered["intento"].Should().Be(1);
+        measurements.Of(ProcesosMetrics.AttemptsInstrument, task.Row.Id).Should().ContainSingle().Which["resultado"].Should().Be("reintento");
+        measurements.Of(ProcesosMetrics.AttemptsInstrument, unknown.Row.Id).Should().ContainSingle().Which["resultado"].Should().Be("fallida");
+        logger.Entries.Should().ContainSingle().Which.Should().Contain(eventId).And.Contain("entregado");
+    }
+
+    [Fact]
+    public void Salud_No_Depende_De_La_Cola_CA_054_21()
+    {
+        var services = new ServiceCollection().AddProcesosDeFondo();
+
+        services.Should().NotContain(x => x.ServiceType == typeof(IConfigureOptions<HealthCheckServiceOptions>));
+        services.Should().Contain(x => x.ServiceType == typeof(IConsultaDeAlertas));
     }
 
     private static EventoDeOutbox Event() => new("cotizacion_nueva:abc:1", "cotizacion_nueva", "messaging", new BsonDocument { ["destinatarioId"] = "u1" });

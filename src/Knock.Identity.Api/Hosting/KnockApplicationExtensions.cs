@@ -4,6 +4,7 @@ using Knock.Hosting.Health;
 using Knock.Hosting.Http;
 using Knock.Hosting.Logging;
 using Knock.Hosting.Observability;
+using Knock.Hosting.Procesos;
 using Knock.Hosting.Security;
 using Microsoft.Extensions.Options;
 using Serilog;
@@ -31,7 +32,7 @@ internal static class KnockApplicationExtensions
             .AddKnockOpenApi()
             .AddKnockData()
             .AddKnockModules()
-            .AddKnockObservability(builder.Configuration, builder.Environment, typeof(KnockApplicationExtensions).Assembly, "knock-api");
+            .AddKnockObservability(builder.Configuration, builder.Environment, typeof(KnockApplicationExtensions).Assembly, "knock-api", ProcesosMetrics.MeterName);
         return builder;
     }
 

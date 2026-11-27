@@ -40,11 +40,15 @@ internal sealed partial class ProcesadorDeOutbox(IOutboxStore store, IEntregaInt
         var owned = result == ResultadoDeEntrega.Aceptado
             ? await store.MarkDeliveredAsync(evento, now, cancellationToken)
             : await store.FailAsync(evento, permanent: result == ResultadoDeEntrega.Rechazado, now, cancellationToken);
+        var attempt = evento.Intentos + 1;
+        var lastFailure = result == ResultadoDeEntrega.Rechazado || attempt >= Reintentos.PoliticaDeReintentos.MaxIntentos;
+        var outcome = ProcesosMetrics.Outcome(owned, result == ResultadoDeEntrega.Aceptado, lastFailure, ProcesosMetrics.Entregado, ProcesosMetrics.Fallido);
+        ProcesosMetrics.RecordAttempt(logger, ProcesosMetrics.Outbox, evento.Tipo, evento.Id, attempt, outcome);
         if (!owned)
         {
             LeaseLost(logger, evento.Tipo, evento.Id);
         }
-        else if (result != ResultadoDeEntrega.Aceptado && (result == ResultadoDeEntrega.Rechazado || evento.Intentos + 1 >= Reintentos.PoliticaDeReintentos.MaxIntentos))
+        else if (result != ResultadoDeEntrega.Aceptado && lastFailure)
         {
             DeliveryFailed(logger, evento.Tipo, evento.Id);
         }

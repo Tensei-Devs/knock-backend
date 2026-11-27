@@ -100,6 +100,28 @@ Las hace el líder con el recurso creado. La evidencia (capturas y consulta KQL,
 
 **Caso 16 (V2).** Con la API como en el paso 2, repetir la petición del paso 3 más de 5 veces en menos de 5 minutos (y más del 2 % del tráfico de esa ventana). La alerta de 5xx debe dispararse y llegar al correo del grupo de acciones. La de latencia se revisa en el portal (regla creada y su consulta).
 
+## Bandeja de salida y tareas programadas (spec 054, T-07)
+
+Identidad (`knock-api`) y Mercado (`knock-market`) publican el medidor `Knock.Procesos` (`Knock.Hosting.Procesos`). Mensajería no tiene bandeja ni ejecutor propios, así que no lo publica.
+
+| Instrumento | Cuándo suma | Atributos |
+|---|---|---|
+| `knock.procesos.intentos` | Una vez por cada intento de entrega o de ejecución | `proceso` (`outbox` o `tareas_programadas`), `tipo`, `id`, `intento`, `resultado` (`entregado`, `hecha`, `reintento`, `fallido`, `fallida`, `reserva_perdida`) |
+| `knock.procesos.alertas` | En cada evaluación, por cada evento o tarea en alerta | Los mismos, con `resultado` = `fallido`, `fallida` o `atrasado` |
+
+- **Qué está en alerta:** lo `fallido`/`fallida`, y lo `pendiente` o `en_proceso` cuya `programadaPara` (o `creadoEn`, si el mensaje no la tiene) pasó hace más de 10 minutos. Incluye los tipos que todavía no tienen manejador o entrega registrada: siguen pendientes y a los 10 minutos alertan.
+- **Cada cuánto:** `TareasProgramadas:IntervaloSegundos` (15 por omisión), en un proceso de fondo aparte. Cada evaluación lee como máximo 100 documentos por colección y por motivo.
+- **Registros:** cada intento en `Information` («Background attempt»); cada alerta en `Error` («process_alert») una vez mientras siga en alerta, por réplica.
+- **Sin datos personales:** nunca la carga, `datos` ni la clave de negocio.
+- **Salud:** `/health/ready` no cambia: una cola atrasada no saca al servicio del balanceo (R-14).
+- **Pendiente:** la regla de alerta en Azure (Terraform) sobre `knock.procesos.alertas` mayor que cero, o sobre `process_alert` en los registros, todavía no existe. Hasta entonces no se avisa a nadie.
+
+```kusto
+traces
+| where message startswith "process_alert:"
+| order by timestamp desc
+```
+
 ## Reparto entre réplicas (spec 034, R-06)
 
 Con dos réplicas por componente, `tests/perf/spec034-deploy-sin-corte.js` marca cada petición con `X-Correlation-Id = <RUN_ID>-<vu>-<iteración>` (`RUN_ID` se fija con la variable `RUN_ID`). Después se cuentan las instancias distintas por componente; deben ser 2 en cada uno:

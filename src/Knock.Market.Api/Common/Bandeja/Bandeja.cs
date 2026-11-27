@@ -83,11 +83,15 @@ internal sealed partial class DespachadorDeBandeja(IBandejaStore store, IEnumera
         var owned = result == ResultadoDeEntrega.Aceptado
             ? await store.MarkDeliveredAsync(message, now, cancellationToken)
             : await store.FailAsync(message, result == ResultadoDeEntrega.Rechazado, now, cancellationToken);
+        var attempt = message.Intentos + 1;
+        var lastFailure = result == ResultadoDeEntrega.Rechazado || attempt >= MaxIntentos;
+        var outcome = ProcesosMetrics.Outcome(owned, result == ResultadoDeEntrega.Aceptado, lastFailure, ProcesosMetrics.Entregado, ProcesosMetrics.Fallido);
+        ProcesosMetrics.RecordAttempt(logger, ProcesosMetrics.Outbox, message.Tipo, message.Id, attempt, outcome);
         if (!owned)
         {
             LeaseLostOnDispatch(logger, message.Tipo, message.Id);
         }
-        else if (result != ResultadoDeEntrega.Aceptado && (result == ResultadoDeEntrega.Rechazado || message.Intentos + 1 >= MaxIntentos))
+        else if (result != ResultadoDeEntrega.Aceptado && lastFailure)
         {
             DispatchFailed(logger, message.Tipo, message.Id);
         }
