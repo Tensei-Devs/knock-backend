@@ -21,17 +21,16 @@ internal sealed class BandejaStore(IMongoDatabase database) : IBandejaStore
     }
 
     public async Task<bool> MarkDeliveredAsync(MensajeReservado mensaje, DateTime now, CancellationToken cancellationToken) =>
-        (await _messages.UpdateOneAsync(Owned(mensaje), Builders<BsonDocument>.Update.Set("estado", "entregado").Set("entregadoEn", now).Set("actualizadoEn", now).Unset("reservadaHasta").Unset("reservaId"), cancellationToken: cancellationToken)).ModifiedCount == 1;
+        (await _messages.UpdateOneAsync(Owned(mensaje), Builders<BsonDocument>.Update.Set("estado", "entregado").Set("entregadoEn", now).Set("actualizadoEn", now).Set(LimpiezaDeProcesos.Field, LimpiezaDeProcesos.LimpiarEn(now, failed: false)).Unset("reservadaHasta").Unset("reservaId"), cancellationToken: cancellationToken)).ModifiedCount == 1;
 
     public async Task<bool> FailAsync(MensajeReservado mensaje, bool permanent, DateTime now, CancellationToken cancellationToken)
     {
         var attempts = mensaje.Intentos + 1;
         var delay = permanent ? null : DespachadorDeBandeja.Espera(attempts);
         var update = Builders<BsonDocument>.Update.Set("estado", delay is null ? "fallido" : "pendiente").Set("intentos", attempts).Set("actualizadoEn", now).Unset("reservadaHasta").Unset("reservaId");
-        if (delay is { } wait)
-        {
-            update = update.Set("programadaPara", now + wait);
-        }
+        update = delay is { } wait
+            ? update.Set("programadaPara", now + wait)
+            : update.Set(LimpiezaDeProcesos.Field, LimpiezaDeProcesos.LimpiarEn(now, failed: true));
 
         return (await _messages.UpdateOneAsync(Owned(mensaje), update, cancellationToken: cancellationToken)).ModifiedCount == 1;
     }

@@ -28,6 +28,8 @@ internal static class ModulesExtensions
         services.AddHttpClient(EntregaOpinionModerada.MessagingClientName).RemoveAllLoggers();
         services.AddScoped<IEntregaDeBandeja, EntregaOpinionModerada>();
         services.AddScoped<IEntregaDeBandeja, EntregaTecnicoNoSePresento>();
+        services.AddScoped<IEntregaDeBandeja, EntregaCotizacionElegida>();
+        services.AddScoped<IEntregaDeBandeja, EntregaVisitaAfectada>();
         services.AddHttpClient(EntregaCambioDeOficio.ClientName).RemoveAllLoggers();
         services.AddScoped<IEntregaDeBandeja, EntregaCambioDeOficio>();
         services.AddScoped<DespachadorDeBandeja>();
