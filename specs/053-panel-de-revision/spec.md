@@ -332,9 +332,25 @@ Las pruebas citan el caso como `CA_053_NN` en el nombre (para `python scripts/sd
 - **Duda que sigue abierta (de José):** VER-04 es a la vez «detalle» y «abrir» (registra auditoría y firma enlaces de fotos); aquí queda en 30 por minuto, con las acciones que dejan rastro. Si José lo quiere con las lecturas, se mueve a `panel-lectura` en la misma enmienda.
 - Tarea: `task.md` T-11 con estos valores. Pendiente de la firma de esta enmienda.
 
+## Nota de enmienda (2026-11-26, ruta interna de técnico ocultado)
+
+- **Estado de esta enmienda:** propuesta **SIN FIRMA**; vale desde que se firma la línea «Enmienda 2026-11-26 (rutas internas)» de la sección Aprobación. La aprobación original y las enmiendas ya firmadas se conservan.
+- **Momento de redacción:** se redacta el 2026-11-26, **después** de que las rutas y su código existen (`docs/openapi.v1.json` de `origin/develop`). Solo describe lo que hay; no pide código.
+- **R-20, gravedad `alta`:** Mercado recibe el evento `TecnicoOcultado` en `POST /api/v1/interno/tecnicos-ocultados`. Token de servicio de Identidad (`aud` `knock-market`, permiso `tecnico-ocultado`). El gateway no la publica. `Cache-Control: private, no-store`.
+
+| Método y ruta | Cuerpo | Respuestas |
+|---|---|---|
+| `POST /api/v1/interno/tecnicos-ocultados` | `{ eventoId, usuarioId, reporteId }`, los tres obligatorios, de hasta 128 caracteres, sin espacios ni caracteres de control; sin texto del reporte | `202` sin cuerpo (también si ya estaba oculto o no existe); `401`; `403`; `422` |
+
+- El perfil queda `oculto = true` con `ocultoPorReporteId` y `ocultoEn`. Repetir con el mismo `reporteId` no reescribe nada; la ocultación no vence sola.
+- **CA-E01:** Dado un evento válido, cuando se entrega dos veces, entonces las dos responden `202` y la segunda no cambia el perfil.
+- **Decisión pendiente:** `docs/endpoints.md` describe el cuerpo como `{ usuarioId, reporteId }`, pero el validador exige también `eventoId`. Propuesta: corregir `docs/endpoints.md`. También lista `429`, que el OpenAPI no declara.
+- **Decisión pendiente:** Identidad escribe `TecnicoOcultado` en su bandeja de salida, pero en el código leído de `sprint-05` `EntregaInternaHttp` no tiene caso para ese tipo, así que no se encontró quién llame a esta ruta (el evento quedaría para reintento). Confirmar antes de firmar; corregirlo es código y va en otro PR.
+
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
 - [x] Enmienda 2026-11-24 — nombre: José Julián Hernández Hernández fecha: 2026-11-24
 - [x] Enmienda 2026-11-23 — nombre: José Julián Hernández Hernández fecha: 2026-11-24
 - [x] Sin conflicto con la constitución
+- [ ] Enmienda 2026-11-26 (rutas internas) — nombre: ______ fecha: ______
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)
