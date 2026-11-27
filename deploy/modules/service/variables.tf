@@ -131,6 +131,12 @@ variable "tags" {
   default = {}
 }
 
+variable "set_identity_client_id" {
+  description = "Define AZURE_CLIENT_ID con la identidad asignada por el usuario del servicio, para que `DefaultAzureCredential` use esa identidad (Blob, Content Safety, Azure OpenAI). Apagado en Redis."
+  type        = bool
+  default     = false
+}
+
 variable "enable_app_insights" {
   description = "Agrega APPLICATIONINSIGHTS_CONNECTION_STRING (spec 011). Va aparte de `env` porque el valor es sensible."
   type        = bool

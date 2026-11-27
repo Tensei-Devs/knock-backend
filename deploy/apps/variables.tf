@@ -138,6 +138,12 @@ variable "enable_oleadas" {
   default     = true
 }
 
+variable "enable_push" {
+  description = "Enciende el envío de avisos push por FCM en Mensajería (`Notificaciones:PushHabilitado`, spec 037). Requiere el secreto `fcm-service-account` en Key Vault. Apagado por omisión."
+  type        = bool
+  default     = false
+}
+
 variable "enable_content_safety" {
   description = "Enciende la moderación con Content Safety en Market (`Moderacion:Habilitado`, spec 031): da el endpoint del recurso y el rol `Cognitive Services User`. Debe valer lo mismo que `enable_content_safety` de `deploy/infra` (que crea el recurso). Apagado por omisión."
   type        = bool
