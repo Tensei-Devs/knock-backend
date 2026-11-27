@@ -10,6 +10,7 @@ import hashlib
 import hmac
 import json
 import os
+import secrets
 import sys
 import time
 import uuid
@@ -42,7 +43,7 @@ def main():
     ahora = int(time.time())
     tokens = {}
     for nombre, uid in CUENTAS.items():
-        claims = {"iss": "knock-api", "aud": "knock-app", "sub": sub_de(uid), "sid": str(uuid.uuid4()), "jti": str(uuid.uuid4()),
+        claims = {"iss": "knock-api", "aud": "knock-app", "sub": sub_de(uid), "sid": secrets.token_hex(12), "jti": str(uuid.uuid4()),
                   "iat": ahora, "nbf": ahora, "exp": ahora + 1800}
         tokens[nombre] = firmar(claims, llave)
         print(f"::add-mask::{tokens[nombre]}")

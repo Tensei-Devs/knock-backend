@@ -538,7 +538,7 @@ jobs:
           persist-credentials: false
       - name: Credenciales efímeras de la pila (no se imprimen)
         run: |
-          for v in CI_DB_PASSWORD:hex:24 CI_REDIS_PASSWORD:hex:24 CI_JWT_KEY:b64:32 CI_KEY_A:b64:32 CI_KEY_B:b64:32 CI_KEY_C:b64:32 CI_KEY_D:b64:32 CI_KEY_E:b64:32 CI_KEY_F:b64:32 CI_BLOB_KEY:b64:32; do
+          for v in CI_DB_PASSWORD:hex:24 CI_REDIS_PASSWORD:hex:24 CI_JWT_KEY:b64:32 CI_KEY_A:b64:32 CI_KEY_B:b64:32 CI_KEY_C:b64:32 CI_KEY_D:b64:32 CI_KEY_E:b64:32 CI_KEY_F:b64:32 CI_KEY_G:b64:32 CI_BLOB_KEY:b64:32; do
             IFS=: read -r nombre tipo largo <<<"$v"
             if [ "$tipo" = hex ]; then valor=$(openssl rand -hex "$largo"); else valor=$(openssl rand -base64 "$largo"); fi
             echo "::add-mask::$valor"; echo "$nombre=$valor" >> "$GITHUB_ENV"
