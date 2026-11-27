@@ -10,6 +10,24 @@ Reglas para un script nuevo:
 - No renombres un script ya entregado: las pruebas de `tests/DatabaseTest/Scripts` y `Memoria.md` lo citan por nombre.
 - Sus nombres de nivel superior (`const`) no deben repetirse entre scripts, porque corren en el mismo ámbito (`load()`).
 
+## Conteo previo: solicitudes con la visita ya cerrada (spec 020, enmienda del 2026-11-27)
+
+Antes de escribir cualquier relleno, una persona cuenta en cada ambiente, **después** de desplegar la regla de estados (enmienda del 2026-11-26). La consulta solo lee y solo devuelve el estado de la visita y un total. En `mongosh`, con la base de Mercado (`market` por omisión):
+
+```js
+db.getSiblingDB("market").solicitudes.aggregate([
+  { $match: { estado: "cita_confirmada" } },
+  { $lookup: { from: "visitas", localField: "_id", foreignField: "solicitudId", as: "visita" } },
+  { $unwind: "$visita" },
+  { $match: { "visita.estado": { $in: ["terminada", "cancelada", "no_presentado"] } } },
+  { $group: { _id: "$visita.estado", total: { $sum: 1 } } },
+])
+```
+
+- Sin resultados en todos los ambientes: no se escribe el script y el conteo se anota en la memoria del proyecto.
+- Con afectadas: se escribe el script en `db/relleno/` con las reglas y los casos CA-E01 a CA-E05 de la enmienda.
+- No se anota ni se copia la cadena de conexión.
+
 ## Rellenos de una sola vez (`db/relleno/`)
 
 Son migraciones de datos que corre una persona. No están numerados y viven en una subcarpeta a propósito: ni `db/entrega.js` ni el bucle de despliegue los aplican. Por omisión solo simulan; escriben únicamente con `KNOCK_APLICAR=si`, y su salida no lleva nombres.
