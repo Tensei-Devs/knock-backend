@@ -12,7 +12,8 @@ internal sealed class BandejaStore(IMongoDatabase database) : IBandejaStore
     public async Task<MensajeReservado?> ReserveAsync(DateTime now, IReadOnlyCollection<string> types, CancellationToken cancellationToken)
     {
         var filter = Builders<BsonDocument>.Filter;
-        var due = filter.In("tipo", types)
+        // Los mensajes antiguos de CotizacionEnviada (_id ObjectId y sin datos) no tienen la forma del buzón: no se reservan.
+        var due = filter.In("tipo", types) & filter.Type("_id", BsonType.String)
             & ((filter.Eq("estado", "pendiente") & (filter.Exists("programadaPara", false) | filter.Lte("programadaPara", now))) | (filter.Eq("estado", "en_proceso") & filter.Lt("reservadaHasta", now)));
         var token = Guid.NewGuid().ToString("N");
         var update = Builders<BsonDocument>.Update.Set("estado", "en_proceso").Set("reservadaHasta", now.AddMinutes(2)).Set("reservaId", token).Set("actualizadoEn", now);

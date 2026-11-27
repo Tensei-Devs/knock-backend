@@ -2,13 +2,24 @@
 
 ## CotizacionEnviada (spec 020)
 
-Mercado inserta este evento en `outbox` dentro de la transacción que guarda la cotización. El documento contiene `_id` (igual al identificador de la cotización), `tipo`, `estado`, `creadoEn`, `solicitudId` y `cotizacionId`.
-
-El despachador de Mercado existe, pero no tiene entrega registrada para `CotizacionEnviada`: el aviso al cliente aún no está implementado y el documento queda `pendiente` (además no lleva el campo `datos` de los demás eventos). El contrato de consumo debe acordarse antes de conectarlo; insertar el documento no demuestra la entrega.
+Mercado lo inserta en `outbox` dentro de la transacción que guarda la cotización, con la misma forma que los demás eventos (`_id` `CotizacionEnviada:{cotizacionId}`, `datos` `solicitudId` y `cotizacionId`). Se entrega como el aviso `cotizacion_nueva` al cliente. Los documentos escritos antes de este cambio (`_id` ObjectId y sin `datos`) no se reservan y quedan `pendiente`.
 
 ## Eventos de Mercado en el buzón de salida (specs 020, 021 y 022)
 
-Mercado escribe cada evento en `outbox` en la misma transacción que el cambio de negocio, con `_id` determinista `{tipo}:{agregadoId}` (un reintento no lo duplica), `estado = pendiente` y `datos` con solo identificadores y datos no personales: nunca descripción, dirección, código, nombre ni teléfono. Insertar el documento no demuestra la entrega: el despachador de Mercado (spec 054, apagado sin `Bandeja:Habilitada`) solo toma los tipos con entrega registrada y los demás quedan `pendiente`. En `sprint-05` tienen entrega `CambioDeOficio`, `CotizacionElegida`, `OpinionModerada`, `ReporteNoTerminadoCreado`, `TecnicoNoSePresento` y `visita_afectada`. Ningún otro tipo que escribe Mercado la tiene; entre ellos están los que corresponden a avisos de la spec 037 (`SolicitudEnviadaATecnico`, `SolicitudSinTecnicos`, `CotizacionEnviada`, `CotizacionAceptada`, `SolicitudCancelada`, `SolicitudVencida`).
+Mercado escribe cada evento en `outbox` en la misma transacción que el cambio de negocio, con `_id` determinista `{tipo}:{agregadoId}` (un reintento no lo duplica), `estado = pendiente` y `datos` con solo identificadores y datos no personales: nunca descripción, dirección, código, nombre ni teléfono. Insertar el documento no demuestra la entrega: el despachador de Mercado (spec 054, apagado sin `Bandeja:Habilitada`) solo toma los tipos con entrega registrada y los demás quedan `pendiente`. Tienen entrega `CambioDeOficio`, `CotizacionElegida`, `OpinionModerada`, `ReporteNoTerminadoCreado`, `TecnicoNoSePresento`, `visita_afectada` y los seis avisos de la tabla siguiente.
+
+**Avisos de solicitudes (spec 037, R-11):** cada uno va a `POST /api/v1/interno/avisos` de Mensajería con `eventoId` = `_id` del mensaje, una petición por persona, y solo identificadores. La persona y la visita se leen de Mercado al entregar; la forma de los eventos no cambia.
+
+| Evento | Aviso | Recibe (`rol`) | `recurso` |
+|---|---|---|---|
+| `SolicitudEnviadaATecnico` | `solicitud_nueva` | el técnico del envío (`tecnico`) | solicitud |
+| `SolicitudSinTecnicos` | `solicitud_sin_tecnicos` | la persona dueña (`cliente`) | solicitud |
+| `CotizacionEnviada` | `cotizacion_nueva` | la persona dueña (`cliente`) | solicitud |
+| `CotizacionAceptada` | `cotizacion_aceptada` | el técnico elegido (`tecnico`) | visita |
+| `SolicitudCancelada` | `solicitud_cancelada` | cada técnico de `tecnicosAvisar` (`tecnico`) | solicitud |
+| `SolicitudVencida` | `solicitud_vencida` | la persona dueña (`cliente`) | solicitud |
+
+El aviso `cotizacion_vencida` a los técnicos de `tecnicosAvisar` de `SolicitudVencida` **no** se entrega: las specs del servidor no dicen qué evento lo produce.
 
 **Limpieza (spec 054, R-11):** al quedar `entregado` o `hecha`, Mercado escribe `limpiarEn` a 14 días; al quedar `fallido` o `fallida`, a 90. Lo borra el índice TTL de `db/054`. Los documentos que ya estaban en un estado terminal sin ese campo no se rellenan.
 

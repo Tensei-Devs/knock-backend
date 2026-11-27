@@ -1,9 +1,7 @@
 using System.Net;
 using AwesomeAssertions;
 using Knock.Market.Api.Common.Bandeja;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.JsonWebTokens;
 using MongoDB.Bson;
 using Xunit;
 
@@ -14,7 +12,6 @@ public sealed class Spec054EntregasDeMercadoTests
 {
     private const string _request = "0123456789abcdef01234567";
     private const string _visit = "76543210fedcba9876543210";
-    private static readonly string _key = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
 
     [Fact]
     public async Task CotizacionElegida_Goes_To_Messaging_Events_With_Only_The_Closed_Body_CA_054_05()
@@ -29,7 +26,7 @@ public sealed class Spec054EntregasDeMercadoTests
         var sent = handler.Sent.Should().ContainSingle().Subject;
         sent.Path.Should().Be("/api/v1/interno/eventos");
         sent.Body.Should().Be($$"""{"eventoId":"{{message.Id}}","tipo":"CotizacionElegida","solicitudId":"{{_request}}","tecnicoUsuarioId":"tech-user"}""");
-        Claims(sent.Token).Should().Contain(("aud", "knock-notifications")).And.Contain(("permisos", "CotizacionElegida")).And.Contain(("iss", "knock-market"));
+        CapturaDeEntregas.Claims(sent.Token).Should().Contain(("aud", "knock-notifications")).And.Contain(("permisos", "CotizacionElegida")).And.Contain(("iss", "knock-market"));
     }
 
     [Fact]
@@ -45,7 +42,7 @@ public sealed class Spec054EntregasDeMercadoTests
         var sent = handler.Sent.Should().ContainSingle().Subject;
         sent.Path.Should().Be("/api/v1/interno/avisos");
         sent.Body.Should().Be($$"""{"eventoId":"{{message.Id}}","tipo":"visita_afectada","destinatarioId":"client-user","rol":"cliente","recurso":"{{_visit}}"}""");
-        Claims(sent.Token).Should().Contain(("aud", "knock-notifications")).And.Contain(("permisos", "visita_afectada")).And.Contain(("iss", "knock-market"));
+        CapturaDeEntregas.Claims(sent.Token).Should().Contain(("aud", "knock-notifications")).And.Contain(("permisos", "visita_afectada")).And.Contain(("iss", "knock-market"));
     }
 
     [Fact]
@@ -78,22 +75,8 @@ public sealed class Spec054EntregasDeMercadoTests
     }, "lease", 0);
 
     private static EntregaCotizacionElegida ChosenDelivery(CapturaDeEntregas handler, bool configured = true) =>
-        new(handler, Configuration(configured), Options.Create(new BandejaOptions()), TimeProvider.System);
+        new(handler, CapturaDeEntregas.Messaging(configured), Options.Create(new BandejaOptions()), TimeProvider.System);
 
     private static EntregaVisitaAfectada AffectedDelivery(CapturaDeEntregas handler, bool configured = true) =>
-        new(handler, Configuration(configured), Options.Create(new BandejaOptions()), TimeProvider.System);
-
-    private static IConfiguration Configuration(bool configured)
-    {
-        var settings = new Dictionary<string, string?>();
-        if (configured)
-        {
-            settings["Services:Messaging:BaseUrl"] = "http://messaging.test";
-            settings["Services:Messaging:InternalKey"] = _key;
-        }
-
-        return new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
-    }
-
-    private static List<(string, string)> Claims(string token) => [.. new JsonWebTokenHandler().ReadJsonWebToken(token).Claims.Select(c => (c.Type, c.Value))];
+        new(handler, CapturaDeEntregas.Messaging(configured), Options.Create(new BandejaOptions()), TimeProvider.System);
 }
