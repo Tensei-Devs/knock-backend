@@ -28,7 +28,8 @@ public class Spec018SesionesSecurityTests
     public async Task Sin_Token_No_Revoca_CA_018_08()
     {
         var hosts = await SecurityHosts.SharedAsync();
-        var session = await SeedSessionAsync(hosts, TokenForge.Sub());
+        var (sub, userId) = await SeedPersonAsync(hosts);
+        var session = await SeedSessionAsync(hosts, sub, userId);
 
         using var response = await SecureHttp.SendAsync(hosts.IdentityClient, HttpMethod.Delete, $"{_route}/{session}");
 
@@ -37,31 +38,57 @@ public class Spec018SesionesSecurityTests
     }
 
     [Fact]
-    public async Task Sesion_Ajena_Responde_404_Y_No_Cambia()
+    public async Task Sesion_Ajena_Responde_El_Mismo_404_Que_Una_Inexistente_Y_No_Cambia()
     {
         var hosts = await SecurityHosts.SharedAsync();
-        var owner = TokenForge.Sub();
-        var attacker = TokenForge.Sub();
-        var victim = await SeedSessionAsync(hosts, owner);
-        var own = await SeedSessionAsync(hosts, attacker);
-        var token = TokenForge.Valid(attacker, own.ToString());
+        var (ownerSub, ownerId) = await SeedPersonAsync(hosts);
+        var (attackerSub, attackerId) = await SeedPersonAsync(hosts);
+        var victim = await SeedSessionAsync(hosts, ownerSub, ownerId);
+        var current = await SeedSessionAsync(hosts, ownerSub, ownerId);
+        var attackerSession = await SeedSessionAsync(hosts, attackerSub, attackerId);
+        var attacker = TokenForge.Valid(attackerSub, attackerSession.ToString());
         var before = await ReadAsync(hosts, victim);
 
-        using var foreign = await SecureHttp.SendAsync(hosts.IdentityClient, HttpMethod.Delete, $"{_route}/{victim}", bearer: token);
-        using var missing = await SecureHttp.SendAsync(hosts.IdentityClient, HttpMethod.Delete, $"{_route}/{ObjectId.GenerateNewId()}", bearer: token);
+        using var foreign = await SecureHttp.SendAsync(hosts.IdentityClient, HttpMethod.Delete, $"{_route}/{victim}", bearer: attacker);
+        using var missing = await SecureHttp.SendAsync(hosts.IdentityClient, HttpMethod.Delete, $"{_route}/{ObjectId.GenerateNewId()}", bearer: attacker);
 
-        await SecureHttp.AssertProblemAsync(foreign, HttpStatusCode.NotFound, victim.ToString(), owner);
-        await SecureHttp.AssertProblemAsync(missing, HttpStatusCode.NotFound);
+        var foreignBody = await SecureHttp.AssertProblemAsync(foreign, HttpStatusCode.NotFound, victim.ToString(), ownerSub);
+        var missingBody = await SecureHttp.AssertProblemAsync(missing, HttpStatusCode.NotFound);
+        SecureHttp.WithoutCorrelationId(foreignBody).Should().Be(SecureHttp.WithoutCorrelationId(missingBody));
         (await ReadAsync(hosts, victim)).Should().Equal(before);
+
+        // Control: su dueña sí puede revocarla desde otra sesión, así que el 404 anterior se debe a la propiedad.
+        using var own = await SecureHttp.SendAsync(hosts.IdentityClient, HttpMethod.Delete, $"{_route}/{victim}", bearer: TokenForge.Valid(ownerSub, current.ToString()));
+        own.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await ReadAsync(hosts, victim))["revocada"].AsBoolean.Should().BeTrue();
     }
 
-    private static async Task<ObjectId> SeedSessionAsync(SecurityHosts hosts, string sub)
+    private static async Task<(string Sub, ObjectId UserId)> SeedPersonAsync(SecurityHosts hosts)
+    {
+        var sub = TokenForge.Sub();
+        var id = ObjectId.GenerateNewId();
+        await hosts.Identity.Users.InsertOneAsync(new BsonDocument
+        {
+            ["_id"] = id,
+            ["sub"] = sub,
+            ["celularHash"] = new BsonBinaryData(Guid.NewGuid().ToByteArray()),
+            ["estado"] = "activa",
+            ["esTecnico"] = false,
+            ["perfilCompleto"] = false,
+            ["creadoEn"] = DateTime.UtcNow,
+            ["version"] = 1,
+        });
+        return (sub, id);
+    }
+
+    private static async Task<ObjectId> SeedSessionAsync(SecurityHosts hosts, string sub, ObjectId userId)
     {
         var id = ObjectId.GenerateNewId();
         await hosts.Identity.Sessions.InsertOneAsync(new BsonDocument
         {
             ["_id"] = id,
             ["sub"] = sub,
+            ["usuarioId"] = userId,
             ["deviceId"] = Guid.NewGuid().ToString("N"),
             ["dispositivo"] = "Telefono de prueba",
             ["huellaRenovacion"] = Guid.NewGuid().ToString("N"),
