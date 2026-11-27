@@ -10,7 +10,10 @@ namespace Knock.Messaging.Api.Modules.Chat;
 public static class ChatModuleExtensions
 {
     /// <summary>Ruta del hub (spec 026, R-01). El gateway la enruta con la política de sesión.</summary>
-    public const string HubPath = "/hubs/chat";
+    /// <summary>Raíz de la que cuelgan los hubs; nada bajo ella se comprime (spec 010, enmienda 2026-11-27).</summary>
+    public const string HubsRoot = "/hubs";
+
+    public const string HubPath = HubsRoot + "/chat";
 
     public static IServiceCollection AddChatModule(this IServiceCollection services)
     {
