@@ -54,7 +54,8 @@ public sealed class Spec037AvisosDeMercadoTests
             Body(message.Id, "cotizacion_vencida", "quoting-user", "tecnico"),
             Body(message.Id, "cotizacion_vencida", "quoting-user", "tecnico"),
         ];
-        handler.Sent.Select(x => x.Body).Should().Equal([.. once, .. once]);
+        string[] twice = [.. once, .. once];
+        handler.Sent.Select(x => x.Body).Should().Equal(twice);
     }
 
     [Fact]

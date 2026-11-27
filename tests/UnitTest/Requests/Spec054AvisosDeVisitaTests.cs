@@ -66,12 +66,13 @@ public sealed class Spec054AvisosDeVisitaTests
     {
         using var handler = new CapturaDeEntregas(HttpStatusCode.Accepted);
         var targets = expected.Split(',').Select(x => x.Split(':')).ToList();
-        var once = targets.Select(x => Body(eventType, x[0], x[1])).ToList();
+        var once = targets.Select(x => Body(eventType, x[0], x[1])).ToArray();
 
         (await DeliverAsync(notices, eventType, data, handler)).Should().Be(ResultadoDeEntrega.Aceptado);
         (await DeliverAsync(notices, eventType, data, handler)).Should().Be(ResultadoDeEntrega.Aceptado);
 
-        handler.Sent.Select(x => x.Body).Should().Equal([.. once, .. once]);
+        string[] twice = [.. once, .. once];
+        handler.Sent.Select(x => x.Body).Should().Equal(twice);
         foreach (var sent in handler.Sent)
         {
             var notice = JsonElement.Parse(sent.Body).GetProperty("tipo").GetString()!;
