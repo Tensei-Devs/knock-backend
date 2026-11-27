@@ -25,7 +25,6 @@ public sealed class Spec037AvisosDeMercadoTests
     [InlineData("CotizacionEnviada", "cotizacion_nueva", "client-user", "cliente", _request)]
     [InlineData("CotizacionAceptada", "cotizacion_aceptada", "chosen-user", "tecnico", _visit)]
     [InlineData("SolicitudCancelada", "solicitud_cancelada", "quoting-user", "tecnico", _request)]
-    [InlineData("SolicitudVencida", "solicitud_vencida", "owner-user", "cliente", _request)]
     public async Task Cada_Evento_Llega_A_Su_Persona_Con_El_Aviso_Del_Catalogo_CA_054_05(string eventType, string notice, string person, string role, string resource)
     {
         using var handler = new CapturaDeEntregas(HttpStatusCode.Accepted);
@@ -40,9 +39,34 @@ public sealed class Spec037AvisosDeMercadoTests
     }
 
     [Fact]
-    public void No_Se_Inventa_La_Cotizacion_Vencida_CA_054_05() =>
-        AvisosDeSolicitud.All.Select(x => x.NoticeType).Should().BeEquivalentTo(
-            "solicitud_nueva", "solicitud_sin_tecnicos", "cotizacion_nueva", "cotizacion_aceptada", "solicitud_cancelada", "solicitud_vencida");
+    public async Task El_Vencimiento_Avisa_A_La_Persona_Duena_Y_A_Cada_Tecnico_Y_Repetir_Manda_Lo_Mismo_CA_037_21()
+    {
+        using var handler = new CapturaDeEntregas(HttpStatusCode.Accepted);
+        var delivery = Delivery("SolicitudVencida", handler);
+        var message = Message("SolicitudVencida", Data(_technician, _otherTechnician));
+
+        (await delivery.DeliverAsync(message, CancellationToken.None)).Should().Be(ResultadoDeEntrega.Aceptado);
+        (await delivery.DeliverAsync(message, CancellationToken.None)).Should().Be(ResultadoDeEntrega.Aceptado);
+
+        string[] once =
+        [
+            Body(message.Id, "solicitud_vencida", "owner-user", "cliente"),
+            Body(message.Id, "cotizacion_vencida", "quoting-user", "tecnico"),
+            Body(message.Id, "cotizacion_vencida", "quoting-user", "tecnico"),
+        ];
+        handler.Sent.Select(x => x.Body).Should().Equal([.. once, .. once]);
+    }
+
+    [Fact]
+    public async Task Un_Vencimiento_Con_Un_Tecnico_Sin_Persona_Avisa_A_Los_Demas_Y_Queda_Fallido_CA_037_22()
+    {
+        using var handler = new CapturaDeEntregas(HttpStatusCode.Accepted);
+
+        var result = await Delivery("SolicitudVencida", handler).DeliverAsync(Message("SolicitudVencida", Data("ffffffffffffffffffffffff", _technician)), CancellationToken.None);
+
+        result.Should().Be(ResultadoDeEntrega.Rechazado);
+        handler.Sent.Should().HaveCount(2);
+    }
 
     [Fact]
     public async Task La_Cancelacion_Avisa_A_Cada_Tecnico_Y_Sin_Ninguno_No_Envia_CA_054_05()
@@ -86,6 +110,9 @@ public sealed class Spec037AvisosDeMercadoTests
         handler.Sent.Should().ContainSingle("al primer fallo se reprograma el mensaje completo");
     }
 
+    private static string Body(string eventId, string notice, string person, string role) =>
+        $$"""{"eventoId":"{{eventId}}","tipo":"{{notice}}","destinatarioId":"{{person}}","rol":"{{role}}","recurso":"{{_request}}"}""";
+
     private static MensajeReservado Message(string eventType, BsonDocument data) => new($"{eventType}:{_request}", eventType, data, "lease", 0);
 
     private static BsonDocument Data(params string[] technicians)
@@ -119,6 +146,8 @@ public sealed class Spec037AvisosDeMercadoTests
             Found(technicianId is _technician or _otherTechnician, "quoting-user");
 
         public Task<string?> VisitAsync(string requestId, string quoteId, CancellationToken cancellationToken) => Found(quoteId == _quote, _visit);
+
+        public Task<PersonasDeVisita?> VisitPeopleAsync(string visitId, CancellationToken cancellationToken) => Task.FromResult<PersonasDeVisita?>(null);
 
         private static Task<string?> Found(bool found, string value) => Task.FromResult(found ? value : null);
     }

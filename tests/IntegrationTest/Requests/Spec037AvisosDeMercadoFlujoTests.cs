@@ -44,6 +44,7 @@ public sealed class Spec037AvisosDeMercadoFlujoTests
 
         await QuoteAsync(host, chosen, technician.Sub);
         await QuoteAsync(host, cancelled, technician.Sub);
+        await QuoteAsync(host, expired, technician.Sub);
         var quote = (await host.Database.GetCollection<BsonDocument>("cotizaciones").Find(new BsonDocument("solicitudId", chosen)).SingleAsync())["_id"].AsObjectId;
         using var choice = await host.ChooseAsync(chosen, quote);
         choice.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -71,7 +72,9 @@ public sealed class Spec037AvisosDeMercadoFlujoTests
             ("cotizacion_nueva", client, "cliente", cancelled.ToString()),
             ("cotizacion_aceptada", sub, "tecnico", visit),
             ("solicitud_cancelada", sub, "tecnico", cancelled.ToString()),
+            ("cotizacion_nueva", client, "cliente", expired.ToString()),
             ("solicitud_vencida", client, "cliente", expired.ToString()),
+            ("cotizacion_vencida", sub, "tecnico", expired.ToString()),
         ];
         notices.Should().BeEquivalentTo(expected);
         var types = Bandeja.AvisosDeSolicitud.All.Select(x => x.EventType);
