@@ -12,7 +12,7 @@ namespace Knock.Market.Api.Modules.Requests.Controllers.V1;
 [Route("api/v{version:apiVersion}/tecnicos/me/solicitudes")]
 [Authorize]
 [PrivateNoStore]
-internal sealed class BandejaController(BandejaService service) : ControllerBase
+internal sealed class BandejaController(BandejaService service) : BusinessRuleController
 {
     [HttpGet]
     [ProducesResponseType<InboxResponse>(200)]
@@ -26,9 +26,7 @@ internal sealed class BandejaController(BandejaService service) : ControllerBase
         var sub = User.FindFirst("sub")?.Value ?? string.Empty;
         if (!await service.IsTechnicianAsync(sub, cancellationToken))
         {
-            var problem = new ProblemDetails { Status = 403, Title = "Forbidden" };
-            problem.Extensions["code"] = "not_a_technician";
-            return StatusCode(403, problem);
+            return Rule(403, "not_a_technician");
         }
         return Ok(await service.ListAsync(sub, query.Cursor, query.Limit, cancellationToken));
     }
