@@ -248,7 +248,20 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **El contador `cotizacionesActivas` no baja si una cotización se retira** (HU-035 sin spec): cuando exista el retiro, debe decrementarlo en la misma transacción.
 - **Sin app del técnico:** la bandeja y el descarte se prueban con semillas y llamadas directas.
 
+## Nota de enmienda (2026-11-27, qué cuenta como trabajo terminado)
+
+- **Estado de esta enmienda:** PROPUESTA SIN FIRMA; vale desde que se firma la línea «Enmienda 2026-11-27» de la sección Aprobación. La aprobación original y las enmiendas ya firmadas se conservan.
+- **Motivo:** el reparto lee `tecnicos.trabajosTerminados` para desempatar y para marcar «técnico nuevo», pero nada escribe ese campo: siempre vale 0.
+- **R-18:** El `trabajosTerminados` de un técnico es el número de sus visitas en estado `terminada`, incluidas las que terminan con `resultado` `solo_visita` (cotización final rechazada o vencida) y las que tienen un reporte de «no terminado», y también las terminadas antes de esta enmienda. No cuentan las visitas `confirmada` (incluidas las bloqueadas), `en_curso`, `cancelada` ni `no_presentado`. Es la misma regla de `resumen.trabajosTerminados` de la spec 036.
+- **R-19:** El reparto calcula el número al leer los candidatos, desde `visitas`, con una sola consulta agrupada para todos. Deja de leer `tecnicos.trabajosTerminados` (cambia §6): no se escribe un contador ni hace falta relleno. La selección sigue siendo la función pura de R-04.
+- **CA-19:** Dado un técnico con visitas en todos los estados, cuando se arman los candidatos, entonces solo se cuentan las `terminada`, incluida la `solo_visita`.
+- **CA-20:** Dado un técnico sin visitas terminadas, entonces cuenta 0 y es «nuevo»; al llegar a `Oleadas:UmbralNuevo` deja de serlo.
+- **CA-21:** Dados dos técnicos con la misma calificación, cuando se ordenan, entonces va primero el de más visitas terminadas.
+- **CA-22:** Dado un documento de `tecnicos` con un `trabajosTerminados` guardado distinto, cuando se reparte, entonces ese valor no se usa.
+- Sin cambio de API ni de eventos. La consulta solo agrupa conteos por técnico (R-17). La tarea se agrega a `task.md` en el PR que la implemente.
+
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-12
 - [x] Sin conflicto con la constitución
+- [ ] Enmienda 2026-11-27 — nombre: ______ fecha: ______
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

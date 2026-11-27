@@ -68,7 +68,21 @@ Decisiones tomadas en la revisión del 2026-11-04. Quien aprueba la spec las ace
 - **Riesgo:** las vigencias iniciales de la caché pueden no ser las óptimas; se ajustan con las pruebas de carga.
 - **Excepción contractual de paginación (T-05 cerrada por alcance, aprobada por el líder):** `GET /api/v1/oficios` conserva su respuesta como arreglo sin paginación, conforme a la decisión D9 (catálogo acotado; excepción documentada a la constitución §11 en `docs/endpoints.md` y en el OpenAPI), y `GET /api/v1/me/sesiones` conserva su listado acotado al máximo de 10 sesiones por cuenta (spec 018, R-02). Esta excepción no introduce cambios incompatibles en v1. R-07 y §5 siguen vigentes para los listados no acotados: todo listado futuro que no esté acotado por su propia spec deberá aplicar `CursorPage<T>` con límite predeterminado 20 y máximo 50, conforme a su especificación. Por lo tanto, **CA-05 se declara no aplicable a los endpoints actuales**: ninguno de los listados v1 vigentes puede superar 50 elementos (el catálogo acotado y el máximo de 10 sesiones), y no se implementó paginación por cursor en los endpoints existentes.
 
+## Nota de enmienda (2026-11-27, compresión en Mensajería y exclusiones)
+
+- **Estado de esta enmienda:** PROPUESTA SIN FIRMA; vale desde que se firma la línea «Enmienda 2026-11-27» de la sección Aprobación. La aprobación original y las enmiendas ya firmadas se conservan.
+- **Motivo:** R-09 no distingue servicios, pero Mensajería no comprime: cuando se decidió no tenía rutas JSON y hoy tiene conversaciones, mensajes, avisos, preferencias y dispositivos. Mercado, además, solo excluye la autenticación, así que no garantiza lo que pide la spec 032 (R-15) para los enlaces de subida.
+- **Mensajería** comprime sus respuestas JSON según R-09 con la pieza compartida de `Knock.Hosting`, excepto todo lo que cuelga de `/hubs` (incluida la negociación del chat, que entrega un token, y el flujo en tiempo real, que la compresión retendría) y de `/api/v1/interno`.
+- **Mercado** excluye de la compresión, además de la autenticación, todo lo que cuelga de `/api/v1/imagenes/subidas`, sin depender del tamaño de la respuesta. La spec 032 no cambia.
+- **El gateway no comprime:** reenvía lo que cada servicio ya comprimió y no puede anular las exclusiones de los servicios.
+- Las respuestas con enlaces de lectura de corta duración o con el código de la visita se siguen comprimiendo: R-09 se refiere a autenticación y tokens, y las llamadas llevan `Authorization`, no cookie.
+- **CA-E01:** Dada una respuesta JSON de Mensajería de más de 1 KB y un cliente que acepta compresión, entonces sale comprimida con `Vary: Accept-Encoding`; sin `Accept-Encoding`, sin comprimir.
+- **CA-E02:** Dada la negociación del chat, una conexión a `/hubs` o una ruta interna, entonces la respuesta no se comprime ni se retiene.
+- **CA-E03:** Dada la respuesta de `/api/v1/imagenes/subidas` o de su confirmación, aunque supere 1 KB, entonces no se comprime.
+- Reabre el trabajo de T-06 de `task.md`: la fila se agrega en el PR que lo implemente.
+
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-12
 - [x] Sin conflicto con la constitución
+- [ ] Enmienda 2026-11-27 — nombre: ______ fecha: ______
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

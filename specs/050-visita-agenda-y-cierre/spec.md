@@ -332,8 +332,23 @@ Las pruebas citan el caso como `CA_050_NN` en el nombre (para `python scripts/sd
 - **Id mal formado y `permiso` con tipo equivocado: 400, no 422 (CA-27 y CA-44).** La convención del repo es la de la spec 002 (R-10) y la spec 020 (§5): 400 = la petición no se puede interpretar (cuerpo ilegible, identificador de ruta mal formado, cursor mal formado) y 422 = formato de un valor ya interpretado (`errors` por campo). Un `ObjectId` inválido en la ruta lanza `DomainErrorKind.BadRequest` (400, `ResolveAsync`), y un `permiso` que no es booleano no deserializa el cuerpo (400). Los demás casos de 422 de la spec (por ejemplo CA-04, CA-09, CA-21, CA-32, CA-38) no cambian. Las rutas de las specs 049, 063 y 064 que validan el id con `VisitRouteValidator` responden 422 con id mal formado: es una diferencia abierta con esta convención, que esta enmienda no resuelve.
 - Pruebas que siguen a esta enmienda: las de #353 (`..._CA_050_08`, `_14`, `_20`, `_27`, `_37`, `_43` y `_44`).
 
+## Nota de enmienda (2026-11-27, propuesta de reprogramación visible)
+
+- **Estado de esta enmienda:** PROPUESTA SIN FIRMA; vale desde que se firma la línea «Enmienda 2026-11-27» de la sección Aprobación. La aprobación original y las enmiendas ya firmadas se conservan.
+- **Motivo:** quien responde no puede ver qué fecha le proponen, quién la propone ni cuándo vence; `reprogramacionPendiente` (vista de la spec 022) es solo un booleano. Además, ese booleano mira la propuesta y su vencimiento, no el estado: una visita que pasa a `en_curso` con una propuesta sin vencer sigue diciendo `true`, aunque responder da 409 (comprobado por lectura del código, sin reproducir).
+- **R-35:** `GET /api/v1/visitas/{id}`, en las vistas del cliente y del técnico, y las demás respuestas que usan esa misma vista, agregan `propuestaReprogramacion`: `{ fechaHora, propuestaPor, venceEn }`. `fechaHora` y `venceEn` son fecha y hora en UTC; `propuestaPor` es `cliente` o `tecnico`. El campo se omite cuando no hay una propuesta vigente. Las dos partes reciben lo mismo.
+- **R-36:** Una propuesta está vigente solo si la visita está guardada como `confirmada` (también si está bloqueada, igual que al responder), la propuesta está guardada y `venceEn` es posterior a ahora. `reprogramacionPendiente` es verdadero exactamente cuando `propuestaReprogramacion` está presente. Se calcula al leer, sin escribir ni borrar la propuesta guardada.
+- **R-37:** Quién puede responder no cambia: la parte distinta de `propuestaPor`. La app compara `propuestaPor` con `rol`.
+
+- **CA-56:** Dada una visita confirmada con una propuesta vigente, cuando la consulta cualquiera de las dos partes, entonces recibe `reprogramacionPendiente: true` y `propuestaReprogramacion` con la fecha propuesta, quién la propuso y cuándo vence.
+- **CA-57:** Dada una visita sin propuesta, o con una vencida, aceptada o rechazada, cuando se consulta, entonces `reprogramacionPendiente` es falso y no viene `propuestaReprogramacion`.
+- **CA-58:** Dada una visita que dejó de estar `confirmada` con una propuesta aún guardada y sin vencer, cuando se consulta, entonces `reprogramacionPendiente` es falso y no viene `propuestaReprogramacion`.
+- **CA-59:** Dada una persona ajena a la visita, cuando la consulta, entonces recibe el mismo 404 que si no existiera.
+- Cambio aditivo del contrato. Los avisos de reprogramación se definen en la spec 054 (enmienda del 2026-11-27). La tarea se agrega a `task.md` en el PR que la implemente.
+
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
 - [x] Enmienda 2026-11-23 — nombre: José Julián Hernández Hernández fecha: 2026-11-24
 - [x] Sin conflicto con la constitución
+- [ ] Enmienda 2026-11-27 — nombre: ______ fecha: ______
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

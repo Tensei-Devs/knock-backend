@@ -238,7 +238,18 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **El límite por IP depende de KNOCK-180 (riesgo aparte):** el gateway solo ve la IP real del cliente si `ForwardedHeaders:KnownNetworks` apunta a la red de Container Apps. El Terraform la define con `container_apps_subnet_cidr`, pero KNOCK-180 (fijar esas redes en el despliegue) sigue por hacer y no se verificó el valor real. Sin eso el límite por IP contaría todo el tráfico como una sola IP.
 - **Mercado no tiene host de integración:** esta spec necesita `MarketApiFactory` con `Testcontainers`, igual que 020, 021 y 022.
 
+## Nota de enmienda (2026-11-27, listado general de colonias fuera de alcance)
+
+- **Estado de esta enmienda:** PROPUESTA SIN FIRMA; vale desde que se firma la línea «Enmienda 2026-11-27» de la sección Aprobación. La aprobación original y las enmiendas ya firmadas se conservan.
+- **Motivo:** el Excel de endpoints lista `GET /colonias` (fila COL-01), pero no hay ruta construida ni spec que la defina. La colonia ya se obtiene por la ubicación o por el código postal.
+- No se construye `GET /api/v1/colonias`. La colonia se obtiene con `GET /api/v1/colonias/en-punto` o con `GET /api/v1/zonas/cp/{cp}`.
+- La búsqueda de colonias por nombre queda fuera de alcance; si una pantalla la necesita, requiere una spec nueva.
+- La fila COL-01 se marca como retirada en el Excel de endpoints y se excluye de sus totales.
+- No cambia código ni contrato.
+- **CA-E01:** Dado el contrato publicado, cuando se revisa, entonces no declara `GET /api/v1/colonias`.
+
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-12
 - [x] Sin conflicto con la constitución
+- [ ] Enmienda 2026-11-27 — nombre: ______ fecha: ______
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

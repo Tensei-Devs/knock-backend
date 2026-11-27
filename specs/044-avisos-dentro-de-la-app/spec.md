@@ -247,9 +247,19 @@ Las pruebas citan el caso como `CA_044_NN` en el nombre (para `python scripts/sd
 - **Sobre `GET /api/v1/avisos?tipo=sistema`.** La ruta no tiene hoy un filtro `tipo` (R-02: cursor, limite, leido, comoRol); `tipo` es un campo de la respuesta y la clave de las preferencias. El PR de código **no agrega** ese filtro; si José lo quiere, es una enmienda aparte de R-02 y de la tabla de entrada.
 - Tarea: `task.md` T-11 (código en el PR de Nivel C de la rama `feature/KNOCK-60-avisos-sistema-export`).
 
+## Nota de enmienda (2026-11-27, aviso ajeno responde 404)
+
+- **Estado de esta enmienda:** PROPUESTA SIN FIRMA; vale desde que se firma la línea «Enmienda 2026-11-27» de la sección Aprobación. La aprobación original y las enmiendas ya firmadas se conservan.
+- **Motivo:** CA-09 pide 403 para quien no es dueño del aviso, y R-07, R-12, CA-11 y CA-18 piden 404 `notice_not_found` sin revelar que existe. El código responde 404.
+- **CA-09 se lee:** «Dada una persona que no es dueña del aviso, cuando llama `POST /api/v1/avisos/{id}/leido`, entonces responde 404 `notice_not_found`, igual que si el aviso no existiera, y no cambia nada».
+- En §5, las respuestas de AVI-03 no incluyen 403. En §9 y §10, «ajeno responde 403 o 404» se lee «ajeno responde 404».
+- No cambia código, contrato publicado ni pruebas. Es la misma convención de las specs 020 y 050.
+- **CA-E01:** Dado el aviso de otra persona y un identificador inexistente, cuando se marcan como leídos, entonces las dos respuestas son iguales.
+
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
 - [x] Enmienda 2026-11-23 — nombre: José Julián Hernández Hernández fecha: 2026-11-24
 - [x] Enmienda 2026-11-24 — nombre: José Julián Hernández Hernández fecha: 2026-11-26
 - [x] Sin conflicto con la constitución
+- [ ] Enmienda 2026-11-27 — nombre: ______ fecha: ______
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)
