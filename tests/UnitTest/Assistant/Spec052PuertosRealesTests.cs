@@ -35,6 +35,9 @@ public sealed class Spec052PuertosRealesTests
 
         public Task<(bool Participates, DateTime? ClosedAtUtc)> GetTechnicianAccessAsync(string solicitudId, string userId, CancellationToken cancellationToken) => Task.FromResult(access);
 
+        public Task<IReadOnlyDictionary<string, DateTime>> GetClosedAtAsync(IReadOnlyCollection<string> solicitudIds, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyDictionary<string, DateTime>>(access.ClosedAtUtc is { } at ? solicitudIds.ToDictionary(x => x, _ => at, StringComparer.Ordinal) : new Dictionary<string, DateTime>());
+
         public Task<IReadOnlySet<string>> BlockedWithAsync(string person, IEnumerable<string> others, CancellationToken cancellationToken) => Task.FromResult<IReadOnlySet<string>>(new HashSet<string>());
     }
 
@@ -72,6 +75,17 @@ public sealed class Spec052PuertosRealesTests
         var access = await port.GetAccessAsync("665f1e7a2b3c4d5e6f708192", "user-1", CancellationToken.None);
 
         access.Should().Be(new RequestAccess(true, closed));
+    }
+
+    [Fact]
+    public async Task Cierres_Salen_Del_Contrato_De_Requests_Y_Sin_El_No_Hay_Ninguno_CA_052_34()
+    {
+        const string id = "665f1e7a2b3c4d5e6f708192";
+        var closed = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc);
+        var port = new AsistenteSolicitudesReal(Scopes(s => s.AddScoped<IRequestsApi>(_ => new FakeRequestsApi((false, closed)))));
+
+        (await port.GetClosedAtAsync([id], CancellationToken.None)).Should().ContainSingle().Which.Value.Should().Be(closed);
+        (await new AsistenteSolicitudesReal(Scopes()).GetClosedAtAsync([id], CancellationToken.None)).Should().BeEmpty();
     }
 
     [Fact]

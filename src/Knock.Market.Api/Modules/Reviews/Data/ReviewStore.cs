@@ -47,6 +47,9 @@ internal interface IReviewStore
 
     Task<bool> IsTechnicianVisibleAsync(ObjectId technicianId, CancellationToken cancellationToken);
 
+    /// <summary>Marca <c>anonimizada</c> las opiniones que escribió esa cuenta (spec 039, R-25). Repetirlo no cambia nada.</summary>
+    Task AnonymizeByAuthorAsync(string clientId, CancellationToken cancellationToken);
+
     Task<ObjectId?> FindTechnicianByUserAsync(string sub, CancellationToken cancellationToken);
 
     Task<StoredReview?> FindReviewAsync(ObjectId id, CancellationToken cancellationToken);
@@ -116,6 +119,12 @@ internal sealed class ReviewStore(
         var d = await Reviews.Find(Builders<BsonDocument>.Filter.Eq(_id, id), _find).FirstOrDefaultAsync(cancellationToken);
         return d is null ? null : new StoredReview(id, d[_technician].AsObjectId, d.Contains("respuesta"));
     }
+
+    public Task AnonymizeByAuthorAsync(string clientId, CancellationToken cancellationToken) =>
+        Reviews.UpdateManyAsync(
+            Builders<BsonDocument>.Filter.Eq("clienteId", clientId),
+            Builders<BsonDocument>.Update.Set("anonimizada", true),
+            cancellationToken: cancellationToken);
 
     public async Task<ObjectId?> CreateAsync(NewReview review, DateTime nowUtc, CancellationToken cancellationToken)
     {

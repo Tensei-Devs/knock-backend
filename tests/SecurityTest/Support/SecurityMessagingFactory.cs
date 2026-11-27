@@ -29,6 +29,12 @@ internal sealed class ProtectedProbeController : ControllerBase
 {
     [HttpGet]
     public IActionResult Get() => Ok(new { sub = User.FindFirst("sub")?.Value });
+
+    /// <summary>JSON de más de 1 KB en una ruta común, en una interna y bajo <c>/hubs</c>, para las exclusiones de la compresión (spec 010, enmienda 2026-11-27).</summary>
+    [HttpGet("grande")]
+    [HttpGet("~/api/v1/interno/sonda-grande")]
+    [HttpGet("~/hubs/sonda-grande")]
+    public IActionResult Large() => Ok(new ProbeBody(new string('x', 2048)));
 }
 
 /// <summary>Cuerpo de la sonda de validación (spec 030, T-04: la infraestructura de controllers de Mensajería).</summary>

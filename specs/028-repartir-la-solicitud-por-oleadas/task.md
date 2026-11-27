@@ -15,6 +15,7 @@
 | T-08 | Bandeja y descarte (controllers, validadores, límite de 30 por hora) | R-13, R-14 · CA-12, CA-13, CA-18 | T-05 | T-07 | Alexis | hecha (CA-17 en la T-09) |
 | T-09 | Seguridad negativa, registros y eventos sin datos personales; regresión de la 020 con el interruptor apagado | R-11, R-13, R-14, R-17 · CA-11, CA-12, CA-16, CA-17, CA-18 | T-06, T-07, T-08 | T-10 | Alexis | hecha |
 | T-10 | OpenAPI regenerado, `docs/endpoints.md`, `docs/events.md` y `Memoria.md` | R-16 | T-07, T-08 | T-09 | Alexis | hecha (documentación; rutas presentes en el OpenAPI existente) |
+| T-11 | Enmienda 2026-11-27: `trabajosTerminados` calculado desde `visitas` con una consulta agrupada; se deja de leer el campo de `tecnicos` | R-18, R-19 · CA-19 a CA-22 | T-05 | — | — | hecha (en PR; la integración corre en el CI) |
 
 **Qué bloquea:** T-02 (ejecutor) bloquea la 028 y la 029; T-06 espera T-02, T-03 y T-05. **Qué va en paralelo:** T-01 a T-04 el mismo día con dos personas; T-07 y T-08 en paralelo una vez listo T-05.
 

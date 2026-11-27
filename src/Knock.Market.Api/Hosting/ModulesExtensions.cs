@@ -1,3 +1,4 @@
+using Knock.Hosting.Procesos;
 using Knock.Market.Api.Common.Bandeja;
 using Knock.Market.Api.Common.TareasProgramadas;
 using Knock.Market.Api.Modules.Assistant;
@@ -39,6 +40,7 @@ internal static class ModulesExtensions
 
         services.AddScoped<DespachadorDeBandeja>();
         services.AddHostedService<BandejaHostedService>();
+        services.AddKnockVigilanciaDeProcesos();
         return services;
     }
 }

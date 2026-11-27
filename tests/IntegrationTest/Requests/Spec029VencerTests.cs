@@ -102,6 +102,31 @@ public sealed class Spec029VencerTests
     }
 
     [Fact]
+    public async Task Cotizacion_Elegida_La_Tarea_Queda_Hecha_Sin_Efecto_CA_054_15()
+    {
+        // El intervalo largo evita que el proceso de fondo del host tome la tarea antes que la prueba.
+        await using var host = await Spec020Host.StartAsync(new Dictionary<string, string?> { ["TareasProgramadas:IntervaloSegundos"] = "3600" });
+        var (requestId, quotes, _) = await host.QuotedRequestAsync(1);
+        (await host.ChooseAsync(requestId, quotes[0])).EnsureSuccessStatusCode();
+        var tasks = host.Database.GetCollection<BsonDocument>("tareas_programadas");
+        var expiry = new BsonDocument { { "tipo", "VencerSolicitud" }, { "claveNegocio", requestId.ToString() } };
+        await tasks.UpdateOneAsync(expiry, new BsonDocument("$set", new BsonDocument("programadaPara", DateTime.UtcNow.AddMinutes(-1))));
+        await SetAsync(host, requestId, new BsonDocument("venceEn", DateTime.UtcNow.AddMinutes(-1)));
+        using var scope = host.Services.CreateScope();
+        var executor = scope.ServiceProvider.GetRequiredService<EjecutorDeTareasProgramadas>();
+        var executed = 0;
+
+        while (executed < 10 && await executor.ExecuteOneAsync(CancellationToken.None))
+        {
+            executed++;
+        }
+
+        (await tasks.Find(expiry).SingleAsync())["estado"].AsString.Should().Be("hecha");
+        (await StateOfAsync(host, requestId)).Should().Be("cita_confirmada");
+        (await ExpiredEventsAsync(host, requestId)).Should().Be(0);
+    }
+
+    [Fact]
     public async Task Vence_Una_Sola_Vez_CA_029_08()
     {
         await using var host = await Spec020Host.StartAsync();

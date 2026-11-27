@@ -35,6 +35,7 @@ public sealed class GatewayRoutingTests : IAsyncLifetime, IDisposable
         { "DELETE", "/api/v1/tecnicos/me/servicios/507f1f77bcf86cd799439011" },
         { "GET", "/api/v1/tecnicos/507f1f77bcf86cd799439011/fotos-trabajos" },
         { "GET", "/api/v1/tecnicos/me/reputacion" },
+        { "GET", "/api/v1/tecnicos/me" },
         { "GET", "/api/v1/agenda" },
         { "POST", "/api/v1/visitas/507f1f77bcf86cd799439011/reprogramar" },
         { "POST", "/api/v1/visitas/507f1f77bcf86cd799439011/reprogramar/respuesta" },
@@ -67,6 +68,17 @@ public sealed class GatewayRoutingTests : IAsyncLifetime, IDisposable
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         response.Headers.GetValues("X-Servicio").Should().ContainSingle().Which.Should().Be("mercado");
         _requestsSeen.Should().ContainSingle().Which.Path.Should().Be(path);
+    }
+
+    [Fact]
+    public async Task GetMyTechnicianProfile_IsNotServedByTheAnonymousProfileRoute_CA_046_75()
+    {
+        _client!.DefaultRequestHeaders.Authorization = null;
+
+        using var response = await _client.GetAsync(new Uri("/api/v1/tecnicos/me", UriKind.Relative));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized, "la ruta anónima del perfil público no la atiende");
+        _requestsSeen.Should().BeEmpty();
     }
 
     public async Task InitializeAsync()

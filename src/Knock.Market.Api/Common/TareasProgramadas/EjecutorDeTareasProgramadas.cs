@@ -1,3 +1,5 @@
+using Knock.Hosting.Procesos;
+
 namespace Knock.Market.Api.Common.TareasProgramadas;
 
 internal interface IManejadorDeTarea
@@ -33,6 +35,7 @@ internal sealed partial class EjecutorDeTareasProgramadas(
         {
             await _handlers[task.Tipo].HandleAsync(task, cancellationToken);
             var completed = await store.CompleteAsync(task, clock.GetUtcNow().UtcDateTime, cancellationToken);
+            Record(task, ProcesosMetrics.Outcome(completed, succeeded: true, lastFailure: false, ProcesosMetrics.Hecha, ProcesosMetrics.Fallida));
             if (!completed)
             {
                 LeaseLost(logger, task.Id.ToString());
@@ -46,15 +49,21 @@ internal sealed partial class EjecutorDeTareasProgramadas(
 
     private async Task RecordFailureAsync(TareaReservada task, CancellationToken cancellationToken)
     {
-        if (!await store.FailAsync(task, clock.GetUtcNow().UtcDateTime, cancellationToken))
+        var owned = await store.FailAsync(task, clock.GetUtcNow().UtcDateTime, cancellationToken);
+        var lastFailure = task.Intentos + 1 >= 5;
+        Record(task, ProcesosMetrics.Outcome(owned, succeeded: false, lastFailure, ProcesosMetrics.Hecha, ProcesosMetrics.Fallida));
+        if (!owned)
         {
             LeaseLost(logger, task.Id.ToString());
         }
-        else if (task.Intentos + 1 >= 5)
+        else if (lastFailure)
         {
             TaskFailed(logger, task.Tipo, task.Id.ToString());
         }
     }
+
+    private void Record(TareaReservada task, string outcome) =>
+        ProcesosMetrics.RecordAttempt(logger, ProcesosMetrics.Tareas, task.Tipo, task.Id.ToString(), task.Intentos + 1, outcome);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Scheduled task lease lost: {TaskId}")]
     private static partial void LeaseLost(ILogger logger, string taskId);

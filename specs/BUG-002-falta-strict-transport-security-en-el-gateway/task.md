@@ -14,3 +14,7 @@
 - **Estado:** hecha. `docs/security-headers.md` y modelo de amenazas en el PR #85; `GET` al gateway desplegado el 2026-11-13 con `Strict-Transport-Security: max-age=31536000; includeSubDomains` en `/health`, `/sitemap.xml` y `/api/v1/me/x` (verificación del líder; tabla en el modelo de amenazas).
 - **Verificar:** TC-BUG-002-05
 - **Dependencia:** el humo de BUG-001 (spec 004 del CI, job `dast`) solo podrá comprobar HSTS cuando BUG-002 esté desplegado; contra `http://localhost` el encabezado no sale a propósito (TC-BUG-002-04).
+
+## T4 — HSTS opcional en el ambiente de desarrollo desplegado (enmienda 2026-11-27)
+- **Estado:** hecha en código (en PR): opción `Security:Hsts:SendInDevelopment`, apagada por omisión. **Pendiente:** que Terraform defina `Security__Hsts__SendInDevelopment` solo en el perfil de desarrollo desplegado y que una persona la aplique.
+- **Verificar:** CA-E01 · CA-E02

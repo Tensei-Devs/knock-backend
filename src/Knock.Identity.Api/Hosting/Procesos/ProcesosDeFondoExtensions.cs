@@ -1,3 +1,5 @@
+using Knock.Hosting.Data;
+using Knock.Hosting.Procesos;
 using Knock.Identity.Api.Hosting.Procesos.Outbox;
 using Knock.Identity.Api.Hosting.Procesos.TareasProgramadas;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -5,7 +7,7 @@ using MongoDB.Driver;
 
 namespace Knock.Identity.Api.Hosting.Procesos;
 
-/// <summary>Registra la bandeja de salida y el ejecutor de tareas programadas de Identidad (spec 054). Sin rutas: son procesos de fondo y su salud no entra en <c>/health/ready</c> (R-14).</summary>
+/// <summary>Registra la bandeja de salida y el ejecutor de tareas programadas de Identidad (spec 054). Sin rutas: son procesos de fondo y su salud no entra en <c>/health/ready</c> (R-14); la alerta sale por métricas y registros (R-13).</summary>
 internal static class ProcesosDeFondoExtensions
 {
     public static IServiceCollection AddProcesosDeFondo(this IServiceCollection services)
@@ -26,6 +28,8 @@ internal static class ProcesosDeFondoExtensions
         services.AddScoped<ProcesadorDeOutbox>();
         services.AddHostedService<TareasProgramadasHostedService>();
         services.AddHostedService<OutboxHostedService>();
+        services.AddScoped<IConsultaDeAlertas>(provider => new ConsultaDeAlertasMongo(provider.GetRequiredKeyedService<IMongoDatabase>(DataExtensions.DatabaseKey)));
+        services.AddKnockVigilanciaDeProcesos();
         return services;
     }
 }

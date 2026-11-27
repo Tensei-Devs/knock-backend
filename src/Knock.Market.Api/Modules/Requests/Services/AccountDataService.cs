@@ -8,18 +8,12 @@ using MongoDB.Bson.IO;
 namespace Knock.Market.Api.Modules.Requests.Services;
 
 /// <summary>
-/// Puerto de la anonimización de las opiniones de una persona (spec 039, R-25; spec 051). Mientras la spec 051 no esté en esta rama la implementación registrada no hace nada;
-/// la de la spec 051 sustituye al nombre y borra el texto de las opiniones de la persona.
+/// Puerto de la anonimización de las opiniones que escribió una persona (spec 039, R-25; spec 051, R-16). Lo implementa el módulo Reviews: las marca <c>anonimizada</c>. No tiene sustituto
+/// vacío a propósito: si falta el registro, la eliminación falla y se reintenta en vez de darse por hecha.
 /// </summary>
 internal interface IOpinionAnonymizer
 {
     Task AnonymizeAsync(string sub, CancellationToken cancellationToken);
-}
-
-/// <summary>Sustituto mientras no existen las opiniones (spec 051): no hay nada que anonimizar.</summary>
-internal sealed class NoOpinionsToAnonymize : IOpinionAnonymizer
-{
-    public Task AnonymizeAsync(string sub, CancellationToken cancellationToken) => Task.CompletedTask;
 }
 
 /// <summary>

@@ -18,11 +18,16 @@ internal sealed class TecnicosOptions
 /// <summary>Lo que hace falta del perfil propio para validar una edición: forma de atención, si ya tiene dirección de taller y su radio.</summary>
 internal sealed record OwnTechnician(ObjectId Id, string? Atencion, bool HasWorkshop, int? RadioKm);
 
+/// <summary>Lo guardado que lee <c>GET /tecnicos/me</c>: la dirección del taller llega como está en la base (cifrada, o en claro en las semillas de demostración).</summary>
+internal sealed record StoredOwnProfile(TechnicianResponse Profile, string? FotoUrl, string? StoredWorkshopAddress, bool Demo);
+
 internal interface ITechnicianSelfStore
 {
     Task<OwnTechnician?> FindOwnAsync(string sub, CancellationToken cancellationToken);
 
     Task<TechnicianResponse?> ReadOwnAsync(string sub, CancellationToken cancellationToken);
+
+    Task<StoredOwnProfile?> ReadOwnProfileAsync(string sub, CancellationToken cancellationToken);
 
     Task<ObjectId?> SetAvailableUntilAsync(string sub, DateTime untilUtc, CancellationToken cancellationToken);
 
@@ -46,7 +51,7 @@ internal enum UpdateTechnicianStatus
 internal sealed record UpdateTechnicianOutcome(UpdateTechnicianStatus Status, TechnicianResponse? Technician = null, string? Field = null);
 
 /// <summary>
-/// Rutas del propio técnico (spec 046, TEC-08 a TEC-11). La persona es siempre la del <c>sub</c>; una cuenta sin perfil de técnico no puede cambiar nada.
+/// Rutas del propio técnico (spec 046, TEC-08 a TEC-11 y TEC-15). La persona es siempre la del <c>sub</c>; una cuenta sin perfil de técnico no puede cambiar nada.
 /// Cada escritura borra el perfil de la caché de esta réplica (R-45).
 /// </summary>
 internal sealed class MyTechnicianService(
@@ -57,6 +62,25 @@ internal sealed class MyTechnicianService(
     IOptions<TecnicosOptions> options,
     TimeProvider clock)
 {
+    /// <summary>
+    /// TEC-15 (R-54 a R-57): el perfil de quien llama, esté activo, suspendido u oculto, sin caché. La dirección del taller se descifra solo para esta respuesta
+    /// y solo con taller o ambos. <see langword="null"/> si la cuenta no es técnico.
+    /// </summary>
+    public async Task<MyTechnicianProfileResponse?> GetProfileAsync(string sub, CancellationToken cancellationToken)
+    {
+        if (await store.ReadOwnProfileAsync(sub, cancellationToken) is not { } stored)
+        {
+            return null;
+        }
+
+        var p = stored.Profile;
+        var workshop = TechnicianRules.UsesWorkshop(p.Atencion)
+            ? WorkshopAddressCipher.Read(cipher, ObjectId.Parse(p.Id), stored.StoredWorkshopAddress, stored.Demo)
+            : null;
+        return new MyTechnicianProfileResponse(p.Id, p.Nombre, p.Oficios, p.OtroOficio, p.Atencion, p.RadioKm, p.ColoniaId, p.NombreNegocio,
+            p.Descripcion, p.Anios, p.Estado, p.Verificacion, p.DisponibleHoy, p.CreadoEn, stored.FotoUrl, workshop);
+    }
+
     /// <summary>TEC-09 (R-46): encendido, hasta hoy a las 23:59:59 de la ciudad; apagado, desde este momento. <see langword="null"/> si no es técnico.</summary>
     public async Task<AvailabilityResponse?> SetAvailabilityAsync(string sub, bool available, CancellationToken cancellationToken)
     {
