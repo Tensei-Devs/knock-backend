@@ -24,6 +24,7 @@
 | T-16 | Transversales: `sub` del token, registros sin datos personales, 429 y 413, sin `Idempotency-Key` | R-50 a R-53 · CA-66 a CA-69 | T-02 a T-15 | T-17 | por asignar | hecha en rama (KNOCK-266): CA-66 a CA-69 con pruebas unitarias; 429 de mapa y explorar en `Spec046MapaExplorarLimitesHttpTests` (CA_046_68; integración, solo CI); el 413 no aplica a esas dos rutas porque son GET sin cuerpo y las rutas con cuerpo ya lo cubren |
 | T-17 | OpenAPI, `docs/endpoints.md` y `docs/rate-limit-matrix.md` | §5 | T-02 a T-15 | T-16 | por asignar | hecha (conciliado 2026-11-24): las rutas de la 046 están en `docs/openapi.v1.json` (regenerado con `export_openapi.py --service market --no-build` sin diferencias), en `docs/endpoints.md` y en `docs/rate-limit-matrix.md` (`tecnicos-registro`, `tecnicos-mapa`, `tecnicos-explorar` y las rutas sin política propia) |
 | T-18 | Gates, `Memoria.md` y revisión de par | §12 | todas | — | por asignar | pendiente |
+| T-19 | `GET /api/v1/tecnicos/me` (TEC-15): DTO, lectura, servicio, controlador, ruta del gateway, contrato, documentación y pruebas | R-54 a R-58 · CA-70 a CA-76 (enmienda del 2026-11-27) | T-09 | — | por asignar | hecha en rama (KNOCK-266): CA-72 a CA-74 con pruebas unitarias; CA-71 en seguridad; CA-75 en la prueba del gateway; CA-70 a CA-74 y CA-76 por HTTP en `Spec046PerfilPropioHttpTests` (integración, solo CI) |
 
 ## Definición de terminado
 - Los criterios de aceptación de `spec.md` están cubiertos por pruebas en verde.
