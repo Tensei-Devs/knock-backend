@@ -1,5 +1,6 @@
 using Knock.Contracts.Moderation;
 using Knock.Hosting.Data;
+using Knock.Hosting.Procesos;
 using Knock.Market.Api.Common.Bandeja;
 using Knock.Market.Api.Common.Crypto;
 using Knock.Market.Api.Common.TareasProgramadas;
@@ -79,6 +80,7 @@ public static class RequestsModuleExtensions
         services.AddScoped<ConversationPermissionService>();
         services.AddScoped<ChooseQuoteService>();
         services.AddScoped<IBandejaStore>(provider => new BandejaStore(provider.GetRequiredKeyedService<IMongoDatabase>(ModuleKey)));
+        services.AddScoped<IConsultaDeAlertas>(provider => new ConsultaDeAlertasMongo(provider.GetRequiredKeyedService<IMongoDatabase>(ModuleKey)));
         services.AddScoped<VisitStore>();
         services.AddScoped<AccountEventStore>();
         services.AddScoped<AccountEventService>();
