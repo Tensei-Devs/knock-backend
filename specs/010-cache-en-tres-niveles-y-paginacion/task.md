@@ -13,6 +13,7 @@
 | T-05 | KNOCK-167 | Implementar la paginación por cursor y las proyecciones | R-07, R-08 · CA-05 | cerrada por alcance (excepción aprobada en spec §9) |
 | T-06 | KNOCK-167 | Configurar la compresión y los serializadores generados | R-09 · CA-04 | hecha (PR #52; verificado en `src`: caché Redis, `ETag`/`If-None-Match` y compresión) |
 | T-07 | KNOCK-166 | Escribir la prueba de carga con k6 para ajustar vigencias | R-04 | hecha (KNOCK-269: p95 secuencial 200 fría 22.976 ms, caliente 6.589 ms; 304 fría 16.938 ms, caliente 8.011 ms; [evidencia](../../docs/evidencia/knock-269-cache-p95.md); k6 queda como referencia de carga) |
+| T-08 | KNOCK-266 | Enmienda 2026-11-27: compresión en Mensajería (fuera `/hubs` y `/api/v1/interno`) y exclusión de `/api/v1/imagenes/subidas` en Mercado | R-09 · CA-E01 a CA-E03 | hecha (en PR; las pruebas con Redis corren en el CI) |
 
 ## Definición de terminado
 - Los criterios de aceptación de `spec.md` están cubiertos por pruebas en verde.

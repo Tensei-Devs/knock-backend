@@ -71,7 +71,8 @@ internal static class KnockApplicationExtensions
         app.UseAuthentication();
         app.UseRateLimiter();
         app.UseMiddleware<RequestBodyLimitMiddleware>(new RequestBodyLimitOptions { PayloadTooLargeCode = ErrorCodes.PayloadTooLargeCode });
-        app.UseKnockJsonCompression();
+        // Spec 010, enmienda 2026-11-27 y spec 032, R-15: las subidas de imágenes llevan una firma en el enlace y no se comprimen, sin depender del tamaño.
+        app.UseKnockJsonCompression("/api/v1/imagenes/subidas");
         app.UseAuthorization();
         app.MapKnockHealth();
         app.MapKnockOpenApi(app.Environment);
