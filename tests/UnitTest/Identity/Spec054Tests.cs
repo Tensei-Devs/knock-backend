@@ -4,6 +4,7 @@ using Knock.Identity.Api.Hosting.Procesos;
 using Knock.Identity.Api.Hosting.Procesos.Outbox;
 using Knock.Identity.Api.Hosting.Procesos.Reintentos;
 using Knock.Identity.Api.Hosting.Procesos.TareasProgramadas;
+using Knock.Identity.Api.Modules.Account.Data;
 using Knock.UnitTest.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -167,6 +168,21 @@ public sealed class Spec054Tests
     }
 
     [Fact]
+    public async Task Eliminacion_Cancelada_La_Tarea_Queda_Hecha_Sin_Efecto_CA_054_15()
+    {
+        var rig = Spec039EliminarCuentaTests.Build("activa", null, _now);
+        var store = new FakeTasks(new FakeTask("EliminarCuenta", _now));
+        var handler = new RekeyedHandler(rig.Handler, AccountOutbox.DeletionKey(rig.Store.Accounts.Single().Sub, _now));
+
+        (await Executor(store, handler).ExecuteOneAsync(CancellationToken.None)).Should().BeTrue();
+
+        store.Single.Estado.Should().Be("hecha");
+        rig.Store.Erased.Should().BeEmpty();
+        rig.Trust.Purged.Should().BeEmpty();
+        rig.Outbox.AccountDeleted.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task Tarea_Aun_No_Vencida_No_Se_Ejecuta_CA_054_19()
     {
         var store = new FakeTasks(new FakeTask("CerrarPeriodoDeOpinion", _now.AddDays(30)));
@@ -291,6 +307,14 @@ public sealed class Spec054Tests
     private sealed class ThrowingDelivery : IEntregaInterna
     {
         public Task<ResultadoDeEntrega> DeliverAsync(OutboxReservado evento, CancellationToken cancellationToken) => throw new HttpRequestException("down");
+    }
+
+    /// <summary>Entrega al manejador real la clave de negocio que el almacén de mentira no guarda.</summary>
+    private sealed class RekeyedHandler(IManejadorDeTarea inner, string key) : IManejadorDeTarea
+    {
+        public string Tipo => inner.Tipo;
+
+        public Task HandleAsync(TareaReservada task, CancellationToken cancellationToken) => inner.HandleAsync(task with { ClaveNegocio = key }, cancellationToken);
     }
 
     private sealed class CountingHandler(string tipo, bool fail = false) : IManejadorDeTarea

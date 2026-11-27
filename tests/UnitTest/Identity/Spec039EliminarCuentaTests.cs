@@ -16,7 +16,7 @@ public class Spec039EliminarCuentaTests
 
     private static readonly DateTime _deleteAt = new(2026, 11, 24, 12, 0, 0, DateTimeKind.Utc);
 
-    private sealed class FakeTrust : ITrustApi
+    internal sealed class FakeTrust : ITrustApi
     {
         public List<string> Purged { get; } = [];
 
@@ -36,9 +36,9 @@ public class Spec039EliminarCuentaTests
         }
     }
 
-    private sealed record Rig(EliminarCuentaHandler Handler, FakeAccountStore Store, FakeTrust Trust, Spec039Outbox Outbox, Spec039Cancelled Cancelled);
+    internal sealed record Rig(EliminarCuentaHandler Handler, FakeAccountStore Store, FakeTrust Trust, Spec039Outbox Outbox, Spec039Cancelled Cancelled);
 
-    private static Rig Build(string state, DateTime? deleteAt, DateTime now)
+    internal static Rig Build(string state, DateTime? deleteAt, DateTime now)
     {
         var store = new FakeAccountStore();
         store.Accounts.Add(new AccountSnapshot(_userId, _sub, state, false, [1, 2, 3], deleteAt));
@@ -101,7 +101,7 @@ public class Spec039EliminarCuentaTests
     }
 
     [Fact]
-    public async Task RunningTwice_ErasesOnce()
+    public async Task RunningTwice_ErasesOnce_CA_054_14()
     {
         var rig = Build("eliminacion_programada", _deleteAt, _deleteAt.AddMinutes(1));
 
@@ -110,6 +110,7 @@ public class Spec039EliminarCuentaTests
 
         rig.Store.Erased.Should().HaveCount(1);
         rig.Trust.Purged.Should().HaveCount(1);
+        rig.Store.Accounts.Single().State.Should().Be("eliminada", "la segunda ejecución deja el mismo resultado");
     }
 
     [Fact]

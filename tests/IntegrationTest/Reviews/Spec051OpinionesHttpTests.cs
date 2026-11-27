@@ -1,6 +1,9 @@
 using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using AwesomeAssertions;
 using Knock.IntegrationTest.Requests;
+using Knock.IntegrationTest.Support;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Xunit;
@@ -68,7 +71,7 @@ public sealed class Spec051OpinionesHttpTests
     }
 
     [Fact]
-    public async Task Sin_Sesion_Ajeno_Y_Valores_Invalidos_Responden_401_403_422_CA_051_08_CA_051_09_CA_051_10()
+    public async Task Sin_Sesion_Ajeno_Y_Valores_Invalidos_Responden_401_403_422_CA_051_08_CA_051_09_CA_051_10_CA_051_11()
     {
         await using var host = await Spec020Host.StartAsync();
         var visit = await FinishedVisitAsync(host);
@@ -138,6 +141,66 @@ public sealed class Spec051OpinionesHttpTests
         tooMany.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
         missing.StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await Spec020Host.ReadAsync(missing)).GetProperty("code").GetString().Should().Be("technician_not_found");
+    }
+
+    [Fact]
+    public async Task Responder_Sin_Sesion_Con_Token_Vencido_O_Cuerpo_Ilegible_No_Guarda_Nada_CA_051_14_CA_051_17()
+    {
+        await using var host = await Spec020Host.StartAsync();
+        var visit = await FinishedVisitAsync(host);
+        using var created = await host.SendAsync(HttpMethod.Post, ReviewPath(visit.VisitId), host.ClientSub, new { calificacion = 5 });
+        var path = $"/api/v1/opiniones/{(await Spec020Host.ReadAsync(created)).GetProperty("id").GetString()}/respuesta";
+        var expiredToken = GatewayTestSupport.IssueToken(sub: visit.Technician.Sub, key: Convert.FromBase64String(MarketApiFactory.SigningKeyBase64), lifetime: TimeSpan.FromMinutes(-10));
+        using var expiredRequest = new HttpRequestMessage(HttpMethod.Post, new Uri(path, UriKind.Relative)) { Content = JsonContent.Create(new { texto = "Gracias" }) };
+        expiredRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", expiredToken);
+
+        using var anonymous = await host.SendAsync(HttpMethod.Post, path, body: new { texto = "Gracias" });
+        using var expired = await host.Client.SendAsync(expiredRequest);
+        using var unreadable = await host.SendAsync(HttpMethod.Post, path, visit.Technician.Sub, rawJson: "{no es json");
+
+        anonymous.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        expired.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        unreadable.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await host.CountAsync("opiniones", Builders<BsonDocument>.Filter.Exists("respuesta"))).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Lista_Sale_De_La_Mas_Nueva_A_La_Mas_Vieja_Con_Distribucion_Y_Anonimizadas_CA_051_01_CA_051_23()
+    {
+        await using var host = await Spec020Host.StartAsync();
+        var technician = await host.SeedPublicTechnicianAsync();
+        var deletedClient = Guid.NewGuid().ToString("D");
+        var oldest = await SeedReviewAsync(host, technician.Id, Guid.NewGuid().ToString("D"), stars: 3, daysAgo: 20, anonymized: false);
+        var newest = await SeedReviewAsync(host, technician.Id, Guid.NewGuid().ToString("D"), stars: 5, daysAgo: 1, anonymized: false);
+        var deleted = await SeedReviewAsync(host, technician.Id, deletedClient, stars: 5, daysAgo: 10, anonymized: true);
+
+        using var response = await host.SendAsync(HttpMethod.Get, $"/api/v1/tecnicos/{technician.Id}/opiniones", host.ClientSub);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var raw = await response.Content.ReadAsStringAsync();
+        var page = await Spec020Host.ReadAsync(response);
+        var items = page.GetProperty("items").EnumerateArray().ToList();
+        items.Select(item => item.GetProperty("id").GetString()).Should().Equal(newest.ToString(), deleted.ToString(), oldest.ToString());
+        items.Select(item => item.GetProperty("anonimizada").GetBoolean()).Should().Equal(false, true, false);
+        items.Should().OnlyContain(item => item.GetProperty("servicioVerificado").GetBoolean());
+        raw.Should().NotContain(deletedClient, "la opinión de una cuenta eliminada no identifica a quien la escribió");
+        var summary = page.GetProperty("resumen");
+        summary.GetProperty("total").GetInt32().Should().Be(3);
+        summary.GetProperty("promedio").GetDouble().Should().Be(4.3);
+        summary.GetProperty("distribucion").GetProperty("5").GetInt32().Should().Be(2);
+        summary.GetProperty("distribucion").GetProperty("3").GetInt32().Should().Be(1);
+        summary.GetProperty("distribucion").GetProperty("1").GetInt32().Should().Be(0);
+    }
+
+    private static async Task<ObjectId> SeedReviewAsync(Spec020Host host, ObjectId technician, string client, int stars, int daysAgo, bool anonymized)
+    {
+        var id = ObjectId.GenerateNewId();
+        await host.Database.GetCollection<BsonDocument>("opiniones").InsertOneAsync(new BsonDocument
+        {
+            { "_id", id }, { "visitaId", ObjectId.GenerateNewId() }, { "tecnicoId", technician }, { "clienteId", client }, { "calificacion", stars },
+            { "fotos", new BsonArray() }, { "moderacion", "publicada" }, { "oculta", false }, { "anonimizada", anonymized }, { "creadoEn", DateTime.UtcNow.AddDays(-daysAgo) },
+        });
+        return id;
     }
 
     [Fact]
