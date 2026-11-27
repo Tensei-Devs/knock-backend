@@ -317,3 +317,15 @@ excepciones:
     creada: 2026-11-26
     vence: 2026-12-25
     plan: revisar antes de vencer, volviendo a correr el DAST sin la línea 90004 y leyendo el informe zap_scan_sesion; retirarla si ya no aparece o si una spec aprobada agrega el encabezado y, si se renueva, comprobar que solo aparece la variante 90004-1 en respuestas JSON, y renovar solo con nueva aprobación.
+  - id: EXC-034
+    herramienta: checkov
+    regla: CKV2_AZURE_22
+    alcance: deploy/infra/main.tf (cuentas de Content Safety y Azure OpenAI; solo existen con enable_content_safety o enable_azure_openai)
+    justificacion: >-
+      La llave propia (CMK) de Azure AI exige que el Key Vault tenga borrado temporal y protección contra purga. El Key Vault de Knock tiene la protección apagada; activarla es irreversible e impide destruir y recrear el ambiente (ADR-006).
+      Las cuentas quedan con el cifrado en reposo administrado por Microsoft, sin llaves compartidas (local_auth_enabled = false) y con identidad administrada.
+      Decidido por el responsable el 2026-11-27. No se probó en Azure que la llave propia fallara; se basa en la documentación de Microsoft y en la configuración del módulo.
+    responsable: José Julián Hernández Hernández
+    creada: 2026-11-27
+    vence: 2026-12-25
+    plan: antes de vencer, decidir si el ambiente se conserva; si se conserva y se activa la protección contra purga, restaurar la llave propia; si no, apagar o destruir las cuentas, o renovar solo con nueva aprobación.

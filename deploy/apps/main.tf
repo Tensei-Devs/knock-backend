@@ -66,10 +66,13 @@ locals {
     Errores__ExponerDetalle = "false"
   }
 
+  # HSTS en dev desplegado (BUG-002, enmienda 2026-11-27): dev corre como Development y se atiende por HTTPS. Fuera de Development el gateway ya lo envía.
+  dev_hsts = var.aspnetcore_environment == "Development" ? { Security__Hsts__SendInDevelopment = "true" } : {}
+
   services = {
     gateway = {
       external = true
-      env = merge(local.runtime, local.forwarded, local.panel_origin, {
+      env = merge(local.runtime, local.forwarded, local.panel_origin, local.dev_hsts, {
         ReverseProxy__Clusters__identidad__Destinations__principal__Address  = local.cluster_address.identity
         ReverseProxy__Clusters__mercado__Destinations__principal__Address    = local.cluster_address.market
         ReverseProxy__Clusters__mensajeria__Destinations__principal__Address = local.cluster_address.messaging
@@ -137,8 +140,8 @@ locals {
         # `WritesEnabled` solo se enciende aquí porque deploy da a todas las réplicas la misma llave de huella (ver secret_env).
         Avisos__Devices__ActiveEncryptionVersion = "1"
         Avisos__Devices__WritesEnabled           = "true"
-        # Push FCM (spec 037): apagado; el proyecto Firebase no es secreto.
-        Notificaciones__PushHabilitado = "false"
+        # Push FCM (spec 037): detrás de `enable_push` (apagado); el proyecto Firebase no es secreto.
+        Notificaciones__PushHabilitado = var.enable_push ? "true" : "false"
         Notificaciones__Fcm__ProjectId = "knock-0"
       })
       secret_env = merge(local.redis_secret, {
@@ -241,6 +244,7 @@ module "service" {
   max_replicas                   = var.replicas[each.key].max
   cpu                            = var.resources[each.key].cpu
   memory                         = var.resources[each.key].memory
+  set_identity_client_id         = true
   enable_app_insights            = true
   app_insights_connection_string = local.infra.application_insights_connection_string
   tags                           = local.tags
