@@ -103,6 +103,19 @@ class PublicContractTests(unittest.TestCase):
         self.assertNotIn("servers", public)
         self.assertEqual("Knock API", public["info"]["title"])
 
+    def test_contrato_publico_incluye_la_raiz_de_un_comodin_CA_034_14(self) -> None:
+        # En YARP «{**resto}» acepta cero o más segmentos: la ruta raíz también la atiende el gateway.
+        ok = {"responses": {"200": {"description": "ok"}}}
+        market = _service_doc({
+            "/api/v{version}/oficios": {"get": ok, "post": ok},
+            "/api/v{version}/oficios/{clave}": {"get": ok},
+            "/api/v{version}/oficios-pedidos": {"get": ok},
+            "/api/v{version}/oficiosx/1": {"get": ok},
+        }, {})
+        public = export_openapi.build_public({"market": market}, _GATEWAY)
+        self.assertEqual(["/api/v{version}/oficios", "/api/v{version}/oficios/{clave}"], list(public["paths"]))
+        self.assertEqual(["get"], list(public["paths"]["/api/v{version}/oficios"]))
+
     def test_contrato_publico_misma_ruta_y_verbo_falla_CA_034_14(self) -> None:
         ok = {"responses": {"200": {"description": "ok"}}}
         doc = _service_doc({"/api/v{version}/oficios/1": {"get": ok}}, {})

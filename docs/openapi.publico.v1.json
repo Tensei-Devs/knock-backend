@@ -396,6 +396,312 @@
         }
       }
     },
+    "/api/v{version}/admin/oficios": {
+      "get": {
+        "tags": [
+          "AdminTrades"
+        ],
+        "summary": "Todos los oficios, activos e inactivos, con sus parámetros de precio (OFI-03).",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTradeListResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTradeListResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTradeListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Segundos que el cliente debe esperar antes de reintentar.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "AdminTrades"
+        ],
+        "summary": "Alta de un oficio (OFI-04): 201 con el oficio creado. La clave repetida responde 409 `trade_key_taken`; un cuerpo ilegible, 400; un valor inválido, 422. La auditoría del panel se escribe en la misma transacción que el\noficio (bandeja de salida) y llega a Identidad después, con reintentos.",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTradeBody"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTradeBody"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTradeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTradeResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTradeResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTradeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Segundos que el cliente debe esperar antes de reintentar.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v{version}/admin/oficios-pedidos": {
       "get": {
         "tags": [
@@ -4258,6 +4564,142 @@
         }
       }
     },
+    "/api/v{version}/avisos": {
+      "get": {
+        "tags": [
+          "Avisos"
+        ],
+        "summary": "Lista los avisos de quien llama, del más reciente al más antiguo, por cursor (20 por omisión, 50 como máximo).",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "leido",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "comoRol",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoticeListResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoticeListResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoticeListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Segundos que el cliente debe esperar antes de reintentar.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v{version}/avisos/leidos": {
       "post": {
         "tags": [
@@ -4994,6 +5436,385 @@
           },
           "429": {
             "description": "Too Many Requests",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Segundos que el cliente debe esperar antes de reintentar.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v{version}/conversaciones": {
+      "get": {
+        "tags": [
+          "Conversaciones"
+        ],
+        "summary": "Las conversaciones de la persona, de la más reciente a la más antigua, con paginación por cursor (1 a 20) y el total de no leídos.",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Page size, 1 to 20. Defaults to 20.",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversacionPage"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversacionPage"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversacionPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Segundos que el cliente debe esperar antes de reintentar.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Conversaciones"
+        ],
+        "summary": "Crea la conversación del par (solicitud, técnico) o devuelve la que ya existe: 201 la primera vez y 200 después. 409 `conversation_closed` si está cerrada; 20 por hora por persona.",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearConversacionBody"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearConversacionBody"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearConversacionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversacionView"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversacionView"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversacionView"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversacionView"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversacionView"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversacionView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Segundos que el cliente debe esperar antes de reintentar.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
             "headers": {
               "X-Correlation-Id": {
                 "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
@@ -6172,6 +6993,222 @@
         }
       }
     },
+    "/api/v{version}/dispositivos": {
+      "post": {
+        "tags": [
+          "Dispositivos"
+        ],
+        "summary": "Registra el token de notificaciones del dispositivo (spec 037, R-01): 201 la primera vez, 200 si ya estaba. 409 `device_conflict` si otra persona lo registró a la vez; 503 `devices_unavailable` con el registro de dispositivos apagado (sin llaves de cifrado); 20 por hora por persona.",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistroDispositivo"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistroDispositivo"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistroDispositivo"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdDispositivo"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdDispositivo"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdDispositivo"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdDispositivo"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdDispositivo"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdDispositivo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Segundos que el cliente debe esperar antes de reintentar.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Segundos que el cliente debe esperar antes de reintentar.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v{version}/dispositivos/{id}": {
       "delete": {
         "tags": [
@@ -6850,6 +7887,310 @@
           },
           "429": {
             "description": "Too Many Requests",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Segundos que el cliente debe esperar antes de reintentar.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v{version}/me": {
+      "get": {
+        "tags": [
+          "Me"
+        ],
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Segundos que el cliente debe esperar antes de reintentar.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Me"
+        ],
+        "summary": "Actualiza el perfil. Los campos inválidos responden 422 con errores por campo; una colonia inexistente responde 422 con su código.",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Segundos que el cliente debe esperar antes de reintentar.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
             "headers": {
               "X-Correlation-Id": {
                 "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
@@ -10196,6 +11537,153 @@
         }
       }
     },
+    "/api/v{version}/me/tecnicos-confianza": {
+      "get": {
+        "tags": [
+          "TrustedTechnicians"
+        ],
+        "summary": "Los técnicos guardados, del más reciente al más antiguo, con paginación por cursor. Un técnico oculto no aparece.",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "description": "Page size, 1 to 50. Defaults to 20.",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrustedTechnicianPage"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrustedTechnicianPage"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrustedTechnicianPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Segundos que el cliente debe esperar antes de reintentar.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v{version}/me/tecnicos-confianza/{tecnicoId}": {
       "delete": {
         "tags": [
@@ -11118,6 +12606,65 @@
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v{version}/oficios": {
+      "get": {
+        "tags": [
+          "Oficios"
+        ],
+        "summary": "Oficios activos como arreglo sin paginar: excepción documentada a la constitución §11 (catálogo acotado, D9).\n`[AllowAnonymous]` explícito para que siga público aunque se agregue una política de autorización global (D3).\nResponde con `ETag` débil, `Cache-Control: public, max-age=0, must-revalidate` y `Vary: Accept-Encoding` (la respuesta comprimida es otra variante);\ncon `If-None-Match` vigente responde 304 sin cuerpo.",
+        "parameters": [
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OficioResponse"
+                  }
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
                 }
               }
             }
@@ -12612,6 +14159,222 @@
           },
           "429": {
             "description": "Too Many Requests",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Segundos que el cliente debe esperar antes de reintentar.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v{version}/reportes": {
+      "post": {
+        "tags": [
+          "Reportes"
+        ],
+        "summary": "Crea un reporte (`abierto`). 201 la primera vez y 200 si ya había uno abierto igual; 422 con `errors.&lt;campo&gt;` si un valor no es válido, si es contra uno mismo o contra alguien\nque no existe, o `report_content_rejected`; 503 `report_moderation_unavailable` si la moderación no responde. Con motivo de peligro la respuesta lleva el aviso de llamar al 911.",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReportBody"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReportBody"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReportBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportCreated"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportCreated"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportCreated"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportCreated"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportCreated"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportCreated"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Segundos que el cliente debe esperar antes de reintentar.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
             "headers": {
               "X-Correlation-Id": {
                 "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
@@ -22032,6 +23795,21 @@
         },
         "description": "Ajuste de precio propuesto (201)."
       },
+      "AdminTradeListResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminTradeResponse"
+            }
+          }
+        },
+        "description": "Todos los oficios, incluidos los inactivos (OFI-03). El catálogo es acotado, así que no se pagina (decisión D9 de la spec TT-PRU-01)."
+      },
       "AdminTradeResponse": {
         "required": [
           "clave",
@@ -22938,6 +24716,100 @@
         },
         "description": "Cuerpo de `POST /asistente/resumen-chat` y `/borrador-cotizacion` (ASI-02 y ASI-03). El identificador de la persona nunca viene en el cuerpo: sale del `sub`."
       },
+      "ConversacionItem": {
+        "required": [
+          "conversacionId",
+          "solicitudId",
+          "rol",
+          "contraparte",
+          "servicio",
+          "estado",
+          "ultimoMensaje",
+          "noLeidos"
+        ],
+        "type": "object",
+        "properties": {
+          "conversacionId": {
+            "type": "string"
+          },
+          "solicitudId": {
+            "type": "string"
+          },
+          "visitaId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "rol": {
+            "type": "string"
+          },
+          "contraparte": {
+            "$ref": "#/components/schemas/Contraparte"
+          },
+          "servicio": {
+            "type": "string"
+          },
+          "estado": {
+            "enum": [
+              "abierta",
+              "cerrada"
+            ],
+            "type": "string",
+            "description": "Estado de la conversación: abierta o cerrada."
+          },
+          "ultimoMensaje": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/UltimoMensajeView"
+              }
+            ]
+          },
+          "noLeidos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        },
+        "description": "Un elemento de `GET /conversaciones` (R-17). `ultimoMensaje` viaja en `null` mientras no haya mensajes."
+      },
+      "ConversacionPage": {
+        "required": [
+          "items",
+          "totalNoLeidos",
+          "nextCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConversacionItem"
+            }
+          },
+          "totalNoLeidos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Página de `GET /conversaciones`: sin conversaciones, `items: []` y `totalNoLeidos: 0`."
+      },
       "ConversacionView": {
         "required": [
           "conversacionId",
@@ -23022,6 +24894,28 @@
         },
         "description": "Respuesta de TEC-06 (R-43)."
       },
+      "CrearConversacionBody": {
+        "required": [
+          "solicitudId",
+          "tecnicoId"
+        ],
+        "type": "object",
+        "properties": {
+          "solicitudId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tecnicoId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Cuerpo de `POST /conversaciones` (spec 030, R-04): `tecnicoId` es obligatorio para el cliente y lo omite el técnico. Los campos son opcionales para que el validador responda 422 y no el 400 del binding."
+      },
       "CreateAddressRequest": {
         "type": "object",
         "properties": {
@@ -23081,6 +24975,49 @@
           }
         },
         "description": "Cuerpo de `POST /me/casa-y-auto` (spec 041, R-03). Solo estos tres campos: el identificador de otra persona u otro campo del JSON no existe aquí, así que se ignora (R-20).\nLos campos son anulables a propósito: el validador responde 422 por campo."
+      },
+      "CreateReportBody": {
+        "type": "object",
+        "properties": {
+          "reportadoId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "referencia": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReportReferenceBody"
+              }
+            ]
+          },
+          "motivo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "descripcion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "evidencia": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "description": "Cuerpo de `POST /reportes` (spec 043, R-10). Ningún campo acepta el identificador de quien reporta: sale del token (R-24)."
       },
       "CreateRequestBody": {
         "required": [
@@ -23252,6 +25189,92 @@
           }
         },
         "description": "Cuerpo de `POST /tecnicos/me/servicios` (SRV-02, R-06): ningún identificador de persona se acepta (R-18)."
+      },
+      "CreateTradeBody": {
+        "required": [
+          "clave",
+          "nombre",
+          "modalidad",
+          "frasesSugeridas",
+          "topePorcentaje",
+          "topeFijoPorcentaje",
+          "pisoAprobacion",
+          "visitaMaxima",
+          "activo"
+        ],
+        "type": "object",
+        "properties": {
+          "clave": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nombre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "modalidad": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "frasesSugeridas": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "topePorcentaje": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "topeFijoPorcentaje": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "pisoAprobacion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "visitaMaxima": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "activo": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        },
+        "description": "Cuerpo de `POST /api/v1/admin/oficios` (OFI-04): la clave y los parámetros del oficio nuevo. Todos son obligatorios salvo las frases y `activo` (verdadero por omisión, R-18)."
       },
       "CreateVerificationRequest": {
         "required": [
@@ -23816,6 +25839,18 @@
           }
         },
         "description": "Un trabajo terminado del historial de un elemento (spec 041, R-17): día de la visita (`YYYY-MM-DD`), oficio y técnico, sin precios ni direcciones."
+      },
+      "IdDispositivo": {
+        "required": [
+          "id"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "description": "Respuesta de `POST /dispositivos`: el id del registro (nunca el token de notificaciones, spec 037, R-03)."
       },
       "ImagenConfirmadaResponse": {
         "required": [
@@ -24502,6 +26537,27 @@
         },
         "description": "Reporte de no terminado creado (201): queda en revisión."
       },
+      "NoticeListResponse": {
+        "required": [
+          "items",
+          "siguienteCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NoticeResponse"
+            }
+          },
+          "siguienteCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "NoticePreferenceChange": {
         "required": [
           "tipo",
@@ -24556,6 +26612,71 @@
             }
           }
         }
+      },
+      "NoticeResponse": {
+        "required": [
+          "id",
+          "tipo",
+          "comoRol",
+          "titulo",
+          "texto",
+          "destino",
+          "leido",
+          "creadoEn"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "comoRol": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "titulo": {
+            "type": "string"
+          },
+          "texto": {
+            "type": "string"
+          },
+          "destino": {},
+          "leido": {
+            "type": "boolean"
+          },
+          "creadoEn": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "description": "Un aviso tal como lo ve la persona (R-10); `ComoRol` es nulo en los avisos comunes a ambos roles: sin códigos de visita, direcciones ni datos sensibles."
+      },
+      "OficioResponse": {
+        "required": [
+          "clave",
+          "nombre",
+          "modalidad"
+        ],
+        "type": "object",
+        "properties": {
+          "clave": {
+            "type": "string",
+            "description": "Clave estable del catálogo (≤ 16 caracteres)."
+          },
+          "nombre": {
+            "type": "string",
+            "description": "Nombre para mostrar, en español (≤ 100 caracteres)."
+          },
+          "modalidad": {
+            "type": "string",
+            "description": "Valores conocidos: `domicilio` o `taller`. Es texto, no enum cerrado, para admitir modalidades futuras."
+          }
+        },
+        "description": "Oficio activo del catálogo tal como lo ve la app: solo clave, nombre y modalidad (nunca id ni activo)."
       },
       "PanelAccesoResponse": {
         "required": [
@@ -24906,6 +27027,60 @@
             "description": "Identificador de traza para soporte."
           }
         }
+      },
+      "ProfileResponse": {
+        "required": [
+          "id",
+          "nombre",
+          "fotoUrl",
+          "colonia",
+          "codigoPostal",
+          "esTecnico",
+          "estado",
+          "perfilCompleto",
+          "creadoEn"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "fotoUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "colonia": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "codigoPostal": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "esTecnico": {
+            "type": "boolean"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "perfilCompleto": {
+            "type": "boolean"
+          },
+          "creadoEn": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "description": "Perfil de la persona (spec 017, R-01). Nunca incluye el celular, su hash ni datos de otra persona."
       },
       "QuoteComparison": {
         "required": [
@@ -25423,6 +27598,55 @@
         },
         "description": "Cuerpo de `POST /tecnicos` (spec 046, TEC-01, R-02 y R-39). El 422 de forma lo da `RegisterTechnicianBodyValidator`; nunca repite el valor recibido."
       },
+      "RegistroDispositivo": {
+        "required": [
+          "identificador",
+          "plataforma"
+        ],
+        "type": "object",
+        "properties": {
+          "identificador": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "plataforma": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ReportCreated": {
+        "required": [
+          "reporteId",
+          "estado",
+          "creadoEn",
+          "avisoEmergencia"
+        ],
+        "type": "object",
+        "properties": {
+          "reporteId": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "creadoEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "avisoEmergencia": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Lo que recibe quien reporta al crear: el reporte, su estado y, si el motivo implica peligro, el aviso de llamar al 911."
+      },
       "ReportDecisionBody": {
         "type": "object",
         "properties": {
@@ -25552,6 +27776,24 @@
             ]
           }
         }
+      },
+      "ReportReferenceBody": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "La referencia opcional de un reporte: de qué solicitud, visita u opinión viene (spec 043, R-20)."
       },
       "ReportSummary": {
         "required": [
@@ -27163,6 +29405,28 @@
         },
         "description": "Un técnico guardado como de confianza: solo datos públicos, nunca teléfono, WhatsApp ni dirección (spec 042, R-12)."
       },
+      "TrustedTechnicianPage": {
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrustedTechnician"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Una página de la lista; `NextCursor` falta en la última."
+      },
       "TurnoBody": {
         "required": [
           "mensaje",
@@ -27226,6 +29490,27 @@
           }
         },
         "description": "Toda respuesta generada es una sugerencia que la persona revisa (spec 052, R-22): `generadoPorIa` siempre es verdadero y `origen` dice si salió del modelo o de la plantilla."
+      },
+      "UltimoMensajeView": {
+        "required": [
+          "texto",
+          "enviadoEn",
+          "autorRol"
+        ],
+        "type": "object",
+        "properties": {
+          "texto": {
+            "type": "string"
+          },
+          "enviadoEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "autorRol": {
+            "type": "string"
+          }
+        },
+        "description": "Último mensaje de una conversación en la lista: el texto ya ocultado y recortado a 80 caracteres (R-14)."
       },
       "UnreadCountResponse": {
         "required": [
@@ -27340,6 +29625,36 @@
           }
         },
         "description": "Cuerpo de `PUT /api/v1/me/preferencias-avisos` (PRE-02): solo los tipos que cambian. Cualquier otro campo (un identificador de persona, por ejemplo) se ignora (R-15)."
+      },
+      "UpdateProfileRequest": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fotoUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "colonia": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "codigoPostal": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Cuerpo del `PUT /me` (spec 017, R-04 y R-08): solo los cuatro campos editables. Cualquier otro campo del JSON (`sub`, `estado`,\n`esTecnico`…) no existe aquí, así que se ignora. Los campos son anulables a propósito: la validación propia responde 400 por campo."
       },
       "UpdateServiceBody": {
         "required": [
