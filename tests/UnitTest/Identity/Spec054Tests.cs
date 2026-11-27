@@ -232,12 +232,33 @@ public sealed class Spec054Tests
         await Executor(new FakeTasks(task), new CountingHandler("VencerSolicitud", fail: true)).ExecuteOneAsync(CancellationToken.None);
         await Executor(new FakeTasks(unknown)).ExecuteOneAsync(CancellationToken.None);
 
-        var delivered = measurements.Of(ProcesosMetrics.AttemptsInstrument, eventId).Should().ContainSingle().Subject;
+        var published = ProcesosMetrics.Identificador(eventId);
+        var delivered = measurements.Of(ProcesosMetrics.AttemptsInstrument, published).Should().ContainSingle().Subject;
         delivered["resultado"].Should().Be("entregado");
         delivered["intento"].Should().Be(1);
         measurements.Of(ProcesosMetrics.AttemptsInstrument, task.Row.Id).Should().ContainSingle().Which["resultado"].Should().Be("reintento");
         measurements.Of(ProcesosMetrics.AttemptsInstrument, unknown.Row.Id).Should().ContainSingle().Which["resultado"].Should().Be("fallida");
-        logger.Entries.Should().ContainSingle().Which.Should().Contain(eventId).And.Contain("entregado");
+        logger.Entries.Should().ContainSingle().Which.Should().Contain(published).And.Contain("entregado");
+    }
+
+    [Theory]
+    [InlineData("CuentaEliminada", true)]
+    [InlineData("sesion_revocada", false)]
+    [InlineData("exportacion_lista", false)]
+    public async Task Los_Registros_Y_Las_Metricas_No_Llevan_Sub_Sid_Ni_Usuario_CA_054_20(string tipo, bool accepted)
+    {
+        var personal = Guid.NewGuid().ToString("D");
+        var eventId = OutboxReglas.BuildId(tipo, personal, 1);
+        var logger = new ProcesosRegistro<ProcesadorDeOutbox>();
+        var result = accepted ? ResultadoDeEntrega.Aceptado : ResultadoDeEntrega.Rechazado;
+        var processor = new ProcesadorDeOutbox(new FakeOutbox(Event() with { Id = eventId }), new FixedDelivery(result), new FixedTime(_now), logger);
+        using var measurements = new ProcesosMedidas();
+
+        await processor.ProcessOneAsync(CancellationToken.None);
+
+        var tags = measurements.Of(ProcesosMetrics.AttemptsInstrument, ProcesosMetrics.Identificador(eventId)).Should().ContainSingle().Subject;
+        tags.Values.Should().NotContain(x => x != null && x.ToString()!.Contains(personal, StringComparison.Ordinal));
+        logger.Entries.Should().NotBeEmpty().And.NotContain(x => x.Contains(personal, StringComparison.Ordinal));
     }
 
     [Fact]

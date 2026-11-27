@@ -23,7 +23,9 @@ public sealed class Spec054MercadoMetricasTests
     [InlineData(false, true, 0, "fallido")]
     public async Task Cada_Entrega_Deja_Metrica_Y_Registro_CA_054_20(bool accepted, bool rejected, int previousAttempts, string expected)
     {
-        var id = $"{_eventType}:{ObjectId.GenerateNewId()}";
+        var personal = Guid.NewGuid().ToString("D");
+        var id = $"{_eventType}:{personal}:1";
+        var published = ProcesosMetrics.Identificador(id);
         var result = (accepted, rejected) switch
         {
             (true, _) => ResultadoDeEntrega.Aceptado,
@@ -37,14 +39,14 @@ public sealed class Spec054MercadoMetricasTests
 
         await dispatcher.DispatchOneAsync(CancellationToken.None);
 
-        var tags = measurements.Of(ProcesosMetrics.AttemptsInstrument, id).Should().ContainSingle().Subject;
+        var tags = measurements.Of(ProcesosMetrics.AttemptsInstrument, published).Should().ContainSingle().Subject;
         tags["proceso"].Should().Be("outbox");
         tags["tipo"].Should().Be(_eventType);
         tags["intento"].Should().Be(previousAttempts + 1);
         tags["resultado"].Should().Be(expected);
         tags.Values.Should().NotContain(_personalText);
-        logger.Entries.Should().Contain(x => x.Contains(id, StringComparison.Ordinal) && x.Contains(expected, StringComparison.Ordinal))
-            .And.NotContain(x => x.Contains(_personalText, StringComparison.Ordinal));
+        logger.Entries.Should().Contain(x => x.Contains(published, StringComparison.Ordinal) && x.Contains(expected, StringComparison.Ordinal))
+            .And.NotContain(x => x.Contains(_personalText, StringComparison.Ordinal) || x.Contains(personal, StringComparison.Ordinal));
     }
 
     [Theory]

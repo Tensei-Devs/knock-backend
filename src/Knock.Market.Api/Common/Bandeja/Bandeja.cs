@@ -50,7 +50,7 @@ internal interface IBandejaStore
 
 /// <summary>
 /// Despachador de la bandeja de salida de Mercado: reserva un mensaje, lo entrega y lo marca <c>entregado</c> solo si el destino respondió 202 (al menos una vez; el consumidor es idempotente). Reintenta con espera
-/// creciente y al quinto fallo lo deja <c>fallido</c>. Los registros llevan tipo e identificador, nunca la carga.
+/// creciente y al quinto fallo lo deja <c>fallido</c>. Los registros llevan tipo e identificador resumido, nunca la carga.
 /// </summary>
 internal sealed partial class DespachadorDeBandeja(IBandejaStore store, IEnumerable<IEntregaDeBandeja> deliveries, TimeProvider clock, ILogger<DespachadorDeBandeja> logger)
 {
@@ -87,13 +87,14 @@ internal sealed partial class DespachadorDeBandeja(IBandejaStore store, IEnumera
         var lastFailure = result == ResultadoDeEntrega.Rechazado || attempt >= MaxIntentos;
         var outcome = ProcesosMetrics.Outcome(owned, result == ResultadoDeEntrega.Aceptado, lastFailure, ProcesosMetrics.Entregado, ProcesosMetrics.Fallido);
         ProcesosMetrics.RecordAttempt(logger, ProcesosMetrics.Outbox, message.Tipo, message.Id, attempt, outcome);
+        var published = ProcesosMetrics.Identificador(message.Id);
         if (!owned)
         {
-            LeaseLostOnDispatch(logger, message.Tipo, message.Id);
+            LeaseLostOnDispatch(logger, message.Tipo, published);
         }
         else if (result != ResultadoDeEntrega.Aceptado && lastFailure)
         {
-            DispatchFailed(logger, message.Tipo, message.Id);
+            DispatchFailed(logger, message.Tipo, published);
         }
 
         return true;

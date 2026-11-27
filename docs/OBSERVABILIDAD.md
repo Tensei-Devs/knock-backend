@@ -112,7 +112,8 @@ Identidad (`knock-api`) y Mercado (`knock-market`) publican el medidor `Knock.Pr
 - **Qué está en alerta:** lo `fallido`/`fallida`, y lo `pendiente` o `en_proceso` cuya `programadaPara` (o `creadoEn`, si el mensaje no la tiene) pasó hace más de 10 minutos. Incluye los tipos que todavía no tienen manejador o entrega registrada: siguen pendientes y a los 10 minutos alertan.
 - **Cada cuánto:** `TareasProgramadas:IntervaloSegundos` (15 por omisión), en un proceso de fondo aparte. Cada evaluación lee como máximo 100 documentos por colección y por motivo.
 - **Registros:** cada intento en `Information` («Background attempt»); cada alerta en `Error` («process_alert») una vez mientras siga en alerta, por réplica.
-- **Sin datos personales:** nunca la carga, `datos` ni la clave de negocio.
+- **Sin datos personales:** nunca la carga, `datos` ni la clave de negocio. Varios `_id` de la bandeja llevan el `sub`, el `sid` o el id de la persona, así que el `id` publicado (métricas, intentos, alertas y fallos de la bandeja) es el `_id` solo si es un ObjectId; en otro caso son los primeros 32 hexadecimales de su SHA-256.
+- **Buscar el documento:** calcular ese resumen sobre los `_id` de la colección (`printf '%s' "<_id>" | sha256sum | cut -c1-32`). Quien ya conozca el `_id` puede relacionarlo: es un seudónimo, no un dato anónimo.
 - **Salud:** `/health/ready` no cambia: una cola atrasada no saca al servicio del balanceo (R-14).
 - **Pendiente:** la regla de alerta en Azure (Terraform) sobre `knock.procesos.alertas` mayor que cero, o sobre `process_alert` en los registros, todavía no existe. Hasta entonces no se avisa a nadie.
 

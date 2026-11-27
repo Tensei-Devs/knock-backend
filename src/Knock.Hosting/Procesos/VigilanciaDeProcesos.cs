@@ -2,7 +2,7 @@ using Microsoft.Extensions.Options;
 
 namespace Knock.Hosting.Procesos;
 
-/// <summary>Un evento o una tarea en alerta. Solo identificadores: <see cref="Resultado"/> es <c>fallido</c>, <c>fallida</c> o <c>atrasado</c>.</summary>
+/// <summary>Un evento o una tarea en alerta. <see cref="Id"/> es el <c>_id</c> de la base y no se publica tal cual: <see cref="Resultado"/> es <c>fallido</c>, <c>fallida</c> o <c>atrasado</c>.</summary>
 public sealed record AlertaDeProceso(string Proceso, string Tipo, string Id, int Intentos, string Resultado);
 
 /// <summary>Lee los eventos y las tareas en alerta de la base de un servicio (spec 054, R-13).</summary>
@@ -37,7 +37,8 @@ internal sealed partial class VigilanteDeProcesos(TimeProvider clock, ILogger<Vi
             ProcesosMetrics.RecordAlert(alert);
             if (!_reported.Contains(alert))
             {
-                ProcessAlert(logger, alert.Proceso, alert.Tipo, alert.Id, alert.Intentos, alert.Resultado);
+                var published = ProcesosMetrics.Identificador(alert.Id);
+                ProcessAlert(logger, alert.Proceso, alert.Tipo, published, alert.Intentos, alert.Resultado);
             }
         }
 

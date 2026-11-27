@@ -11,5 +11,6 @@
 
 ## A evitar
 - Poner la carga, `datos` o `claveNegocio` en métricas o registros.
+- Registrar o etiquetar el `_id` de la bandeja tal cual: puede llevar `sub`, `sid` o el id de la persona. Se usa `ProcesosMetrics.Identificador`.
 - Dar por avisado a alguien: la regla de Terraform no existe todavía.
-- Mercado no escribe `limpiarEn` (R-11): un `fallido` suyo queda en alerta hasta que alguien lo atienda. Además, sus eventos sin entrega registrada alertan a los 10 minutos.
+- Mercado todavía no escribe `limpiarEn` (R-11) en esta rama: lo agrega el PR #415, aún sin fusionar; hasta entonces un `fallido` suyo no se borra y sigue en alerta. Además, sus eventos sin entrega registrada alertan a los 10 minutos.
