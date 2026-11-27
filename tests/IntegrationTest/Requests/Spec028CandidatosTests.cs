@@ -131,7 +131,7 @@ public sealed class Spec028CandidatosTests
 
         // Con centro, la lectura pasa por la consulta geográfica.
         var candidates = await store.FindAsync(ObjectId.GenerateNewId(), "client", "plomeria", "target", 19, -99, now, CancellationToken.None);
-        var selection = SeleccionDeOleada.Select(candidates, [], new OleadasOptions { TamanoOleada = 2, MejorOrdenados = 1, UmbralNuevo = 3 });
+        var selection = SeleccionDeOleada.Select(candidates, [], new OleadasOptions { TamanoOleada = 3, MejorOrdenados = 1, UmbralNuevo = 3 });
 
         selection.Select(x => (x.TechnicianId, x.Reason)).Should().Equal(
             (veteran["_id"].ToString()!, "mejor_ordenado"), (novice["_id"].ToString()!, "nuevo"));
