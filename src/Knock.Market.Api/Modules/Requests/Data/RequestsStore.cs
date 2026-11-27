@@ -152,6 +152,16 @@ internal sealed class RequestsStore(
             .AnyAsync(cancellationToken);
     }
 
+    /// <summary>Si ese técnico fue el elegido: su cotización de esa solicitud está <c>aceptada</c>.</summary>
+    public async Task<bool> WasChosenAsync(string technicianUserId, ObjectId requestId, CancellationToken cancellationToken)
+    {
+        var filter = Builders<BsonDocument>.Filter;
+        return await Quotes.Find(filter.Eq("solicitudId", requestId) & filter.Eq("tecnicoUsuarioId", technicianUserId) & filter.Eq("estado", "aceptada"), _findOptions)
+            .Project(Builders<BsonDocument>.Projection.Include("_id"))
+            .Limit(1)
+            .AnyAsync(cancellationToken);
+    }
+
     private static BsonDocument ToDocument(RequestRecord record)
     {
         var document = new BsonDocument
