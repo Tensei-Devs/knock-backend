@@ -251,6 +251,13 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **La cuota gratuita puede cambiar:** si el 11 de noviembre el despliegue falla por cuota, el ADR-008 se revisa; esta spec no cambia.
 - **El `sub` en `uso_ia` liga el consumo con una persona:** es necesario para el tope; el documento no tiene contenido y se puede borrar con la cuenta (la baja de cuenta es una historia posterior; esta spec deja el índice `{ usuarioId, creadoEn }` para poder borrarlos).
 - **La retención de `uso_ia` no está decidida:** hoy no tiene TTL; se define con el primer reporte de costos.
+
+### Propuesta de retención (KNOCK-279, pendiente de aprobación)
+
+- **Plazo propuesto: 35 días desde `creadoEn` en UTC.** Conserva los registros individuales durante un mes completo de hasta 31 días y deja cuatro días para conciliar el gasto. Pasado ese plazo, el equipo podría conservar el total mensual por función y origen sin `usuarioId`, si necesita comparar costos entre meses.
+- **Alcance:** aplicar el TTL únicamente a `uso_ia`. Los contadores diarios de Redis, los topes de consumo y el contrato HTTP quedan fuera de esta enmienda. La caducidad diaria del presupuesto sigue siendo independiente de la retención del registro.
+- **Antes de aplicar:** el Tech Lead confirma que la ventana cubre la conciliación mensual y autoriza la caducidad de los registros existentes. Si hace falta conservar totales históricos, obtenerlos sin identificadores antes de habilitar la caducidad.
+- **Verificación propuesta:** ejecutar `db/024-assistant-uso-ia.js` dos veces en `DatabaseTest` sobre una base que ya tenga los índices actuales. Comprobar que queda un solo índice TTL de `3024000` segundos sobre `creadoEn` y que se mantienen los planes de consulta de gasto. Confirmar en el motor de destino si se puede conservar también el índice descendente actual. Insertar un registro anterior al plazo y otro vigente en una base aislada, comprobar que el motor elimina el primero y conserva el segundo. La prueba no llama a Azure OpenAI.
 - **Sin prueba contra el servicio real en el CI:** el contrato se prueba con el simulador; un cambio de formato del proveedor se detectaría en la prueba manual, no en el pipeline.
 
 ## Aprobación
