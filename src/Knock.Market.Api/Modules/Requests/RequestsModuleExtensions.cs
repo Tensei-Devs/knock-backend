@@ -38,7 +38,7 @@ public static class RequestsModuleExtensions
         services.AddScoped<ITechnicianDirectory, MongoTechnicianDirectory>();
         services.AddScoped<IQuoteRequestReader, MongoQuoteRequestReader>();
         services.AddScoped<QuoteValidator>();
-        services.AddScoped<INoteModerator, UnavailableNoteModerator>();
+        services.AddScoped<INoteModerator, ContentNoteModerator>();
         services.AddScoped<IQuoteWriter, QuoteStore>();
         services.AddScoped<QuoteStore>();
         services.AddScoped<MyQuotesService>();

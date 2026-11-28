@@ -92,12 +92,6 @@ public class QuoteServiceTests
         moderator.Calls.Should().Be(0);
     }
 
-    [Fact]
-    public async Task DefaultModeratorIsUnavailable()
-    {
-        (await new UnavailableNoteModerator().ModerateAsync("note", CancellationToken.None)).Should().Be(NoteModerationResult.Unavailable);
-    }
-
     [Theory]
     [InlineData(19.0, 5, true)]
     [InlineData(19.04, 5, true)]
