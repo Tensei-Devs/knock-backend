@@ -1,13 +1,15 @@
-// jscpd:ignore-start -- EXC-016
-namespace Knock.Gateway.Hosting;
+namespace Knock.Hosting.Http;
 
 /// <summary>CORS del gateway (spec 009, R-03): solo los orígenes de <c>Security:Cors:AllowedOrigins</c>; sin ninguno configurado no se permite ninguno.</summary>
-internal static class CorsExtensions
+public static class CorsExtensions
 {
     public const string PolicyName = "knock";
 
     public static IServiceCollection AddKnockGatewayCors(this IServiceCollection services, IConfiguration configuration)
     {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+
         var origins = configuration.GetSection("Security:Cors:AllowedOrigins").Get<string[]>() ?? [];
         foreach (var origin in origins)
         {
@@ -19,11 +21,10 @@ internal static class CorsExtensions
 
         services.AddCors(options => options.AddPolicy(PolicyName, policy => policy
             .WithOrigins(origins)
-            .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE")
+            .WithMethods(CorsMiddleware.AllowedMethods)
             .WithHeaders("Authorization", "Content-Type", "X-Correlation-Id")
             .WithExposedHeaders("X-Correlation-Id", "Retry-After")
             .SetPreflightMaxAge(TimeSpan.FromMinutes(10))));
         return services;
     }
 }
-// jscpd:ignore-end

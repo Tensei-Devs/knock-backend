@@ -131,18 +131,6 @@ excepciones:
     creada: 2026-11-04
     vence: 2027-01-31
     plan: agregar un NSG con las reglas que exige Container Apps cuando la spec 006 defina la política de red.
-  - id: EXC-016
-    herramienta: jscpd
-    regla: duplicación textual (y huella estructural de codemap)
-    alcance: src/Knock.Gateway/Hosting/CorsExtensions.cs (ProblemResponses.cs salió a Knock.Hosting en KNOCK-266; marcadores jscpd:ignore-start/end con EXC-016; los parámetros de validación del JWT pasaron a Knock.Hosting en KNOCK-281)
-    justificacion: >-
-      El gateway necesita la misma respuesta ProblemDetails de error, la misma lectura de los proxies de confianza y los mismos parámetros de validación del JWT que Market (spec 009); cada servicio es
-      desplegable por separado (spec 001) y no comparten código técnico todavía. La duplicación es intencional y temporal. Evidencia: PR de KNOCK-204 y la lista
-      de duplicados de `codemap.py --check`.
-    responsable: José Guillermo Rangel Hernández
-    creada: 2026-11-04
-    vence: 2027-01-15
-    plan: renovada el 2026-11-24 hasta 2027-01-15 (KNOCK-266). Los parámetros de validación del JWT y los proxies de confianza ya están en Knock.Hosting; faltan `ProblemResponses` y `CorsExtensions` del gateway (spec 055 T-17). Cada PR que mueve una pieza quita sus marcadores; al mover ambas se retira la excepción.
   - id: EXC-017
     herramienta: revisión de arquitectura (modelo de amenazas, KNOCK-78)
     regla: acceso de red público del clúster de MongoDB (DB-5 y H-04 del modelo de amenazas)
