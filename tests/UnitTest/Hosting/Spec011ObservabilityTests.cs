@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
 using Xunit;
-using GatewayHosting = gateway::Knock.Gateway.Hosting;
+using GatewayProgram = gateway::Program;
 using IdentityHosting = identity::Knock.Identity.Api.Hosting;
 using MessagingHosting = messaging::Knock.Messaging.Api.Hosting;
 
@@ -85,10 +85,10 @@ public sealed class Spec011ObservabilityTests
             "Knock.Gateway",
             "knock-gateway",
             (services, configuration, environment) => ObservabilityExtensions.AddKnockObservability(
-                LoggingExtensions.AddKnockLogging(services, configuration, typeof(GatewayHosting.CorsExtensions).Assembly),
+                LoggingExtensions.AddKnockLogging(services, configuration, typeof(GatewayProgram).Assembly),
                 configuration,
                 environment,
-                typeof(GatewayHosting.CorsExtensions).Assembly,
+                typeof(GatewayProgram).Assembly,
                 "knock-api"),
             Knock.Hosting.Logging.TelemetryRedactor.Redact,
             Knock.Hosting.Logging.TelemetryRedactor.RedactAttribute,

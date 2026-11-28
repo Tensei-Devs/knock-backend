@@ -3,7 +3,7 @@
 ## KNOCK-281 — Política CORS del gateway
 - La política ASP.NET Core vive en `Knock.Hosting.Http`. El gateway sigue registrando y ejecutando la misma política. Comparte la lista de métodos con el middleware de los servicios y conserva sus propios encabezados expuestos y permitidos.
 - El caso CA-12 de la spec 055 impide reintroducir `CorsExtensions` en los servicios. Se retira EXC-016 porque su último archivo salió del gateway.
-- Pendiente: ejecutar CA-12 y la regresión CORS del gateway en CI si el SDK local no restaura las dependencias. Las demás excepciones conservan sus tareas y requisitos de aprobación.
+- La prueba de observabilidad toma el ensamblado del punto de entrada del gateway. La extensión CORS ahora pertenece al ensamblado compartido y ya no identifica al servicio. Las demás excepciones conservan sus tareas y requisitos de aprobación.
 
 ## 2026-11-24 — KNOCK-71: integración de cascada con envíos de la 028
 - **Avance:** `Spec029CierreTests` usa `EnviosStore` y reloj inyectado para probar cancelación y vencimiento: cierra envíos activos y cotizados, conserva descartados y avisa solo al técnico que cotizó. T-02 sigue parcial: no se forzó una carrera real entre reparto y cierre ni se acreditó la cobertura completa.
