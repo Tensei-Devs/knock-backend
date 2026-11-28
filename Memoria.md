@@ -1,7 +1,7 @@
 # Memoria — knock-backend
 
 ## 2026-11-27 — KNOCK-272 · Evidencia histórica de la spec 007
-- El `task.md` de la spec 007 enlaza las corridas verificadas para construcción selectiva de contenedores, fallo de una prueba de integración con gate en rojo y humo en `main` con la etiqueta de las cuatro imágenes.
+- El `task.md` de la spec 007 enlaza las corridas verificadas para construcción selectiva de contenedores, fallo de una prueba de integración con gate en rojo y humo de la primera promoción a `main` (#154) con la etiqueta de las cuatro imágenes.
 - El job de pruebas sigue compilando toda la solución .NET. La etiqueta documentada identifica la publicación de esa corrida y la comprobación de qué imagen sigue activa queda en el seguimiento separado.
 
 ## 2026-11-24 — KNOCK-71: integración de cascada con envíos de la 028
