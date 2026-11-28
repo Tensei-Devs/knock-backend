@@ -525,6 +525,21 @@ jobs:
           # EXC-003 (security/exceptions.yaml): falsos positivos de CIS-DI-0010 en variables de la imagen base.
           # Solo estas claves; cualquier otra variable o archivo sospechoso sigue fallando.
           accept-key: DOTNET_VERSION,ASPNET_VERSION,ASPNETCORE_URLS,ASPNETCORE_ENVIRONMENT,ASPNETCORE_HTTP_PORTS,DOTNET_RUNNING_IN_CONTAINER,DOTNET_EnableDiagnostics,APP_UID,org.opencontainers.image.version,org.opencontainers.image.title,org.opencontainers.image.description,org.opencontainers.image.created,--gid,--uid,--clear,PATH
+      # SBOM CycloneDX de la imagen construida en este job (KNOCK-266). No es la imagen que publica ci-deploy: esa se vuelve a construir.
+      - name: SBOM de la imagen (CycloneDX)
+        if: needs.detect.outputs[matrix.salida] == 'true'
+        env:
+          NOMBRE: ${{ matrix.imagen }}
+        run: |
+          mkdir -p sbom
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/sbom:/sbom" ghcr.io/aquasecurity/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c image --format cyclonedx --output "/sbom/${NOMBRE}.cdx.json" --quiet "${NOMBRE}:ci"
+          jq -e '.bomFormat == "CycloneDX" and ((.components // []) | length > 0)' "sbom/${NOMBRE}.cdx.json" > /dev/null
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: needs.detect.outputs[matrix.salida] == 'true'
+        with:
+          name: sbom-${{ matrix.imagen }}
+          path: sbom/${{ matrix.imagen }}.cdx.json
+          if-no-files-found: error
 
   dast:
     name: Smoke + DAST (ZAP baseline)
@@ -582,10 +597,35 @@ jobs:
         if: always()
         run: docker compose -f deploy/docker-compose.ci.yml down -v
 
+  # SBOM CycloneDX de la solución .NET (KNOCK-266): la misma imagen de Trivy del escaneo de contenedores lee los
+  # packages.lock.json versionados (incluye las transitivas y las de los proyectos de prueba), sin restaurar ni compilar.
+  sbom:
+    name: SBOM de la solución .NET (CycloneDX)
+    needs: detect
+    if: needs.detect.outputs.api == 'true' && needs.detect.outputs.docsonly != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Generar el SBOM
+        run: |
+          mkdir -p sbom
+          docker run --rm -v "$PWD:/work" -w /work ghcr.io/aquasecurity/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c fs --format cyclonedx --output sbom/knock-backend-dotnet.cdx.json --quiet .
+      - name: El SBOM debe ser CycloneDX y traer paquetes NuGet
+        run: |
+          jq -e '.bomFormat == "CycloneDX" and ([.components[]? | select((.purl // "") | startswith("pkg:nuget/"))] | length > 0)' sbom/knock-backend-dotnet.cdx.json > /dev/null
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: sbom-dotnet
+          path: sbom/knock-backend-dotnet.cdx.json
+          if-no-files-found: error
+
   gate:
     name: gate
     if: always()
-    needs: [detect, pr-meta, pr-points, governance, build-test, test-integration, test-database, coverage, sast, sca, secrets, openapi-diff, iac, container, dast]
+    needs: [detect, pr-meta, pr-points, governance, build-test, test-integration, test-database, coverage, sast, sca, secrets, openapi-diff, iac, container, dast, sbom]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
