@@ -1,5 +1,9 @@
 # Memoria — knock-backend
 
+## 2026-11-27 — KNOCK-272 · Evidencia histórica de la spec 007
+- El `task.md` de la spec 007 enlaza las corridas verificadas para construcción selectiva de contenedores, fallo de una prueba de integración con gate en rojo y humo de la primera promoción a `main` (#154) con la etiqueta de las cuatro imágenes.
+- El job de pruebas sigue compilando toda la solución .NET. La etiqueta documentada identifica la publicación de esa corrida y la comprobación de qué imagen sigue activa queda en el seguimiento separado.
+
 ## 2026-11-24 — KNOCK-71: integración de cascada con envíos de la 028
 - **Avance:** `Spec029CierreTests` usa `EnviosStore` y reloj inyectado para probar cancelación y vencimiento: cierra envíos activos y cotizados, conserva descartados y avisa solo al técnico que cotizó. T-02 sigue parcial: no se forzó una carrera real entre reparto y cierre ni se acreditó la cobertura completa.
 - **Verificación:** build Release con warnings como errores; integración 028/029 61/61 y base 028/029 2/2; `dotnet format`, trazador 029, codemap y excepciones correctos. El trazador reconoce nombres, no prueba cobertura completa. T-04 y T-06 ya existían en la rama y sus pruebas filtradas pasaron; sin cambios de producción ni dependencias.

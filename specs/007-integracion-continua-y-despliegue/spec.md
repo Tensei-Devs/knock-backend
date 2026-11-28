@@ -30,6 +30,13 @@ Definir las verificaciones automáticas de cada cambio y cómo el código llega 
 - **CA-03:** Dado un cambio aprobado y fusionado, cuando termina el despliegue, entonces la prueba de humo responde.
 - **CA-04:** Dado un PR con un secreto de ejemplo o una dependencia con vulnerabilidad crítica, cuando corre el CI, entonces el check falla.
 
+| Caso | Verificación |
+|---|---|
+| CA-01 | Inspección de la matriz de imágenes y del build .NET (comando). Ver el alcance comprobado en [tareas y evidencia](task.md#evidencia-de-ci-y-despliegue-knock-272). |
+| CA-02 | Corrida de `ci-pr` con una prueba de integración y el gate fallidos (comando). Ver [tareas y evidencia](task.md#evidencia-de-ci-y-despliegue-knock-272). |
+| CA-03 | Corrida histórica de `ci-deploy` en `main` con humo en verde (comando). Ver [tareas y evidencia](task.md#evidencia-de-ci-y-despliegue-knock-272). |
+| CA-04 | Corrida de `ci-pr` con SCA y gate fallidos ante una dependencia vulnerable (comando). Ver [evidencia de KNOCK-202](../../docs/evidencia/KNOCK-202-ca04-sca.md). |
+
 ## 5. Contrato
 No aplica. Interfaces que fija: los nombres de los checks obligatorios y las etiquetas de imagen con la versión.
 
