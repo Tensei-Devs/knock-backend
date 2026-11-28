@@ -3,6 +3,8 @@ using AwesomeAssertions;
 using Knock.IntegrationTest.Support;
 using Knock.SecurityTest.Support;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -79,6 +81,57 @@ public sealed class Spec035RegistrosTests
         output.Should().NotBeNullOrWhiteSpace();
         output.Should().Contain("\"StatusCode\":500");
         output.Should().NotContain("secreto").And.NotContain("token=x").And.NotContain("q=");
+    }
+
+    [Fact]
+    public async Task Identity_Error_500_Y_Registro_Sin_Consulta_CA_035_07()
+    {
+        using var factory = await SecurityIdentityFactory.CreateAsync();
+        await CheckServerErrorAsync(factory, HttpMethod.Post, "/api/v1/auth/refresh", json: "{}");
+    }
+
+    [Fact]
+    public async Task Messaging_Error_500_Y_Registro_Sin_Consulta_CA_035_07()
+    {
+        using var factory = await SecurityMessagingFactory.CreateAsync();
+        await CheckServerErrorAsync(factory, HttpMethod.Post, "/api/v1/sonda/infra/validar", json: """{"texto":"hola"}""", bearer: TokenForge.Valid());
+    }
+
+    /// <summary>
+    /// CA-07 en un host sin un punto de falla propio: un filtro de recurso de prueba lanza en <paramref name="path"/> antes del enlace del modelo, y la excepción
+    /// llega al manejador real del host. El ProblemDetails y el registro del 500 no llevan la consulta.
+    /// </summary>
+    private static async Task CheckServerErrorAsync<T>(WebApplicationFactory<T> factory, HttpMethod method, string path, string json, string? bearer = null)
+        where T : class
+    {
+        using var host = factory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+            services.Configure<MvcOptions>(options => options.Filters.Add(new ThrowOnPathFilter(path)))));
+        using var client = host.CreateClient();
+        HttpResponseMessage? response = null;
+        var output = await ConsoleCapture.RunAsync(async () =>
+        {
+            response = await SecureHttp.SendRawJsonAsync(client, method, path + "?q=secreto&token=x", json, bearer);
+        });
+        using (response)
+        {
+            response!.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+            response.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
+            var body = await SecureHttp.ReadJsonAsync(response);
+            body.GetProperty("instance").GetString().Should().Be(path);
+        }
+
+        output.Should().NotBeNullOrWhiteSpace();
+        output.Should().Contain("\"StatusCode\":500");
+        output.Should().NotContain("secreto").And.NotContain("token=x").And.NotContain("q=");
+    }
+
+    /// <summary>Simula una falla interna en una sola ruta; el mensaje no lleva datos de la petición.</summary>
+    private sealed class ThrowOnPathFilter(string path) : IAsyncResourceFilter
+    {
+        public Task OnResourceExecutionAsync(ResourceExecutingContext context, ResourceExecutionDelegate next) =>
+            context.HttpContext.Request.Path.Equals(path, StringComparison.OrdinalIgnoreCase)
+                ? throw new InvalidOperationException("spec035 simulated failure")
+                : next();
     }
 
     private static async Task CheckProblemAndTraceAsync<T>(
