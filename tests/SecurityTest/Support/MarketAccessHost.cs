@@ -269,7 +269,7 @@ internal sealed class MarketAccessHost
             ["Security:FieldEncryption:ActiveVersion"] = "1",
             ["Security:FieldEncryption:Keys:1"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)),
         };
-        foreach (var module in new[] { "Catalog", "Requests", "Trust", "Tecnicos", "Reviews" })
+        foreach (var module in new[] { "Catalog", "Requests", "Trust", "Tecnicos", "Reviews", "Assistant" })
         {
             settings["Mongo:Databases:" + module] = name;
         }
