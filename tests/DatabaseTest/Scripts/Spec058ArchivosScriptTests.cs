@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Security.Cryptography;
 using AwesomeAssertions;
 using Knock.DatabaseTest.Support;
@@ -31,6 +32,37 @@ public sealed class Spec058ArchivosScriptTests
                 "propietarioId_1_estado_1_confirmarAntesDe_1 propietarioId:1,estado:1,confirmarAntesDe:1 - ttl:-");
             var duplicado = async () => await archivos.InsertOneAsync(new BsonDocument { ["archivoId"] = "a" });
             await duplicado.Should().ThrowAsync<MongoWriteException>("archivoId es único");
+        });
+
+    [Fact]
+    public async Task Ttl_Borra_Pendientes_Y_Rechazados_No_Listos_CA_058_04() =>
+        await WithScriptAsync(async (client, name, _) =>
+        {
+            var archivos = client.GetDatabase(name).GetCollection<BsonDocument>("archivos");
+            var vencido = DateTime.UtcNow.AddDays(-1);
+            var listo = new DateTime(9999, 12, 31, 0, 0, 0, DateTimeKind.Utc);
+            await archivos.InsertManyAsync(
+            [
+                new BsonDocument { ["archivoId"] = "pending", ["estado"] = "pendiente", ["expiraEn"] = vencido },
+                new BsonDocument { ["archivoId"] = "rejected", ["estado"] = "rechazado", ["expiraEn"] = vencido },
+                new BsonDocument { ["archivoId"] = "ready", ["estado"] = "listo", ["expiraEn"] = listo },
+            ]);
+
+            // The server runs TTL cleanup asynchronously.
+            var elapsed = Stopwatch.StartNew();
+            List<BsonDocument> remaining;
+            while (true)
+            {
+                remaining = await archivos.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+                if (remaining.Count <= 1 || elapsed.Elapsed >= TimeSpan.FromMinutes(3))
+                {
+                    break;
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(2));
+            }
+
+            remaining.Select(file => file["archivoId"].AsString).Should().Equal("ready");
         });
 
     /// <summary>CA-20: el conteo de pendientes vigentes de una persona (el de <c>MongoMediaFileStore</c>) se resuelve con el índice compuesto y no recorre toda la colección.</summary>
