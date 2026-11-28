@@ -84,7 +84,7 @@ Tener un solo punto de acceso a la IA generativa en el backend: un cliente de Az
 | CA-12 | `Spec024ArquitecturaTests.Un_Solo_Punto_De_Acceso_CA_024_12` |
 | CA-13 | `Spec024RegistrosTests.Sin_Valores_Censurados_CA_024_13` |
 | CA-14 | `Spec024LimitesTests.Redis_Caido_No_Gasta_CA_024_14` |
-| CA-15 | `Spec024RespaldoTests.Apagado_Por_Omision_CA_024_15` |
+| CA-15 | `Spec024InterruptorTests.Apagado_Por_Omision_CA_024_15` |
 | CA-16 | `Spec024FiltroTests.Sin_Identificadores_En_La_Peticion_CA_024_16` |
 
 ## 5. Contrato

@@ -22,14 +22,18 @@ public sealed class Spec024InterruptorTests
     }
 
     [Fact]
-    public async Task Switch_Off_Answers_With_The_Template_And_Has_No_Azure_Credential_CA_024_09()
+    public async Task Apagado_Por_Omision_CA_024_15()
     {
         var services = Build([]);
 
         services.Should().NotContain(d => d.ServiceType == typeof(TokenCredential));
+        services.Should().NotContain(d => d.ServiceType == typeof(IHttpClientFactory));
         using var provider = services.BuildServiceProvider();
-        var response = await provider.GetRequiredService<IProveedorIa>().CompleteAsync("system", "text", [], 100, CancellationToken.None);
-        response.Json.Should().BeNull();
+        var response = await provider.GetRequiredService<IAiClient>()
+            .GenerarAsync<AsistenteKnockSalida>(AiHarness.Request(), CancellationToken.None);
+
+        (response.Origen, response.MotivoRespaldo).Should().Be((AiOrigin.Template, "disabled"));
+        response.Valor.Should().NotBeNull();
     }
 
     [Fact]
