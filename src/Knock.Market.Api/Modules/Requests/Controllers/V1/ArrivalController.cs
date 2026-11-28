@@ -17,7 +17,7 @@ namespace Knock.Market.Api.Modules.Requests.Controllers.V1;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/visitas/{id}/llegada")]
 [Authorize]
-[Hosting.PrivateNoStore]
+[PrivateNoStore]
 internal sealed class ArrivalController(ArrivalService service) : BusinessRuleController
 {
     /// <summary>
@@ -27,7 +27,7 @@ internal sealed class ArrivalController(ArrivalService service) : BusinessRuleCo
     /// </summary>
     [HttpPost]
     [RequestSizeLimit(ArrivalBody.MaxBodyBytes)]
-    [EnableRateLimiting(Hosting.RateLimitingExtensions.ArrivalPolicy)]
+    [EnableRateLimiting(Hosting.MarketRateLimits.ArrivalPolicy)]
     [ProducesResponseType<VisitResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, ProblemJson)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, ProblemJson)]

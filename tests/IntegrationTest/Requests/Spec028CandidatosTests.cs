@@ -3,10 +3,11 @@ extern alias MarketApi;
 using AwesomeAssertions;
 using Knock.IntegrationTest.Support;
 using MarketApi::Knock.Market.Api.Modules.Requests.Data;
+using MarketApi::Knock.Market.Api.Modules.Requests.Domain;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using MongoOptions = MarketApi::Knock.Market.Api.Hosting.KnockMongoOptions;
+using MongoOptions = Knock.Hosting.Data.KnockMongoOptions;
 
 namespace Knock.IntegrationTest.Requests;
 
@@ -84,6 +85,67 @@ public sealed class Spec028CandidatosTests
         (await duplicate.Should().ThrowAsync<MongoWriteException>()).Which.WriteError.Category.Should().Be(ServerErrorCategory.DuplicateKey);
     }
 
+    [Fact]
+    public async Task FinishedJobs_ComeOnlyFromFinishedVisits_CA_028_19_22()
+    {
+        using var factory = await MarketApiFactory.CreateAsync();
+        var now = DateTime.UtcNow;
+        var busy = Technician("busy", -99.0, now);
+        busy["coloniaBaseId"] = "target";
+        busy["trabajosTerminados"] = 99;
+        var idle = Technician("idle", -99.0, now);
+        idle["coloniaBaseId"] = "target";
+        await factory.Database.GetCollection<BsonDocument>("tecnicos").InsertManyAsync([busy, idle]);
+        var onlyVisit = Visit("busy", "terminada");
+        onlyVisit["resultado"] = "solo_visita";
+        var reported = Visit("busy", "terminada");
+        reported["reporteNoTerminado"] = new BsonDocument("creadoEn", now);
+        var blocked = Visit("busy", "confirmada");
+        blocked["bloqueadaEn"] = now;
+        await factory.Database.GetCollection<BsonDocument>("visitas").InsertManyAsync(
+        [
+            Visit("busy", "terminada"), onlyVisit, reported, blocked, Visit("busy", "confirmada"), Visit("busy", "en_curso"),
+            Visit("busy", "cancelada"), Visit("busy", "no_presentado"), Visit("someone-else", "terminada"), Visit("idle", "cancelada"),
+        ]);
+        var store = new CandidatosStore(factory.Database, Options.Create(new MongoOptions()));
+
+        var candidates = await store.FindAsync(ObjectId.GenerateNewId(), "client", "plomeria", "target", null, null, now, CancellationToken.None);
+
+        candidates.ToDictionary(x => x.TechnicianUserId!, x => x.CompletedJobs).Should()
+            .BeEquivalentTo(new Dictionary<string, int> { ["busy"] = 3, ["idle"] = 0 });
+    }
+
+    [Fact]
+    public async Task FinishedJobs_DecideTiesAndTheNewcomer_CA_028_20_21()
+    {
+        using var factory = await MarketApiFactory.CreateAsync();
+        var technicians = factory.Database.GetCollection<BsonDocument>("tecnicos");
+        await technicians.Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(new BsonDocument("ubicacionBase", "2dsphere")));
+        var now = DateTime.UtcNow;
+        var veteran = Technician("veteran", -99.001, now);
+        var novice = Technician("novice", -99.001, now);
+        await technicians.InsertManyAsync([novice, veteran]);
+        await factory.Database.GetCollection<BsonDocument>("visitas").InsertManyAsync(
+            [Visit("veteran", "terminada"), Visit("veteran", "terminada"), Visit("veteran", "terminada"), Visit("novice", "terminada"), Visit("novice", "terminada")]);
+        var store = new CandidatosStore(factory.Database, Options.Create(new MongoOptions()));
+
+        // Con centro, la lectura pasa por la consulta geográfica.
+        var candidates = await store.FindAsync(ObjectId.GenerateNewId(), "client", "plomeria", "target", 19, -99, now, CancellationToken.None);
+        var selection = SeleccionDeOleada.Select(candidates, [], new OleadasOptions { TamanoOleada = 3, MejorOrdenados = 1, UmbralNuevo = 3 });
+
+        selection.Select(x => (x.TechnicianId, x.Reason)).Should().Equal(
+            (veteran["_id"].ToString()!, "mejor_ordenado"), (novice["_id"].ToString()!, "nuevo"));
+        candidates.Single(x => x.TechnicianUserId == "veteran").CompletedJobs.Should().Be(3, "al llegar al umbral deja de ser nuevo");
+    }
+
+    private static BsonDocument Visit(string technicianUserId, string state) => new()
+    {
+        ["_id"] = ObjectId.GenerateNewId(),
+        ["solicitudId"] = ObjectId.GenerateNewId(),
+        ["tecnicoUsuarioId"] = technicianUserId,
+        ["estado"] = state,
+    };
+
     private static BsonDocument Technician(string user, double longitude, DateTime now) => new()
     {
         ["_id"] = ObjectId.GenerateNewId(),
@@ -96,6 +158,5 @@ public sealed class Spec028CandidatosTests
         ["radioAtencionKm"] = 10,
         ["ubicacionBase"] = new BsonDocument { ["type"] = "Point", ["coordinates"] = new BsonArray { longitude, 19.0 } },
         ["calificacion"] = 4.5,
-        ["trabajosTerminados"] = 5,
     };
 }

@@ -1,3 +1,4 @@
+using Knock.Identity.Api.Common.Errors;
 using Knock.Identity.Api.Modules.Addresses.Domain;
 using MongoDB.Bson;
 
@@ -55,7 +56,7 @@ internal static class AddressPlanner
         ArgumentNullException.ThrowIfNull(existing);
         if (existing.FirstOrDefault(address => address.Id == id) is not { } target)
         {
-            return AddressChanges.Reject(AddressRejections.NotFound);
+            return AddressChanges.Reject(CommonErrorCodes.NotFound);
         }
 
         if (!target.Principal)

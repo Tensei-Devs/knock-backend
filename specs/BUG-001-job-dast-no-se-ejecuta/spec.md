@@ -98,7 +98,19 @@ No aplica: la pila del CI arranca con bases vacías y se destruye con `down -v` 
 | B-02 | **Los cambios a `.github/workflows/ci-pr.yml` (TC-01 y TC-06, nombres de los pasos) los aplica Julián (Tech Lead) en el mismo PR de implementación, una vez aprobada la spec, como ya dice `task.md` T4.** | Sin esos cambios TC-01 y TC-06 no se pueden cerrar; el agente no toca `.github/`. | Se indica otra persona. |
 | B-03 | **Se acepta la revisión de par con los cuatro puntos de Erick atendidos (commit `ff0848c`), sin una nueva respuesta suya.** | En el PR #59 Erick dejó «cambios solicitados» el 2026-11-11, Alexis los atendió el 2026-11-12 y pidió el 2026-11-13 que los revisara; no hay respuesta posterior en el hilo. | Se pide la re-revisión de Erick antes de aprobar. |
 
+## Nota de enmienda (2026-11-27, sesiones de prueba en el escaneo pasivo)
+
+- **Estado de esta enmienda:** PROPUESTA SIN FIRMA; vale desde que se firma la línea «Enmienda 2026-11-27» de la sección Aprobación. La aprobación original y las enmiendas ya firmadas se conservan.
+- **Motivo:** el escaneo sin sesión solo ve la raíz y respuestas 401, así que no revisa las respuestas de la API. §3 deja fuera «el escaneo de API o activo de ZAP con OpenAPI y un token de prueba», sin decir nada del escaneo pasivo con sesión.
+- **Entra en el alcance** un segundo escaneo ZAP baseline, **pasivo** y bloqueante, con las mismas reglas de TC-BUG-001-05, sobre una lista de rutas de lectura recorridas sin sesión y con sesiones ficticias de cliente y de técnico. El primer escaneo, el smoke y el `gate` se conservan.
+- **Condiciones de las sesiones:** se firman en el propio job con la llave efímera de esa ejecución, vencen en 30 minutos como máximo, se enmascaran, no se suben como artefacto y no sirven en ningún ambiente. No usan credenciales reales ni llaman a Azure ni a Firebase. Los datos son de demostración, cargados en las bases de la pila del runner. No se modifica `src/` ni se agrega un modo que desactive controles (B-01 se mantiene).
+- **Sigue fuera:** el escaneo activo, el escaneo de API con OpenAPI, las rutas internas, las rutas del panel con sesión y cualquier ejecución contra un ambiente desplegado.
+- **CA-E01:** Dadas las rutas centinela de Identidad, Mercado y Mensajería con sesión, cuando no responden 200 o falta el resumen de rutas, entonces el job falla.
+- **CA-E02:** Dados los registros y artefactos del job, cuando se revisan, entonces no contienen los tokens de las sesiones.
+- Las excepciones de ZAP que se vean afectadas se actualizan en `security/exceptions.yaml` por la persona responsable.
+
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-20
 - [x] Sin conflicto con la constitución
+- [x] Enmienda 2026-11-27 — nombre: José Julián Hernández Hernández fecha: 2026-11-27
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Firmada (tras el merge)

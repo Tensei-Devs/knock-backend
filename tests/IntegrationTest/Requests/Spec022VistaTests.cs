@@ -27,6 +27,7 @@ public sealed class Spec022VistaTests
         json.GetProperty("codigoVenceEn").GetDateTimeOffset().Should().BeAfter(DateTimeOffset.UtcNow);
         json.GetProperty("reglaSeguridad").GetString().Should().Be($"Pídele a {Spec021Host.TechnicianName} que te diga este código en la puerta. Si no lo sabe, no abras.");
         json.GetProperty("tecnico").GetProperty("nombre").GetString().Should().Be(Spec021Host.TechnicianName);
+        json.GetProperty("tecnicoUsuarioId").GetString().Should().Be(visit.Technician.Sub);
         json.GetProperty("puedeAvisar").GetBoolean().Should().BeTrue();
         json.GetProperty("puedeLlegar").GetBoolean().Should().BeFalse();
         json.TryGetProperty("motivoCodigo", out _).Should().BeFalse();
@@ -46,8 +47,8 @@ public sealed class Spec022VistaTests
         var json = JsonElement.Parse(raw);
         json.GetProperty("rol").GetString().Should().Be("tecnico");
         json.GetProperty("puedeLlegar").GetBoolean().Should().BeTrue("la ventana de la cita está abierta");
-        raw.Should().NotContain(visit.Code!, "el técnico nunca ve el código")
-            .And.NotContain(host.ClientSub, "ni quién es el cliente")
+        Spec020Host.CarriesVisitCode(raw, visit.Code!).Should().BeFalse("el técnico nunca ve el código");
+        raw.Should().NotContain(host.ClientSub, "ni quién es el cliente")
             .And.NotContain("codigo", "la vista del técnico no tiene ningún campo de código")
             .And.NotContain("telefono").And.NotContain("whatsapp");
     }

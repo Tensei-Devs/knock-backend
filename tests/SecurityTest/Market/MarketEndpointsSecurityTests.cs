@@ -67,7 +67,13 @@ public class MarketEndpointsSecurityTests
         {
             using var response = await SecureHttp.SendAsync(hosts.MarketClient, HttpMethod.Get, path);
 
-            ((int)response.StatusCode).Should().BeOneOf(400, 404);
+            ((int)response.StatusCode).Should().BeOneOf(400, 404, 422);
+            if (response.StatusCode == HttpStatusCode.UnprocessableEntity)
+            {
+                response.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
+                System.Text.Json.JsonElement.Parse(await response.Content.ReadAsStringAsync()).TryGetProperty("detail", out _).Should().BeFalse("la clave hostil no se devuelve ni se explica");
+            }
+
             (await response.Content.ReadAsStringAsync()).Should().NotContain("stackTrace").And.NotContain("Jwt").And.NotContain("mongodb");
         }
     }

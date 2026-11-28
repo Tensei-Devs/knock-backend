@@ -20,7 +20,7 @@ internal sealed class FirebaseIdTokenVerifier(IConfiguration configuration) : IF
         {
             var token = await FirebaseAuth.GetAuth(_app.Value).VerifyIdTokenAsync(idToken, cancellationToken);
             return token.Claims.TryGetValue("phone_number", out var phone) && phone is string number && PhoneNumberPolicy.IsValid(number)
-                ? new FirebaseIdentity(token.Uid, number)
+                ? new FirebaseIdentity(token.Uid, number, ReadAuthTime(token.Claims))
                 : null;
         }
         catch (FirebaseAuthException ex) when (ex.AuthErrorCode != AuthErrorCode.CertificateFetchFailed)
@@ -30,6 +30,24 @@ internal sealed class FirebaseIdTokenVerifier(IConfiguration configuration) : IF
         catch (Exception ex) when (ex is ArgumentException or FormatException or Newtonsoft.Json.JsonException)
         {
             // Token vacío o mal formado (el SDK deja pasar errores de Base64 y de JSON de su propio lector).
+            return null;
+        }
+    }
+
+    // `auth_time` (segundos Unix del último inicio de sesión) lo pone Firebase; sin él o ilegible la identidad no es «reciente».
+    private static DateTimeOffset? ReadAuthTime(IReadOnlyDictionary<string, object> claims)
+    {
+        if (!claims.TryGetValue("auth_time", out var value) || value is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return DateTimeOffset.FromUnixTimeSeconds(Convert.ToInt64(value, System.Globalization.CultureInfo.InvariantCulture));
+        }
+        catch (Exception ex) when (ex is FormatException or InvalidCastException or OverflowException or ArgumentOutOfRangeException)
+        {
             return null;
         }
     }

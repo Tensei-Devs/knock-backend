@@ -3,7 +3,7 @@ namespace Knock.Market.Api.Modules.Requests.Dtos;
 /// <summary>Cuerpo de <c>POST /solicitudes</c> (spec 020, R-01). El 422 lo da <c>CreateRequestBodyValidator</c>; nunca repite el valor recibido.</summary>
 /// <param name="OficioClave">Clave de un oficio activo del catálogo. La modalidad (domicilio o taller) la dicta el oficio.</param>
 /// <param name="Descripcion">De 8 a 500 caracteres; pasa por moderación antes de guardarse.</param>
-/// <param name="Fotos">De 1 a 5 identificadores de archivo (24 hexadecimales), sin repetidos, de archivos ya confirmados del mismo usuario.</param>
+/// <param name="Fotos">De 1 a 5 identificadores de archivo (`archivoId`: 32 hexadecimales, UUID v7 sin guiones), sin repetidos, de archivos ya confirmados del mismo usuario.</param>
 /// <param name="Dia">Fecha <c>YYYY-MM-DD</c> en la zona America/Mexico_City, de hoy a hoy + 5 días.</param>
 /// <param name="Franja">Una de <c>manana</c>, <c>tarde</c> o <c>noche</c>.</param>
 /// <param name="ColoniaId">Identificador (24 hexadecimales) de una colonia del catálogo.</param>

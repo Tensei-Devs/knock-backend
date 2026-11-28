@@ -89,6 +89,19 @@ public class Spec033ArquitecturaTests
     }
 
     [Fact]
+    public void Todo_Controller_De_Admin_Declara_Permiso_Y_No_Toca_MongoDb_CA_053_14()
+    {
+        var admin = Identity.GetTypes()
+            .Where(type => type.Name.EndsWith("Controller", StringComparison.Ordinal) && type.Namespace == "Knock.Identity.Api.Modules.Moderation.Controllers.V1")
+            .ToList();
+
+        admin.Should().HaveCount(2, "si no hay controllers la regla pasaría en vacío");
+        admin.Where(type => !HasAttribute(type, "RequierePermisoAttribute")).Should().BeEmpty("cada ruta /admin exige su permiso del panel");
+        Types.InAssembly(Identity).That().ResideInNamespace("Knock.Identity.Api.Modules.Moderation.Controllers.V1")
+            .ShouldNot().HaveDependencyOnAny("MongoDB.Driver", "MongoDB.Bson").GetResult().IsSuccessful.Should().BeTrue();
+    }
+
+    [Fact]
     public void La_Regla_Puede_Fallar_Para_Un_Controller_Del_Panel_Sin_Permiso_CA_033_20()
     {
         PanelControllersWithoutPermission([typeof(SinPermisoController), typeof(ConPermisoController)])

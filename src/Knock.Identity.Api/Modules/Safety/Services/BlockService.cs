@@ -16,7 +16,7 @@ internal enum BlockOutcome
 /// <summary>
 /// Bloqueos entre personas (spec 043, BLO-01 a BLO-03). La persona de cada operación es siempre la del <c>sub</c> del token (R-24). Bloquear a alguien que no existe es 404 y bloquear a
 /// quien ya se bloqueó, 409; no se puede bloquear a uno mismo. A la persona bloqueada no se le avisa (R-17). Los efectos sobre mensajes, solicitudes y búsquedas en otros servicios
-/// se aplican con los eventos de la bandeja de salida (R-23), que este paso todavía no emite. No toca MongoDB.
+/// se aplican con los eventos <c>BloqueoCreado</c> y <c>BloqueoEliminado</c> (R-23), que el almacén deja en la bandeja de salida (spec 054) en la misma transacción que el bloqueo. No toca MongoDB.
 /// </summary>
 internal sealed class BlockService(BloqueosStore store, IUsuariosApi users, TimeProvider clock)
 {
@@ -36,7 +36,7 @@ internal sealed class BlockService(BloqueosStore store, IUsuariosApi users, Time
         }
 
         var now = clock.GetUtcNow().UtcDateTime;
-        if (!await store.AddAsync(sub, targetId, now.AddTicks(-(now.Ticks % TimeSpan.TicksPerMillisecond)), cancellationToken))
+        if (!await store.AddAsync(sub, targetId, now, cancellationToken))
         {
             throw new DomainException(DomainErrorKind.Conflict, "The person is already blocked.", SafetyErrorCodes.AlreadyBlockedCode);
         }
@@ -47,10 +47,11 @@ internal sealed class BlockService(BloqueosStore store, IUsuariosApi users, Time
     /// <summary>Quita el bloqueo; lanza 404 <c>block_not_found</c> si no había.</summary>
     public async Task UnblockAsync(string sub, string targetId, CancellationToken cancellationToken)
     {
-        if (!await store.RemoveAsync(sub, targetId, cancellationToken))
+        if (!await store.RemoveAsync(sub, targetId, clock.GetUtcNow().UtcDateTime, cancellationToken))
         {
             throw new DomainException(DomainErrorKind.NotFound, "There is no block for that person.", SafetyErrorCodes.BlockNotFoundCode);
         }
+
     }
 
     /// <summary>Las personas bloqueadas por quien llama, con su nombre público. Un cursor que no se puede leer lanza 400 (<c>invalid_safety_cursor</c>).</summary>

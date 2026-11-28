@@ -1,20 +1,20 @@
 # Tareas 056 — Autenticación entre servicios (KNOCK-162)
 
-> **Estado:** pendientes. En esta etapa **no se ejecutan**: se activan cuando la spec esté Aprobada y una persona lo indique.
+> **Estado:** T-01 a T-07 y T-09 hechas o parciales en la rama `feature/KNOCK-266-credencial-servicio-unica` (conciliado el 2026-11-23); D-01 a D-04 decididas por José el 2026-11-23.
 
 | Tarea | Qué se hace | Cubre | Estado |
 |---|---|---|---|
-| T-01 | Decisiones de §8 registradas (2026-11-19); responder D-01 a D-04 (sí/no con recomendación, spec §8) | R-10 | parcial |
-| T-02 | Definir o extraer la validación de la credencial de servicio (según P-01) con falla cerrada | R-01 a R-06 · CA-02, CA-06 | pendiente |
-| T-03 | Aplicar la regla común en Mensajería (`POST /api/v1/interno/avisos`, spec 037) y revisar Mercado (spec 041) | R-01 a R-05, R-09 · CA-03, CA-09 | pendiente |
-| T-04 | Comprobar que el gateway no enruta `/api/v1/interno/*` | R-07 · CA-07 | pendiente |
-| T-05 | Escribir las pruebas de seguridad negativa (credenciales inválidas, JWT cruzado, emisor cruzado, sin permiso) | CA-01, CA-03, CA-04, CA-05 | pendiente |
-| T-06 | Pruebas de arquitectura y de no exposición de secretos | R-05, R-08 · CA-08 | pendiente |
-| T-07 | Replay (idempotente, sin `jti` guardado) y rotación (dos claves, 24 h) según P-03 y P-02 | CA-10, CA-11 | pendiente (tras D-01 y D-02) |
-| T-10 | Dejar probado que Mensajería→Mercado (spec 026) reenvía el JWT del usuario | R-11 · CA-12 | pendiente |
-| T-11 | Enmienda a la spec 055 para el catálogo de `Knock.Hosting` (P-01b), en PR aparte y antes del código | P-01b | pendiente |
-| T-08 | Secretos (`avisos-key-*`, `interno-key-identity`) y permisos en Key Vault y Terraform | P-04 | del líder (fuera de esta spec) |
-| T-09 | `docs/endpoints.md` si cambia el esquema, `Memoria.md` e informe | — | pendiente |
+| T-01 | Decisiones de §8 registradas (2026-11-19); responder D-01 a D-04 (sí/no con recomendación, spec §8) | R-10 | hecha (D-01 a D-04: sí, `DECISIONES_PENDIENTES.md`, 2026-11-23) |
+| T-02 | Definir o extraer la validación de la credencial de servicio (según P-01) con falla cerrada | R-01 a R-06 · CA-02, CA-06 | hecha (`src/Knock.Hosting/Security/ServiceCredential.cs`; Mercado, Mensajería e Identidad la usan) |
+| T-03 | Aplicar la regla común en Mensajería (`POST /api/v1/interno/avisos`, spec 037) y revisar Mercado (spec 041) | R-01 a R-05, R-09 · CA-03, CA-09 | hecha (`InternalNoticeAuthentication` y `InternalServiceAuthentication` delegan en `Knock.Hosting`; sin cambio de contrato; suites 037 y 041 sin editar) |
+| T-04 | Comprobar que el gateway no enruta `/api/v1/interno/*` | R-07 · CA-07 | hecha (`Spec056RutasInternasTests`) |
+| T-05 | Escribir las pruebas de seguridad negativa (credenciales inválidas, JWT cruzado, emisor cruzado, sin permiso) | CA-01, CA-03, CA-04, CA-05 | hecha en código (`ServiceCredentialTests` CA-01, 02, 04, 05; `Spec037InternoAvisosSeguridadTests.InternalNotices_CredentialWithoutThePermission_Returns403ServiceNotAllowed_CA_056_03` es nueva y solo corre en el CI contra DocumentDB: falta ver su run verde) |
+| T-06 | Pruebas de arquitectura y de no exposición de secretos | R-05, R-08 · CA-08 | hecha (2026-11-24, KNOCK-266): `Spec056SecretosTests` (CA_056_08) comprueba que ningún `appsettings*.json` trae claves de servicio ni `SigningKey`, que el gateway no nombra las claves internas y que no tiene rutas `/interno`; `Spec056RegistrosTests` (CA_056_08) ejecuta el esquema real con nivel Trace sobre una llamada aceptada y varias rechazadas (otra clave, vencida, mal formada, sin credencial) y comprueba que ningún registro ni cuerpo de error contiene las claves (vigente, anterior y ajena) ni el token ni sus partes. Revisión por par y `security-reviewer` omitidas por decisión de José (2026-11-24); autorrevisión hecha por el asistente de código con IA (no por una persona) |
+| T-07 | Replay (idempotente, sin `jti` guardado) y rotación (dos claves, 24 h) según P-03 y P-02 | CA-10, CA-11 | hecha (`ServiceCredentialTests` CA_056_10 y CA_056_11; repetición por ruta en `Spec041HistorialInternoTests` y `Spec037InternoAvisosSeguridadTests`; la repetición de las demás rutas internas queda pendiente) |
+| T-10 | Dejar probado que Mensajería→Mercado (spec 026) reenvía el JWT del usuario | R-11 · CA-12 | hecha: `Spec056ReenvioDelJwtTests` (CA_056_12) prueba el reenvío del JWT sin reintento tras 401/403, y `Spec056CredencialEnRutaDeUsuarioTests` (CA_056_04 y CA_056_12, solo CI) prueba que una credencial de servicio válida en una ruta interna recibe 401 en `GET /api/v1/visitas/{id}` |
+| T-11 | Enmienda a la spec 055 para el catálogo de `Knock.Hosting` (P-01b), en PR aparte y antes del código | P-01b | hecha en este PR (§14 punto 5 de la spec 055; sin aprobar hasta que las den las personas) |
+| T-08 | Secretos (`avisos-key-*`, `interno-key-identity`) y permisos en Key Vault y Terraform | P-04 | hecha (conciliado 2026-11-23): `avisos-key-*` e `interno-key-*` cableados en `deploy/apps/main.tf` con el rol `Key Vault Secrets User` de `deploy/modules/service/main.tf`; los secretos existen en el Key Vault según el informe operativo de José del 2026-11-23 (no se puede comprobar desde el repositorio) |
+| T-09 | `docs/endpoints.md` si cambia el esquema, `Memoria.md` e informe | — | hecha (2026-11-24, KNOCK-266): `docs/endpoints.md` no cambia (las filas de `/api/v1/interno/*` ya describen la credencial de servicio y no cambió ningún contrato); la memoria está en `docs/memoria/2026-11-23-KNOCK-162-*.md` y en esta entrada (sin dependencias nuevas, así que `Memoria.md` no recibe entrada de dependencia); el informe operativo es `docs/rotacion-de-claves-de-servicio.md`. Revisión por par y `security-reviewer` omitidas por decisión de José (2026-11-24); autorrevisión hecha por el asistente de código con IA (no por una persona) |
 
 ## Definición de terminado
 - Los casos CA de `spec.md` tienen prueba con su ID; `python scripts/sdd_lint.py --trace 056` en OK.

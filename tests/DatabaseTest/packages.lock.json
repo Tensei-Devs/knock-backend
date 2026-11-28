@@ -97,6 +97,14 @@
           "System.Memory.Data": "10.0.10"
         }
       },
+      "Azure.Identity": {
+        "type": "Transitive",
+        "resolved": "1.21.0",
+        "contentHash": "GeFv8sGwRKvDKwI2WFy8r0mhmlxEVZg24Sit2NogTjiSO8RVjllWM65OT6e1sKjOvG8V74y7hAbaELUUPjZQSw==",
+        "dependencies": {
+          "Azure.Core": "1.53.0"
+        }
+      },
       "Azure.Monitor.OpenTelemetry.Exporter": {
         "type": "Transitive",
         "resolved": "1.10.0",
@@ -105,6 +113,14 @@
           "Azure.Core": "1.63.0",
           "OpenTelemetry.Extensions.Hosting": "1.18.0",
           "OpenTelemetry.PersistentStorage.FileSystem": "1.1.1"
+        }
+      },
+      "Azure.Security.KeyVault.Keys": {
+        "type": "Transitive",
+        "resolved": "4.8.0",
+        "contentHash": "3rueqKRzNZdW+gEWox07Hpxq3n+0AZdRw3QI4GC3GBzLCw9n00LXgy4upow00bAuQJ9QGX2xwzJPg2/wALPYDA==",
+        "dependencies": {
+          "Azure.Core": "1.46.2"
         }
       },
       "Azure.Storage.Blobs": {
@@ -915,20 +931,44 @@
       "knock.hosting": {
         "type": "Project",
         "dependencies": {
+          "Azure.Monitor.OpenTelemetry.Exporter": "[1.10.0, )",
+          "Microsoft.AspNetCore.Authentication.JwtBearer": "[11.0.0, )",
+          "Microsoft.AspNetCore.OpenApi": "[11.0.0, )",
           "OpenTelemetry.Extensions.Hosting": "[1.21.0, )",
-          "Serilog.AspNetCore": "[10.0.0, )"
+          "OpenTelemetry.Instrumentation.AspNetCore": "[1.20.1, )",
+          "OpenTelemetry.Instrumentation.Http": "[1.20.1, )",
+          "Serilog.AspNetCore": "[10.0.0, )",
+          "StackExchange.Redis": "[2.13.23, )"
+        }
+      },
+      "knock.hosting.data": {
+        "type": "Project",
+        "dependencies": {
+          "Knock.Hosting": "[1.0.0, )",
+          "MongoDB.Driver": "[3.14.0, )"
+        }
+      },
+      "knock.hosting.mvc": {
+        "type": "Project",
+        "dependencies": {
+          "Asp.Versioning.Mvc": "[10.2.1, )"
         }
       },
       "knock.identity.api": {
         "type": "Project",
         "dependencies": {
           "Asp.Versioning.Mvc": "[10.2.1, )",
+          "Azure.Identity": "[1.21.0, )",
           "Azure.Monitor.OpenTelemetry.Exporter": "[1.10.0, )",
+          "Azure.Security.KeyVault.Keys": "[4.8.0, )",
+          "Azure.Storage.Blobs": "[12.30.1, )",
           "FirebaseAdmin": "[3.7.1, )",
           "FluentValidation": "[12.1.1, )",
           "FluentValidation.DependencyInjectionExtensions": "[12.1.1, )",
           "Knock.Contracts": "[1.0.0, )",
           "Knock.Hosting": "[1.0.0, )",
+          "Knock.Hosting.Data": "[1.0.0, )",
+          "Knock.Hosting.Mvc": "[1.0.0, )",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[11.0.0, )",
           "Microsoft.AspNetCore.OpenApi": "[11.0.0, )",
           "MongoDB.Driver": "[3.14.0, )",
@@ -946,12 +986,15 @@
         "type": "Project",
         "dependencies": {
           "Asp.Versioning.Mvc": "[10.2.1, )",
+          "Azure.Identity": "[1.21.0, )",
           "Azure.Monitor.OpenTelemetry.Exporter": "[1.10.0, )",
           "Azure.Storage.Blobs": "[12.30.1, )",
           "FluentValidation": "[12.1.1, )",
           "FluentValidation.DependencyInjectionExtensions": "[12.1.1, )",
           "Knock.Contracts": "[1.0.0, )",
           "Knock.Hosting": "[1.0.0, )",
+          "Knock.Hosting.Data": "[1.0.0, )",
+          "Knock.Hosting.Mvc": "[1.0.0, )",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[11.0.0, )",
           "Microsoft.AspNetCore.OpenApi": "[11.0.0, )",
           "MongoDB.Driver": "[3.14.0, )",

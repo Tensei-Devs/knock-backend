@@ -233,7 +233,33 @@ Las pruebas citan el caso como `CA_044_NN` en el nombre (para `python scripts/sd
 - Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
 - Dependencia: el despachador de avisos de la spec 037 es el único que crea avisos.
 
+## Nota de enmienda (2026-11-23, decisión de José)
+- **Estado de esta enmienda:** aprobada por José Julián Hernández Hernández el 2026-11-24. La aprobación de abajo es la original; la firma de esta enmienda es la línea «Enmienda» de la sección Aprobación. El trabajo de código que pide queda en `task.md` como pendiente, **desbloqueada por la firma del 2026-11-24**.
+- **Quién escribe `avisos`.** R-14 dice que el aviso «solo se crea desde el despachador de la spec 037». Se verificó que hoy **nada lo hace**: `NoticesStore` solo lee, cuenta y marca como leído, y el despachador solo envía el push. La enmienda de la spec 037 (R-14, nota del 2026-11-23) obliga al despachador a escribir en `avisos`; hasta que se implemente (037 T-10), `GET /api/v1/avisos` y el contador responden vacío y los CA que dependen de avisos existentes solo se prueban con datos sembrados.
+- El texto de los avisos sigue siendo **fijo y sin enlace** (el catálogo de la 037). Para el aviso «exportación lista» la app consulta la exportación al abrirlo (spec 039, nota de enmienda del 2026-11-23).
+- Tarea: `task.md` T-11, desbloqueada por la firma del 2026-11-24 (pendiente de código).
+
+## Nota de enmienda (2026-11-24, decisión de José, pendiente de firma)
+- **Estado de esta enmienda:** **sin firmar**. Propuesta para validación de José Julián Hernández Hernández; no habilita nada por sí sola. El código que pide ya está en un PR aparte (Nivel C) que se fusiona solo después de esta firma. La firma es la línea «Enmienda 2026-11-24» de la sección Aprobación.
+- **Tipo `sistema`, no apagable.** R-13 y D-06 dicen que solo los avisos de `seguridad` no se apagan. La lista cerrada de tipos (`NoticeRules.Types`) gana `sistema`, que agrupa los avisos de texto fijo `reporte_decidido`, `opinion_oculta` y `exportacion_lista` (catálogo de la spec 037). `GET /api/v1/me/preferencias-avisos` devuelve ese tipo con `activo: true` y `apagable: false`, igual que `seguridad`; un `PUT` que intente apagarlo responde 422 y no se guarda. Con esto CA-19 se lee «todos los tipos activos salvo promociones, y los de seguridad y sistema marcados como no apagables».
+- **Avisos sin rol.** Los avisos que no pertenecen a un rol (`reporte_decidido` y `exportacion_lista`) se guardan con `comoRol` nulo (antes el despachador les ponía `cliente`, por lo que un técnico no los veía). El filtro `comoRol` de `GET /api/v1/avisos` devuelve los del rol pedido **más** los comunes (`comoRol` nulo), tanto para `cliente` como para `tecnico`; sin filtro devuelve todos. En la respuesta `comoRol` puede ser nulo. CA-16 se lee «ve solo los de ese rol y los comunes». El contador de no leídos no filtra por rol, así que no cambia.
+- **Sin cambio de datos ni de índices.** Los índices de `db/044-avisos-dentro-de-la-app.js` no incluyen `comoRol`; el filtro es sobre el resultado de la consulta por persona, y no se necesita migración. Los avisos ya guardados con rol `cliente` por esta causa (solo `reporte_decidido` y `exportacion_lista` creados desde que existe el despachador) conservan ese rol hasta que vencen a los 30 días.
+- **Sobre `GET /api/v1/avisos?tipo=sistema`.** La ruta no tiene hoy un filtro `tipo` (R-02: cursor, limite, leido, comoRol); `tipo` es un campo de la respuesta y la clave de las preferencias. El PR de código **no agrega** ese filtro; si José lo quiere, es una enmienda aparte de R-02 y de la tabla de entrada.
+- Tarea: `task.md` T-11 (código en el PR de Nivel C de la rama `feature/KNOCK-60-avisos-sistema-export`).
+
+## Nota de enmienda (2026-11-27, aviso ajeno responde 404)
+
+- **Estado de esta enmienda:** PROPUESTA SIN FIRMA; vale desde que se firma la línea «Enmienda 2026-11-27» de la sección Aprobación. La aprobación original y las enmiendas ya firmadas se conservan.
+- **Motivo:** CA-09 pide 403 para quien no es dueño del aviso, y R-07, R-12, CA-11 y CA-18 piden 404 `notice_not_found` sin revelar que existe. El código responde 404.
+- **CA-09 se lee:** «Dada una persona que no es dueña del aviso, cuando llama `POST /api/v1/avisos/{id}/leido`, entonces responde 404 `notice_not_found`, igual que si el aviso no existiera, y no cambia nada».
+- En §5, las respuestas de AVI-03 no incluyen 403. En §9 y §10, «ajeno responde 403 o 404» se lee «ajeno responde 404».
+- No cambia código, contrato publicado ni pruebas. Es la misma convención de las specs 020 y 050.
+- **CA-E01:** Dado el aviso de otra persona y un identificador inexistente, cuando se marcan como leídos, entonces las dos respuestas son iguales.
+
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
+- [x] Enmienda 2026-11-23 — nombre: José Julián Hernández Hernández fecha: 2026-11-24
+- [x] Enmienda 2026-11-24 — nombre: José Julián Hernández Hernández fecha: 2026-11-26
 - [x] Sin conflicto con la constitución
+- [x] Enmienda 2026-11-27 — nombre: José Julián Hernández Hernández fecha: 2026-11-27
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

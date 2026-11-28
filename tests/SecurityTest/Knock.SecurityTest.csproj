@@ -23,6 +23,7 @@
     <ProjectReference Include="..\..\src\Knock.Market.Api\Knock.Market.Api.csproj" Aliases="MarketApi" />
     <ProjectReference Include="..\..\src\Knock.Gateway\Knock.Gateway.csproj" Aliases="GatewayApi" />
     <ProjectReference Include="..\..\src\Knock.Messaging.Api\Knock.Messaging.Api.csproj" Aliases="MessagingApi" />
+    <ProjectReference Include="..\..\src\Knock.Hosting\Knock.Hosting.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -32,6 +33,7 @@
     <Compile Include="..\IntegrationTest\Support\ConsoleCapture.cs" Link="Support\ConsoleCapture.cs" />
     <Compile Include="..\IntegrationTest\Support\ProblemBody.cs" Link="Support\ProblemBody.cs" />
     <Compile Include="..\IntegrationTest\Support\QueryLeakDetector.cs" Link="Support\QueryLeakDetector.cs" />
+    <Compile Include="..\IntegrationTest\Support\PanelReportKit.cs" Link="Support\PanelReportKit.cs" />
   </ItemGroup>
 
   <ItemGroup>

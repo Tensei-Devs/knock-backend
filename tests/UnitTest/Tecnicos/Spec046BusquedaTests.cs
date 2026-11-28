@@ -92,6 +92,34 @@ public sealed class Spec046BusquedaTests : IDisposable
         new AutocompleteQueryValidator().Validate(new AutocompleteQuery { Q = new string('a', 41) }).IsValid.Should().BeFalse();
 
     [Fact]
+    public async Task Sugerencias_Ordenan_Oficios_Servicios_Y_Negocios_CA_046_10()
+    {
+        var (service, reader) = Create(null);
+        reader.Services = [new ServiceName(ObjectId.GenerateNewId().ToString(), "Plomería de baños")];
+        reader.Businesses = [new BusinessName(ObjectId.GenerateNewId().ToString(), "Plomería Ana")];
+
+        var response = await service.AutocompleteAsync("plomer", CancellationToken.None);
+
+        response.Sugerencias.Select(s => s.Tipo).Should().Equal("oficio", "servicio", "negocio");
+        response.Sugerencias[1].Id.Should().NotBeNull();
+        response.Sugerencias[1].Clave.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("reparacion", "Reparación de calentador")]
+    [InlineData("REPARACIÓN", "reparacion rapida")]
+    [InlineData("banos  y", "Baños y cocinas")]
+    [InlineData("pinon", "Taller Piñón")]
+    public void Patron_Encuentra_Sin_Distinguir_Acentos_CA_046_10(string query, string name) =>
+        System.Text.RegularExpressions.Regex.IsMatch(name, TechnicianLookupService.AccentInsensitivePattern(query), System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+            .Should().BeTrue();
+
+    [Fact]
+    public void Patron_Escapa_Los_Metacaracteres_CA_046_57() =>
+        System.Text.RegularExpressions.Regex.IsMatch("cualquier cosa", TechnicianLookupService.AccentInsensitivePattern(".*"))
+            .Should().BeFalse();
+
+    [Fact]
     public async Task Sugerencias_Sin_Acentos_Primero_Oficios_Y_Maximo_Ocho_CA_046_57()
     {
         var (service, reader) = Create(null);
@@ -125,6 +153,11 @@ public sealed class Spec046BusquedaTests : IDisposable
 
         public IReadOnlyList<BusinessName> Businesses { get; set; } = [];
 
+        public IReadOnlyList<ServiceName> Services { get; set; } = [];
+
+        public Task<IReadOnlyList<ServiceName>> FindServiceNamesAsync(string text, int limit, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<ServiceName>>([.. Services.Take(limit)]);
+
         public Task<TechnicianCoverage?> FindCoverageAsync(ObjectId id, CancellationToken cancellationToken)
         {
             CoverageCalls++;
@@ -136,6 +169,9 @@ public sealed class Spec046BusquedaTests : IDisposable
             BusinessCalls++;
             return Task.FromResult<IReadOnlyList<BusinessName>>([.. Businesses.Take(limit)]);
         }
+
+        public Task<TechnicianListPage> FindListAsync(TechnicianListQuery query, CancellationToken cancellationToken) =>
+            Task.FromResult(new TechnicianListPage([], null));
     }
 
     private sealed class FakeCenters : INeighborhoodCenterCatalog

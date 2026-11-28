@@ -1,14 +1,18 @@
 using Knock.Contracts.Moderation;
 using Knock.Market.Api.Modules.Media.Data;
 using Knock.Market.Api.Modules.Media.Domain;
+using Microsoft.Extensions.Options;
 
 namespace Knock.Market.Api.Modules.Media.Services;
 
 /// <summary>Upload ticket: the pending file id. The signed upload link is OI-3.</summary>
 internal sealed record UploadTicket(Guid Id);
 
+/// <summary>Pending file with its signed upload link (spec 062, R-01): the id (<c>archivoId</c>), the link and the time limit to confirm.</summary>
+internal sealed record IssuedUpload(Guid Id, EnlaceSubida Link, DateTimeOffset ConfirmBefore);
+
 /// <summary>Confirmed file: final state and dimensions (no URLs until OI-3).</summary>
-internal sealed record ConfirmedFile(Guid Id, string State, int Width, int Height);
+internal sealed record ConfirmedFile(Guid Id, string State, int Width, int Height, int Bytes = 0);
 
 /// <summary>
 /// Upload, confirmation and ownership of private photos. The client uploads to quarantine with the OI-3 signed link;
@@ -20,8 +24,12 @@ internal sealed class MediaService(
     IMediaBlobStore blobs,
     ImageProcessor processor,
     IContentModerator moderator,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    IOptions<MediaOptions>? options = null,
+    MediaMetrics? metrics = null)
 {
+    private readonly int _maxPendingUploads = options?.Value.MaxPendingUploads ?? MediaRules.DefaultMaxPendingUploads;
+
     public async Task<MediaOutcome<UploadTicket>> CreateUploadAsync(
         string ownerId, string usage, string contentType, long sizeBytes, CancellationToken cancellationToken)
     {
@@ -33,9 +41,54 @@ internal sealed class MediaService(
         }
 
         await blobs.EnsureContainersAsync(cancellationToken);
-        var file = MediaFile.CreatePending(ownerId, parsedUsage.Value, contentType, sizeBytes, timeProvider.GetUtcNow());
-        await store.AddAsync(file, cancellationToken);
+        var now = timeProvider.GetUtcNow();
+        var file = MediaFile.CreatePending(ownerId, parsedUsage.Value, contentType, sizeBytes, now);
+        var added = await store.AddPendingWithinLimitAsync(file, _maxPendingUploads, now, cancellationToken);
+        if (!added.Added)
+        {
+            metrics?.UploadsRejectedByLimit.Add(1);
+            return MediaOutcome<UploadTicket>.LimitExceeded(RetryAfterSeconds(added.RetryAt, now));
+        }
+
+        metrics?.FilesCreated.Add(1);
         return MediaOutcome<UploadTicket>.Ok(new UploadTicket(file.Id));
+    }
+
+    /// <summary>
+    /// Creates the pending file and issues its signed upload link to the private quarantine (spec 062, R-01 and R-03). A storage failure after the file was created leaves a pending
+    /// document that expires by itself (30 minutes) and counts toward the cap only until then.
+    /// </summary>
+    public async Task<MediaOutcome<IssuedUpload>> RequestUploadAsync(
+        string ownerId, string usage, string contentType, long sizeBytes, CancellationToken cancellationToken)
+    {
+        var created = await CreateUploadAsync(ownerId, usage, contentType, sizeBytes, cancellationToken);
+        if (created.Status != MediaOutcomeStatus.Success)
+        {
+            return new MediaOutcome<IssuedUpload>(created.Status, Detail: created.Detail, RetryAfterSeconds: created.RetryAfterSeconds);
+        }
+
+        var stored = await store.FindAsync(created.Value!.Id, cancellationToken);
+        if (stored is null)
+        {
+            return MediaOutcome<IssuedUpload>.Unavailable();
+        }
+
+        try
+        {
+            var link = await blobs.CreateUploadLinkAsync(stored.File.QuarantineBlob, contentType, cancellationToken);
+            return MediaOutcome<IssuedUpload>.Ok(new IssuedUpload(stored.File.Id, link, stored.File.CreatedAt + MediaRules.ConfirmationWindow));
+        }
+        catch (IOException)
+        {
+            return MediaOutcome<IssuedUpload>.Unavailable();
+        }
+    }
+
+    /// <summary>Seconds until the oldest valid pending file stops counting, between 1 and the confirmation window (1 800 s) (spec 058, R-11).</summary>
+    private static int RetryAfterSeconds(DateTimeOffset? retryAt, DateTimeOffset now)
+    {
+        var window = (int)MediaRules.ConfirmationWindow.TotalSeconds;
+        return retryAt is null ? window : Math.Clamp((int)Math.Ceiling((retryAt.Value - now).TotalSeconds), 1, window);
     }
 
     public async Task<MediaOutcome<ConfirmedFile>> ConfirmAsync(string ownerId, Guid id, CancellationToken cancellationToken)
@@ -72,16 +125,16 @@ internal sealed class MediaService(
         }
         catch (TimeoutException)
         {
-            return MediaOutcome<ConfirmedFile>.Unavailable();
+            return MediaOutcome<ConfirmedFile>.Unavailable(MediaRejection.ModerationUnavailable);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return MediaOutcome<ConfirmedFile>.Unavailable();
+            return MediaOutcome<ConfirmedFile>.Unavailable(MediaRejection.ModerationUnavailable);
         }
 
         if (review.Outcome == ModerationOutcome.Unavailable)
         {
-            return MediaOutcome<ConfirmedFile>.Unavailable();
+            return MediaOutcome<ConfirmedFile>.Unavailable(MediaRejection.ModerationUnavailable);
         }
         if (review.Outcome != ModerationOutcome.Allowed)
         {
@@ -97,6 +150,21 @@ internal sealed class MediaService(
         ArgumentException.ThrowIfNullOrEmpty(ownerId);
         var stored = await store.FindAsync(id, cancellationToken);
         return stored is not null && stored.File.IsReadyFor(ownerId);
+    }
+
+    /// <summary>True only for a Ready file owned by <paramref name="ownerId"/> whose <c>uso</c> is <paramref name="usage"/> (spec 020 CA-18).</summary>
+    public async Task<bool> IsReadyOwnedAndUsedForAsync(Guid id, string ownerId, MediaUsage usage, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(ownerId);
+        var stored = await store.FindAsync(id, cancellationToken);
+        return stored is not null && stored.File.Usage == usage && stored.File.IsReadyFor(ownerId);
+    }
+
+    /// <summary>The file when it is Ready, has <paramref name="usage"/> and has a reduced blob to link; otherwise <see langword="null"/>. Ownership is the caller's decision (it already authorized the reader).</summary>
+    public async Task<MediaFile?> FindReadableAsync(Guid id, MediaUsage usage, CancellationToken cancellationToken)
+    {
+        var stored = await store.FindAsync(id, cancellationToken);
+        return stored is { File: { State: MediaFileState.Ready, ReducedBlob: not null } file } && file.Usage == usage ? file : null;
     }
 
     /// <summary>
@@ -135,7 +203,7 @@ internal sealed class MediaService(
         await blobs.UploadFileAsync(ready.ReducedBlob!, image.Reduced, image.Format, cancellationToken);
         await blobs.DeleteQuarantineAsync(ready.QuarantineBlob, cancellationToken);
         return await store.TryReplaceAsync(ready, stored.Version, cancellationToken)
-            ? MediaOutcome<ConfirmedFile>.Ok(new ConfirmedFile(ready.Id, ready.State.ToContractValue(), image.Width, image.Height))
+            ? MediaOutcome<ConfirmedFile>.Ok(new ConfirmedFile(ready.Id, ready.State.ToContractValue(), image.Width, image.Height, image.Original.Length))
             : MediaOutcome<ConfirmedFile>.Conflict("The file was confirmed by another request.");
     }
 }

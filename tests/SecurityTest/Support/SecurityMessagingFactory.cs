@@ -2,6 +2,8 @@ extern alias MessagingApi;
 using System.Reflection;
 using Asp.Versioning;
 using FluentValidation;
+using Knock.Contracts.Conversations;
+using Knock.Hosting.Mvc;
 using Knock.IntegrationTest.Support;
 using MessagingApi::Knock.Messaging.Api.Hosting;
 using MessagingApi::Knock.Messaging.Api.Modules.Conversaciones.Domain;
@@ -14,6 +16,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using StackExchange.Redis;
 
 namespace Knock.SecurityTest.Support;
@@ -26,6 +29,12 @@ internal sealed class ProtectedProbeController : ControllerBase
 {
     [HttpGet]
     public IActionResult Get() => Ok(new { sub = User.FindFirst("sub")?.Value });
+
+    /// <summary>JSON de más de 1 KB en una ruta común, en una interna y bajo <c>/hubs</c>, para las exclusiones de la compresión (spec 010, enmienda 2026-11-27).</summary>
+    [HttpGet("grande")]
+    [HttpGet("~/api/v1/interno/sonda-grande")]
+    [HttpGet("~/hubs/sonda-grande")]
+    public IActionResult Large() => Ok(new ProbeBody(new string('x', 2048)));
 }
 
 /// <summary>Cuerpo de la sonda de validación (spec 030, T-04: la infraestructura de controllers de Mensajería).</summary>
@@ -68,8 +77,16 @@ internal sealed class InfraProbeController : ControllerBase
     public IActionResult Public() => Ok(new ProbeBody("ok"));
 
     [HttpPost("crear")]
-    [EnableRateLimiting(RateLimitingExtensions.CreateConversationPolicy)]
+    [EnableRateLimiting(MessagingRateLimits.CreateConversationPolicy)]
     public IActionResult Create() => StatusCode(StatusCodes.Status201Created);
+}
+
+/// <summary>Mercado de mentira para las pruebas de seguridad de Conversaciones (spec 030): nunca concede ningún permiso. Estas pruebas no llegan a MongoDB ni a Mercado.</summary>
+internal sealed class DenyingPermisoDeConversacion : IPermisoDeConversacion
+{
+    public Task<ResultadoPermisoConversacion> ConsultarAsync(
+        string solicitudId, string? tecnicoId, string? conversacionId, string subject, string bearerToken, CancellationToken cancellationToken) =>
+        Task.FromResult(new ResultadoPermisoConversacion(EstadoPermisoConversacion.NoEncontrado));
 }
 
 /// <summary>MVC solo descubre controllers públicos; el de prueba es interno, así que se agrega al descubrimiento a mano.</summary>
@@ -117,6 +134,7 @@ internal sealed class SecurityMessagingFactory(IReadOnlyDictionary<string, strin
     {
         ArgumentNullException.ThrowIfNull(builder);
         builder.UseEnvironment("Production");
+        builder.UseSetting("ForwardedHeaders:KnownNetworks:0", "10.0.0.0/16"); // spec 035, R-09: fuera de Development hay que fijar las redes de confianza
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
             var values = new Dictionary<string, string?>
@@ -141,6 +159,8 @@ internal sealed class SecurityMessagingFactory(IReadOnlyDictionary<string, strin
         {
             services.AddSingleton<IStartupFilter>(new RemoteIpStartupFilter());
             services.AddSingleton<IValidator<ProbeBody>>(new ProbeBodyValidator());
+            services.RemoveAll<IPermisoDeConversacion>();
+            services.AddSingleton<IPermisoDeConversacion>(new DenyingPermisoDeConversacion());
             services.AddControllers().ConfigureApplicationPartManager(manager => manager.FeatureProviders.Add(new ProtectedProbeFeatureProvider()));
         });
     }

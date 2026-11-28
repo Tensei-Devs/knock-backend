@@ -19,5 +19,7 @@ if (!reportsIdentity.getCollectionNames().includes("reportes")) {
 reportsIdentity.reportes.createIndex({ gravedad: 1, estado: 1, creadoEn: 1 }, { name: "gravedad_1_estado_1_creadoEn_1" });
 reportsIdentity.reportes.createIndex({ reportadoId: 1 }, { name: "reportadoId_1" });
 reportsIdentity.reportes.createIndex({ reportaId: 1 }, { name: "reportaId_1" });
+// Spec 053: el reporte que Identidad abre desde el «no terminado» de una visita es único por visita.
+reportsIdentity.reportes.createIndex({ visitaNoTerminadaId: 1 }, { name: "visitaNoTerminadaId_1", unique: true, sparse: true });
 
 print(`Índices de reportes listos en «${reportsDbName}»`);

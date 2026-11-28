@@ -1,12 +1,12 @@
 # Tareas 042 — Técnicos de confianza
 
-> **Estado:** pendientes. En esta etapa **no se ejecutan**: se activan cuando la spec esté Aprobada y una persona lo indique.
+> **Estado:** T-01 a T-08 implementadas (KNOCK-91); T-00 sigue sin hacerse aquí (la spec lee `tecnicos` directamente). Conciliado contra el código el 2026-11-22: CA-01 a CA-19 con prueba (`sdd_lint --trace 042` en verde); `docs/endpoints.md` y `docs/rate-limit-matrix.md` por revisar en el cierre.
 > «Depende de» = tareas que deben estar fusionadas antes; «Paralelo con» = tareas que se pueden trabajar a la vez.
 
 | Tarea | Qué se hace | Cubre | Depende de | Paralelo con | Responsable sugerido | Estado |
 |---|---|---|---|---|---|---|
 | T-00 | Prerrequisitos que hoy no existen y no son parte de esta spec: Almacén de técnicos y su visibilidad de las specs 027 y 028 (hoy no implementados) | §8 | — | T-01 | por asignar | pendiente (no se hizo aquí: esta spec lee `tecnicos` directamente, «visible» es estado activo y no oculto; el almacén de las specs 027 y 028 sigue sin existir) |
-| T-01 | Script de `db/` con colecciones e índices de §6 y prueba de base de datos | §6 | — | T-02 en adelante (con datos de prueba) | por asignar | parcial (KNOCK-91): `db/042-tecnicos-de-confianza.js` con la colección y el índice único, y el índice lo comprueban las pruebas de integración; falta la prueba de base de datos del script (`DatabaseTest`) |
+| T-01 | Script de `db/` con colecciones e índices de §6 y prueba de base de datos | §6 | — | T-02 en adelante (con datos de prueba) | por asignar | hecha (KNOCK-91): `db/042-tecnicos-de-confianza.js` con la colección y el índice único, y el índice lo comprueban las pruebas de integración; prueba de base de datos `Spec042TrustScriptTests` (`DatabaseTest`, corre solo en CI con Docker): índice único, idempotencia y nombre de base inválido |
 | T-02 | `GET /api/v1/me/tecnicos-confianza` (TCO-01): DTO, validador, servicio, almacén, controlador y pruebas | R-01 a R-02 · CA-01 a CA-03 | T-01 | otras rutas | por asignar | hecha (KNOCK-91): módulo `Trust` de Mercado con `TrustedTechniciansController`, `TrustService` y `TrustStore`; pruebas `Spec042ConfianzaTests` (CA-01 a CA-19) y `Spec042TrustTests` |
 | T-03 | `PUT /api/v1/me/tecnicos-confianza/{tecnicoId}` (TCO-02): DTO, validador, servicio, almacén, controlador y pruebas | R-03 a R-05 · CA-04 a CA-08 | T-01 | otras rutas | por asignar | hecha (KNOCK-91): módulo `Trust` de Mercado con `TrustedTechniciansController`, `TrustService` y `TrustStore`; pruebas `Spec042ConfianzaTests` (CA-01 a CA-19) y `Spec042TrustTests` |
 | T-04 | `DELETE /api/v1/me/tecnicos-confianza/{tecnicoId}` (TCO-03): DTO, validador, servicio, almacén, controlador y pruebas | R-06 a R-08 · CA-09 a CA-12 | T-01 | otras rutas | por asignar | hecha (KNOCK-91): módulo `Trust` de Mercado con `TrustedTechniciansController`, `TrustService` y `TrustStore`; pruebas `Spec042ConfianzaTests` (CA-01 a CA-19) y `Spec042TrustTests` |

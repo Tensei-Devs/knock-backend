@@ -1,5 +1,6 @@
 using System.Net;
 using AwesomeAssertions;
+using Knock.Contracts.Safety;
 using Knock.IntegrationTest.Support;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -107,12 +108,7 @@ public sealed class Spec043BloqueosTests
         await using var scenario = await SafetyHost.StartAsync();
         var target = await scenario.SeedUserAsync("Demo Carrera");
 
-        // El emulador a veces contesta 500 por bloqueo mutuo; esa ráfaga se repite con la colección vacía, así el conteo sigue siendo exacto.
-        var summary = await ResponseSummary.WithoutEmulatorDeadlockAsync(async () =>
-        {
-            await scenario.Blocks.DeleteManyAsync(FilterDefinition<BsonDocument>.Empty);
-            return await ResponseSummary.ReadAsync(await Task.WhenAll(Enumerable.Range(0, 5).Select(_ => scenario.SendAsync(HttpMethod.Post, $"/api/v1/usuarios/{target}/bloqueo", scenario.Caller))));
-        });
+        var summary = await ResponseSummary.ReadAsync(await Task.WhenAll(Enumerable.Range(0, 5).Select(_ => scenario.SendAsync(HttpMethod.Post, $"/api/v1/usuarios/{target}/bloqueo", scenario.Caller))));
 
         summary.Count(HttpStatusCode.Created).Should().Be(1, $"solo uno bloquea; respuestas: {summary}");
         summary.Count(HttpStatusCode.Conflict).Should().Be(4, $"los otros cuatro chocan con el índice único; respuestas: {summary}");
@@ -201,5 +197,26 @@ public sealed class Spec043BloqueosTests
             var body = ProblemBody.Reasons(await response.Content.ReadAsStringAsync());
             body.Should().NotContain(scenario.Caller).And.NotContain(target).And.NotContain("Demo Privado Nombre");
         }
+    }
+
+    [Fact]
+    public async Task Bloquear_Y_Desbloquear_Publican_Un_Evento_Cada_Uno_Sin_Datos_Personales_CA_043_33()
+    {
+        await using var scenario = await SafetyHost.StartAsync();
+        var target = await scenario.SeedUserAsync("Demo Evento");
+
+        using var created = await scenario.SendAsync(HttpMethod.Post, $"/api/v1/usuarios/{target}/bloqueo", scenario.Caller);
+        using var repeated = await scenario.SendAsync(HttpMethod.Post, $"/api/v1/usuarios/{target}/bloqueo", scenario.Caller);
+        using var removed = await scenario.SendAsync(HttpMethod.Delete, $"/api/v1/usuarios/{target}/bloqueo", scenario.Caller);
+
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        repeated.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        removed.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        var events = await scenario.Outbox.Find(Builders<BsonDocument>.Filter.In("tipo", new[] { BlockCreated.EventType, BlockRemoved.EventType })).ToListAsync();
+        events.Should().HaveCount(4, "un evento por servicio destino y por cada bloqueo y desbloqueo; el segundo bloqueo fue 409 y no emite nada");
+        events.Select(e => e["destino"].AsString).Should().BeEquivalentTo("market", "market", "messaging", "messaging");
+        events.Where(e => e["tipo"] == BlockCreated.EventType).Should().HaveCount(2);
+        events.Should().OnlyContain(e => e["carga"]["bloqueaId"] == scenario.Caller && e["carga"]["bloqueadoId"] == target);
+        events.SelectMany(e => e["carga"].AsBsonDocument.Names).Distinct().Should().BeEquivalentTo("eventoId", "bloqueaId", "bloqueadoId", "ocurridoEn");
     }
 }

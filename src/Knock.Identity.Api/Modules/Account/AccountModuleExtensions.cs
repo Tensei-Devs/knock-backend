@@ -1,8 +1,13 @@
+using Knock.Identity.Api.Hosting.Procesos.Outbox;
+using Knock.Identity.Api.Hosting.Procesos.TareasProgramadas;
 using Knock.Identity.Api.Modules.Account.Data;
 using Knock.Identity.Api.Modules.Account.Domain;
 using Knock.Identity.Api.Modules.Account.Services;
+using Knock.Identity.Api.Modules.HomeAndCar.Services;
+using Knock.Identity.Api.Modules.Moderation.Services;
 using Knock.Identity.Api.Modules.Usuarios.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Knock.Identity.Api.Modules.Account;
 
@@ -17,16 +22,51 @@ public static class AccountModuleExtensions
         services.AddSingleton<ISessionCanceller, RedisSessionCanceller>();
         services.AddSingleton<ProfileCacheInvalidator>();
         services.AddSingleton<IAccountStore>(provider => provider.GetRequiredService<AccountStore>());
-        services.TryAddSingleton<IAccountOutbox, PendingAccountOutbox>();
+        services.AddSingleton<IAccountExportSource>(provider => provider.GetRequiredService<AccountStore>());
+        services.AddSingleton<IAccountOutbox, AccountOutbox>();
         services.AddSingleton<PhoneChangeService>();
         services.AddSingleton<IRecoveryAttemptLimiter, RecoveryAttemptLimiter>();
         services.AddSingleton<AccessRecoveryService>();
+        // Lo que sigue de aprobar una recuperacion en el panel (spec 053, D-07): aviso a los dispositivos y sesiones canceladas.
+        services.Replace(ServiceDescriptor.Singleton<IRecoverySessionClosures, RecoverySessionClosures>());
         services.AddSingleton<DataExportService>();
         services.AddOptions<OptionalConsentOptions>().BindConfiguration(OptionalConsentOptions.SectionName);
         services.AddSingleton<ConsentService>();
-        services.TryAddSingleton<IMarketAccountClient, UnavailableMarketAccountClient>();
+        // Rutas internas de Mercado (spec 039, §8): comparten dirección y clave con el historial (Services:Market). Sin ellas fallan cerrado con 503.
+        services.AddOptions<MarketHistoryOptions>().BindConfiguration(MarketHistoryOptions.SectionName).ValidateDataAnnotations();
+        services.AddHttpClient<MarketAccountClient>((provider, client) =>
+        {
+            var options = provider.GetRequiredService<IOptions<MarketHistoryOptions>>().Value;
+            if (Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out var baseAddress) && baseAddress.Scheme is "http" or "https")
+            {
+                client.BaseAddress = baseAddress;
+            }
+
+            client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+        });
+        services.TryAddSingleton<IMarketAccountClient>(provider => provider.GetRequiredService<MarketAccountClient>());
+        services.TryAddSingleton<IMarketExport>(provider => provider.GetRequiredService<MarketAccountClient>());
+        // Mensajería (spec 039, R-22; spec 054, T-09): comparte dirección y clave con la entrega de avisos (Services:Messaging). Sin ellas la tarea se reintenta.
+        services.AddOptions<EntregaInternaOptions>().BindConfiguration(EntregaInternaOptions.SectionName);
+        services.AddHttpClient<MessagingExportClient>((provider, client) =>
+        {
+            var options = provider.GetRequiredService<IOptions<EntregaInternaOptions>>().Value;
+            if (Uri.TryCreate(options.Messaging.BaseUrl, UriKind.Absolute, out var baseAddress) && baseAddress.Scheme is "http" or "https")
+            {
+                client.BaseAddress = baseAddress;
+            }
+
+            client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+        });
+        services.TryAddSingleton<IMessagingExport>(provider => provider.GetRequiredService<MessagingExportClient>());
+        services.TryAddSingleton<IExportStorage, UnavailableExportStorage>();
+        services.AddSingleton<IExportNotice, OutboxExportNotice>();
+        services.AddSingleton<LatestExportService>();
+        services.AddSingleton<IManejadorDeTarea, PrepararExportacionHandler>();
         services.AddSingleton<PendingService>();
         services.AddSingleton<AccountDeletionService>();
+        services.AddSingleton<IManejadorDeTarea, EliminarCuentaHandler>();
+        services.AddSingleton<IManejadorDeTarea, VencerRecuperacionHandler>();
         return services;
     }
 }

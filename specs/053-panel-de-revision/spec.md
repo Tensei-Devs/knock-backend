@@ -51,7 +51,7 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 - **R-22:** **Permiso y auditoría de las decisiones.** El permiso `verification:review` (rol `verificador`, y `administrador`, spec 033 R-02) cubre las dos colas, la de verificaciones de identidad y la de recuperaciones de acceso; la lista de permisos de la 033 es cerrada y no se agrega uno nuevo. Cada decisión de VER-05 escribe en `panel_auditoria` (spec 033 R-23) un registro con `evento` `verificacion_decidida` o `recuperacion_decidida`, `resultado`, `sub` del verificador y `recursoId`, sin celular, motivo ni datos de la persona; si la auditoría no se puede escribir, la acción responde 503 `audit_unavailable` y no se ejecuta (R-24). Como las recuperaciones y el panel viven en Identidad, el cambio de número, el cierre de sesiones y el registro de auditoría se escriben en **una sola transacción**. Un moderador sin `verification:review` recibe 403 `insufficient_permission` (también auditado).
 - **R-23:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
 - **R-24:** Los errores usan ProblemDetails con `correlationId` y `traceId`; los registros llevan método, ruta, estado y correlación, sin teléfono, dirección, coordenadas, nombres ni textos escritos por la persona (spec 011).
-- **R-25:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden).
+- **R-25:** Por encima del límite de peticiones responde 429 con `Retry-After`; cada ruta tiene su límite registrado en `docs/rate-limit-matrix.md` y los cuerpos se limitan según la spec 009 (413 si lo exceden). *(Enmienda 2026-11-24, aprobada por José Julián Hernández Hernández el 2026-11-24: los límites del panel son por sesión del panel, 120 por minuto en lecturas y 30 por minuto al abrir y decidir; ver la nota al final.)*
 - **R-26:** Las rutas que crean algo no usan `Idempotency-Key` (retirado en la spec 020): la repetición se controla con la regla de estado o el índice único de §6.
 
 ## 4. Criterios de aceptación
@@ -93,8 +93,9 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 - **CA-36:** Dada una recuperación en revisión, cuando un verificador la aprueba, entonces el número cambia, se cierran las sesiones y queda un registro `recuperacion_decidida` en la misma transacción; sin poder escribir la auditoría responde 503 `audit_unavailable` y no cambia nada; y un moderador sin `verification:review` recibe 403 con su registro de denegación.
 - **CA-37:** Dado un cuerpo con el identificador de otra persona, cuando se llama cualquier ruta de esta spec, entonces la operación usa el `sub` del token y no el del cuerpo.
 - **CA-38:** Dada una operación con datos personales, cuando se inspeccionan los registros y las respuestas de error, entonces no aparecen esos datos.
-- **CA-39:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
+- **CA-39:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413. *(Enmienda 2026-11-23, aprobada por José Julián Hernández Hernández el 2026-11-24: R-25 se exige con política propia en las rutas del panel; ver la nota al final.)* *(Enmienda 2026-11-24, aprobada por José Julián Hernández Hernández el 2026-11-24: el límite se cuenta por sesión del panel (`sid`) y sus valores son 120 por minuto para lecturas y 30 por minuto para abrir y decidir; antes decía «valores a validar por José» y partición por persona del panel. 413 por cuerpo mayor al tope de la decisión (2 048 bytes). Ver la nota al final.)*
 - **CA-40:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
+- **CA-41:** Dado un reporte decidido `critica` contra una persona que no es técnica, cuando se consulta la decisión o la cola, entonces la gravedad sigue siendo `critica` (nunca se sobrescribe) y la prioridad derivada es `alta`; en cualquier otro caso la prioridad es `normal` y un reporte sin decidir no trae prioridad.
 
 **4.1 Criterio → prueba prevista**
 
@@ -140,6 +141,7 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 | CA-38 | `Spec053Tests.Criterio38_CA_053_38` |
 | CA-39 | `Spec053Tests.Criterio39_CA_053_39` |
 | CA-40 | `Spec053Tests.Criterio40_CA_053_40` |
+| CA-41 | `Spec053Tests.La_Prioridad_Se_Deriva_Aparte_Y_La_Gravedad_Asignada_No_Se_Sobrescribe_CA_053_41` y `Spec053ReportesPanelTests.DecidingCritical_KeepsTheAssignedSeverity_AndDerivesThePriorityApart_CA_053_41` |
 
 ## 5. Contrato
 | ID | Método y ruta | Quién | Entrada | Respuestas |
@@ -169,6 +171,7 @@ Definir y especificar los endpoints VER-03, VER-04, VER-05, REP-04, REP-05 del E
 | VER-05 | 404 | `verification_not_found` | la verificación o el caso no existe |
 | VER-05 | 409 | `verification_already_decided` | ya tiene una decisión o no está en revisión |
 | REP-05 | 404 | `report_not_found` | el reporte no existe |
+| REP-05 | 409 | `report_already_decided` | el reporte ya está decidido, o dos decisiones simultáneas: la que llega después recibe 409 y no 500 (enmienda 2026-11-23) |
 
 
 **Códigos de error:** los de forma salen como 422 con `errors` por campo y los de sesión y límite como 401 y 429; los conflictos de negocio llevan un código en inglés y snake_case que se fija al implementar y se agrega al catálogo.
@@ -295,9 +298,43 @@ Las pruebas citan el caso como `CA_053_NN` en el nombre (para `python scripts/sd
 
 ## 15. Riesgos y dudas abiertas
 - Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
+- Duda de lectura (2026-11-23): R-20 dice «prioridad alta» sin definir si cambia el orden de la cola. Se tomó la lectura más conservadora: la prioridad es un dato derivado y visible, y el orden sigue siendo por gravedad y antigüedad; una crítica contra un técnico (que sí se suspende) queda con prioridad `normal`. Si José quiere ordenar por prioridad, es una enmienda aparte.
 - Dependencias: el panel con doble factor y los permisos `verification:review` y `reports:resolve` (spec 033, H-4), la cuenta de almacenamiento privada de la spec 025 (H-2) y la moderación de la 031.
+
+## Nota de enmienda (2026-11-23, decisión de José)
+- **R-20, reportes contra un cliente:** un reporte decidido `critica` contra una persona que no es técnica **no suspende la cuenta** (spec 059, R-03: `Suspender` responde «no es técnico» y no cambia nada); la decisión se registra, se avisa a las dos partes y el reporte se atiende con prioridad alta. El código ya lo hace así (`AccountSuspension`, resultado `NotTechnician`).
+- **REP-05, decisiones simultáneas:** la segunda decisión sobre el mismo reporte responde 409 `report_already_decided` (turno por reporte, `DecisionTurns`), nunca 500. Caso nuevo CA-REP05-409: `Spec053Tests` (ya cubierto por la prueba de «ya decidido»).
+- **Apelación de una persona suspendida (spec 060):** un reporte en apelación de suspensión no se decide por REP-05 sino por `POST /api/v1/admin/apelaciones/{id}/resolucion`; REP-05 responde 409 `report_already_decided`.
+- **`ReporteDecidido` avisa a las dos partes** con un aviso de texto fijo (spec 037, enmienda del 2026-11-23): nunca lleva motivo, gravedad ni datos del reporte.
+- No se marcan firmas: la aprobación de abajo es la original.
+
+## Nota de enmienda (2026-11-23, decisión de José)
+- **R-20, gravedad y prioridad por separado:** el reporte guarda la gravedad que asignó la moderación (`gravedad` y `decision.gravedad`); `critica` queda como `critica` aunque no se suspenda a un cliente y nunca se sobrescribe. La **prioridad** se deriva aparte y se guarda en el campo `prioridad` del reporte en la misma transacción de la decisión: `alta` cuando la gravedad es `critica` y la persona reportada no es técnica (la suspensión no aplica, spec 059, R-03); `normal` en cualquier otro caso. `POST /api/v1/admin/reportes/{id}/decision` responde además `prioridad` y `GET /api/v1/admin/reportes` la trae en los reportes ya decididos (por ejemplo en apelación); un reporte sin decidir no la trae. Caso nuevo CA-41. Sin índice nuevo (no se consulta por prioridad; el orden de la cola sigue siendo gravedad y antigüedad) y sin script en `db/`.
+- No se marcan firmas: la aprobación de abajo es la original.
+
+## Nota de enmienda (2026-11-23, tercera, decisión de José)
+- **Estado de esta enmienda:** aprobada por José Julián Hernández Hernández el 2026-11-24. La aprobación de abajo es la original; la firma de esta enmienda es la línea «Enmienda» de la sección Aprobación. El trabajo de código que pide queda en `task.md` como pendiente, **desbloqueada por la firma del 2026-11-24**.
+- **R-25 y CA-39: las rutas del panel deben tener política 429.** Cada ruta de `/api/v1/admin/verificaciones` y `/api/v1/admin/reportes` (VER-03 a VER-05 y REP-04 y REP-05) lleva una política de límite **por persona del panel (el `sub` de la sesión del panel)**, con 429 y `Retry-After`, registrada en `docs/rate-limit-matrix.md` (R-25 ya lo pedía; el texto de arriba no fijaba el criterio de partición ni el valor). Los valores concretos son **propuestos y los valida José** al implementar, medidos con el uso real del panel; la partición por persona y no por IP es el requisito (el token del panel no pasa por el esquema de la IP del gateway, igual que en las políticas `admin-catalogo` y `admin-opiniones`).
+- **Evidencia del hueco:** `AdminVerificacionesController` y `AdminReportesController` no usan `[EnableRateLimiting]` (0 coincidencias); solo los limitan los topes globales por IP. `IdentityRateLimits` no tiene política para el panel. `CA-39` sigue sin prueba.
+- Tarea: `task.md` T-11 (política y pruebas de 429 y 413 con host real), desbloqueada por la firma del 2026-11-24 (pendiente de código). No cambia la ruta ni el contrato salvo declarar el 429 en OpenAPI.
+
+## Nota de enmienda (2026-11-24, decisión de José)
+- **Estado de esta enmienda:** aprobada por José Julián Hernández Hernández el 2026-11-24. La aprobación de abajo es la original; la firma de esta enmienda es la línea «Enmienda» de la sección Aprobación.
+- **R-25 y CA-39: valores y partición fijados.** Los límites de las rutas del panel se cuentan **por sesión del panel** (el claim `sid` del token del panel, el mismo que valida `PanelAuthorization.cs:84-85`; no por IP ni por `sub`: reemplaza el «por persona del panel» y el «valores propuestos que valida José» de la nota 2026-11-23, tercera). Dos políticas, con 429 y `Retry-After`:
+
+| Política (nombre propuesto) | Rutas | Límite | Partición |
+|---|---|---|---|
+| `panel-lectura` | `GET /api/v1/admin/verificaciones` (VER-03) y `GET /api/v1/admin/reportes` (REP-04) | 120 por minuto | sesión del panel (`sid`) |
+| `panel-decision` | `GET /api/v1/admin/verificaciones/{id}` (VER-04, abre la verificación y entrega enlaces a las fotos) y `POST .../verificaciones/{id}/decision` (VER-05) y `POST .../reportes/{id}/decision` (REP-05) | 30 por minuto | sesión del panel (`sid`) |
+
+- **413:** las dos decisiones ya limitan el cuerpo con `[RequestSizeLimit(2048)]` (`VerificationDecisionBody.MaxBodyBytes` y `ReportDecisionBody.MaxBodyBytes`, `ModerationDtos.cs:60` y `:98`); CA-39 debe probar el 413 con un cuerpo mayor a ese tope.
+- **Matriz:** la fila correspondiente de `docs/rate-limit-matrix.md` (las dos políticas de la tabla de arriba) la agrega el PR de código de T-11, no este PR de documentación.
+- **Duda que sigue abierta (de José):** VER-04 es a la vez «detalle» y «abrir» (registra auditoría y firma enlaces de fotos); aquí queda en 30 por minuto, con las acciones que dejan rastro. Si José lo quiere con las lecturas, se mueve a `panel-lectura` en la misma enmienda.
+- Tarea: `task.md` T-11 con estos valores. Pendiente de la firma de esta enmienda.
 
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
+- [x] Enmienda 2026-11-24 — nombre: José Julián Hernández Hernández fecha: 2026-11-24
+- [x] Enmienda 2026-11-23 — nombre: José Julián Hernández Hernández fecha: 2026-11-24
 - [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

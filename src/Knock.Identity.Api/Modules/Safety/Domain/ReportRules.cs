@@ -25,6 +25,12 @@ internal static class ReportReferenceKinds
 internal static class ReportRules
 {
     public const string DangerReason = "peligro";
+
+    /// <summary>Motivo del reporte que abre Identidad a partir del «no terminado» de una visita (spec 053; spec 050, R-29): el trabajo no quedó terminado es un mal servicio.</summary>
+    public const string NotFinishedReason = "mal_servicio";
+
+    /// <summary>Campo que solo lleva el reporte abierto desde una visita (su identificador): lo distingue de los que crea una persona y, con su índice único disperso, da la idempotencia por visita.</summary>
+    public const string NotFinishedVisitField = "visitaNoTerminadaId";
     public const int MinTextLength = 8;
     public const int MaxTextLength = 500;
     public const int MaxEvidence = 5;

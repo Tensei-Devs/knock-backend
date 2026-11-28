@@ -1,3 +1,4 @@
+using Knock.Hosting.Http;
 using Knock.Market.Api.Common.Errors;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.WebUtilities;

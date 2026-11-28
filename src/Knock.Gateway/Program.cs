@@ -1,10 +1,19 @@
 using Knock.Contracts.Correlation;
 using Knock.Gateway.Hosting;
 using Knock.Hosting.ForwardedHeaders;
+using Knock.Hosting.Health;
+using Knock.Hosting.Http;
+using Knock.Hosting.Lifecycle;
+using Knock.Hosting.Logging;
+using Knock.Hosting.Observability;
+using Knock.Hosting.Security;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+// Spec 034 R-03: apagado ordenado (readiness en 503 y drenado de 25 s).
+builder.Services.AddKnockGracefulShutdown();
 
 // BUG-003: Kestrel agrega «Server: Kestrel» al final de la respuesta, después de cualquier middleware; solo se apaga aquí.
 builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
@@ -12,10 +21,10 @@ builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
 // La tabla de rutas y las direcciones de los servicios viven en la configuración (sección ReverseProxy),
 // para cambiarlas por entorno sin recompilar (spec 001, R-02). Cada ruta declara su política: `default` exige sesión
 // y `anonymous` deja pasar (specs 009 y 015).
-builder.Services.AddReverseProxy().LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
+builder.Services.AddReverseProxy().LoadFromConfig(builder.Configuration.GetSection("ReverseProxy")).AddKnockForwardedHeadersTransform();
 builder.Services
-    .AddKnockGatewayProblemDetails()
-    .AddKnockGatewayHsts()
+    .AddKnockProblemDetails(new KnockProblemDetailsOptions { ExposeExceptionDetail = false })
+    .AddKnockHsts()
     .AddKnockForwardedHeaders()
     .AddKnockGatewayCors(builder.Configuration)
     .AddKnockData()
@@ -23,14 +32,16 @@ builder.Services
     .AddKnockGatewayAuthentication()
     .AddKnockGatewayPanel();
 // Spec 011: Serilog estructurado y OpenTelemetry con redacción; Azure Monitor solo si hay APPLICATIONINSIGHTS_CONNECTION_STRING.
-builder.Services.AddKnockLogging(builder.Configuration);
-builder.Services.AddKnockObservability(builder.Configuration, builder.Environment);
+builder.Services.AddKnockLogging(builder.Configuration, typeof(Program).Assembly);
+builder.Services.AddKnockObservability(builder.Configuration, builder.Environment, typeof(Program).Assembly, "knock-api");
 
 var app = builder.Build();
 
 app.UseForwardedHeaders();
 app.UseKnockCorrelationId();
-app.UseMiddleware<SecurityHeadersMiddleware>();
+// Detrás del ingreso la petición llega como HTTP y UseHsts no respondería: el encabezado lo fija el middleware (BUG-002).
+var hsts = app.Services.GetRequiredService<IOptions<HstsSettings>>().Value;
+app.UseKnockSecurityHeaders(new SecurityHeadersOptions { StrictTransportSecurity = hsts.HeaderValue, SendStrictTransportSecurityInDevelopment = hsts.SendInDevelopment });
 app.UseExceptionHandler();
 app.UseSerilogRequestLogging(LoggingExtensions.ConfigureRequestLogging);
 app.UseRouting();
@@ -42,7 +53,7 @@ app.UseMiddleware<PanelTokenMiddleware>();
 app.UseMiddleware<UserRateLimitMiddleware>();
 app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "gateway" })).AllowAnonymous();
-app.MapHealthChecks(HealthExtensions.ReadyPath, new HealthCheckOptions { Predicate = check => check.Tags.Contains(HealthExtensions.ReadyTag) }).AllowAnonymous();
+app.MapKnockReadiness(allowAnonymous: true);
 app.MapReverseProxy();
 
 await app.RunAsync();

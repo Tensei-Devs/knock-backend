@@ -9,7 +9,7 @@
 | T-03 | Implementar la validación (5 MB, JPEG/PNG/WebP), la limpieza de metadatos y la reducción de tamaño | R-03 · CA-01, CA-06 | parcial: OI-2 procesa JPEG/PNG/WebP a JPEG sin metadatos, con fondo blanco y reducción por uso; falta el flujo HTTP de OI-3 |
 | T-04 | Implementar el cliente de moderación compartido con falla cerrada y 503 reintentable | R-05, R-06, R-07 · CA-04, CA-05 | parcial: OI-2 conserva la subida pendiente ante moderación no disponible o tiempo agotado; faltan el cliente real y la respuesta HTTP 503 con Retry-After en OI-3 |
 | T-05 | Escribir las pruebas de seguridad negativa (incluida la petición anónima a la cuenta privada) | R-04 · CA-03 | parcial: OI-2 cubre archivo malicioso con firma falsa y falla cerrada de moderación; falta la petición anónima a la cuenta privada (CA-03) |
-| T-06 | Crear el índice TTL de `subidas_imagen` (vence solo lo pendiente o rechazado) | R-08 · CA-07 | pendiente |
+| T-06 | Crear el índice TTL de `subidas_imagen` (vence solo lo pendiente o rechazado) | R-08 · CA-07 | hecha: índice TTL `expiraEn_1` en `db/044-market-subidas-imagen.js` (`Spec032ImagesScriptTests`) y `Spec013SubidasTtlTests` (CA_013_07, solo CI): a los 7 días alcanza lo pendiente, rechazado e inválido y nunca lo publicado; la prueba no espera al proceso de limpieza de la base |
 
 ## Avance de la implementación (KNOCK-208)
 

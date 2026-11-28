@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
+using Knock.Hosting.Data;
 using Knock.IntegrationTest.Support;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Catalog;

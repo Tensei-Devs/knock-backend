@@ -28,7 +28,7 @@ public sealed class Spec022LlegadaTests
         json.GetProperty("rol").GetString().Should().Be("tecnico");
         json.GetProperty("estado").GetString().Should().Be("en_curso");
         json.GetProperty("llegadaEn").GetDateTimeOffset().Should().BeCloseTo(DateTimeOffset.UtcNow, TimeSpan.FromMinutes(1));
-        raw.Should().NotContain(visit.Code!);
+        Spec020Host.CarriesVisitCode(raw, visit.Code!).Should().BeFalse();
         var document = await host.VisitDocAsync(visit.VisitId);
         document["estado"].AsString.Should().Be("en_curso");
         document["codigoUsado"].AsBoolean.Should().BeTrue();

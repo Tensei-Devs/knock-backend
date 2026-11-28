@@ -1,4 +1,5 @@
 using System.Globalization;
+using Knock.Hosting.Data;
 using Knock.Market.Api.Common.Errors;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Requests.Domain;
@@ -83,8 +84,8 @@ internal sealed class QuoteStore(
                 var quoteId = ObjectId.GenerateNewId();
                 var quote = CreateQuote(quoteId, requestId, technicianId, sub, trade, body, now);
                 await quotes.InsertOneAsync(transaction, quote, cancellationToken: token);
-                var message = new BsonDocument { ["_id"] = quoteId, ["tipo"] = "CotizacionEnviada", ["estado"] = "pendiente", ["creadoEn"] = now.UtcDateTime, ["solicitudId"] = requestId, ["cotizacionId"] = quoteId };
-                await database.GetCollection<BsonDocument>("outbox").InsertOneAsync(transaction, message, cancellationToken: token);
+                var identifiers = new BsonDocument { ["solicitudId"] = requestId.ToString(), ["cotizacionId"] = quoteId.ToString() };
+                await new MongoOutbox(database).AddAsync(transaction, OutboxMessage.Create("CotizacionEnviada", quoteId.ToString(), identifiers, now.UtcDateTime), token);
                 CreatedQuote = new QuoteResponse(quoteId.ToString(), requestId.ToString(), "enviada", body.TipoPrecio!, body.Precio,
                     body.PrecioMin, body.PrecioMax, quote["tope"].AsInt32, quote["requiereAprobacion"].AsBoolean,
                     body.Dia!.Value, body.Hora!, body.Nota, now);

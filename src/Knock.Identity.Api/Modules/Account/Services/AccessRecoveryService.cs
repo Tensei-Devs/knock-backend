@@ -35,6 +35,7 @@ internal abstract record AccessRecoveryOutcome
 /// </summary>
 internal sealed partial class AccessRecoveryService(
     IAccountStore store,
+    IAccountOutbox outbox,
     IFirebaseIdTokenVerifier verifier,
     PhoneProtector phones,
     IRecoveryAttemptLimiter limiter,
@@ -69,14 +70,21 @@ internal sealed partial class AccessRecoveryService(
             return new AccessRecoveryOutcome.Accepted();
         }
 
+        var createdAt = timeProvider.GetUtcNow().UtcDateTime;
         var created = await store.CreateRecoveryCaseIfNoneOpenAsync(
             new RecoveryCase(
                 account.Id,
                 phones.Protect(identity.PhoneNumber, account.Id),
                 newHash,
                 input.Type,
-                timeProvider.GetUtcNow().UtcDateTime),
+                createdAt),
             cancellationToken);
+        if (created)
+        {
+            // Un caso sin decidir vence a los 7 días (R-21): la tarea se programa solo con el caso nuevo; reintentos de la misma petición no duplican nada.
+            await outbox.EnqueueRecoveryExpiryAsync(account.Id, createdAt, cancellationToken);
+        }
+
         LogCase(logger, created);
         return new AccessRecoveryOutcome.Accepted();
     }

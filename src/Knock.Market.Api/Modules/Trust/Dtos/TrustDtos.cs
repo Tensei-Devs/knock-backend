@@ -10,7 +10,8 @@ internal sealed record TrustedTechnician(
     string Nombre,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? FotoUrl,
     string NivelVerificacion,
-    DateTime GuardadoEn);
+    DateTime GuardadoEn,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? TecnicoUsuarioId = null);
 
 /// <summary>Una página de la lista; <c>NextCursor</c> falta en la última.</summary>
 internal sealed record TrustedTechnicianPage(

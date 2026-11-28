@@ -1,4 +1,12 @@
+using Knock.Hosting.Data;
 using Knock.Hosting.ForwardedHeaders;
+using Knock.Hosting.Health;
+using Knock.Hosting.Http;
+using Knock.Hosting.Logging;
+using Knock.Hosting.Observability;
+using Knock.Hosting.Procesos;
+using Knock.Hosting.Security;
+using Knock.Market.Api.Common.Errors;
 using Microsoft.Extensions.Options;
 using Serilog;
 
@@ -9,13 +17,14 @@ internal static class KnockApplicationExtensions
     public static WebApplicationBuilder AddKnockApi(this WebApplicationBuilder builder)
     {
         builder.Services
-            .AddKnockLogging(builder.Configuration)
+            .AddKnockLogging(builder.Configuration, typeof(KnockApplicationExtensions).Assembly)
             .AddControllers(options => options.Filters.Add<ValidationFilter>())
             .AddInternalControllers();
         builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.TypeInfoResolverChain.Insert(0, MarketJsonSerializerContext.Default));
         builder.AddKnockSecurity();
         builder.Services
             .AddKnockProblemDetails()
+            .AddExceptionHandler<DomainExceptionHandler>()
             .AddKnockValidation()
             .AddKnockForwardedHeaders()
             .AddKnockRateLimiting()
@@ -25,7 +34,7 @@ internal static class KnockApplicationExtensions
             .AddKnockHealth()
             .AddKnockMongo()
             .AddKnockModules(builder.Configuration, builder.Environment.IsDevelopment())
-            .AddKnockObservability(builder.Configuration, builder.Environment);
+            .AddKnockObservability(builder.Configuration, builder.Environment, typeof(KnockApplicationExtensions).Assembly, "knock-market", ProcesosMetrics.MeterName);
         return builder;
     }
 
@@ -33,7 +42,7 @@ internal static class KnockApplicationExtensions
     {
         app.UseForwardedHeaders();
         app.UseMiddleware<CorrelationIdMiddleware>();
-        app.UseMiddleware<SecurityHeadersMiddleware>();
+        app.UseKnockSecurityHeaders(new SecurityHeadersOptions { RelaxContentSecurityPolicyForApiDocsInDevelopment = true });
         app.UseExceptionHandler();
         // Una respuesta de error sin cuerpo (404 de una ruta inexistente, 405…) sale como ProblemDetails igual que las excepciones (spec 002, R-03).
         app.UseStatusCodePages();
@@ -49,7 +58,7 @@ internal static class KnockApplicationExtensions
             app.UseHttpsRedirection();
         }
 
-        app.UseMiddleware<CorsMiddleware>();
+        app.UseKnockCors(CorsOptions(app.Services.GetRequiredService<IOptions<SecuritySettings>>().Value.Cors));
         app.Use(async (context, next) =>
         {
             if (context.Request.Path.Equals("/api/v1/zonas/lista-espera", StringComparison.OrdinalIgnoreCase))
@@ -61,12 +70,17 @@ internal static class KnockApplicationExtensions
         });
         app.UseAuthentication();
         app.UseRateLimiter();
-        app.UseMiddleware<RequestBodyLimitMiddleware>();
-        app.UseMiddleware<JsonCompressionMiddleware>();
+        app.UseMiddleware<RequestBodyLimitMiddleware>(new RequestBodyLimitOptions { PayloadTooLargeCode = ErrorCodes.PayloadTooLargeCode });
+        // Spec 010, enmienda 2026-11-27 y spec 032, R-15: las subidas de imágenes llevan una firma en el enlace y no se comprimen, sin depender del tamaño.
+        app.UseKnockJsonCompression("/api/v1/imagenes/subidas");
         app.UseAuthorization();
         app.MapKnockHealth();
         app.MapKnockOpenApi(app.Environment);
         app.MapControllers();
         return app;
     }
+
+    /// <summary>Los orígenes y la vigencia del preflight salen de <c>Security:Cors</c>; los encabezados de petición que concede este servicio son los de su contrato.</summary>
+    private static KnockCorsOptions CorsOptions(CorsSettings cors) =>
+        new(cors.AllowedOrigins, cors.PreflightMaxAge, ["Authorization", "Content-Type", "X-Correlation-Id", "Idempotency-Key", "If-Match", "If-None-Match", "Cache-Control"]);
 }

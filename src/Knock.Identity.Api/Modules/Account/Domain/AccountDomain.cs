@@ -7,6 +7,7 @@ internal static class AccountStates
 {
     public const string Active = "activa";
     public const string DeletionScheduled = "eliminacion_programada";
+    public const string Deleted = "eliminada";
 }
 
 /// <summary>Códigos de negocio de la spec 039 (§5): en inglés y en snake_case, sin datos de la persona.</summary>
@@ -14,6 +15,8 @@ internal static class AccountErrorCodes
 {
     public const string PhoneAlreadyRegistered = "phone_already_registered";
     public const string ExportInProgress = "export_in_progress";
+    public const string ExportNotFound = "export_not_found";
+    public const string ExportUnavailable = "export_unavailable";
     public const string DeletionNotAllowed = "deletion_not_allowed";
     public const string NoDeletionScheduled = "no_deletion_scheduled";
     public const string MarketUnavailable = "market_unavailable";
@@ -93,6 +96,17 @@ internal enum PhoneChangeOutcome
 {
     Changed,
     PhoneTaken,
+}
+
+/// <summary>Lo que la cuenta guarda de su exportación (spec 039, R-22): si hay una en curso y, si ya hubo una lista, el nombre de su ZIP y cuándo quedó lista. Nunca el enlace.</summary>
+internal sealed record ExportStatus(bool InProgress, string? BlobName, DateTime? ReadyAt);
+
+/// <summary>Estados que devuelve la consulta de la última exportación (spec 039, R-22).</summary>
+internal static class ExportStates
+{
+    public const string Preparing = "en_preparacion";
+    public const string Ready = "lista";
+    public const string Expired = "vencida";
 }
 
 /// <summary>Resultado de pedir una exportación: una sola en curso por persona (spec 039, R-22).</summary>

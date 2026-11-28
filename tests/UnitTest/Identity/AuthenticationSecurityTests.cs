@@ -2,7 +2,8 @@ using System.Net;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using AwesomeAssertions;
-using Knock.Identity.Api.Common.Security;
+using Knock.Hosting.Http;
+using Knock.Hosting.Security;
 using Knock.Identity.Api.Hosting;
 using Knock.Identity.Api.Modules.Sesiones.Controllers.V1;
 using Knock.Identity.Api.Modules.Sesiones.Data;
@@ -228,7 +229,7 @@ public class AuthenticationSecurityTests
     [Fact]
     public void RateLimitKey_NormalizesMappedIpv4AndGroupsIpv6By64_SEC_009_17()
     {
-        static string Key(string? ip) => RateLimitingExtensions.ClientKey(new DefaultHttpContext { Connection = { RemoteIpAddress = ip is null ? null : IPAddress.Parse(ip) } });
+        static string Key(string? ip) => Knock.Hosting.RateLimiting.RequestKeys.ClientKey(new DefaultHttpContext { Connection = { RemoteIpAddress = ip is null ? null : IPAddress.Parse(ip) } });
 
         Key("203.0.113.9").Should().Be("203.0.113.9");
         Key("::ffff:203.0.113.9").Should().Be("203.0.113.9", "IPv4 mapeada y directa comparten contador");

@@ -1,3 +1,4 @@
+using Knock.Hosting.OpenApi;
 using Scalar.AspNetCore;
 
 namespace Knock.Market.Api.Hosting;
@@ -6,7 +7,7 @@ internal static class OpenApiExtensions
 {
     public static IServiceCollection AddKnockOpenApi(this IServiceCollection services)
     {
-        services.AddOpenApi("v1");
+        services.AddOpenApi("v1", options => options.AddKnockContractConventions());
         return services;
     }
 

@@ -1,5 +1,11 @@
 // jscpd:ignore-start -- EXC-015
 using Knock.Hosting.ForwardedHeaders;
+using Knock.Hosting.Health;
+using Knock.Hosting.Http;
+using Knock.Hosting.Logging;
+using Knock.Hosting.Observability;
+using Knock.Hosting.Procesos;
+using Knock.Hosting.Security;
 using Microsoft.Extensions.Options;
 using Serilog;
 
@@ -10,13 +16,14 @@ internal static class KnockApplicationExtensions
     public static WebApplicationBuilder AddKnockApi(this WebApplicationBuilder builder)
     {
         builder.Services
-            .AddKnockLogging(builder.Configuration)
+            .AddKnockLogging(builder.Configuration, typeof(KnockApplicationExtensions).Assembly)
             .AddControllers(options => options.Filters.Add<ValidationFilter>())
             .AddInternalControllers();
         builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.TypeInfoResolverChain.Insert(0, IdentityJsonSerializerContext.Default));
         builder.AddKnockSecurity();
         builder.Services
-            .AddKnockProblemDetails()
+            .AddKnockProblemDetails(new KnockProblemDetailsOptions { W3CTraceId = false })
+            .AddExceptionHandler<DomainExceptionHandler>()
             .AddKnockValidation()
             .AddKnockForwardedHeaders()
             .AddKnockRateLimiting()
@@ -25,7 +32,7 @@ internal static class KnockApplicationExtensions
             .AddKnockOpenApi()
             .AddKnockData()
             .AddKnockModules()
-            .AddKnockObservability(builder.Configuration, builder.Environment);
+            .AddKnockObservability(builder.Configuration, builder.Environment, typeof(KnockApplicationExtensions).Assembly, "knock-api", ProcesosMetrics.MeterName);
         return builder;
     }
 
@@ -33,7 +40,7 @@ internal static class KnockApplicationExtensions
     {
         app.UseForwardedHeaders();
         app.UseMiddleware<CorrelationIdMiddleware>();
-        app.UseMiddleware<SecurityHeadersMiddleware>();
+        app.UseKnockSecurityHeaders(new SecurityHeadersOptions { RelaxContentSecurityPolicyForApiDocsInDevelopment = true });
         app.UseExceptionHandler();
         // Una respuesta de error sin cuerpo (404 de una ruta inexistente, 405…) sale como ProblemDetails igual que las excepciones (spec 002, R-03).
         app.UseStatusCodePages();
@@ -49,12 +56,12 @@ internal static class KnockApplicationExtensions
             app.UseHttpsRedirection();
         }
 
-        app.UseMiddleware<CorsMiddleware>();
+        app.UseKnockCors(CorsOptions(app.Services.GetRequiredService<IOptions<SecuritySettings>>().Value.Cors));
         // La autenticación va antes del limitador para que las políticas por persona (spec 039) lean el `sub`; el 401 lo produce la autorización.
         app.UseAuthentication();
         app.UseRateLimiter();
         app.UseMiddleware<RequestBodyLimitMiddleware>();
-        app.UseMiddleware<JsonCompressionMiddleware>();
+        app.UseKnockJsonCompression("/api/v1/panel");
         app.UseAuthorization();
         // /health: vida (spec 001, igual que el gateway y Messaging); /health/ready: dependencias de datos (spec 003).
         app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "identidad" }));
@@ -63,5 +70,9 @@ internal static class KnockApplicationExtensions
         app.MapControllers();
         return app;
     }
+
+    /// <summary>Los orígenes y la vigencia del preflight salen de <c>Security:Cors</c>; los encabezados de petición que concede este servicio son los de su contrato.</summary>
+    private static KnockCorsOptions CorsOptions(CorsSettings cors) =>
+        new(cors.AllowedOrigins, cors.PreflightMaxAge, ["Authorization", "Content-Type", "X-Correlation-Id", "Idempotency-Key", "If-Match"]);
 }
 // jscpd:ignore-end

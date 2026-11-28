@@ -1,3 +1,4 @@
+using Knock.Hosting.Data;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Requests.Domain;
 using Microsoft.Extensions.Options;
@@ -23,8 +24,8 @@ internal sealed class CandidatosStore(
         {
             var baseDocuments = await collection.Find(filter & f.Eq("coloniaBaseId", coloniaId),
                 new FindOptions { MaxTime = options.Value.QueryMaxTime })
-                .Project<BsonDocument>(new BsonDocument { ["calificacion"] = 1, ["trabajosTerminados"] = 1, ["usuarioId"] = 1 }).ToListAsync(cancellationToken);
-            return ToCandidates(baseDocuments);
+                .Project<BsonDocument>(new BsonDocument { ["calificacion"] = 1, ["usuarioId"] = 1 }).ToListAsync(cancellationToken);
+            return await ToCandidatesAsync(baseDocuments, cancellationToken);
         }
         var query = filter.Render(new RenderArgs<BsonDocument>(collection.DocumentSerializer, collection.Settings.SerializerRegistry));
         var geo = new BsonDocument("$geoNear", new BsonDocument
@@ -46,7 +47,6 @@ internal sealed class CandidatosStore(
         var project = new BsonDocument("$project", new BsonDocument
         {
             ["calificacion"] = 1,
-            ["trabajosTerminados"] = 1,
             ["distanceMeters"] = 1,
             ["usuarioId"] = 1,
         });
@@ -56,14 +56,32 @@ internal sealed class CandidatosStore(
         var withoutLocation = filter & f.Eq("coloniaBaseId", coloniaId)
             & (f.Exists("ubicacionBase", false) | f.Eq("ubicacionBase", BsonNull.Value));
         documents.AddRange(await collection.Find(withoutLocation, new FindOptions { MaxTime = options.Value.QueryMaxTime })
-            .Project<BsonDocument>(new BsonDocument { ["calificacion"] = 1, ["trabajosTerminados"] = 1, ["usuarioId"] = 1 }).ToListAsync(cancellationToken));
-        return ToCandidates(documents);
+            .Project<BsonDocument>(new BsonDocument { ["calificacion"] = 1, ["usuarioId"] = 1 }).ToListAsync(cancellationToken));
+        return await ToCandidatesAsync(documents, cancellationToken);
     }
 
-    private static WaveCandidate[] ToCandidates(IEnumerable<BsonDocument> documents) =>
-        documents.Where(x => x["_id"].IsObjectId).Select(x => new WaveCandidate(x["_id"].AsObjectId.ToString(),
+    private async Task<WaveCandidate[]> ToCandidatesAsync(IEnumerable<BsonDocument> documents, CancellationToken cancellationToken)
+    {
+        var eligible = documents.Where(x => x["_id"].IsObjectId).ToArray();
+        var finished = await CountFinishedVisitsAsync(eligible.Select(x => x["usuarioId"].AsString), cancellationToken);
+        return eligible.Select(x => new WaveCandidate(x["_id"].AsObjectId.ToString(),
             x.GetValue("calificacion", 0).IsNumeric ? x["calificacion"].ToDecimal() : 0,
-            x.GetValue("trabajosTerminados", 0).IsNumeric ? x["trabajosTerminados"].ToInt32() : 0,
+            finished.GetValueOrDefault(x["usuarioId"].AsString),
             x.TryGetValue("distanceMeters", out var distance) && distance.IsNumeric ? distance.ToDouble() / 1000 : null,
             x["usuarioId"].AsString)).ToArray();
+    }
+
+    /// <summary>Trabajos terminados de todos los candidatos con una sola consulta agrupada sobre <c>visitas</c> (spec 028, R-18 y R-19; la misma regla del resumen de la spec 036).</summary>
+    private async Task<Dictionary<string, int>> CountFinishedVisitsAsync(IEnumerable<string> userIds, CancellationToken cancellationToken)
+    {
+        var ids = new BsonArray(userIds.Distinct(StringComparer.Ordinal));
+        if (ids.Count == 0) return [];
+        var match = new BsonDocument("$match", new BsonDocument { ["tecnicoUsuarioId"] = new BsonDocument("$in", ids), ["estado"] = "terminada" });
+        var group = new BsonDocument("$group", new BsonDocument { ["_id"] = "$tecnicoUsuarioId", ["total"] = new BsonDocument("$sum", 1) });
+        var pipeline = PipelineDefinition<BsonDocument, BsonDocument>.Create(match, group);
+        using var cursor = await database.GetCollection<BsonDocument>(ChoiceStore.VisitsCollection)
+            .AggregateAsync(pipeline, new AggregateOptions { MaxTime = options.Value.QueryMaxTime }, cancellationToken);
+        var totals = await cursor.ToListAsync(cancellationToken);
+        return totals.ToDictionary(x => x["_id"].AsString, x => x["total"].ToInt32(), StringComparer.Ordinal);
+    }
 }

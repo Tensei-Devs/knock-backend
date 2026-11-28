@@ -13,12 +13,13 @@ public sealed class Spec020ValidacionTests
     public async Task Rechaza_Fotos_Y_Descripcion_CA_020_02()
     {
         await using var host = await Spec020Host.StartAsync();
-        var photo = ObjectId.GenerateNewId().ToString();
+        var photo = Guid.CreateVersion7().ToString("N");
         var cases = new (string Field, Action<Dictionary<string, object?>> Break)[]
         {
             ("fotos", b => b["fotos"] = Array.Empty<string>()),
-            ("fotos", b => b["fotos"] = Enumerable.Range(0, 6).Select(_ => ObjectId.GenerateNewId().ToString()).ToArray()),
+            ("fotos", b => b["fotos"] = Enumerable.Range(0, 6).Select(_ => Guid.CreateVersion7().ToString("N")).ToArray()),
             ("fotos", b => b["fotos"] = new[] { photo, photo }),
+            ("fotos", b => b["fotos"] = new[] { ObjectId.GenerateNewId().ToString() }),
             ("descripcion", b => b["descripcion"] = "1234567"),
         };
 

@@ -1,5 +1,6 @@
 // jscpd:ignore-start -- EXC-015
 using System.Diagnostics;
+using Knock.Hosting.Observability;
 using Serilog.Context;
 
 namespace Knock.Identity.Api.Hosting;
@@ -26,7 +27,7 @@ internal static class CorrelationId
 
 /// <summary>
 /// Asigna o propaga el <c>X-Correlation-Id</c>: lo valida, lo devuelve en la respuesta (incluso en errores), lo pone en el cuerpo de los errores
-/// (vía <see cref="ProblemDetailsExtensions"/>) y en cada log de la petición con <c>LogContext</c>. Es solo para rastrear, nunca para autorizar.
+/// (vía <see cref="Knock.Hosting.Http.ProblemResponses"/>) y en cada log de la petición con <c>LogContext</c>. Es solo para rastrear, nunca para autorizar.
 /// </summary>
 internal sealed class CorrelationIdMiddleware(RequestDelegate next)
 {

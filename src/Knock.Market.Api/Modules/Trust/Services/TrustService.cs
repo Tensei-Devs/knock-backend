@@ -54,5 +54,5 @@ internal sealed class TrustService(TrustStore store, TimeProvider clock)
         store.RemoveAsync(sub, ObjectId.Parse(technicianId), cancellationToken);
 
     private static TrustedTechnician ToResponse(TrustTechnicianView technician, DateTime savedAtUtc) =>
-        new(technician.Id.ToString(), technician.Name, technician.PhotoUrl, technician.VerificationLevel, savedAtUtc);
+        new(technician.Id.ToString(), technician.Name, technician.PhotoUrl, technician.VerificationLevel, savedAtUtc, technician.UserId);
 }

@@ -1,7 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <!-- EXC-006: IStartupValidator está obsoleto en .NET 11; las pruebas de arranque se portan a IAsyncStartupValidator -->
-    <NoWarn>$(NoWarn);SYSLIB0066</NoWarn>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <RootNamespace>Knock.UnitTest</RootNamespace>

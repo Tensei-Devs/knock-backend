@@ -180,10 +180,10 @@ public sealed class Spec043ReportesTests
     public async Task Lista_Pagina_De_20_Con_Cursor_Y_Rechaza_Limites_Invalidos_CA_043_19()
     {
         await using var host = await SafetyHost.StartAsync();
+        // Crear reportes tiene su propio límite por persona (10 por hora): los 25 se siembran directo y la lista sí se pide por la API.
         for (var i = 0; i < 25; i++)
         {
-            var reported = await host.SeedUserAsync($"Demo {i:00}");
-            (await host.PostJsonAsync(_reports, host.Caller, Body(reported))).EnsureSuccessStatusCode();
+            await host.SeedReportAsync(await host.SeedUserAsync($"Demo {i:00}"));
         }
 
         using var firstPage = await host.SendAsync(HttpMethod.Get, $"{_reports}/me", host.Caller);
@@ -324,6 +324,14 @@ public sealed class Spec043ReportesTests
 /// <summary>Atajos de las pruebas de reportes.</summary>
 internal static class SafetyHostReports
 {
+    /// <summary>Siembra un reporte abierto de quien llama contra <paramref name="reported"/> sin pasar por el límite de creación.</summary>
+    public static Task SeedReportAsync(this SafetyHost host, string reported) =>
+        host.Reports.InsertOneAsync(new MongoDB.Bson.BsonDocument
+        {
+            { "reportaId", host.Caller }, { "reportadoId", reported }, { "motivo", "mal_servicio" }, { "descripcion", "El técnico llegó tarde y fue grosero conmigo." },
+            { "evidencia", new MongoDB.Bson.BsonArray() }, { "estado", "abierto" }, { "creadoEn", new MongoDB.Bson.BsonDateTime(DateTime.UtcNow) },
+        });
+
     /// <summary>Crea un reporte válido de quien llama contra <paramref name="reported"/> y devuelve su identificador.</summary>
     public static async Task<string> CreateReportAsync(this SafetyHost host, string reported)
     {

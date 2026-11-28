@@ -70,4 +70,88 @@ variable "container_apps_subnet_cidr" {
   EOT
   type        = string
   default     = "10.20.0.0/23"
+
+  validation {
+    condition     = can(cidrnetmask(var.container_apps_subnet_cidr)) && can(regex("^(10\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.|192\\.168\\.)", var.container_apps_subnet_cidr)) && try(tonumber(split("/", var.container_apps_subnet_cidr)[1]) >= 16, false)
+    error_message = "container_apps_subnet_cidr debe ser una red IPv4 privada (10/8, 172.16/12 o 192.168/16) con prefijo /16 o más estrecho (spec 035, R-10)."
+  }
+}
+
+variable "aspnetcore_environment" {
+  description = <<-EOT
+    Entorno de ASP.NET de los cuatro servicios. Los Dockerfile fijan `Production` y ese es el valor por omisión (evaluación y producción).
+    Solo el tfvars de dev lo pone en `Development` (decisión de José, camino A de moderación: con `Development` el chat puede operar sin moderación
+    y las llaves que faltan se generan al azar). Aun así, `Errores__ExponerDetalle=false` se manda siempre para que ninguna respuesta lleve mensajes ni trazas de excepciones.
+  EOT
+  type        = string
+  default     = "Production"
+
+  validation {
+    condition     = contains(["Production", "Development"], var.aspnetcore_environment)
+    error_message = "aspnetcore_environment solo puede ser Production o Development."
+  }
+}
+
+variable "resources" {
+  description = <<-EOT
+    CPU (vCPU) y memoria por servicio. El crédito de Azure es limitado y el gasto es sobre todo Container Apps, así que el valor por omisión es el mínimo
+    razonable: 0.25 vCPU y 0.5 GiB por servicio. Súbelos solo si un servicio se queda sin memoria. Combinaciones válidas de Container Apps: 0.25 vCPU con 0.5Gi, 0.5 con 1Gi, 0.75 con 1.5Gi, 1 con 2Gi.
+  EOT
+  type = map(object({
+    cpu    = number
+    memory = string
+  }))
+  default = {
+    gateway   = { cpu = 0.25, memory = "0.5Gi" }
+    identity  = { cpu = 0.25, memory = "0.5Gi" }
+    messaging = { cpu = 0.25, memory = "0.5Gi" }
+    market    = { cpu = 0.25, memory = "0.5Gi" }
+  }
+}
+
+variable "seed_demo" {
+  description = "Enciende la carga de datos de demostración (`Seed:Demo`) en Identity y Market. Apagado por omisión: solo se enciende si el humo de dev lo necesita (ver deploy/README.md)."
+  type        = bool
+  default     = false
+}
+
+variable "enable_curp_keyvault" {
+  description = "Enciende la verificación real de CURP con Key Vault (`Verificacion:KeyVault:Habilitado`, spec 025 R-11) y da a Identidad el rol sobre la llave `curp-kek`. Apagado por omisión: Identidad falla cerrado (503) al guardar verificaciones."
+  type        = bool
+  default     = false
+}
+
+variable "curp_kek_version" {
+  description = "Versión de la llave `curp-kek` (32 caracteres hexadecimales) con la que se envuelve lo nuevo. Solo se lee con `enable_curp_keyvault = true`."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.curp_kek_version == "" || can(regex("^[0-9a-f]{32}$", var.curp_kek_version))
+    error_message = "curp_kek_version debe ser los 32 caracteres hexadecimales de la versión de la llave."
+  }
+}
+
+variable "enable_oleadas" {
+  description = "Enciende el reparto por oleadas de solicitudes (`Oleadas:Habilitado`, spec 028) en Market. Sin esto no corre."
+  type        = bool
+  default     = true
+}
+
+variable "enable_push" {
+  description = "Enciende el envío de avisos push por FCM en Mensajería (`Notificaciones:PushHabilitado`, spec 037). Requiere el secreto `fcm-service-account` en Key Vault. Apagado por omisión."
+  type        = bool
+  default     = false
+}
+
+variable "enable_content_safety" {
+  description = "Enciende la moderación con Content Safety en Market (`Moderacion:Habilitado`, spec 031): da el endpoint del recurso y el rol `Cognitive Services User`. Debe valer lo mismo que `enable_content_safety` de `deploy/infra` (que crea el recurso). Apagado por omisión."
+  type        = bool
+  default     = false
+}
+
+variable "enable_azure_openai" {
+  description = "Enciende el asistente con Azure OpenAI en Market (`Asistente:Habilitado`, spec 024): da el endpoint y el despliegue de la cuenta y el rol `Cognitive Services OpenAI User`. Debe valer lo mismo que `enable_azure_openai` de `deploy/infra` (que crea la cuenta; cuesta por token). Apagado por omisión."
+  type        = bool
+  default     = false
 }

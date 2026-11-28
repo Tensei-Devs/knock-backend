@@ -74,5 +74,78 @@ class SyntheticEnvironmentTests(unittest.TestCase):
         self.assertEqual("demo-knock", first["Firebase__ProjectId"])
 
 
+def _service_doc(paths: dict, schemas: dict) -> dict:
+    return {"openapi": "3.1.1", "info": {"title": "x", "version": "1.0.0"}, "paths": paths, "components": {"schemas": schemas}}
+
+
+_GATEWAY = {"ReverseProxy": {"Routes": {
+    "a": {"ClusterId": "identidad", "Match": {"Path": "/api/v1/auth/{**resto}"}},
+    "b": {"ClusterId": "mercado", "Match": {"Path": "/api/v1/oficios/{**resto}", "Methods": ["GET"]}},
+    "hub": {"ClusterId": "mensajeria", "Match": {"Path": "/hubs/chat/{**resto}"}},
+}}}
+
+
+class PublicContractTests(unittest.TestCase):
+    def test_contrato_publico_conflictos_CA_034_14(self) -> None:
+        identity = _service_doc({"/api/v{version}/auth/login": {"post": {"responses": {"200": {"description": "ok"}}}}}, {"Dto": {"type": "string"}})
+        market = _service_doc({"/api/v{version}/oficios": {"get": {"responses": {"200": {"description": "ok"}}}}}, {"Dto": {"type": "integer"}})
+        with self.assertRaises(export_openapi.PublicContractError) as raised:
+            export_openapi.build_public({"identity": identity, "market": market}, _GATEWAY)
+        self.assertIn("schemas/Dto", str(raised.exception))
+
+    def test_contrato_publico_solo_rutas_del_gateway_CA_034_14(self) -> None:
+        ok = {"responses": {"200": {"description": "ok"}}}
+        identity = _service_doc({"/api/v{version}/auth/login": {"post": ok}, "/api/v{version}/interno/x": {"post": ok}}, {})
+        market = _service_doc({"/api/v{version}/oficios/1": {"get": ok, "delete": ok}}, {"Dto": {"type": "string"}})
+        public = export_openapi.build_public({"identity": identity, "market": market}, _GATEWAY)
+        self.assertEqual(["/api/v{version}/auth/login", "/api/v{version}/oficios/1"], list(public["paths"]))
+        self.assertEqual(["get"], list(public["paths"]["/api/v{version}/oficios/1"]))
+        self.assertNotIn("servers", public)
+        self.assertEqual("Knock API", public["info"]["title"])
+
+    def test_contrato_publico_incluye_la_raiz_de_un_comodin_CA_034_14(self) -> None:
+        # En YARP «{**resto}» acepta cero o más segmentos: la ruta raíz también la atiende el gateway.
+        ok = {"responses": {"200": {"description": "ok"}}}
+        market = _service_doc({
+            "/api/v{version}/oficios": {"get": ok, "post": ok},
+            "/api/v{version}/oficios/{clave}": {"get": ok},
+            "/api/v{version}/oficios-pedidos": {"get": ok},
+            "/api/v{version}/oficiosx/1": {"get": ok},
+        }, {})
+        public = export_openapi.build_public({"market": market}, _GATEWAY)
+        self.assertEqual(["/api/v{version}/oficios", "/api/v{version}/oficios/{clave}"], list(public["paths"]))
+        self.assertEqual(["get"], list(public["paths"]["/api/v{version}/oficios"]))
+
+    def test_contrato_publico_misma_ruta_y_verbo_falla_CA_034_14(self) -> None:
+        ok = {"responses": {"200": {"description": "ok"}}}
+        doc = _service_doc({"/api/v{version}/oficios/1": {"get": ok}}, {})
+        gateway = {"ReverseProxy": {"Routes": {"b": {"ClusterId": "mercado", "Match": {"Path": "/api/v1/oficios/{**r}"}}, "c": {"ClusterId": "identidad", "Match": {"Path": "/api/v1/oficios/{**r}"}}}}}
+        with self.assertRaises(export_openapi.PublicContractError) as raised:
+            export_openapi.build_public({"identity": doc, "market": doc}, gateway)
+        self.assertIn("GET /api/v{version}/oficios/1", str(raised.exception))
+
+    def test_publicacion_rechaza_datos_internos_CA_034_18(self) -> None:
+        self.assertEqual([], export_openapi.check_public({"paths": {}}))
+        self.assertTrue(export_openapi.check_public({"servers": [{"url": "https://x"}]}))
+        self.assertTrue(export_openapi.check_public({"description": "http://knock-market/api"}))
+        self.assertTrue(export_openapi.check_public({"a": {"example": "+525512345678"}}))
+        self.assertTrue(export_openapi.check_public({"a": {"examples": {"x": {"value": "ana@example.com"}}}}))
+        self.assertTrue(export_openapi.check_public({"a": {"example": "GOMC800101HDFRRL09"}}))
+
+    def test_contrato_desactualizado_falla_CA_034_11(self) -> None:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder) / "openapi.publico.v1.json"
+            target.write_text("{}\n", encoding="utf-8")
+            args = export_openapi.parse_args(["--publico", "--check", "--output", str(target)])
+            error = io.StringIO()
+            with contextlib.redirect_stderr(error):
+                self.assertEqual(1, export_openapi.run_public(args))
+            self.assertIn("openapi.publico.v1.json", error.getvalue())
+            self.assertEqual(0, export_openapi.run_public(export_openapi.parse_args(["--publico", "--output", str(target)])))
+            self.assertEqual(0, export_openapi.run_public(args))
+
+
 if __name__ == "__main__":
     unittest.main()

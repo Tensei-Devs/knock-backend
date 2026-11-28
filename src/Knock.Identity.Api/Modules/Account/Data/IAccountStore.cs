@@ -32,10 +32,22 @@ internal interface IAccountStore
     Task<bool> CreateRecoveryCaseIfNoneOpenAsync(RecoveryCase recoveryCase, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Pasa a <c>vencida</c> el caso <c>pendiente</c> de la persona creado en el segundo Unix <paramref name="createdAtSeconds"/> (spec 039, R-21; tarea <c>VencerRecuperacion</c>). Falso si ya se decidió
+    /// o no existe: la tarea es idempotente.
+    /// </summary>
+    Task<bool> ExpireRecoveryAsync(string userId, long createdAtSeconds, DateTime now, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Marca la exportación en curso con una sola operación condicionada a que no haya otra (una por persona, spec 039 R-22): si ya hay una, no escribe
     /// nada. La marca la quita la tarea <c>PrepararExportacion</c> (spec 054) al terminar.
     /// </summary>
     Task<ExportStartOutcome> TryStartExportAsync(string userId, DateTime now, CancellationToken cancellationToken);
+
+    /// <summary>Guarda en la cuenta el ZIP de la última exportación lista (solo el nombre del blob y el instante): la consulta <c>GET /me/exportaciones/ultima</c> firma el enlace al pedirlo.</summary>
+    Task SetLastExportAsync(string userId, string blobName, DateTime readyAt, CancellationToken cancellationToken);
+
+    /// <summary>Estado de la exportación de la cuenta con ese <paramref name="sub"/>; <c>null</c> si la cuenta no existe.</summary>
+    Task<ExportStatus?> FindExportStatusAsync(string sub, CancellationToken cancellationToken);
 
     /// <summary>Quita la marca de exportación en curso (se usa si la tarea no se pudo encolar).</summary>
     Task ClearExportAsync(string userId, CancellationToken cancellationToken);
@@ -63,4 +75,11 @@ internal interface IAccountStore
     /// se borra <c>eliminarEn</c>. Falso si no había nada que cancelar.
     /// </summary>
     Task<bool> CancelDeletionAsync(string userId, DateTime now, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Borra los datos personales de la cuenta y cierra sus sesiones en una sola transacción, condicionada a que siga <c>eliminacion_programada</c> con la gracia vencida
+    /// (<c>eliminarEn</c> menor o igual que <paramref name="now"/>). La cuenta queda <c>eliminada</c> sin celular legible ni perfil. <c>null</c> si no se cumple la condición
+    /// (cancelada, ya borrada o gracia vigente); si se cumple, los ids de las sesiones que cerró para cancelarlos en Redis.
+    /// </summary>
+    Task<IReadOnlyList<string>?> EraseAccountAsync(string userId, DateTime now, CancellationToken cancellationToken);
 }

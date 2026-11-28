@@ -73,26 +73,26 @@ Definir y especificar los endpoints VIS-02, VIS-04, VIS-05, VIS-06, VIS-07, VIS-
 - **CA-05:** Dado un listado con más de 20 elementos, cuando se pide sin `limite`, entonces devuelve 20 y el cursor de la página siguiente; con `limite=51` responde 422.
 - **CA-06:** Dado el rol «persona con sesión que sea participante del recurso», cuando llama `POST /api/v1/visitas/{id}/reprogramar` con datos válidos, entonces responde 200 con lo descrito en §5.
 - **CA-07:** Dada una petición sin token o con token vencido, cuando llama `POST /api/v1/visitas/{id}/reprogramar`, entonces responde 401 y no ejecuta la operación.
-- **CA-08:** Dada una persona que no cumple el rol «persona con sesión que sea participante del recurso», cuando llama `POST /api/v1/visitas/{id}/reprogramar`, entonces responde 403 y no cambia nada.
+- **CA-08:** Dada una persona que no cumple el rol «persona con sesión que sea participante del recurso», cuando llama `POST /api/v1/visitas/{id}/reprogramar`, entonces responde 403 y no cambia nada. *(Enmienda 2026-11-23, aprobada por José Julián Hernández Hernández el 2026-11-24: responde 404, igual que una visita inexistente, sin revelar que existe; antes decía 403.)*
 - **CA-09:** Dado un valor inválido según las reglas de §6, cuando llama `POST /api/v1/visitas/{id}/reprogramar`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
 - **CA-10:** Dado un cuerpo que no se puede leer, cuando llama `POST /api/v1/visitas/{id}/reprogramar`, entonces responde 400 y no guarda nada.
 - **CA-11:** Dado el caso «la visita ya empezó o terminó, ya hay una propuesta pendiente o ya se reprogramó dos veces», cuando llama `POST /api/v1/visitas/{id}/reprogramar`, entonces responde 409 `visit_not_reschedulable` con ProblemDetails y no cambia el estado.
 - **CA-12:** Dado el rol «persona con sesión que sea participante del recurso», cuando llama `POST /api/v1/visitas/{id}/reprogramar/respuesta` con datos válidos, entonces responde 200 con lo descrito en §5.
 - **CA-13:** Dada una petición sin token o con token vencido, cuando llama `POST /api/v1/visitas/{id}/reprogramar/respuesta`, entonces responde 401 y no ejecuta la operación.
-- **CA-14:** Dada una persona que no cumple el rol «persona con sesión que sea participante del recurso», cuando llama `POST /api/v1/visitas/{id}/reprogramar/respuesta`, entonces responde 403 y no cambia nada.
+- **CA-14:** Dada una persona que no cumple el rol «persona con sesión que sea participante del recurso», cuando llama `POST /api/v1/visitas/{id}/reprogramar/respuesta`, entonces responde 403 y no cambia nada. *(Enmienda 2026-11-23, aprobada por José Julián Hernández Hernández el 2026-11-24: responde 404, igual que una visita inexistente, sin revelar que existe; antes decía 403.)*
 - **CA-15:** Dado un valor inválido según las reglas de §6, cuando llama `POST /api/v1/visitas/{id}/reprogramar/respuesta`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
 - **CA-16:** Dado un cuerpo que no se puede leer, cuando llama `POST /api/v1/visitas/{id}/reprogramar/respuesta`, entonces responde 400 y no guarda nada.
 - **CA-17:** Dado el caso «no hay una propuesta pendiente o ya venció», cuando llama `POST /api/v1/visitas/{id}/reprogramar/respuesta`, entonces responde 409 `no_pending_proposal` con ProblemDetails y no cambia el estado.
 - **CA-18:** Dado el rol «persona con sesión que sea participante del recurso», cuando llama `POST /api/v1/visitas/{id}/cancelar` con datos válidos, entonces responde 200 con lo descrito en §5.
 - **CA-19:** Dada una petición sin token o con token vencido, cuando llama `POST /api/v1/visitas/{id}/cancelar`, entonces responde 401 y no ejecuta la operación.
-- **CA-20:** Dada una persona que no cumple el rol «persona con sesión que sea participante del recurso», cuando llama `POST /api/v1/visitas/{id}/cancelar`, entonces responde 403 y no cambia nada.
+- **CA-20:** Dada una persona que no cumple el rol «persona con sesión que sea participante del recurso», cuando llama `POST /api/v1/visitas/{id}/cancelar`, entonces responde 403 y no cambia nada. *(Enmienda 2026-11-23, aprobada por José Julián Hernández Hernández el 2026-11-24: responde 404, igual que una visita inexistente, sin revelar que existe; antes decía 403.)*
 - **CA-21:** Dado un valor inválido según las reglas de §6, cuando llama `POST /api/v1/visitas/{id}/cancelar`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
 - **CA-22:** Dado un cuerpo que no se puede leer, cuando llama `POST /api/v1/visitas/{id}/cancelar`, entonces responde 400 y no guarda nada.
 - **CA-23:** Dado el caso «la visita ya terminó o ya fue cancelada», cuando llama `POST /api/v1/visitas/{id}/cancelar`, entonces responde 409 `visit_already_closed` con ProblemDetails y no cambia el estado.
 - **CA-24:** Dado el rol «cuenta con perfil de técnico», cuando llama `POST /api/v1/visitas/{id}/cliente-ausente` con datos válidos, entonces responde 200 con lo descrito en §5.
 - **CA-25:** Dada una petición sin token o con token vencido, cuando llama `POST /api/v1/visitas/{id}/cliente-ausente`, entonces responde 401 y no ejecuta la operación.
 - **CA-26:** Dada una persona que no cumple el rol «cuenta con perfil de técnico», cuando llama `POST /api/v1/visitas/{id}/cliente-ausente`, entonces responde 403 y no cambia nada.
-- **CA-27:** Dado un valor inválido según las reglas de §6, cuando llama `POST /api/v1/visitas/{id}/cliente-ausente`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
+- **CA-27:** Dado un valor inválido según las reglas de §6, cuando llama `POST /api/v1/visitas/{id}/cliente-ausente`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada. *(Enmienda 2026-11-23, aprobada por José Julián Hernández Hernández el 2026-11-24: un id de visita mal formado responde 400 sin repetirlo, no 422; antes decía 422.)*
 - **CA-28:** Dado el caso «fuera de la ventana de la cita o la visita ya empezó», cuando llama `POST /api/v1/visitas/{id}/cliente-ausente`, entonces responde 409 `outside_arrival_window` con ProblemDetails y no cambia el estado.
 - **CA-29:** Dado el rol «cuenta con perfil de técnico», cuando llama `POST /api/v1/visitas/{id}/terminar` con datos válidos, entonces responde 200 con lo descrito en §5.
 - **CA-30:** Dada una petición sin token o con token vencido, cuando llama `POST /api/v1/visitas/{id}/terminar`, entonces responde 401 y no ejecuta la operación.
@@ -102,14 +102,14 @@ Definir y especificar los endpoints VIS-02, VIS-04, VIS-05, VIS-06, VIS-07, VIS-
 - **CA-34:** Dado el caso «la visita no está en curso», cuando llama `POST /api/v1/visitas/{id}/terminar`, entonces responde 409 `visit_not_in_progress` con ProblemDetails y no cambia el estado.
 - **CA-35:** Dado el rol «persona con sesión que sea dueña del recurso», cuando llama `POST /api/v1/visitas/{id}/no-terminado` con datos válidos, entonces responde 201 con lo descrito en §5.
 - **CA-36:** Dada una petición sin token o con token vencido, cuando llama `POST /api/v1/visitas/{id}/no-terminado`, entonces responde 401 y no ejecuta la operación.
-- **CA-37:** Dada una persona que no cumple el rol «persona con sesión que sea dueña del recurso», cuando llama `POST /api/v1/visitas/{id}/no-terminado`, entonces responde 403 y no cambia nada.
+- **CA-37:** Dada una persona que no cumple el rol «persona con sesión que sea dueña del recurso», cuando llama `POST /api/v1/visitas/{id}/no-terminado`, entonces responde 403 y no cambia nada. *(Enmienda 2026-11-23, aprobada por José Julián Hernández Hernández el 2026-11-24: responde 404, igual que una visita inexistente, sin revelar que existe; antes decía 403.)*
 - **CA-38:** Dado un valor inválido según las reglas de §6, cuando llama `POST /api/v1/visitas/{id}/no-terminado`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
 - **CA-39:** Dado un cuerpo que no se puede leer, cuando llama `POST /api/v1/visitas/{id}/no-terminado`, entonces responde 400 y no guarda nada.
 - **CA-40:** Dado el caso «pasaron más de 7 días de terminada o ya se reportó», cuando llama `POST /api/v1/visitas/{id}/no-terminado`, entonces responde 409 `report_window_closed` con ProblemDetails y no cambia el estado.
 - **CA-41:** Dado el rol «persona con sesión que sea dueña del recurso», cuando llama `PUT /api/v1/visitas/{id}/permiso-fotos` con datos válidos, entonces responde 200 con lo descrito en §5.
 - **CA-42:** Dada una petición sin token o con token vencido, cuando llama `PUT /api/v1/visitas/{id}/permiso-fotos`, entonces responde 401 y no ejecuta la operación.
-- **CA-43:** Dada una persona que no cumple el rol «persona con sesión que sea dueña del recurso», cuando llama `PUT /api/v1/visitas/{id}/permiso-fotos`, entonces responde 403 y no cambia nada.
-- **CA-44:** Dado un valor inválido según las reglas de §6, cuando llama `PUT /api/v1/visitas/{id}/permiso-fotos`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada.
+- **CA-43:** Dada una persona que no cumple el rol «persona con sesión que sea dueña del recurso», cuando llama `PUT /api/v1/visitas/{id}/permiso-fotos`, entonces responde 403 y no cambia nada. *(Enmienda 2026-11-23, aprobada por José Julián Hernández Hernández el 2026-11-24: responde 404, igual que una visita inexistente, sin revelar que existe; antes decía 403.)*
+- **CA-44:** Dado un valor inválido según las reglas de §6, cuando llama `PUT /api/v1/visitas/{id}/permiso-fotos`, entonces responde 422 con `errors.<campo>`, no repite el valor y no guarda nada. *(Enmienda 2026-11-23, aprobada por José Julián Hernández Hernández el 2026-11-24: un `permiso` que no es booleano responde 400 sin repetirlo, no 422; antes decía 422.)*
 - **CA-45:** Dado un técnico con visitas, cuando consulta su agenda, entonces recibe solo las suyas dentro del rango y ordenadas; un rango mayor de 31 días o invertido responde 422.
 - **CA-46:** Dada una visita confirmada, cuando una parte propone una fecha válida y la otra acepta, entonces la cita cambia; si rechaza o vence, la cita no cambia; una tercera reprogramación aceptada responde 409 `visit_not_reschedulable`.
 - **CA-47:** Dada una visita con más de 24 horas, cuando una parte cancela con motivo, entonces queda `cancelada`; con menos de 24 horas queda `cancelada` con `tardia: true` y la otra parte recibe aviso inmediato.
@@ -186,13 +186,13 @@ Definir y especificar los endpoints VIS-02, VIS-04, VIS-05, VIS-06, VIS-07, VIS-
 | ID | Método y ruta | Quién | Entrada | Respuestas |
 |---|---|---|---|---|
 | VIS-02 | `GET /api/v1/agenda` | cuenta con perfil de técnico | Query: desde, hasta | 200; 401; 403 |
-| VIS-04 | `POST /api/v1/visitas/{id}/reprogramar` | persona con sesión que sea participante del recurso | Ruta: id. Cuerpo: fechaHora | 200; 400; 401; 403; 409 |
-| VIS-05 | `POST /api/v1/visitas/{id}/reprogramar/respuesta` | persona con sesión que sea participante del recurso | Ruta: id. Cuerpo: acepta | 200; 400; 401; 403; 409 |
-| VIS-06 | `POST /api/v1/visitas/{id}/cancelar` | persona con sesión que sea participante del recurso | Ruta: id. Cuerpo: motivo | 200; 400; 401; 403; 409 |
-| VIS-07 | `POST /api/v1/visitas/{id}/cliente-ausente` | cuenta con perfil de técnico | Ruta: id | 200; 401; 403; 409 |
+| VIS-04 | `POST /api/v1/visitas/{id}/reprogramar` | persona con sesión que sea participante del recurso | Ruta: id. Cuerpo: fechaHora | 200; 400; 401; 404; 409 |
+| VIS-05 | `POST /api/v1/visitas/{id}/reprogramar/respuesta` | persona con sesión que sea participante del recurso | Ruta: id. Cuerpo: acepta | 200; 400; 401; 404; 409 |
+| VIS-06 | `POST /api/v1/visitas/{id}/cancelar` | persona con sesión que sea participante del recurso | Ruta: id. Cuerpo: motivo | 200; 400; 401; 404; 409 |
+| VIS-07 | `POST /api/v1/visitas/{id}/cliente-ausente` | cuenta con perfil de técnico | Ruta: id | 200; 400; 401; 403; 404; 409 |
 | VIS-09 | `POST /api/v1/visitas/{id}/terminar` | cuenta con perfil de técnico | Ruta: id. Cuerpo: descripcion, recomendacion, fotos | 200; 400; 401; 403; 409; 422 |
-| VIS-10 | `POST /api/v1/visitas/{id}/no-terminado` | persona con sesión que sea dueña del recurso | Ruta: id. Cuerpo: texto | 201; 400; 401; 403; 409 |
-| VIS-11 | `PUT /api/v1/visitas/{id}/permiso-fotos` | persona con sesión que sea dueña del recurso | Ruta: id. Cuerpo: permiso | 200; 401; 403 |
+| VIS-10 | `POST /api/v1/visitas/{id}/no-terminado` | persona con sesión que sea dueña del recurso | Ruta: id. Cuerpo: texto | 201; 400; 401; 404; 409 |
+| VIS-11 | `PUT /api/v1/visitas/{id}/permiso-fotos` | persona con sesión que sea dueña del recurso | Ruta: id. Cuerpo: permiso | 200; 400; 401; 404 |
 
 **Filtros, orden, paginación y caché**
 
@@ -326,7 +326,29 @@ Las pruebas citan el caso como `CA_050_NN` en el nombre (para `python scripts/sd
 - Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
 - Dependencias: estados y ciclo de la visita de las specs 021 y 022, tareas de vencimiento de la 054 y moderación de fotos (031 y 032).
 
+## Nota de enmienda (2026-11-23, decisión de José)
+- **Estado de esta enmienda:** aprobada por José Julián Hernández Hernández el 2026-11-24. La aprobación de abajo es la original; la firma de esta enmienda es la línea «Enmienda» de la sección Aprobación y el texto anterior de cada criterio se conserva como historial.
+- **Persona ajena a la visita: 404, no 403 (CA-08, CA-14, CA-20, CA-37 y CA-43).** Quien llama sin ser parte de la visita (o sin ser el cliente dueño, en `no-terminado` y `permiso-fotos`) recibe el mismo 404 que si la visita no existiera, para no revelar que existe. Es la convención de las specs 020 a 026 (spec 020, §5: «404 = recurso inexistente o ajeno, sin distinguir»). El 403 se queda solo para el rol: una cuenta sin perfil de técnico en las rutas del técnico (CA-03, CA-26 y CA-31, `not_a_technician`). La tabla de §5 se ajusta a esas respuestas. Evidencia: `VisitScheduleController.Reply` (`NotFound()` para `VisitScheduleStatus.NotFound`; `NotATechnician` a 403) y `ResolveAsync` de `VisitScheduleService` y `VisitCloseService`, que devuelven «sin visita» tanto para el id inexistente como para el rol ajeno.
+- **Id mal formado y `permiso` con tipo equivocado: 400, no 422 (CA-27 y CA-44).** La convención del repo es la de la spec 002 (R-10) y la spec 020 (§5): 400 = la petición no se puede interpretar (cuerpo ilegible, identificador de ruta mal formado, cursor mal formado) y 422 = formato de un valor ya interpretado (`errors` por campo). Un `ObjectId` inválido en la ruta lanza `DomainErrorKind.BadRequest` (400, `ResolveAsync`), y un `permiso` que no es booleano no deserializa el cuerpo (400). Los demás casos de 422 de la spec (por ejemplo CA-04, CA-09, CA-21, CA-32, CA-38) no cambian. Las rutas de las specs 049, 063 y 064 que validan el id con `VisitRouteValidator` responden 422 con id mal formado: es una diferencia abierta con esta convención, que esta enmienda no resuelve.
+- Pruebas que siguen a esta enmienda: las de #353 (`..._CA_050_08`, `_14`, `_20`, `_27`, `_37`, `_43` y `_44`).
+
+## Nota de enmienda (2026-11-27, propuesta de reprogramación visible)
+
+- **Estado de esta enmienda:** PROPUESTA SIN FIRMA; vale desde que se firma la línea «Enmienda 2026-11-27» de la sección Aprobación. La aprobación original y las enmiendas ya firmadas se conservan.
+- **Motivo:** quien responde no puede ver qué fecha le proponen, quién la propone ni cuándo vence; `reprogramacionPendiente` (vista de la spec 022) es solo un booleano. Además, ese booleano mira la propuesta y su vencimiento, no el estado: una visita que pasa a `en_curso` con una propuesta sin vencer sigue diciendo `true`, aunque responder da 409 (comprobado por lectura del código, sin reproducir).
+- **R-35:** `GET /api/v1/visitas/{id}`, en las vistas del cliente y del técnico, y las demás respuestas que usan esa misma vista, agregan `propuestaReprogramacion`: `{ fechaHora, propuestaPor, venceEn }`. `fechaHora` y `venceEn` son fecha y hora en UTC; `propuestaPor` es `cliente` o `tecnico`. El campo se omite cuando no hay una propuesta vigente. Las dos partes reciben lo mismo.
+- **R-36:** Una propuesta está vigente solo si la visita está guardada como `confirmada` (también si está bloqueada, igual que al responder), la propuesta está guardada y `venceEn` es posterior a ahora. `reprogramacionPendiente` es verdadero exactamente cuando `propuestaReprogramacion` está presente. Se calcula al leer, sin escribir ni borrar la propuesta guardada.
+- **R-37:** Quién puede responder no cambia: la parte distinta de `propuestaPor`. La app compara `propuestaPor` con `rol`.
+
+- **CA-56:** Dada una visita confirmada con una propuesta vigente, cuando la consulta cualquiera de las dos partes, entonces recibe `reprogramacionPendiente: true` y `propuestaReprogramacion` con la fecha propuesta, quién la propuso y cuándo vence.
+- **CA-57:** Dada una visita sin propuesta, o con una vencida, aceptada o rechazada, cuando se consulta, entonces `reprogramacionPendiente` es falso y no viene `propuestaReprogramacion`.
+- **CA-58:** Dada una visita que dejó de estar `confirmada` con una propuesta aún guardada y sin vencer, cuando se consulta, entonces `reprogramacionPendiente` es falso y no viene `propuestaReprogramacion`.
+- **CA-59:** Dada una persona ajena a la visita, cuando la consulta, entonces recibe el mismo 404 que si no existiera.
+- Cambio aditivo del contrato. Los avisos de reprogramación se definen en la spec 054 (enmienda del 2026-11-27). La tarea se agrega a `task.md` en el PR que la implemente.
+
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
+- [x] Enmienda 2026-11-23 — nombre: José Julián Hernández Hernández fecha: 2026-11-24
 - [x] Sin conflicto con la constitución
+- [x] Enmienda 2026-11-27 — nombre: José Julián Hernández Hernández fecha: 2026-11-27
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

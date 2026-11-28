@@ -8,16 +8,24 @@ using Microsoft.AspNetCore.Mvc;
 namespace Knock.Market.Api.Modules.Tecnicos.Controllers.V1;
 
 /// <summary>
-/// Perfil propio del técnico (spec 046, TEC-08 a TEC-11). La persona es la del <c>sub</c> del token; una cuenta sin perfil de técnico recibe 404 (403 en la
+/// Perfil propio del técnico (spec 046, TEC-08 a TEC-11 y TEC-15). La persona es la del <c>sub</c> del token; una cuenta sin perfil de técnico recibe 404 (403 en la
 /// disponibilidad, CA-38) y no cambia nada. Ninguna respuesta se cachea.
 /// </summary>
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/tecnicos/me")]
 [Authorize]
-internal sealed class TecnicosMeController(MyTechnicianService service) : ControllerBase
+internal sealed class TecnicosMeController(MyTechnicianService service, TechnicianReputationService reputations) : ControllerBase
 {
     private const string _problemJson = TechnicianProblems.ProblemJson;
+
+    /// <summary>Perfil propio (TEC-15), con la foto y la dirección del taller; una cuenta sin perfil de técnico recibe 404.</summary>
+    [HttpGet]
+    [ProducesResponseType<MyTechnicianProfileResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, _problemJson)]
+    public Task<IActionResult> Read(CancellationToken cancellationToken) => OwnOrNotFoundAsync(service.GetProfileAsync(Subject(), cancellationToken));
 
     /// <summary>Edita el perfil público (TEC-08): cambian solo los campos enviados.</summary>
     [HttpPut]
@@ -86,6 +94,23 @@ internal sealed class TecnicosMeController(MyTechnicianService service) : Contro
         Response.Headers.CacheControl = "private, no-store";
         var schedule = await service.SetScheduleAsync(Subject(), body.Horarios!, cancellationToken);
         return schedule is null ? Rule(StatusCodes.Status404NotFound, code: null) : Ok(new ScheduleBody(schedule));
+    }
+
+    /// <summary>Reputación propia (TEC-13): promedio, distribución por estrellas y nivel; una cuenta sin perfil de técnico recibe 404.</summary>
+    [HttpGet("reputacion")]
+    [ProducesResponseType<ReputationResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, _problemJson)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, _problemJson)]
+    public Task<IActionResult> Reputation(CancellationToken cancellationToken) => OwnOrNotFoundAsync(reputations.GetOwnAsync(Subject(), cancellationToken));
+
+    /// <summary>Respuesta de una lectura propia: 200 con el dato, o 404 si la cuenta no es técnico; nunca se cachea.</summary>
+    private async Task<IActionResult> OwnOrNotFoundAsync<T>(Task<T?> reading)
+        where T : class
+    {
+        Response.Headers.CacheControl = "private, no-store";
+        var found = await reading;
+        return found is null ? Rule(StatusCodes.Status404NotFound, code: null) : Ok(found);
     }
 
     private string Subject() => User.FindFirst("sub")?.Value ?? string.Empty;

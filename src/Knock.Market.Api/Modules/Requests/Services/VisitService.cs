@@ -67,6 +67,7 @@ internal sealed class VisitService(VisitStore visits, RequestsStore requests, Ch
         var place = visit.Modality == VisitRules.Domicile
             ? new VisitPlace(visit.Modality, await ClientAddressAsync(visit, cancellationToken))
             : new VisitPlace(visit.Modality, technician?.WorkshopAddress);
+        var proposal = CurrentProposal(visit, now);
         return new VisitResponse(
             visit.Id.ToString(),
             "cliente",
@@ -85,7 +86,13 @@ internal sealed class VisitService(VisitStore visits, RequestsStore requests, Ch
             code is null ? null : VisitRules.SafetyRule(name),
             VisitRules.CanNotify(visit.Estado),
             false,
-            null);
+            null,
+            visit.TechnicianUserId,
+            proposal is not null,
+            visit.FinalQuoteState,
+            visit.PhotoPermission,
+            Utc(visit.FinishedAtUtc),
+            proposal);
     }
 
     private async Task<VisitResponse> BuildTechnicianViewAsync(VisitRecord visit, CancellationToken cancellationToken)
@@ -103,6 +110,7 @@ internal sealed class VisitService(VisitStore visits, RequestsStore requests, Ch
             place = new VisitPlace(visit.Modality, (await FindTechnicianAsync(visit, cancellationToken))?.WorkshopAddress);
         }
 
+        var proposal = CurrentProposal(visit, now);
         return new VisitResponse(
             visit.Id.ToString(),
             "tecnico",
@@ -121,8 +129,23 @@ internal sealed class VisitService(VisitStore visits, RequestsStore requests, Ch
             null,
             null,
             VisitRules.CanArrive(visit.State, now),
-            Utc(visit.ArrivedAtUtc));
+            Utc(visit.ArrivedAtUtc),
+            null,
+            proposal is not null,
+            visit.FinalQuoteState,
+            visit.PhotoPermission,
+            Utc(visit.FinishedAtUtc),
+            proposal);
     }
+
+    /// <summary>
+    /// La propuesta de reprogramación vigente, o <see langword="null"/> (spec 050, R-36): la visita sigue <c>confirmada</c> (también si está bloqueada), la propuesta
+    /// está guardada y no ha vencido. Se calcula al leer, sin escribir ni borrar la guardada.
+    /// </summary>
+    internal static VisitRescheduleProposal? CurrentProposal(VisitRecord visit, DateTime nowUtc) =>
+        visit.Estado == VisitRules.Confirmed && visit.Proposal is { } proposal && proposal.ExpiresAtUtc > nowUtc
+            ? new VisitRescheduleProposal(new DateTimeOffset(proposal.ProposedAtUtc, TimeSpan.Zero), proposal.ProposedBy, new DateTimeOffset(proposal.ExpiresAtUtc, TimeSpan.Zero))
+            : null;
 
     private async Task<TechnicianPublic?> FindTechnicianAsync(VisitRecord visit, CancellationToken cancellationToken)
     {

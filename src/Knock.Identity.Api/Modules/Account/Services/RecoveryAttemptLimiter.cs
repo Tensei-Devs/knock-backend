@@ -20,11 +20,21 @@ internal sealed class RecoveryAttemptLimiter : IRecoveryAttemptLimiter, IDisposa
 
     public static readonly TimeSpan Window = TimeSpan.FromHours(1);
 
+    private readonly PerKeyAttemptLimiter _limiter = new(PermitLimit, Window);
+
+    public bool TryAcquire(string key, out TimeSpan retryAfter) => _limiter.TryAcquire(key, out retryAfter);
+
+    public void Dispose() => _limiter.Dispose();
+}
+
+/// <summary>Ventana fija de <c>permitLimit</c> intentos por clave en la memoria del proceso (la usan la recuperación de acceso y la apelación de una persona suspendida, spec 060, R-07).</summary>
+internal sealed class PerKeyAttemptLimiter(int permitLimit, TimeSpan window) : IDisposable
+{
     private readonly PartitionedRateLimiter<string> _limiter = PartitionedRateLimiter.Create<string, string>(key =>
         RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
         {
-            PermitLimit = PermitLimit,
-            Window = Window,
+            PermitLimit = permitLimit,
+            Window = window,
             QueueLimit = 0,
             AutoReplenishment = true,
         }));
@@ -39,7 +49,7 @@ internal sealed class RecoveryAttemptLimiter : IRecoveryAttemptLimiter, IDisposa
             return true;
         }
 
-        retryAfter = lease.TryGetMetadata(MetadataName.RetryAfter, out var hint) ? hint : Window;
+        retryAfter = lease.TryGetMetadata(MetadataName.RetryAfter, out var hint) ? hint : window;
         return false;
     }
 

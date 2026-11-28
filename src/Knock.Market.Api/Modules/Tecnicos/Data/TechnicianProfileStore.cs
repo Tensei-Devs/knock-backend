@@ -1,3 +1,5 @@
+using Knock.Hosting.Concurrency;
+using Knock.Hosting.Data;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Tecnicos.Domain;
 using Knock.Market.Api.Modules.Tecnicos.Services;
@@ -24,15 +26,27 @@ internal sealed class TechnicianProfileStore(
             .Project(Builders<BsonDocument>.Projection.Include("_id")).FirstOrDefaultAsync(cancellationToken) is not null;
 
     public Task<bool> InsertAsync(NewTechnician technician, CancellationToken cancellationToken) =>
-        InsertOnceAsync(
-            () => Technicians.InsertOneAsync(ToDocument(technician), cancellationToken: cancellationToken),
+        InsertSerializedAsync(
+            technician.Sub,
             () => ExistsAsync(technician.Sub, cancellationToken),
-            delay => Task.Delay(delay, cancellationToken));
+            () => InsertOnceAsync(
+                () => Technicians.InsertOneAsync(ToDocument(technician), cancellationToken: cancellationToken),
+                () => ExistsAsync(technician.Sub, cancellationToken),
+                delay => Task.Delay(delay, cancellationToken)),
+            cancellationToken);
+
+    /// <summary>
+    /// Causa raíz de CA-69 intermitente: varios <c>insert</c> a la vez sobre la misma llave única pueden bloquearse entre sí en documentdb-local («Could not acquire lock ... due to deadlock»)
+    /// y agotar los reintentos mientras todos esperan el candado del otro, lo que daba 500. Dentro de la instancia, los registros de una misma cuenta se turnan (candado por franja de <c>sub</c>)
+    /// y quien entra después relee el perfil: si ya existe responde «ya existía» sin escribir. Entre instancias sigue valiendo la llave única más la relectura y el reintento de <see cref="InsertOnceAsync"/>.
+    /// </summary>
+    internal static Task<bool> InsertSerializedAsync(string sub, Func<Task<bool>> exists, Func<Task<bool>> insert, CancellationToken cancellationToken) =>
+        KeyedGate.RunAsync(sub, async () => !await exists() && await insert(), cancellationToken);
 
     /// <summary>
     /// Dos registros simultáneos de la misma cuenta chocan en el índice único de <c>usuarioId</c>: MongoDB responde «llave duplicada» (11000) y DocumentDB puede responder «conflicto
-    /// de escritura» (112). En ambos casos se relee el perfil por <c>usuarioId</c>: si existe, el otro registro ganó (CA-69, <see langword="false"/>); si no, se reintenta con espera
-    /// creciente y, agotados los intentos, se relanza la excepción.
+    /// de escritura» (112) o «interbloqueo» (24). Ante cualquier error del servidor se relee el perfil por <c>usuarioId</c>: si existe, el otro registro ganó (CA-69, <see langword="false"/>); si no, los conflictos se reintentan con espera
+    /// creciente y, agotados los intentos (u otro error), se relanza la excepción.
     /// </summary>
     internal static async Task<bool> InsertOnceAsync(Func<Task> insert, Func<Task<bool>> exists, Func<TimeSpan, Task> wait)
     {
@@ -45,14 +59,15 @@ internal sealed class TechnicianProfileStore(
                 await insert();
                 return true;
             }
-            catch (MongoException exception) when (IsConflict(exception))
+            catch (MongoException exception)
             {
+                // Cualquier fallo del servidor con el perfil ya guardado significa que el otro registro ganó (CA-69): no es un 500.
                 if (await exists())
                 {
                     return false;
                 }
 
-                if (attempt >= _maxWriteConflictAttempts)
+                if (!IsConflict(exception) || attempt >= _maxWriteConflictAttempts)
                 {
                     throw;
                 }
@@ -65,26 +80,40 @@ internal sealed class TechnicianProfileStore(
     private static bool IsConflict(MongoException exception) =>
         exception is MongoWriteException { WriteError.Category: ServerErrorCategory.DuplicateKey }
         or MongoWriteException { WriteError.Code: _writeConflictCode }
-        or MongoCommandException { Code: _duplicateKeyCode or _writeConflictCode };
+        or MongoCommandException { Code: _duplicateKeyCode or _writeConflictCode }
+        || IsDeadlock(exception);
+
+    private static bool IsDeadlock(Exception exception) =>
+        exception is MongoCommandException { Code: _lockErrorCode } command && command.Message.Contains("deadlock", StringComparison.OrdinalIgnoreCase);
 
     private const int _duplicateKeyCode = 11000;
 
     private const int _writeConflictCode = 112;
 
+    /// <summary>Código 24 de documentdb-local («Could not acquire lock ... due to deadlock»): la escritura no se aplicó. Solo cuenta si el mensaje dice «deadlock».</summary>
+    private const int _lockErrorCode = 24;
+
     private const int _maxWriteConflictAttempts = 6;
 
     private const int _backoffMilliseconds = 50;
 
-    /// <summary>Campos del perfil público: nunca se proyectan <c>tallerDireccion</c>, <c>contactoPublico</c>, <c>ubicacionBase</c> ni <c>usuarioId</c>.</summary>
-    private static readonly string[] _profileFields =
+    /// <summary>Técnicos visibles para clientes: <c>activo</c>, no ocultos y sin un ocultamiento vigente de la moderación (R-40).</summary>
+    internal static FilterDefinition<BsonDocument> VisibleFilter(DateTime nowUtc)
+    {
+        var filters = Builders<BsonDocument>.Filter;
+        return filters.Eq("estado", TechnicianRules.ActiveState) & filters.Eq("oculto", false) & (filters.Exists("ocultoHasta", false) | filters.Lte("ocultoHasta", nowUtc));
+    }
+
+    /// <summary>Campos del perfil público: nunca se proyectan <c>tallerDireccion</c>, <c>contactoPublico</c> ni <c>ubicacionBase</c>; <c>usuarioId</c> se lee pero solo sale en el perfil con sesión (<c>tecnicoUsuarioId</c>), nunca en lista, explorar ni mapa.</summary>
+    internal static readonly string[] ProfileFields =
     [
         "nombre", "nombreNegocio", "fotoUrl", "nivelVerificacion", "calificacion", "anios", "descripcion", "oficios", "atencion", "radioAtencionKm",
-        "coloniaBaseId", "estado", "oculto", "ocultoHasta", "disponibleHasta",
+        "coloniaBaseId", "estado", "oculto", "ocultoHasta", "disponibleHasta", "usuarioId",
     ];
 
     public async Task<TechnicianProfileRecord?> FindByIdAsync(ObjectId id, CancellationToken cancellationToken)
     {
-        var projection = Builders<BsonDocument>.Projection.Combine(_profileFields.Select(f => Builders<BsonDocument>.Projection.Include(f)));
+        var projection = Builders<BsonDocument>.Projection.Combine(ProfileFields.Select(f => Builders<BsonDocument>.Projection.Include(f)));
         var document = await Technicians.Find(Builders<BsonDocument>.Filter.Eq("_id", id), new FindOptions { MaxTime = options.Value.QueryMaxTime })
             .Project(projection).FirstOrDefaultAsync(cancellationToken);
         return document is null ? null : ToProfile(document);
@@ -106,7 +135,8 @@ internal sealed class TechnicianProfileStore(
         Text(d, "estado") ?? string.Empty,
         !d.TryGetValue("oculto", out var hidden) || !hidden.IsBoolean || hidden.AsBoolean,
         Date(d, "ocultoHasta"),
-        Date(d, "disponibleHasta"));
+        Date(d, "disponibleHasta"),
+        Text(d, "usuarioId"));
 
     private static string? Text(BsonDocument d, string name) => d.TryGetValue(name, out var v) && v.IsString ? v.AsString : null;
 
@@ -132,6 +162,7 @@ internal sealed class TechnicianProfileStore(
             ["version"] = 1,
         };
         Add(document, "otroOficio", t.OtroOficio);
+        Add(document, "coloniaBaseNombre", t.ColoniaNombre);
         Add(document, "tallerDireccion", t.TallerDireccionCifrada);
         if (t.RadioKm is { } radius) document["radioAtencionKm"] = radius;
         if (t.Centro is { } center)
@@ -140,6 +171,7 @@ internal sealed class TechnicianProfileStore(
         }
 
         Add(document, "nombreNegocio", t.Perfil?.NombreNegocio);
+        TechnicianSearchFields.AddTo(document, t.Nombre, t.Perfil?.NombreNegocio);
         Add(document, "descripcion", t.Perfil?.Descripcion);
         if (t.Perfil?.Anios is { } years) document["anios"] = years;
         return document;

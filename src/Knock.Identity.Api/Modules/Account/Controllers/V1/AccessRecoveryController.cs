@@ -1,5 +1,6 @@
 using System.Globalization;
 using Asp.Versioning;
+using Knock.Hosting.Http;
 using Knock.Identity.Api.Hosting;
 using Knock.Identity.Api.Modules.Account.Dtos;
 using Knock.Identity.Api.Modules.Account.Services;
@@ -24,7 +25,7 @@ internal sealed class AccessRecoveryController(AccessRecoveryService recovery) :
     /// Siempre responde 202 sin revelar si la cuenta existe.
     /// </summary>
     [HttpPost]
-    [EnableRateLimiting(RateLimitingExtensions.AccessRecoveryPolicy)]
+    [EnableRateLimiting(IdentityRateLimits.AccessRecoveryPolicy)]
     [RequestSizeLimit(MaxBodyBytes)]
     [ProducesResponseType(StatusCodes.Status202Accepted)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
