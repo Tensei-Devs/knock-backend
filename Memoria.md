@@ -1136,6 +1136,11 @@
 - **Pendiente:** confirmar que el job corre en este PR, muta y genera reporte, y que la regla R-18 (mutación de `Knock.Hosting`) sigue aplicando.
 - **A evitar:** declarar `solution` y `test-projects` a la vez; subir la versión de dotnet-stryker sin probar el job en un PR.
 
+## 2026-11-27 — KNOCK-100 · Regresión de sprint-05
+- [Backend, `eae26678`](https://github.com/Tensei-Devs/knock-backend/actions/runs/46081013644) pasó compilación, formato y pruebas, integración, base de datos, cobertura combinada, controles de seguridad y el gate.
+- [Frontend, `73aadfa`](https://github.com/Tensei-Devs/knock-frontend/actions/runs/46085914655) pasó análisis, pruebas y build de la app, emulador Android, contrato, panel, landing, controles de seguridad y el gate.
+- La regresión adicional de frontend sobre el descarte de Trabajo registró 1,568 pruebas Flutter en verde, lint, 11 pruebas y build de panel, y 24 pruebas de landing con una omisión prevista por la suite y comprobación de enlaces. Las suites automáticas verdes acreditan esos commits. La revisión de defectos fuera de esas suites queda en la tarjeta.
+
 ## 2026-11-19 · KNOCK-286 · Prueba 422 de la spec 041 ya no falla por azar
 - **Qué cambió:** las pruebas de valor inválido (crear y actualizar, CA-041-05) buscan el valor enviado solo dentro de `errors`, no en todo el cuerpo.
 - **Por qué:** el `traceId` y el `correlationId` del ProblemDetails son al azar y a veces contienen «9999», lo que hacía fallar la prueba sin ser un error del código. El 422 ya tenía el formato de la spec (`errors` por campo).
