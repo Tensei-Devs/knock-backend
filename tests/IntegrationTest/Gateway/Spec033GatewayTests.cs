@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using AwesomeAssertions;
 using Knock.Gateway.Hosting;
+using Knock.Hosting.RateLimiting;
 using Knock.IntegrationTest.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.JsonWebTokens;
@@ -116,6 +117,32 @@ public sealed class Spec033GatewayTests
         panelOnPanel.StatusCode.Should().Be(HttpStatusCode.OK);
         panelOnPanel.Headers.GetValues("X-Servicio").Should().Equal("identidad");
         appOnApp.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Theory]
+    [InlineData("/api/v1/admin/reportes", "identidad")]
+    [InlineData("/api/v1/admin/verificaciones", "identidad")]
+    [InlineData("/api/v1/admin/opiniones/507f1f77bcf86cd799439011/ocultar", "mercado")]
+    [InlineData("/api/v1/admin/opiniones/507f1f77bcf86cd799439011/mostrar", "mercado")]
+    public async Task Las_Rutas_Admin_Van_Al_Servicio_Dueno_Y_Solo_Con_Token_Del_Panel_KNOCK_266(string path, string service)
+    {
+        await using var host = await StartAsync();
+        using var panelRequest = new HttpRequestMessage(HttpMethod.Get, new Uri(path, UriKind.Relative));
+        panelRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", PanelToken());
+        using var appRequest = new HttpRequestMessage(HttpMethod.Get, new Uri(path, UriKind.Relative));
+        appRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", GatewayTestSupport.IssueToken());
+        using var anonymousRequest = new HttpRequestMessage(HttpMethod.Get, new Uri(path, UriKind.Relative));
+
+        using var panel = await host.Client.SendAsync(panelRequest);
+        host.PathsSeen.Clear();
+        using var app = await host.Client.SendAsync(appRequest);
+        using var anonymous = await host.Client.SendAsync(anonymousRequest);
+
+        panel.StatusCode.Should().Be(HttpStatusCode.OK);
+        panel.Headers.GetValues("X-Servicio").Should().Equal(service);
+        app.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        anonymous.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        host.PathsSeen.Should().BeEmpty();
     }
 
     [Fact]

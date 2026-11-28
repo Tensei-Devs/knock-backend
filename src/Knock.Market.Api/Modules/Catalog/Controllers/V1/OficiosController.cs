@@ -38,6 +38,26 @@ internal sealed class OficiosController(OficioQueries oficios) : ControllerBase
         return Matches(ifNoneMatch ?? string.Empty, etag) ? StatusCode(StatusCodes.Status304NotModified) : Ok(items);
     }
 
+    /// <summary>
+    /// Detalle de un oficio activo (OFI-02, spec 045). Público, con la misma caché de 24 horas del catálogo (la edición del panel la invalida) y con <c>ETag</c> débil para revalidar; un oficio que no existe o
+    /// está inactivo responde 404 <c>trade_not_found</c>, y una clave con formato inválido, 422 <c>errors.clave</c>.
+    /// </summary>
+    [HttpGet("{clave}")]
+    [AllowAnonymous]
+    [ProducesResponseType<TradeDetailResponse>(StatusCodes.Status200OK, "application/json")]
+    [ProducesResponseType(StatusCodes.Status304NotModified)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity, "application/problem+json")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, "application/problem+json")]
+    public async Task<IActionResult> Detail([FromRoute] TradeKeyRoute route, [FromHeader(Name = "If-None-Match")] string? ifNoneMatch, CancellationToken cancellationToken)
+    {
+        var detail = await oficios.GetActiveAsync(route.Clave!, cancellationToken);
+        var etag = ETagPayload(detail);
+        Response.Headers.ETag = etag;
+        Response.Headers.CacheControl = _cacheControl;
+        return Matches(ifNoneMatch ?? string.Empty, etag) ? StatusCode(StatusCodes.Status304NotModified) : Ok(detail);
+    }
+
     /// <summary>ETag débil a partir del contenido serializado: determinista para el mismo catálogo y distinto ante cualquier cambio.</summary>
     internal static string ETag(IReadOnlyList<OficioResponse> items) => ETagPayload(items);
 

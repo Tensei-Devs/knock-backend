@@ -1,8 +1,10 @@
+using Knock.Hosting.Http;
+using Knock.Hosting.Security;
 using Knock.Market.Api.Common.Errors;
-using Knock.Market.Api.Common.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Knock.Market.Api.Hosting;
@@ -18,26 +20,13 @@ internal static class AuthenticationExtensions
             sp.GetRequiredService<IConfiguration>(),
             sp.GetRequiredService<IHostEnvironment>()));
 
-        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer().AddInternalServiceScheme();
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer().AddInternalServiceScheme().AddPanelScheme();
         services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
             .Configure<JwtSettings>((options, settings) =>
             {
                 // jscpd:ignore-start -- EXC-028
                 options.MapInboundClaims = false;
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuer = true,
-                    ValidIssuer = settings.Issuer,
-                    ValidateAudience = true,
-                    ValidAudience = settings.Audience,
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = settings.SigningKey,
-                    RequireSignedTokens = true,
-                    ValidateLifetime = true,
-                    RequireExpirationTime = true,
-                    ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
-                    ClockSkew = TimeSpan.Zero,
-                };
+                options.TokenValidationParameters = settings.ToValidationParameters();
                 // jscpd:ignore-end
                 options.Events = new JwtBearerEvents
                 {
@@ -51,6 +40,11 @@ internal static class AuthenticationExtensions
             });
         services.AddAuthorization();
         services.AddKnockInternalServiceAuthentication();
+        services.AddKnockPanelAuthentication();
+        services.AddHttpContextAccessor();
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddHttpClient(IdentityPanelPermissionGate.ClientName).RemoveAllLoggers();
+        services.TryAddSingleton<IPanelPermissionGate, IdentityPanelPermissionGate>();
         services.AddHostedService<AuthenticationStartupCheck>();
         return services;
     }

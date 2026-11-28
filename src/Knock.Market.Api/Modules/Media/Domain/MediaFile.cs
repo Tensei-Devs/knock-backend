@@ -20,6 +20,10 @@ internal sealed record MediaFile(
     public int? Width { get; init; }
     public int? Height { get; init; }
     public DateTimeOffset? ConfirmedAt { get; init; }
+    /// <summary>Hasta cuándo se puede confirmar la subida (spec 058, R-09): un pendiente solo cuenta para el tope mientras esta fecha esté en el futuro.</summary>
+    public DateTimeOffset ConfirmBefore => CreatedAt + MediaRules.ConfirmationWindow;
+    /// <summary>Fecha del TTL (spec 058, R-07): 7 días tras crearse si sigue pendiente o fue rechazado; la fecha lejana si está listo.</summary>
+    public DateTimeOffset ExpiresAt => State == MediaFileState.Ready ? MediaRules.NeverExpires : CreatedAt + MediaRules.PendingRetention;
     public string QuarantineBlob => BlobKey;
     public bool IsReadyFor(string ownerId) => State == MediaFileState.Ready && string.Equals(OwnerId, ownerId, StringComparison.Ordinal);
     public static MediaFile CreatePending(string ownerId, MediaUsage usage, string contentType, long sizeBytes, DateTimeOffset now) =>

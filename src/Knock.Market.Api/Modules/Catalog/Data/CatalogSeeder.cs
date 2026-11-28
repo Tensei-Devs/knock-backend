@@ -1,3 +1,4 @@
+using Knock.Market.Api.Common.Text;
 using Knock.Market.Api.Modules.Catalog.Domain;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;

@@ -1,11 +1,9 @@
-extern alias gateway;
-
 using AwesomeAssertions;
+using Knock.Hosting.Security;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Xunit;
-using GatewayHosting = gateway::Knock.Gateway.Hosting;
 
 namespace Knock.UnitTest.Gateway;
 
@@ -16,7 +14,7 @@ public sealed class HstsOptionsTests
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
         var services = new ServiceCollection().AddSingleton<IConfiguration>(configuration);
-        GatewayHosting.HstsExtensions.AddKnockGatewayHsts(services);
+        HstsExtensions.AddKnockHsts(services);
         return services.BuildServiceProvider();
     }
 
@@ -25,7 +23,7 @@ public sealed class HstsOptionsTests
     {
         using var provider = Provider([]);
 
-        var settings = provider.GetRequiredService<IOptions<GatewayHosting.HstsSettings>>().Value;
+        var settings = provider.GetRequiredService<IOptions<HstsSettings>>().Value;
 
         settings.HeaderValue.Should().Be("max-age=31536000; includeSubDomains");
         settings.HeaderValue.Should().NotContain("preload");
@@ -36,7 +34,7 @@ public sealed class HstsOptionsTests
     {
         using var provider = Provider(new() { ["Security:Hsts:MaxAge"] = "1.00:00:00", ["Security:Hsts:IncludeSubDomains"] = "false" });
 
-        provider.GetRequiredService<IOptions<GatewayHosting.HstsSettings>>().Value.HeaderValue.Should().Be("max-age=86400");
+        provider.GetRequiredService<IOptions<HstsSettings>>().Value.HeaderValue.Should().Be("max-age=86400");
     }
 
     [Theory]
@@ -46,7 +44,7 @@ public sealed class HstsOptionsTests
     {
         using var provider = Provider(new() { ["Security:Hsts:MaxAge"] = maxAge });
 
-        var act = () => provider.GetRequiredService<IOptions<GatewayHosting.HstsSettings>>().Value;
+        var act = () => provider.GetRequiredService<IOptions<HstsSettings>>().Value;
 
         act.Should().Throw<OptionsValidationException>().Which.Message.Should().Contain("Security:Hsts:MaxAge").And.NotContain(maxAge);
     }

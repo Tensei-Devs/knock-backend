@@ -1,3 +1,4 @@
+using Knock.Hosting.Data;
 using Knock.Identity.Api.Hosting;
 using Knock.Identity.Api.Modules.Panel.Domain;
 using Microsoft.Extensions.Options;
@@ -130,6 +131,17 @@ internal sealed class PanelSesionesStore(
 
         await Sessions.UpdateManyAsync(_filter.In(IdField, ids), _update.Set(RevokedField, true), cancellationToken: cancellationToken);
         return ids;
+    }
+
+    /// <summary>Revoca las sesiones abiertas de la cuenta del panel dentro de la transacción de quien llama (spec 059, R-04 d). Devuelve cuántas revocó.</summary>
+    public async Task<int> RevokeAllInTransactionAsync(StoreTransaction transaction, string sub, CancellationToken cancellationToken)
+    {
+        var result = await Sessions.UpdateManyAsync(
+            (IClientSessionHandle)transaction.Handle,
+            _filter.And(_filter.Eq(SubField, sub), _filter.Eq(RevokedField, false)),
+            _update.Set(RevokedField, true),
+            cancellationToken: cancellationToken);
+        return (int)result.ModifiedCount;
     }
 
     public async Task<bool> RevokeAsync(string sid, CancellationToken cancellationToken)

@@ -75,6 +75,23 @@ public sealed class Spec041HistorialInternoTests
     }
 
     [Fact]
+    public async Task ThePresentationOfTheSameCredentialTwice_IsAcceptedAndReadsTheSameHistory_CA_056_10()
+    {
+        await using var host = await StartAsync();
+        var client = Guid.NewGuid().ToString("D");
+        var element = ObjectId.GenerateNewId().ToString();
+        await SeedAsync(host, client, element, "Mecánica", "terminada", "2026-03-10", await SeedTechnicianAsync(host, "Técnica Ana de prueba"));
+        var credential = InternalServiceTokens.Issue(client, element);
+
+        using var first = await GetAsync(host, Query(client, element), credential);
+        using var second = await GetAsync(host, Query(client, element), credential);
+
+        first.StatusCode.Should().Be(HttpStatusCode.OK);
+        second.StatusCode.Should().Be(HttpStatusCode.OK, "sin jti guardado, la repetición dentro de la vida se acepta");
+        (await second.Content.ReadAsStringAsync()).Should().Be(await first.Content.ReadAsStringAsync(), "la ruta solo lee: sin efecto duplicado");
+    }
+
+    [Fact]
     public async Task ADifferentClientWithTheSameElementId_GetsNothing_CA_041_27()
     {
         await using var host = await StartAsync();

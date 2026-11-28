@@ -1,3 +1,4 @@
+using Knock.Hosting.Data;
 using Knock.Identity.Api.Hosting;
 
 namespace Knock.Identity.Api.Modules.Sesiones.Data;
@@ -14,6 +15,7 @@ internal static class SesionesDataExtensions
         services.AddKnockMongoDatabase(ModuleKey);
         services.AddSingleton<SesionesStore>();
         services.AddSingleton<ISesionesStore>(provider => provider.GetRequiredService<SesionesStore>());
+        services.AddSingleton<ISesionesSuspensionStore>(provider => provider.GetRequiredService<SesionesStore>());
         return services;
     }
 }

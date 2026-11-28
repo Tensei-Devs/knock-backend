@@ -1,5 +1,6 @@
 using Knock.Market.Api.Common.TareasProgramadas;
 using Knock.Market.Api.Modules.Requests.Domain;
+using Knock.Market.Api.Modules.Requests.Services;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -64,6 +65,29 @@ internal sealed class RepartoStore(
                 await new TareasProgramadasStore(database).ScheduleAsync(tx, "RepartirOleada", id, wave + 1, now, now, ct);
             return true;
         }, cancellationToken: token);
+    }
+
+    /// <summary>
+    /// «Pedir también a otros» (spec 048, R-10): marca la oleada siguiente como pedida y programa su reparto para ahora, en una sola transacción. La marca <c>ampliadaHacia</c>
+    /// impide pedir dos veces la misma oleada; sin ella, repetir la petición daría el mismo resultado sin duplicar la tarea.
+    /// </summary>
+    public async Task<ExtendStatus> ExtendAsync(ObjectId id, string clientId, int maxWaves, DateTime now, CancellationToken token)
+    {
+        var f = Builders<BsonDocument>.Filter;
+        var request = await Requests.Find(f.Eq("_id", id) & f.Eq("clienteId", clientId)).FirstOrDefaultAsync(token);
+        if (request is null) return ExtendStatus.NotFound;
+        var wave = request.GetValue("oleadaActual", 0).ToInt32();
+        if (wave < 1 || wave >= maxWaves) return ExtendStatus.NotExtendable;
+        using var session = await database.Client.StartSessionAsync(cancellationToken: token);
+        var extended = await session.WithTransactionAsync(async (tx, ct) =>
+        {
+            var filter = Open(id, now) & f.Eq("clienteId", clientId) & f.Eq("oleadaActual", wave) & f.Ne("ampliadaHacia", wave + 1);
+            var updated = await Requests.UpdateOneAsync(tx, filter, Builders<BsonDocument>.Update.Set("ampliadaHacia", wave + 1), cancellationToken: ct);
+            if (updated.ModifiedCount != 1) return false;
+            await new TareasProgramadasStore(database).ScheduleAsync(tx, "RepartirOleada", id, wave + 1, now, now, ct);
+            return true;
+        }, cancellationToken: token);
+        return extended ? ExtendStatus.Extended : ExtendStatus.NotExtendable;
     }
 
     private static FilterDefinition<BsonDocument> Open(ObjectId id, DateTime now)

@@ -21,9 +21,11 @@ internal enum CreateRequestStatus
     PhotoInvalid,
     ContentRejected,
     ModerationUnavailable,
+    ModerationLimit,
 }
 
-internal sealed record CreateRequestOutcome(CreateRequestStatus Status, RequestResponse? Request = null);
+/// <summary><paramref name="RetryAfterSeconds"/> acompaña a 429 y 503 de moderación (spec 031, R-13).</summary>
+internal sealed record CreateRequestOutcome(CreateRequestStatus Status, RequestResponse? Request = null, int? RetryAfterSeconds = null);
 
 /// <summary>
 /// Crear, listar y ver solicitudes (spec 020, HU-024). Aplica las reglas del catálogo, las fotos, la moderación, el cifrado de la dirección y el buzón de salida, y arma
@@ -40,7 +42,8 @@ internal sealed class SolicitudService(
     IQuoteRequestReader quoteRequests,
     TimeProvider clock,
     EnviosStore? sends = null,
-    IOptions<OleadasOptions>? waves = null)
+    IOptions<OleadasOptions>? waves = null,
+    IOptions<SolicitudesOptions>? deadlines = null)
 {
     private const string _domicile = "domicilio";
     private const string _workshop = "taller";
@@ -73,7 +76,7 @@ internal sealed class SolicitudService(
             return new CreateRequestOutcome(CreateRequestStatus.AddressNotApplicable);
         }
 
-        var photoIds = body.Fotos!.Select(id => ObjectId.Parse(id).ToString()).ToList();
+        var photoIds = body.Fotos!.Select(id => PhotoIds.TryParse(id, out var file) ? PhotoIds.Canonical(file) : string.Empty).ToList();
         if (!await photos.AreReadyForAsync(clientId, photoIds, cancellationToken))
         {
             return new CreateRequestOutcome(CreateRequestStatus.PhotoInvalid);
@@ -82,7 +85,13 @@ internal sealed class SolicitudService(
         var review = await moderator.ReviewTextAsync(body.Descripcion!.Trim(), cancellationToken);
         if (review.Outcome != ModerationOutcome.Allowed)
         {
-            return new CreateRequestOutcome(review.Outcome == ModerationOutcome.Rejected ? CreateRequestStatus.ContentRejected : CreateRequestStatus.ModerationUnavailable);
+            var status = review.Outcome switch
+            {
+                ModerationOutcome.Rejected => CreateRequestStatus.ContentRejected,
+                ModerationOutcome.LimitReached => CreateRequestStatus.ModerationLimit,
+                _ => CreateRequestStatus.ModerationUnavailable,
+            };
+            return new CreateRequestOutcome(status, RetryAfterSeconds: review.RetryAfterSeconds);
         }
 
         var now = clock.GetUtcNow();
@@ -102,7 +111,7 @@ internal sealed class SolicitudService(
             colonia.Value.Cp,
             hasAddress ? cipher.Encrypt(body.Direccion!.Trim(), AddressContext(id)) : null,
             RequestState.Enviada,
-            RequestRules.ExpiresAt(now).UtcDateTime,
+            RequestRules.ExpiresAt(now, deadlines?.Value.HorasVencimiento ?? RequestRules.LifetimeHours).UtcDateTime,
             now.UtcDateTime,
             body.ElementoId is null ? null : ObjectId.Parse(body.ElementoId).ToString());
         var message = OutboxMessage.Create(
@@ -112,14 +121,18 @@ internal sealed class SolicitudService(
             now.UtcDateTime);
 
         await store.InsertAsync(record, message, cancellationToken);
-        return new CreateRequestOutcome(CreateRequestStatus.Created, await ClientViewAsync(record, totalQuotes: 0, cancellationToken));
+        return new CreateRequestOutcome(
+            CreateRequestStatus.Created,
+            (await ClientViewAsync(clientId, record, totalQuotes: 0, cancellationToken))
+                with
+            { PuedeVolverAPedir = null });
     }
 
-    /// <summary>Solicitudes del cliente, de la más reciente a la más antigua. Un cursor que no se puede decodificar lanza 400 <c>invalid_cursor</c>.</summary>
+    /// <summary>Solicitudes del cliente, activas primero y cada grupo de la más reciente a la más antigua. Un cursor que no se puede decodificar lanza 400 <c>invalid_cursor</c>.</summary>
     public async Task<RequestPage> ListAsync(string clientId, ListRequestsQuery query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
-        (DateTime, ObjectId)? after = string.IsNullOrEmpty(query.Cursor) ? null : RequestCursor.Decode(query.Cursor);
+        (int, DateTime, ObjectId)? after = string.IsNullOrEmpty(query.Cursor) ? null : RequestCursor.DecodeGrouped(query.Cursor);
         var page = await store.ListAsync(clientId, query.Estado, after, query.Limit, cancellationToken);
         var ids = page.Items.Select(item => item.Id).ToList();
         var totals = await store.CountLiveQuotesAsync(ids, cancellationToken);
@@ -159,10 +172,16 @@ internal sealed class SolicitudService(
         if (string.Equals(record.ClienteId, sub, StringComparison.Ordinal))
         {
             var totals = await store.CountLiveQuotesAsync([record.Id], cancellationToken);
-            return await ClientViewAsync(record, totals.GetValueOrDefault(record.Id), cancellationToken);
+            return await ClientViewAsync(sub, record, totals.GetValueOrDefault(record.Id), cancellationToken);
         }
 
-        return await TechnicianMaySeeAsync(sub, record, cancellationToken) ? await TechnicianViewAsync(record, cancellationToken) : null;
+        // Spec 029, R-13 y CA-10: una solicitud cancelada o vencida la ven su dueño y el técnico elegido (su visita se canceló o alguien faltó); los demás reciben 404.
+        if (TransicionesDeSolicitud.IsClosedWithoutAppointment(record.Estado))
+        {
+            return await store.WasChosenAsync(sub, record.Id, cancellationToken) ? await TechnicianViewAsync(sub, record, cancellationToken) : null;
+        }
+
+        return await TechnicianMaySeeAsync(sub, record, cancellationToken) ? await TechnicianViewAsync(sub, record, cancellationToken) : null;
     }
 
     /// <summary>Elegibilidad base (R-23), verificada en cada petición: técnico activo y visible, y o ya cotizó, o tiene el oficio, atiende la colonia y la solicitud sigue cotizable.</summary>
@@ -196,11 +215,11 @@ internal sealed class SolicitudService(
             && snapshot.ExpiresAt > clock.GetUtcNow();
     }
 
-    private async Task<RequestResponse> ClientViewAsync(RequestRecord record, int totalQuotes, CancellationToken cancellationToken) =>
-        ToResponse(record, await photos.ReadLinksAsync(record.Fotos, cancellationToken), record.DireccionCifrada is null ? null : cipher.Decrypt(record.DireccionCifrada, AddressContext(record.Id)), totalQuotes);
+    private async Task<RequestResponse> ClientViewAsync(string sub, RequestRecord record, int totalQuotes, CancellationToken cancellationToken) =>
+        ToResponse(record, await photos.ReadLinksAsync(sub, record.Fotos, cancellationToken), record.DireccionCifrada is null ? null : cipher.Decrypt(record.DireccionCifrada, AddressContext(record.Id)), totalQuotes);
 
-    private async Task<RequestResponse> TechnicianViewAsync(RequestRecord record, CancellationToken cancellationToken) =>
-        ToResponse(record, await photos.ReadLinksAsync(record.Fotos, cancellationToken), address: null, totalQuotes: null);
+    private async Task<RequestResponse> TechnicianViewAsync(string sub, RequestRecord record, CancellationToken cancellationToken) =>
+        ToResponse(record, await photos.ReadLinksAsync(sub, record.Fotos, cancellationToken), address: null, totalQuotes: null);
 
     private static RequestResponse ToResponse(RequestRecord record, IReadOnlyList<RequestPhoto> links, string? address, int? totalQuotes) => new(
         record.Id.ToString(),
@@ -215,7 +234,9 @@ internal sealed class SolicitudService(
         address,
         totalQuotes,
         new DateTimeOffset(record.VenceEnUtc, TimeSpan.Zero),
-        new DateTimeOffset(record.CreadoEnUtc, TimeSpan.Zero));
+        new DateTimeOffset(record.CreadoEnUtc, TimeSpan.Zero),
+        // Solo la vista del cliente (la que trae totalCotizaciones) lo lleva: spec 029, R-13.
+        totalQuotes is null ? null : TransicionesDeSolicitud.IsClosedWithoutAppointment(record.Estado));
 
     /// <summary>La dirección va atada a su solicitud: copiada a otro documento no se descifra.</summary>
     internal static string AddressContext(ObjectId id) => $"solicitudes|direccion|{id}";

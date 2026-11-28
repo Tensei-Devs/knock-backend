@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using Knock.Gateway.Hosting;
+using Knock.Hosting.RateLimiting;
 using Knock.IntegrationTest.Support;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;

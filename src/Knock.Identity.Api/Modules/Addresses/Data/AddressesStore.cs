@@ -1,3 +1,4 @@
+using Knock.Hosting.Data;
 using Knock.Identity.Api.Hosting;
 using Knock.Identity.Api.Modules.Addresses.Domain;
 using Microsoft.Extensions.Options;

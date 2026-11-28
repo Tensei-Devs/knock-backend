@@ -1,10 +1,12 @@
 using System.Security.Cryptography;
 using System.Text;
+using Knock.Hosting.RateLimiting;
 using Knock.Identity.Api.Common.Errors;
 using Knock.Identity.Api.Hosting;
 using Knock.Identity.Api.Modules.Panel.Data;
 using Knock.Identity.Api.Modules.Panel.Domain;
 using Knock.Identity.Api.Modules.Sesiones.Services;
+
 
 namespace Knock.Identity.Api.Modules.Panel.Services;
 
@@ -47,8 +49,45 @@ internal sealed partial class AuditoriaPanel(
         string? resourceId = null,
         CancellationToken cancellationToken = default)
     {
+        var entry = BuildEntry(type, eventName, result, sub, sid, permission, route, resourceId);
+        await InsertAsync(eventName, () => store.InsertAsync(entry, cancellationToken));
+    }
+
+    /// <summary>
+    /// Igual que <see cref="WriteAsync"/> pero dentro de la transacción de MongoDB de quien llama (spec 053, R-22): el registro y el cambio se confirman juntos o ninguno.
+    /// </summary>
+    /// <exception cref="DomainException">503 <c>audit_unavailable</c> si la escritura falla.</exception>
+    public async Task WriteInTransactionAsync(
+        StoreTransaction transaction,
+        string type,
+        string eventName,
+        string result,
+        string? sub,
+        string? resourceId,
+        CancellationToken cancellationToken)
+    {
+        var entry = BuildEntry(type, eventName, result, sub, null, null, null, resourceId);
+        var transactional = store as IPanelAuditoriaEnTransaccion ?? throw new InvalidOperationException("The audit store does not support transactions.");
+        await InsertAsync(eventName, () => transactional.InsertAsync(entry, transaction, cancellationToken));
+    }
+
+    /// <summary>
+    /// Escribe el evento una sola vez por <paramref name="eventId"/> (spec 061, R-06): el identificador del evento es el <c>_id</c> del registro. <see langword="false"/> si ya estaba escrito.
+    /// </summary>
+    /// <exception cref="DomainException">503 <c>audit_unavailable</c> si la escritura falla.</exception>
+    public async Task<bool> WriteOnceAsync(string eventId, string type, string eventName, string result, string? sub, string? permission, string? resourceId, CancellationToken cancellationToken)
+    {
+        var entry = BuildEntry(type, eventName, result, sub, null, permission, null, resourceId);
+        var once = store as IPanelAuditoriaUnica ?? throw new InvalidOperationException("The audit store does not support single writes.");
+        var written = false;
+        await InsertAsync(eventName, async () => written = await once.InsertOnceAsync(entry, eventId, cancellationToken));
+        return written;
+    }
+
+    private PanelAuditEntry BuildEntry(string type, string eventName, string result, string? sub, string? sid, string? permission, string? route, string? resourceId)
+    {
         var (ipHmac, correlationId) = RequestOrigin();
-        var entry = new PanelAuditEntry(
+        return new PanelAuditEntry(
             timeProvider.GetUtcNow().UtcDateTime,
             type,
             eventName,
@@ -60,9 +99,13 @@ internal sealed partial class AuditoriaPanel(
             permission,
             route,
             IsSafeResourceId(resourceId) ? resourceId : null);
+    }
+
+    private async Task InsertAsync(string eventName, Func<Task> insert)
+    {
         try
         {
-            await store.InsertAsync(entry, cancellationToken);
+            await insert();
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -82,7 +125,7 @@ internal sealed partial class AuditoriaPanel(
             return (CliOrigin, Guid.NewGuid().ToString("N"));
         }
 
-        return (ipHasher.Hash(RateLimitingExtensions.ClientKey(context)), CorrelationId.Current(context) ?? context.TraceIdentifier);
+        return (ipHasher.Hash(RequestKeys.ClientKey(context)), CorrelationId.Current(context) ?? context.TraceIdentifier);
     }
 
     // El registro técnico lleva solo el nombre del evento: ni sub, sid, IP ni datos de la petición.

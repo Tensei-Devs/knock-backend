@@ -24,7 +24,9 @@ permissions:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Solo los pull_request cancelan runs viejos del mismo PR; los push a ramas fijas (sprint-*, main, release, develop) terminan,
+  # porque cada merge cancelaba el run completo del push anterior. El group ya distingue PR (refs/pull/N/merge) de push (refs/heads/X).
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   DOTNET_NOLOGO: "true"
@@ -46,6 +48,7 @@ jobs:
       identity: ${{ steps.d.outputs.identity }}
       messaging: ${{ steps.d.outputs.messaging }}
       market: ${{ steps.d.outputs.market }}
+      docsonly: ${{ steps.d.outputs.docsonly }}
       spec: ${{ steps.d.outputs.spec }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -57,6 +60,7 @@ jobs:
           HEAD_REF: ${{ github.head_ref }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           EVENT_BEFORE: ${{ github.event.before }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           {
             echo "api=$([ -f Knock.slnx ] && echo true || echo false)"
@@ -77,17 +81,20 @@ jobs:
           if [ -z "$BASE_SHA" ]; then
             # Push: `before` cubre todos los commits del push, no solo el último. `before` de ceros =
             # rama nueva: no hay base y se considera que cambió todo.
-            if [ -n "$EVENT_BEFORE" ] && [ "$EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+              # Disparo manual: no hay `before` ni base; se corre todo (sin esto caía a HEAD~1 y podía omitir el API).
+              CHANGED="__ALL__"
+            elif [ -n "$EVENT_BEFORE" ] && [ "$EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
               CHANGED=$(git diff --name-only "$EVENT_BEFORE" HEAD 2>/dev/null || echo "__ALL__")
             else
-              CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "__ALL__")
+              CHANGED="__ALL__"
             fi
           fi
           # Cambios por servicio (KNOCK-202): solo se construye lo afectado. Un cambio en los
-          # contratos compartidos (Knock.Contracts) o en archivos compartidos de compilación
+          # contratos compartidos (Knock.Contracts), en las bibliotecas técnicas (Knock.Hosting, Knock.Hosting.Data y Knock.Hosting.Mvc) o en archivos compartidos de compilación
           # (Directory.Build.*, Directory.Packages.props, global.json, NuGet.config, *.sln/*.slnx,
           # *.props/*.targets) afecta a los cuatro servicios.
-          SHARED='^src/Knock\.Contracts/|^Directory\.|\.(slnx?|props|targets)$|^global\.json$|^[Nn]u[Gg]et\.config$'
+          SHARED='^src/Knock\.Contracts/|^src/Knock\.Hosting(\.Data|\.Mvc)?/|^Directory\.|\.(slnx?|props|targets)$|^global\.json$|^[Nn]u[Gg]et\.config$'
           hit() { [ "$CHANGED" = "__ALL__" ] || grep -qE "$1" <<<"$CHANGED"; }
           {
             echo "gateway=$(hit "^src/Knock\.Gateway/|$SHARED" && echo true || echo false)"
@@ -95,6 +102,15 @@ jobs:
             echo "messaging=$(hit "^src/Knock\.Messaging\.Api/|$SHARED" && echo true || echo false)"
             echo "market=$(hit "^src/Knock\.Market\.Api/|$SHARED" && echo true || echo false)"
           } >> "$GITHUB_OUTPUT"
+          # Solo documentos: ningún archivo cambiado fuera de docs/ (salvo docs/openapi*.json, que es contrato),
+          # specs/, *.md, db/README.md y Memoria.md. Con lista vacía o «__ALL__» NO es solo documentos (falla cerrado).
+          # Solo se salta el job «API — build, formato y pruebas»; contrato, SAST, Gitleaks y gobierno siguen.
+          DOCS_ONLY=false
+          if [ -n "$CHANGED" ] && [ "$CHANGED" != "__ALL__" ]             && ! grep -vE '^(docs/|specs/)|\.md$|^db/README\.md$|^Memoria\.md$' <<<"$CHANGED" | grep -q .             && ! grep -qE '^docs/openapi[^/]*\.json$' <<<"$CHANGED"; then
+            DOCS_ONLY=true
+            echo "::notice::PR solo de documentos: se omite el job API."
+          fi
+          echo "docsonly=$DOCS_ONLY" >> "$GITHUB_OUTPUT"
           if [ -n "$SPEC" ] && [ -n "$BASE_SHA" ] && ! grep -qE '^(src|tests)/' <<<"$CHANGED"; then
             echo "::notice::PR sin cambios de código ni pruebas: se omite la trazabilidad de $SPEC."
             SPEC=""
@@ -163,9 +179,9 @@ jobs:
   build-test:
     name: API — build, formato y pruebas
     needs: detect
-    if: needs.detect.outputs.api == 'true'
+    if: needs.detect.outputs.api == 'true' && needs.detect.outputs.docsonly != 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -188,36 +204,107 @@ jobs:
         run: dotnet test tests/UnitTest -c Release --no-build --filter "Category=Performance" --results-directory reports/performance --logger trx
       - name: Arquitectura (fronteras entre servicios)
         run: dotnet test tests/ArchitectureTest -c Release --no-build --logger trx --results-directory reports/architecture
-      # TT-CI-03 (KNOCK-139): emulador de Firebase Auth para las pruebas de inicio de sesión. Sin Java ni credenciales:
-      # solo el proyecto ficticio demo-knock. firebase-tools queda fijado a una versión exacta (15.34.0).
       - name: Emulador de Firebase Auth
-        run: |
-          cfg="$RUNNER_TEMP/firebase-emulator"
-          mkdir -p "$cfg"
-          cat > "$cfg/firebase.json" <<'JSON'
-          {"emulators":{"auth":{"host":"127.0.0.1","port":9099},"ui":{"enabled":false}}}
-          JSON
-          (cd "$cfg" && nohup npx --yes firebase-tools@15.34.0 emulators:start --only auth --project demo-knock > "$cfg/emulator.log" 2>&1 &)
-          for _ in $(seq 1 90); do
-            curl -fsS http://127.0.0.1:9099/ > /dev/null 2>&1 && break
-            sleep 1
-          done
-          if ! curl -fsS http://127.0.0.1:9099/ > /dev/null 2>&1; then
-            echo "::error::El emulador de Firebase Auth no respondió en 90 s"
-            cat "$cfg/emulator.log"
-            exit 1
-          fi
-          echo "FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099" >> "$GITHUB_ENV"
-      - name: Integración (Redis y Azurite con Testcontainers)
-        run: dotnet test tests/IntegrationTest -c Release --no-build --collect:"XPlat Code Coverage" --results-directory reports/integration --logger trx
+        run: bash scripts/ci/firebase_emulator.sh
       - name: Seguridad negativa
         run: dotnet test tests/SecurityTest -c Release --no-build --collect:"XPlat Code Coverage" --results-directory reports/security --logger trx
-      - name: Base de datos (semillas y restricciones)
-        if: hashFiles('tests/DatabaseTest/*.csproj') != ''
-        run: dotnet test tests/DatabaseTest -c Release --no-build --logger trx --results-directory reports/database
       - name: Contrato (captura del wire)
         if: hashFiles('tests/ContractTest/*.csproj') != ''
         run: dotnet test tests/ContractTest -c Release --no-build --logger trx --results-directory reports/contract
+      - name: Contrato OpenAPI regenerado y sin cambios pendientes
+        if: hashFiles('scripts/export_openapi.py') != ''
+        run: |
+          python3 scripts/export_openapi.py --no-build
+          python3 scripts/export_openapi.py --no-build --service identity
+          python3 scripts/export_openapi.py --no-build --service messaging
+          # Spec 034 R-13 y R-15: el contrato público sale de los tres de servicio y de las rutas del gateway (sin compilar).
+          python3 scripts/export_openapi.py --publico
+          python3 scripts/export_openapi.py --comprobar-publico
+          git diff --exit-code --name-only -- docs/openapi.v1.json docs/openapi.identity.v1.json docs/openapi.messaging.v1.json docs/openapi.publico.v1.json || { echo "::error::Los contratos listados arriba cambiaron: regénéralos con scripts/export_openapi.py (--service ... y --publico) y súbelos con el código."; exit 1; }
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: always()
+        with:
+          name: api-reports-build
+          path: reports/
+          if-no-files-found: ignore
+
+  # Integración, base de datos y cobertura van en jobs aparte (KNOCK-266): en un solo job sumaban 51 a 55 de sus 60 minutos.
+  # El gate exige los cuatro en verde cuando hay código: aquí un «skipped» no basta.
+  test-integration:
+    name: API — integración
+    needs: detect
+    if: needs.detect.outputs.api == 'true' && needs.detect.outputs.docsonly != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+      - run: dotnet restore Knock.slnx --locked-mode
+      - run: dotnet build tests/IntegrationTest -c Release --no-restore -warnaserror
+      - name: Emulador de Firebase Auth
+        run: bash scripts/ci/firebase_emulator.sh
+      - name: Integración (Redis y Azurite con Testcontainers)
+        run: dotnet test tests/IntegrationTest -c Release --no-build --collect:"XPlat Code Coverage" --results-directory reports/integration --logger trx
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: always()
+        with:
+          name: api-reports-integration
+          path: reports/
+          if-no-files-found: ignore
+
+  test-database:
+    name: API — base de datos
+    needs: detect
+    if: needs.detect.outputs.api == 'true' && needs.detect.outputs.docsonly != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+      - run: dotnet restore Knock.slnx --locked-mode
+      - if: hashFiles('tests/DatabaseTest/*.csproj') != ''
+        run: dotnet build tests/DatabaseTest -c Release --no-restore -warnaserror
+      - name: Base de datos (semillas y restricciones)
+        if: hashFiles('tests/DatabaseTest/*.csproj') != ''
+        run: dotnet test tests/DatabaseTest -c Release --no-build --logger trx --results-directory reports/database
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: always()
+        with:
+          name: api-reports-database
+          path: reports/
+          if-no-files-found: ignore
+
+  coverage:
+    name: API — cobertura combinada
+    needs: [detect, build-test, test-integration]
+    if: needs.detect.outputs.api == 'true' && needs.detect.outputs.docsonly != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+      - name: Restaurar herramientas de .NET
+        run: dotnet tool restore
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: api-reports-build
+          path: reports
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: api-reports-integration
+          path: reports
       # Se excluye solo el código que genera el compilador (interceptores de OpenAPI y atributos): no es código de Knock
       # y no se puede probar. Los umbrales de MIN_LINES y MIN_BRANCHES no cambian.
       - name: Cobertura combinada
@@ -227,12 +314,7 @@ jobs:
       - name: Resumen en el PR
         if: always()
         run: cat reports/coverage/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
-      - name: Contrato OpenAPI regenerado y sin cambios pendientes
-        if: hashFiles('scripts/export_openapi.py') != ''
-        run: |
-          python3 scripts/export_openapi.py --no-build
-          python3 scripts/export_openapi.py --no-build --service identity
-          git diff --exit-code -- docs/openapi.v1.json docs/openapi.identity.v1.json || { echo "::error::El contrato (docs/openapi.v1.json o docs/openapi.identity.v1.json) cambió: regénéralo con scripts/export_openapi.py y súbelo con el código."; exit 1; }
+      # Conserva el nombre y la estructura que lee sonarcloud.yml (reports/coverage/Cobertura.xml).
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
@@ -353,20 +435,29 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Contrato base vs PR
+      # Spec 034 R-15 / CA-12: oasdiff compara cada contrato de servicio con el de la rama destino. Un cambio incompatible falla,
+      # salvo con la etiqueta `contrato-incompatible`: entonces pasa y la lista de cambios queda en el resumen del PR.
+      - name: Contratos base vs PR (oasdiff)
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: |
-          git show "$BASE_SHA:docs/openapi.v1.json" > base.json 2>/dev/null || { echo "Contrato nuevo: nada que comparar"; exit 0; }
-          [ -f docs/openapi.v1.json ] || exit 0
-          docker run --rm -v "$PWD":/w -w /w tufin/oasdiff breaking base.json docs/openapi.v1.json --fail-on ERR
-      - name: Contrato de Identity base vs PR
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          git show "$BASE_SHA:docs/openapi.identity.v1.json" > base.identity.json 2>/dev/null || { echo "Contrato de Identity nuevo: nada que comparar"; exit 0; }
-          [ -f docs/openapi.identity.v1.json ] || exit 0
-          docker run --rm -v "$PWD":/w -w /w tufin/oasdiff breaking base.identity.json docs/openapi.identity.v1.json --fail-on ERR
+          permitido=false
+          if echo "$PR_LABELS" | grep -q '"contrato-incompatible"'; then permitido=true; fi
+          malos=0
+          for f in openapi.v1.json openapi.identity.v1.json openapi.messaging.v1.json openapi.publico.v1.json; do
+            [ -f "docs/$f" ] || continue
+            git show "$BASE_SHA:docs/$f" > "base.$f" 2>/dev/null || { echo "docs/$f es nuevo: nada que comparar"; continue; }
+            if ! docker run --rm -v "$PWD":/w -w /w tufin/oasdiff breaking "base.$f" "docs/$f" --fail-on ERR > "diff.$f.txt"; then
+              malos=1
+              { echo "### Cambios incompatibles en docs/$f"; echo '```'; cat "diff.$f.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+              cat "diff.$f.txt"
+            fi
+          done
+          if [ "$malos" = 1 ] && [ "$permitido" != true ]; then
+            echo "::error::Cambio incompatible en el contrato. Si es intencional, el PR necesita la etiqueta contrato-incompatible."; exit 1
+          fi
+          if [ "$malos" = 1 ]; then echo "::warning::Cambios incompatibles aceptados por la etiqueta contrato-incompatible (ver el resumen)."; fi
 
   iac:
     name: IaC, Dockerfile y workflows (Checkov)
@@ -386,7 +477,7 @@ jobs:
 
   container:
     name: Contenedor (build, Trivy, Dockle)
-    needs: [detect, build-test]
+    needs: [detect, build-test, test-integration, test-database, coverage]
     if: needs.detect.outputs.docker == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -447,13 +538,20 @@ jobs:
           persist-credentials: false
       - name: Credenciales efímeras de la pila (no se imprimen)
         run: |
-          DB=$(openssl rand -hex 24); JWT=$(openssl rand -hex 32)
-          echo "::add-mask::$DB"; echo "::add-mask::$JWT"
-          echo "CI_DB_PASSWORD=$DB" >> "$GITHUB_ENV"; echo "CI_JWT_KEY=$JWT" >> "$GITHUB_ENV"
-      - name: Levantar API + Redis + Azurite
+          for v in CI_DB_PASSWORD:hex:24 CI_REDIS_PASSWORD:hex:24 CI_JWT_KEY:b64:32 CI_KEY_A:b64:32 CI_KEY_B:b64:32 CI_KEY_C:b64:32 CI_KEY_D:b64:32 CI_KEY_E:b64:32 CI_KEY_F:b64:32 CI_KEY_G:b64:32 CI_BLOB_KEY:b64:32; do
+            IFS=: read -r nombre tipo largo <<<"$v"
+            if [ "$tipo" = hex ]; then valor=$(openssl rand -hex "$largo"); else valor=$(openssl rand -base64 "$largo"); fi
+            echo "::add-mask::$valor"; echo "$nombre=$valor" >> "$GITHUB_ENV"
+          done
+      - name: Datos ficticios (índices y catálogo de ejemplo con db/entrega.js)
         run: |
-          docker compose -f deploy/docker-compose.ci.yml up -d --build
-          for _ in $(seq 1 40); do curl -fs http://localhost:8080/health/ready && break; sleep 3; done
+          docker compose -f deploy/docker-compose.ci.yml up -d --wait --wait-timeout 300 documentdb redis
+          docker compose -f deploy/docker-compose.ci.yml run -T seed
+      - name: Levantar gateway, Identidad, Mercado, Mensajería, MongoDB (documentdb-local), Redis y Azurite
+        run: |
+          docker compose -f deploy/docker-compose.ci.yml up -d --build --wait --wait-timeout 600             || { docker compose -f deploy/docker-compose.ci.yml ps; docker compose -f deploy/docker-compose.ci.yml logs --no-color --tail 80 gateway identity market messaging; exit 1; }
+      - name: Autoprueba del humo (TC-BUG-001-04)
+        run: bash tests/smoke/smoke_test.sh
       - name: Smoke (health, 401 sin token, headers de seguridad)
         run: bash tests/smoke/smoke.sh http://localhost:8080
       - name: ZAP baseline
@@ -463,6 +561,23 @@ jobs:
           rules_file_name: security/zap-rules.tsv
           allow_issue_writing: false
           fail_action: true
+      # KNOCK-266: segundo escaneo, también pasivo y con las mismas reglas, sobre una lista de rutas con y sin sesión.
+      - name: Sesiones ficticias para ZAP (llave efímera del job)
+        run: python3 tests/smoke/dast_sesion.py dast-sesion.json
+      - name: ZAP baseline con rutas y sesión ficticia
+        uses: zaproxy/action-baseline@de8ad967d3548d44ef623df22cf95c3b0baf8b25 # v0.15.0
+        with:
+          target: http://localhost:8080
+          rules_file_name: security/zap-rules.tsv
+          cmd_options: --hook /zap/wrk/tests/smoke/zap_rutas.py -P 8099
+          artifact_name: zap_scan_sesion
+          allow_issue_writing: false
+          fail_action: true
+      # Si ZAP no encuentra el hook solo avisa y termina en verde: sin el resumen de rutas, el paso falla.
+      - name: Comprobar que ZAP recorrió las rutas
+        run: |
+          test -s dast-rutas.txt || { echo "::error::ZAP no recorrió las rutas de tests/smoke/zap_rutas.py"; exit 1; }
+          cat dast-rutas.txt
       - name: Apagar
         if: always()
         run: docker compose -f deploy/docker-compose.ci.yml down -v
@@ -470,7 +585,7 @@ jobs:
   gate:
     name: gate
     if: always()
-    needs: [detect, pr-meta, pr-points, governance, build-test, sast, sca, secrets, openapi-diff, iac, container, dast]
+    needs: [detect, pr-meta, pr-points, governance, build-test, test-integration, test-database, coverage, sast, sca, secrets, openapi-diff, iac, container, dast]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -484,5 +599,13 @@ jobs:
           for k, v in needs.items():
               print(f"{k}: {v['result']}")
           bad = {k: v["result"] for k, v in needs.items() if v["result"] not in ("success", "skipped")}
+          outputs = needs["detect"]["outputs"]
+          if outputs.get("api") == "true" and outputs.get("docsonly") != "true":
+              # Con código, las pruebas y la cobertura no pueden quedar omitidas (KNOCK-266).
+              for job in ("build-test", "test-integration", "test-database", "coverage"):
+                  if needs[job]["result"] != "success":
+                      bad[job] = needs[job]["result"]
+          if needs["detect"]["outputs"].get("docker") == "true" and needs["detect"]["outputs"].get("dast") != "true":
+              sys.exit("BUG-001: falta deploy/docker-compose.ci.yml o tests/smoke/smoke.sh; el humo y el DAST no pueden saltarse")
           sys.exit(f"Fallaron: {bad}" if bad else 0)
           EOF

@@ -46,6 +46,7 @@ public sealed class Spec027BusquedaSecurityTests
             ["ConnectionStrings:KnockMongo"] = new MongoUrlBuilder { Server = new MongoServerAddress("127.0.0.1", 1), ServerSelectionTimeout = TimeSpan.FromMilliseconds(500) }.ToString(),
             ["Mongo:Databases:Catalog"] = "market_offline",
             ["Mongo:Databases:Requests"] = "market_offline",
+            ["Imagenes:BaseUrlPublica"] = "https://localhost/imagenes-publicas",
         };
         using var factory = new SecurityMarketFactory(settings, "Production");
         using var client = factory.CreateClient();

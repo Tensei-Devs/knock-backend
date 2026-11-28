@@ -1,12 +1,9 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Security.Cryptography;
 using System.Text.Json;
 using Knock.Identity.Api.Hosting;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.JsonWebTokens;
-using Microsoft.IdentityModel.Tokens;
 
 namespace Knock.Identity.Api.Modules.HomeAndCar.Services;
 
@@ -54,12 +51,12 @@ internal interface IMarketHistory
 /// </summary>
 internal sealed class MarketHistoryClient(HttpClient http, IOptions<MarketHistoryOptions> options, IHttpContextAccessor accessor, TimeProvider clock) : IMarketHistory
 {
-    public const string Issuer = "knock-identity";
-    public const string Audience = "knock-market";
+    public const string Issuer = ServiceTokenIssuer.MarketIssuer;
+    public const string Audience = ServiceTokenIssuer.MarketAudience;
     public const string HistoryPermission = "historial";
     public const string InvalidCursorProblem = "invalid_cursor";
-    public const int MinKeyBytes = 32;
-    public static readonly TimeSpan TokenLifetime = TimeSpan.FromMinutes(1);
+    public const int MinKeyBytes = ServiceTokenIssuer.MinKeyBytes;
+    public static readonly TimeSpan TokenLifetime = ServiceTokenIssuer.Lifetime;
 
     public async Task<HistoryResult> ListAsync(string clientId, string elementId, string? cursor, int limit, CancellationToken cancellationToken)
     {
@@ -105,44 +102,10 @@ internal sealed class MarketHistoryClient(HttpClient http, IOptions<MarketHistor
         }
     }
 
-    internal static byte[]? ReadKey(string? configured)
-    {
-        if (string.IsNullOrWhiteSpace(configured))
-        {
-            return null;
-        }
+    internal static byte[]? ReadKey(string? configured) => ServiceTokenIssuer.ReadKey(configured);
 
-        try
-        {
-            var key = Convert.FromBase64String(configured);
-            return key.Length >= MinKeyBytes ? key : null;
-        }
-        catch (FormatException)
-        {
-            return null;
-        }
-    }
-
-    private string IssueToken(byte[] key, string clientId, string elementId)
-    {
-        var now = clock.GetUtcNow().UtcDateTime;
-        return new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
-        {
-            Issuer = Issuer,
-            Audience = Audience,
-            Claims = new Dictionary<string, object>
-            {
-                ["jti"] = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16)),
-                ["permisos"] = new[] { HistoryPermission },
-                ["usuarioId"] = clientId,
-                ["elementoId"] = elementId,
-            },
-            IssuedAt = now,
-            NotBefore = now,
-            Expires = now + TokenLifetime,
-            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256),
-        });
-    }
+    private string IssueToken(byte[] key, string clientId, string elementId) =>
+        ServiceTokenIssuer.IssueForMarket(key, HistoryPermission, new Dictionary<string, string> { ["usuarioId"] = clientId, ["elementoId"] = elementId }, clock.GetUtcNow().UtcDateTime);
 
     private static async Task<bool> IsInvalidCursorAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {

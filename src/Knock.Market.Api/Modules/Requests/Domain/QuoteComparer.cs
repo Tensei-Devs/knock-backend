@@ -21,7 +21,8 @@ internal sealed record QuoteToCompare(
     string TecnicoNombre,
     string? TecnicoFotoUrl,
     double? Calificacion,
-    string NivelVerificacion)
+    string NivelVerificacion,
+    string? TecnicoUsuarioId = null)
 {
     public bool Verificado => NivelVerificacion != QuoteComparer.NoVerification;
 

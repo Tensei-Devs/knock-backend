@@ -104,8 +104,18 @@ run "imagenes_publicas_CA_23" {
   }
 
   assert {
-    condition     = one([for r in azurerm_storage_management_policy.quarantine.rule : one([for a in r.actions : one(a.base_blob).delete_after_days_since_creation_greater_than])]) == 1
+    condition     = one([for r in azurerm_storage_management_policy.quarantine.rule : one([for a in r.actions : one(a.base_blob).delete_after_days_since_creation_greater_than]) if r.name == "borrar-cuarentena-de-imagenes"]) == 1
     error_message = "La cuarentena se borra al día."
+  }
+
+  assert {
+    condition     = azurerm_storage_container.private["exportaciones"].container_access_type == "private"
+    error_message = "`exportaciones` (spec 039, R-22) vive en la cuenta privada y es privado."
+  }
+
+  assert {
+    condition     = contains([for r in azurerm_storage_management_policy.quarantine.rule : r.name], "borrar-exportaciones-de-datos")
+    error_message = "Las exportaciones se borran a los 7 días (spec 039, R-22)."
   }
 
   assert {

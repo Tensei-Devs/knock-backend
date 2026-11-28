@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using AwesomeAssertions;
 using Knock.SecurityTest.Support;
 using MongoDB.Bson;
@@ -72,5 +73,48 @@ public class Spec039ExportApiTests
                 response.Dispose();
             }
         }
+    }
+
+    private static Task<HttpResponseMessage> LatestAsync(SecurityHosts hosts, string? token) =>
+        SecureHttp.SendAsync(hosts.IdentityClient, HttpMethod.Get, _path + "/ultima", bearer: token);
+
+    [Fact]
+    public async Task Latest_WithoutTokenOrWithAnExpiredOne_Returns401_CA_039_35()
+    {
+        var hosts = await SecurityHosts.SharedAsync();
+
+        using var anonymous = await LatestAsync(hosts, null);
+        using var expired = await LatestAsync(hosts, TokenForge.Expired());
+
+        await SecureHttp.AssertProblemAsync(anonymous, HttpStatusCode.Unauthorized);
+        await SecureHttp.AssertProblemAsync(expired, HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Latest_WhenThePersonNeverAskedForAnExport_Returns404ExportNotFound_CA_039_35()
+    {
+        var hosts = await SecurityHosts.SharedAsync();
+        var person = await hosts.Identity.SignInAsync(hosts.IdentityClient);
+
+        using var response = await LatestAsync(hosts, person.AccessToken);
+
+        var raw = await SecureHttp.AssertProblemAsync(response, HttpStatusCode.NotFound);
+        raw.Should().Contain("export_not_found");
+    }
+
+    [Fact]
+    public async Task Latest_WhileTheExportRuns_AnswersEnPreparacionWithoutALinkAndWithoutCache_CA_039_35()
+    {
+        var hosts = await SecurityHosts.SharedAsync();
+        var person = await hosts.Identity.SignInAsync(hosts.IdentityClient);
+        (await ExportAsync(hosts, person.AccessToken)).Dispose();
+
+        using var response = await LatestAsync(hosts, person.AccessToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Headers.CacheControl!.NoStore.Should().BeTrue();
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        body.RootElement.GetProperty("estado").GetString().Should().Be("en_preparacion");
+        body.RootElement.TryGetProperty("enlace", out _).Should().BeFalse("sin archivo listo no hay enlace");
     }
 }

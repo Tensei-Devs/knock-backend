@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using AwesomeAssertions;
+using Knock.Hosting.Data;
 using Knock.IntegrationTest.Support;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Requests.Data;
@@ -118,7 +119,7 @@ public sealed class Spec020QuoteStoreTests
             (await quotes.CountDocumentsAsync(Builders<BsonDocument>.Filter.Eq("solicitudId", id))).Should().Be(5);
             (await db.GetCollection<BsonDocument>("outbox").CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).Should().Be(5);
             var events = await db.GetCollection<BsonDocument>("outbox").Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
-            events.Should().OnlyContain(e => e["tipo"] == "CotizacionEnviada" && e["solicitudId"] == id);
+            events.Should().OnlyContain(e => e["tipo"] == "CotizacionEnviada" && e["datos"]["solicitudId"] == id.ToString());
             var request = await db.GetCollection<BsonDocument>("solicitudes").Find(Builders<BsonDocument>.Filter.Eq("_id", id)).FirstAsync();
             request["estado"].AsString.Should().Be("cotizando");
         }

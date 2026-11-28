@@ -35,7 +35,7 @@ public class Spec039DeletionTests
         }
     }
 
-    private sealed record Rig(AccountDeletionService Service, FakeAccountStore Store, Spec039Market Market, Spec039Verifier Verifier, NoCache Cache);
+    private sealed record Rig(AccountDeletionService Service, FakeAccountStore Store, Spec039Market Market, Spec039Verifier Verifier, NoCache Cache, Spec039Outbox Outbox);
 
     private static Rig Build(TimeSpan sessionAge = default, string state = AccountState.Active)
     {
@@ -46,7 +46,8 @@ public class Spec039DeletionTests
         var market = new Spec039Market();
         var verifier = new Spec039Verifier(new FirebaseIdentity(_uid, _phone));
         var cache = new NoCache();
-        return new Rig(new AccountDeletionService(store, market, verifier, phones, new ProfileCacheInvalidator(cache), new Spec039Clock(_now), NullLogger<AccountDeletionService>.Instance), store, market, verifier, cache);
+        var outbox = new Spec039Outbox();
+        return new Rig(new AccountDeletionService(store, market, outbox, verifier, phones, new ProfileCacheInvalidator(cache), new Spec039Clock(_now), NullLogger<AccountDeletionService>.Instance), store, market, verifier, cache, outbox);
     }
 
     private static DeleteAccountInput Input(string? token = null) => new(token);
@@ -64,6 +65,7 @@ public class Spec039DeletionTests
         account.DeleteAt.Should().Be(_now.UtcDateTime.AddDays(7));
         rig.Market.Cancelled.Should().Equal(_sub);
         rig.Cache.Removed.Should().Be(1);
+        rig.Outbox.DeletionTasks.Should().Equal((_sub, _now.UtcDateTime.AddDays(7)));
     }
 
     [Fact]

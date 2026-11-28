@@ -24,7 +24,8 @@ internal sealed record TechnicianProfileResponse(
     int? Anios,
     string? DescripcionCorta,
     IReadOnlyList<string> Oficios,
-    TechnicianProfileDetail? Detalle);
+    TechnicianProfileDetail? Detalle,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] string? TecnicoUsuarioId = null);
 
 /// <summary>
 /// Parte del perfil que solo ve una persona con sesión: descripción completa, forma de atención, radio a domicilio (<see langword="null"/> si solo atiende en

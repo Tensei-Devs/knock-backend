@@ -5,3 +5,6 @@ replicas = {
   messaging = { min = 2, max = 2 }
   market    = { min = 2, max = 2 }
 }
+
+# Evaluación corre como Production (valor por omisión de aspnetcore_environment) y con los recursos mínimos por servicio.
+aspnetcore_environment = "Production"

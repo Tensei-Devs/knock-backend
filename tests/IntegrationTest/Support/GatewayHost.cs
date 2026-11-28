@@ -25,6 +25,9 @@ internal sealed class GatewayHost : IAsyncDisposable
 
     public List<string> PathsSeen { get; } = [];
 
+    /// <summary>Encabezados de la última petición que recibió cualquiera de los servicios de mentira.</summary>
+    public Dictionary<string, string> LastHeadersSeen { get; private set; } = [];
+
     public static async Task<GatewayHost> StartAsync(
         IReadOnlyDictionary<string, string?>? settings = null,
         Action<IServiceCollection>? configureServices = null)
@@ -42,6 +45,7 @@ internal sealed class GatewayHost : IAsyncDisposable
                 (HttpContext context) =>
                 {
                     host.PathsSeen.Add(context.Request.Path.Value ?? string.Empty);
+                    host.LastHeadersSeen = context.Request.Headers.ToDictionary(pair => pair.Key, pair => pair.Value.ToString(), StringComparer.OrdinalIgnoreCase);
                     context.Response.Headers["X-Servicio"] = serviceName;
                     return Results.Ok(new { servicio = serviceName });
                 });

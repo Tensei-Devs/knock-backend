@@ -29,12 +29,7 @@ public class MongoAccessTests
     [Fact]
     public void MongoCollectionsOnlyInModuleDataAndClientOnlyInHosting_CA_003_02()
     {
-        Types.InAssembly(ModuleCatalog.ApiAssembly)
-            .That().ResideInNamespace("Knock.Market.Api.Hosting")
-            .And().HaveDependencyOnAny(MongoAccessRule.ClientType)
-            .GetTypes()
-            .Should().NotBeEmpty("el cliente compartido vive en Hosting; si no, la regla del cliente pasaría en vacío");
-
+        // El cliente compartido vive en Knock.Hosting.Data (spec 055): Mercado no lo toca. Que la regla puede fallar lo prueba el fixture que la viola.
         var result = MongoAccessRule.Evaluate(ModuleCatalog.ApiAssembly, "Knock.Market.Api");
 
         result.FailingTypes.Should().BeEmpty();

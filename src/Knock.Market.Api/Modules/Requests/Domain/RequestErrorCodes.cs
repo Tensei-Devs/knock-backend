@@ -10,6 +10,7 @@ internal static class RequestErrorCodes
     public const string PhotoInvalidCode = "photo_invalid";
     public const string ContentRejectedCode = "content_rejected";
     public const string ModerationUnavailableCode = "moderation_unavailable";
+    public const string ModerationLimitCode = "moderation_limit";
     public const string InvalidCursorCode = "invalid_cursor";
 
     // Comparar y elegir cotización (spec 021, §5).
@@ -18,5 +19,9 @@ internal static class RequestErrorCodes
     public const string RequestCancelledCode = "request_cancelled";
     public const string RequestWithoutQuotesCode = "request_without_quotes";
     public const string QuoteUnavailableCode = "quote_unavailable";
+    public const string RequestWithAppointmentCode = "request_with_appointment";
     public const string ServiceUnavailableCode = "service_unavailable";
+
+    // Ampliar la búsqueda (spec 048, §5).
+    public const string RequestNotExtendableCode = "request_not_extendable";
 }

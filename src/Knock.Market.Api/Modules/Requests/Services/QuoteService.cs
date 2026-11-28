@@ -1,3 +1,4 @@
+using Knock.Market.Api.Modules.Requests.Data;
 using Knock.Market.Api.Modules.Requests.Domain;
 using Knock.Market.Api.Modules.Requests.Validators;
 
@@ -7,7 +8,7 @@ internal sealed record Technician(string UsuarioId, string Estado, bool Oculto, 
     string? ColoniaBaseId, double? Latitude, double? Longitude, int RadioAtencionKm, string Id = "");
 
 internal sealed record QuoteRequestSnapshot(string Trade, string ColoniaId, RequestState State,
-    DateTimeOffset ExpiresAt, DateOnly Day, double? Latitude, double? Longitude);
+    DateTimeOffset ExpiresAt, DateOnly Day, double? Latitude, double? Longitude, string ClientId = "");
 
 internal interface ITechnicianDirectory
 {
@@ -48,7 +49,7 @@ internal sealed class UnavailableNoteModerator : INoteModerator
     public Task<NoteModerationResult> ModerateAsync(string note, CancellationToken cancellationToken) => Task.FromResult(NoteModerationResult.Unavailable);
 }
 
-internal sealed class QuoteService(ITechnicianDirectory technicians, IQuoteRequestReader requests, QuoteValidator validator, TimeProvider clock, INoteModerator moderator, IQuoteWriter writer)
+internal sealed class QuoteService(ITechnicianDirectory technicians, IQuoteRequestReader requests, QuoteValidator validator, TimeProvider clock, INoteModerator moderator, IQuoteWriter writer, IBlockLookup blocks)
 {
     public QuoteResponse? CreatedQuote => (writer as ICreatedQuote)?.CreatedQuote;
     public IDictionary<string, string[]> Errors { get; private set; } = new Dictionary<string, string[]>();
@@ -60,6 +61,9 @@ internal sealed class QuoteService(ITechnicianDirectory technicians, IQuoteReque
         var request = await requests.FindAsync(solicitudId, cancellationToken);
         if (request is null || await technicians.FindEligibleAsync(sub, request, cancellationToken) is null || technician.Estado != "activo" || technician.Oculto ||
             !technician.Oficios.Contains(request.Trade, StringComparer.Ordinal) || !Covers(technician, request))
+            return QuoteCheckResult.NotFound;
+        // Un bloqueo en cualquier sentido responde igual que un técnico no disponible: 404, sin revelar el bloqueo (spec 043, R-16, R-17, CA-26, CA-27).
+        if (request.ClientId.Length > 0 && await blocks.AreBlockedAsync(request.ClientId, sub, cancellationToken))
             return QuoteCheckResult.NotFound;
         if (!RequestRules.AcceptsQuotes(request.State) || request.ExpiresAt <= clock.GetUtcNow())
             return QuoteCheckResult.RequestNotQuotable;

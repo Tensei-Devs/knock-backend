@@ -26,7 +26,7 @@ Esta spec **no sustituye** el esquema de la 037 y la 041: lo toma como base, lo 
 Reglas (la mecánica que dependa de una decisión abierta está en §8):
 - **R-01 (credencial de servicio propia):** toda ruta interna exige una credencial de servicio **distinta** del JWT de usuario. Nunca se acepta el JWT de usuario en una ruta interna ni la credencial de servicio en una ruta pública. No se reutiliza `jwt-signing-key`.
 - **R-02 (emisor y destinatario):** la credencial dice quién la emite (`iss`) y para qué servicio es (`aud`); el receptor rechaza otro `iss` o `aud`.
-- **R-03 (permisos por emisor):** la credencial lleva los permisos del emisor y la ruta exige el suyo. Sin permiso: 403 `service_not_allowed`. Sin credencial válida: 401.
+- **R-03 (permisos por emisor):** la credencial lleva los permisos del emisor y la ruta exige el suyo. Sin permiso: 403 `service_not_allowed`. Sin credencial válida: 401. *(Enmienda 2026-11-24, aprobada por José Julián Hernández Hernández el 2026-11-24: en Identidad el código del 403 es `internal_token_not_allowed`; ver CA-03.)*
 - **R-04 (vida corta):** la credencial vive 5 minutos como máximo, con `jti` e `iat`; una sin límite o con vida mayor se rechaza. `ClockSkew` en cero, algoritmos fijos y firma obligatoria.
 - **R-05 (clave aislada por emisor):** cada emisor firma con su propia clave y cada servicio lee solo la suya (para firmar) y las que necesita para verificar. Comprometer la clave de un servicio no permite emitir como otro.
 - **R-06 (falla cerrada):** sin clave válida configurada, el servicio rechaza toda llamada interna; nunca acepta por omisión.
@@ -39,7 +39,7 @@ Reglas (la mecánica que dependa de una decisión abierta está en §8):
 **Criterios de aceptación (casos):**
 - **CA-01:** Dada una ruta interna, cuando se llama sin credencial, con una firmada con otra clave o con un algoritmo distinto de HS256, entonces responde 401 y no ejecuta la operación. (R-01, R-04)
 - **CA-02:** Dada una credencial de servicio, cuando el `iss` o el `aud` no corresponden, o está vencida, o su vida (`exp` menos `iat`) excede 5 minutos, o no trae `jti`, entonces responde 401. (R-02, R-04)
-- **CA-03:** Dada una credencial válida sin el permiso que pide la ruta, cuando llama, entonces responde 403 con código `service_not_allowed` y la operación no se ejecuta. (R-03)
+- **CA-03:** Dada una credencial válida sin el permiso que pide la ruta, cuando llama, entonces responde 403 con código `service_not_allowed` y la operación no se ejecuta. (R-03) *(Enmienda 2026-11-24, aprobada por José Julián Hernández Hernández el 2026-11-24: el código es `service_not_allowed` en Mercado y Mensajería e `internal_token_not_allowed` en las rutas internas de Identidad; antes decía `service_not_allowed` para todas. Ver la nota al final.)*
 - **CA-04:** Dado un JWT de usuario válido (firmado con `jwt-signing-key`), cuando se envía a una ruta interna, entonces responde 401; y dada una credencial de servicio válida, cuando se envía a una ruta pública, entonces responde 401. (R-01)
 - **CA-05:** Dada una credencial que declara el `iss` de un emisor pero está firmada con la clave de otro emisor, cuando llega a un receptor que verifica a ambos, entonces responde 401. (R-05)
 - **CA-06:** Dado un servicio sin clave configurada o con una clave mal escrita o menor a 32 bytes, cuando recibe una llamada interna, entonces la rechaza con 401 y ningún registro contiene el valor de la clave. (R-06, R-08)
@@ -88,7 +88,7 @@ Reglas (la mecánica que dependa de una decisión abierta está en §8):
 - **Rutas internas afectadas (sin cambio de contrato):** `POST /api/v1/interno/avisos` (Mensajería, spec 037 R-11) y `GET /api/v1/interno/historial` (Mercado, spec 041 R-17). Ninguna aparece en el OpenAPI público ni en el gateway.
 - **Llamada que no cambia:** Mensajería → `GET /api/v1/visitas/{id}` de Mercado (spec 026 R-06) es una ruta pública y se llama con el JWT del usuario; no usa la credencial de servicio.
 - **Credencial de servicio (propiedades que fija esta spec; la mecánica exacta está en §8 P-01):** encabezado `Authorization: Bearer <credencial de servicio>`; token firmado con claims `iss` (emisor), `aud` (servicio destino), `exp`, `iat`, `jti` y `permisos`; vida de 5 minutos como máximo; clave por emisor; algoritmo fijo.
-- **Errores (sin cambio de forma):** ProblemDetails; `401` sin credencial válida; `403` con código `service_not_allowed` sin permiso del emisor para la ruta.
+- **Errores (sin cambio de forma):** ProblemDetails; `401` sin credencial válida; `403` con código `service_not_allowed` sin permiso del emisor para la ruta. *(Enmienda 2026-11-24, aprobada por José Julián Hernández Hernández el 2026-11-24: `internal_token_not_allowed` en Identidad; ver CA-03.)*
 - **Documentos vivos:** `docs/endpoints.md` solo si cambia el esquema declarado de una ruta interna; `docs/openapi.v1.json` no cambia (las rutas son internas).
 
 ## 5. Modelo de datos
@@ -163,7 +163,15 @@ Análisis proporcional: cambio de autenticación y permisos entre servicios; sin
   - Opciones: (a) sí, se descarta y se deja como mejora futura con ticket propio; (b) no, se incluye en la 056 (amplía alcance y puntos; la spec vale 2 puntos).
   - **Recomendación: (a), sí.** P-07 ya decidió mantener el reenvío; incluirla cambia el alcance y obliga a una enmienda de la 026. Si la respuesta es «no», se abre una spec aparte.
 
+## Nota de enmienda (2026-11-24, decisión de José)
+- **Estado de esta enmienda:** aprobada por José Julián Hernández Hernández el 2026-11-24. La aprobación de abajo es la original; la firma de esta enmienda es la línea «Enmienda» de la sección Aprobación.
+- **CA-03, el código del 403 es el que el código usa.** Se enmienda el texto en vez de cambiar el código. Evidencia verificada en `origin/sprint-05`: Mensajería responde `service_not_allowed` (`InternalNoticeAuthentication.cs:20`, tomado de `ServiceCredential.ServiceNotAllowedCode`, `src/Knock.Hosting/Security/ServiceCredential.cs:17`, y `InternoAvisosController.cs:34`); Mercado también (`InternalServiceAuthentication.cs:31`, usado en `InternalAccountController.cs:83`, `InternalHistoryController.cs:39` y `InternalNotFinishedReportController.cs:35`); Identidad responde **`internal_token_not_allowed`** en las rutas con `[InternalServiceToken]` (`InternalServiceTokenAttribute.cs:22` y `:67`: `InternalOpinionModeratedController`, `InternalPanelPermissionController` e `InternalNotFinishedReportsController`). Ninguno de los cuatro OpenAPI publicados lista `internal_token_not_allowed` (esas rutas internas no se publican); `docs/openapi.messaging.v1.json` solo cita `service_not_allowed`.
+- **Por qué no se cambió el código:** unificar a `service_not_allowed` en Identidad es un cambio de contrato de las rutas internas de Identidad y obligaría a tocar el contrato de la spec 037 (catálogo de errores del despachador, R-11 y CA-14) y sus pruebas; no se hace sin una decisión aparte.
+- **Duda de trazabilidad (no enmendada):** la tabla criterio→prueba de CA-03 cita `tests/SecurityTest/InternalAuth/ServiceAuthenticationSecurityTests.cs`, archivo que no existe en `origin/sprint-05`; la prueba que lleva el sufijo `_CA_056_03` es `Spec037InternoAvisosSeguridadTests.InternalNotices_CredentialWithoutThePermission_Returns403ServiceNotAllowed_CA_056_03`. Se anota para que lo corrija quien implemente 056 T-05.
+- Sin tarea nueva de código. Pendiente de la firma de esta enmienda.
+
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-20
+- [x] Enmienda 2026-11-24 — nombre: José Julián Hernández Hernández fecha: 2026-11-24
 - [x] Sin conflicto con la constitución
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Firmada (tras el merge)

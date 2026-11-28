@@ -1,3 +1,4 @@
+using Knock.Hosting.Http;
 using Knock.Identity.Api.Hosting;
 using Knock.Identity.Api.Modules.Panel.Data;
 using Knock.Identity.Api.Modules.Panel.Domain;
@@ -100,6 +101,10 @@ internal sealed class PermisoPanelHandler(
         http.Items[DenialItem] = decision;
         context.Fail();
     }
+
+    /// <summary>Misma decisión que toma la petición local, pero para otro servicio (spec 061): <see langword="true"/> solo si la cuenta está activa, su versión coincide y sus roles vigentes dan el permiso. Falla cerrado.</summary>
+    public async Task<bool> IsAllowedAsync(string sub, string sid, int tokenVersion, string permission, CancellationToken cancellationToken) =>
+        await PanelInfra.GuardAsync(() => DecideAsync(sub, sid, tokenVersion, permission, null, null, cancellationToken)) is null;
 
     private async Task<PanelDenial?> DecideAsync(string sub, string sid, int tokenVersion, string permission, string? route, string? resource, CancellationToken cancellationToken)
     {

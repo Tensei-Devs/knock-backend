@@ -11,6 +11,9 @@ internal sealed record VisitCustomer(string Colonia);
 /// <summary>Lugar de la visita: <c>domicilio</c> o <c>taller</c>, con su dirección.</summary>
 internal sealed record VisitPlace(string Tipo, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Direccion);
 
+/// <summary>Propuesta de reprogramación vigente, igual para las dos partes (spec 050, R-35): fecha propuesta, quién la propone (<c>cliente</c> o <c>tecnico</c>) y cuándo vence, en UTC.</summary>
+internal sealed record VisitRescheduleProposal(DateTimeOffset FechaHora, string PropuestaPor, DateTimeOffset VenceEn);
+
 /// <summary>
 /// Vista de la visita (spec 022, R-02 y R-05). <c>Rol</c> es <c>cliente</c> o <c>tecnico</c> y decide qué campos vienen: <c>Tecnico</c>, <c>Codigo</c>,
 /// <c>CodigoVenceEn</c>, <c>MotivoCodigo</c>, <c>ReglaSeguridad</c> y <c>PuedeAvisar</c> solo en la del cliente; <c>Cliente</c> y <c>LlegadaEn</c> solo en la del técnico.
@@ -35,7 +38,13 @@ internal sealed record VisitResponse(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ReglaSeguridad,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? PuedeAvisar,
     bool PuedeLlegar,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] DateTimeOffset? LlegadaEn);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] DateTimeOffset? LlegadaEn,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? TecnicoUsuarioId = null,
+    bool ReprogramacionPendiente = false,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? EstadoCotizacionFinal = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? PermisoFotos = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] DateTimeOffset? TerminadaEn = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] VisitRescheduleProposal? PropuestaReprogramacion = null);
 
 /// <summary>Cuerpo de <c>POST /visitas/{id}/llegada</c>: <c>Codigo</c> son exactamente cuatro dígitos ASCII, con los ceros a la izquierda.</summary>
 internal sealed record ArrivalBody(string? Codigo)

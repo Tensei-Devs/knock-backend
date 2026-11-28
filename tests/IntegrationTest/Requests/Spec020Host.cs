@@ -33,7 +33,7 @@ internal sealed class FakePhotos : IRequestPhotos
         return Task.FromResult(Ready && owned);
     }
 
-    public Task<IReadOnlyList<RequestPhoto>> ReadLinksAsync(IReadOnlyList<string> photoIds, CancellationToken cancellationToken) =>
+    public Task<IReadOnlyList<RequestPhoto>> ReadLinksAsync(string requesterSub, IReadOnlyList<string> photoIds, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<RequestPhoto>>([.. photoIds.Select(id => new RequestPhoto(id, "https://files.test/" + id + "?sig=ficticia", DateTimeOffset.UtcNow.AddMinutes(5)))]);
 }
 
@@ -162,7 +162,7 @@ internal sealed class Spec020Host : IAsyncDisposable
     {
         ["oficioClave"] = trade,
         ["descripcion"] = Description,
-        ["fotos"] = new[] { ObjectId.GenerateNewId().ToString() },
+        ["fotos"] = new[] { Guid.CreateVersion7().ToString("N") },
         ["dia"] = Tomorrow(),
         ["franja"] = "tarde",
         ["coloniaId"] = ColoniaId.ToString(),
@@ -190,6 +190,29 @@ internal sealed class Spec020Host : IAsyncDisposable
     public async Task<long> CountRequestsAsync() => await Database.GetCollection<BsonDocument>("solicitudes").CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty);
 
     public static async Task<JsonElement> ReadAsync(HttpResponseMessage response) => JsonElement.Parse(await response.Content.ReadAsStringAsync());
+
+    /// <summary>True si algún valor escalar (texto o número) del JSON es exactamente <paramref name="value"/>. Robusto ante ids aleatorios y fechas, a diferencia de buscar la subcadena en el cuerpo crudo.</summary>
+    public static bool CarriesValue(string json, string value) => CarriesValue(JsonElement.Parse(json), value);
+
+    /// <summary>
+    /// Como <see cref="CarriesValue(string, string)"/> para el código de visita, de 4 dígitos al azar: no cuenta <c>precio</c> ni <c>tope</c> cuando valen justo el monto sembrado
+    /// (<see cref="Spec021Host.SeededPrice"/>). Con el código «1000» el precio legítimo parecía una fuga (fallo intermitente de CA_022_02). En esos campos cualquier otro número,
+    /// y en los demás cualquier valor, sigue contando.
+    /// </summary>
+    public static bool CarriesVisitCode(string json, string code) => CarriesValue(JsonElement.Parse(json), code, IsSeededAmount);
+
+    private static bool IsSeededAmount(JsonProperty property) =>
+        property.Name is "precio" or "tope" && property.Value.ValueKind == JsonValueKind.Number
+        && property.Value.GetRawText() == Spec021Host.SeededPrice.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    private static bool CarriesValue(JsonElement element, string value, Func<JsonProperty, bool>? ignore = null) => element.ValueKind switch
+    {
+        JsonValueKind.Object => element.EnumerateObject().Any(p => ignore?.Invoke(p) != true && CarriesValue(p.Value, value, ignore)),
+        JsonValueKind.Array => element.EnumerateArray().Any(item => CarriesValue(item, value, ignore)),
+        JsonValueKind.String => element.GetString() == value,
+        JsonValueKind.Number => element.GetRawText() == value,
+        _ => false,
+    };
 
     public async ValueTask DisposeAsync()
     {

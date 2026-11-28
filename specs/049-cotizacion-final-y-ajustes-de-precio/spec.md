@@ -33,14 +33,14 @@ Definir y especificar los endpoints COT-06, COT-07, AJU-01, AJU-02 del Excel de 
 - **R-05:** Entrada de `POST /api/v1/visitas/{id}/cotizacion-final/decision`: Ruta: id. Cuerpo: decision. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400.
 - **R-06:** Estados de `POST /api/v1/visitas/{id}/cotizacion-final/decision`: 409 `final_quote_already_decided`. Los códigos de negocio van en inglés y en snake_case.
 - **R-07:** `POST /api/v1/cotizaciones/{id}/ajuste-precio` (crear): El técnico propone un cambio sobre el tope, con motivo. Lo puede llamar: cuenta con perfil de técnico. Responde 201 cuando sale bien.
-- **R-08:** Entrada de `POST /api/v1/cotizaciones/{id}/ajuste-precio`: Ruta: id. Cuerpo: montoNuevo, motivo. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400. Reglas: `montoNuevo`: Mayor que el tope en al menos 100 pesos; `motivo`: Mínimo 10 caracteres. Moderado.
+- **R-08:** Entrada de `POST /api/v1/cotizaciones/{id}/ajuste-precio`: Ruta: id. Cuerpo: montoNuevo, motivo. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400. Reglas: `montoNuevo`: Mayor que el tope en al menos 100 pesos; `motivo`: De 10 a 300 caracteres (antes decía 8: enmienda 2026-11-23, aprobada por José Julián Hernández Hernández el 2026-11-24). Moderado.
 - **R-09:** Estados de `POST /api/v1/cotizaciones/{id}/ajuste-precio`: 409 `adjustment_not_allowed`. Los códigos de negocio van en inglés y en snake_case.
 - **R-10:** `POST /api/v1/ajustes/{id}/decision` (actualizar (acción)): El cliente aprueba o rechaza. Lo puede llamar: persona con sesión que sea dueña del recurso. Responde 200 cuando sale bien.
 - **R-11:** Entrada de `POST /api/v1/ajustes/{id}/decision`: Ruta: id. Cuerpo: decision. Un valor inválido responde 422 con `errors.<campo>` sin repetirlo; un cuerpo ilegible, 400.
 - **R-12:** Estados de `POST /api/v1/ajustes/{id}/decision`: 404; 409 `adjustment_already_decided`. Los códigos de negocio van en inglés y en snake_case.
 - **R-13:** **Cotización final (COT-06).** Solo la envía el técnico de la visita, una vez terminada la revisión previa y **una sola** por visita. `precio` es un entero positivo en pesos (sin tope de negocio) y `descripcion` tiene de 8 a 500 caracteres. El cliente la ve para aprobarla o rechazarla.
 - **R-14:** **Decisión sobre la cotización final (COT-07).** `decision` es `aprueba` o `rechaza` y es definitiva. Si aprueba, el trabajo sigue con ese precio; si rechaza, la visita queda `terminada` con `resultado = solo_visita` y la cotización final `rechazada`: el cobro de la visita lo define la historia de cobro posterior (spec 020, decisión 8) y esta spec solo registra el resultado. Tiene vigencia de 48 horas (tarea `VencerCotizacionFinal`, spec 054): sin respuesta queda rechazada por vencimiento.
-- **R-15:** **Ajuste de precio (AJU-01).** El técnico propone un `montoNuevo` mayor que el tope de la cotización con un `motivo` de 8 a 300 caracteres; solo puede haber un ajuste pendiente por cotización, y el cálculo del tope y su aprobación son los de la spec 020 (`CotizacionTopeCalculator`).
+- **R-15:** **Ajuste de precio (AJU-01).** El técnico propone un `montoNuevo` mayor que el tope de la cotización con un `motivo` de 10 a 300 caracteres *(enmienda 2026-11-23, aprobada por José Julián Hernández Hernández el 2026-11-24: antes decía 8)*; solo puede haber un ajuste pendiente por cotización, y el cálculo del tope y su aprobación son los de la spec 020 (`CotizacionTopeCalculator`).
 - **R-16:** **Decisión sobre el ajuste (AJU-02).** `decision` es `aprueba` o `rechaza` y es definitiva, con vigencia de 24 horas (tarea `VencerAjuste`, spec 054): sin respuesta queda rechazada por vencimiento y el precio sigue siendo el tope aprobado.
 - **R-17:** **Avisos.** Cada cotización final y cada ajuste crea un aviso para el cliente, y cada decisión, uno para el técnico, por la bandeja de salida (specs 037 y 054); los avisos no llevan precios ni textos escritos por las personas.
 - **R-18:** La persona de cada operación es siempre la del `sub` del token; ningún cuerpo, ruta o consulta acepta el identificador de otra persona para actuar en su nombre, y un identificador ajeno enviado en el cuerpo se ignora.
@@ -84,44 +84,46 @@ Definir y especificar los endpoints COT-06, COT-07, AJU-01, AJU-02 del Excel de 
 - **CA-33:** Dada una persona que supera el límite de una ruta, cuando repite la petición, entonces responde 429 con `Retry-After` y, con un cuerpo de tamaño excesivo, 413.
 - **CA-34:** Dada una operación de creación repetida por mala señal, cuando llega dos veces, entonces no deja duplicados porque lo impide la regla de estado o el índice único.
 
-**4.1 Criterio → prueba prevista**
+**4.1 Criterio → prueba**
 
-| Criterio | Prueba prevista |
+*(Enmienda 2026-11-23, aprobada por José Julián Hernández Hernández el 2026-11-24: los nombres `Spec049Tests.CriterioNN_CA_049_NN` de la versión anterior no existen en el código. Los de abajo son los de las pruebas de integración de #352, que ya está fusionado; su CI no se ha leído aquí, así que los nombres son los del código fusionado y no una afirmación de CI verde. El trazador solo exige el sufijo `CA_049_NN`.)*
+
+| Criterio | Prueba (IntegrationTest/Requests; pendiente de #352) |
 |---|---|
-| CA-01 | `Spec049Tests.Criterio01_CA_049_01` |
-| CA-02 | `Spec049Tests.Criterio02_CA_049_02` |
-| CA-03 | `Spec049Tests.Criterio03_CA_049_03` |
-| CA-04 | `Spec049Tests.Criterio04_CA_049_04` |
-| CA-05 | `Spec049Tests.Criterio05_CA_049_05` |
-| CA-06 | `Spec049Tests.Criterio06_CA_049_06` |
-| CA-07 | `Spec049Tests.Criterio07_CA_049_07` |
-| CA-08 | `Spec049Tests.Criterio08_CA_049_08` |
-| CA-09 | `Spec049Tests.Criterio09_CA_049_09` |
-| CA-10 | `Spec049Tests.Criterio10_CA_049_10` |
-| CA-11 | `Spec049Tests.Criterio11_CA_049_11` |
-| CA-12 | `Spec049Tests.Criterio12_CA_049_12` |
-| CA-13 | `Spec049Tests.Criterio13_CA_049_13` |
-| CA-14 | `Spec049Tests.Criterio14_CA_049_14` |
-| CA-15 | `Spec049Tests.Criterio15_CA_049_15` |
-| CA-16 | `Spec049Tests.Criterio16_CA_049_16` |
-| CA-17 | `Spec049Tests.Criterio17_CA_049_17` |
-| CA-18 | `Spec049Tests.Criterio18_CA_049_18` |
-| CA-19 | `Spec049Tests.Criterio19_CA_049_19` |
-| CA-20 | `Spec049Tests.Criterio20_CA_049_20` |
-| CA-21 | `Spec049Tests.Criterio21_CA_049_21` |
-| CA-22 | `Spec049Tests.Criterio22_CA_049_22` |
-| CA-23 | `Spec049Tests.Criterio23_CA_049_23` |
-| CA-24 | `Spec049Tests.Criterio24_CA_049_24` |
-| CA-25 | `Spec049Tests.Criterio25_CA_049_25` |
-| CA-26 | `Spec049Tests.Criterio26_CA_049_26` |
-| CA-27 | `Spec049Tests.Criterio27_CA_049_27` |
-| CA-28 | `Spec049Tests.Criterio28_CA_049_28` |
-| CA-29 | `Spec049Tests.Criterio29_CA_049_29` |
-| CA-30 | `Spec049Tests.Criterio30_CA_049_30` |
-| CA-31 | `Spec049Tests.Criterio31_CA_049_31` |
-| CA-32 | `Spec049Tests.Criterio32_CA_049_32` |
-| CA-33 | `Spec049Tests.Criterio33_CA_049_33` |
-| CA-34 | `Spec049Tests.Criterio34_CA_049_34` |
+| CA-01 | `Spec049CotizacionFinalTests.Tecnico_Envia_La_Cotizacion_Final_Y_Responde_201_CA_049_01` |
+| CA-02 | `Spec049CotizacionFinalTests.Sin_Token_Responde_401_Y_No_Guarda_CA_049_02` |
+| CA-03 | `Spec049CotizacionFinalTests.Quien_No_Es_Tecnico_Responde_403_Y_No_Cambia_Nada_CA_049_03` |
+| CA-04 | `Spec049CotizacionFinalTests.Valor_Invalido_Responde_422_Con_Errores_Sin_Repetir_El_Valor_CA_049_04` |
+| CA-05 | `Spec049CotizacionFinalTests.Cuerpo_Ilegible_Responde_400_Y_No_Guarda_CA_049_05` |
+| CA-06 | `Spec049CotizacionFinalTests.Sin_Visita_En_Curso_O_Ya_Enviada_Responde_409_CA_049_06` |
+| CA-07 | `Spec049CotizacionFinalTests.Cliente_Aprueba_La_Cotizacion_Final_Y_Responde_200_CA_049_07` |
+| CA-08 | `Spec049CotizacionFinalTests.Decision_Sin_Token_Responde_401_CA_049_08` |
+| CA-09 | `Spec049CotizacionFinalTests.Quien_No_Es_El_Cliente_Dueno_Responde_403_O_404_Y_No_Cambia_Nada_CA_049_09` |
+| CA-10 | `Spec049CotizacionFinalTests.Decision_Invalida_Responde_422_Sin_Repetir_El_Valor_CA_049_10` |
+| CA-11 | `Spec049CotizacionFinalTests.Decision_Con_Cuerpo_Ilegible_Responde_400_CA_049_11` |
+| CA-12 | `Spec049CotizacionFinalTests.Sin_Cotizacion_Pendiente_O_Ya_Decidida_O_Vencida_Responde_409_CA_049_12` |
+| CA-13 | `Spec049AjusteTests.Tecnico_Propone_El_Ajuste_Y_Responde_201_CA_049_13` |
+| CA-14 | `Spec049AjusteTests.Ajuste_Sin_Token_Responde_401_Y_No_Guarda_CA_049_14` |
+| CA-15 | `Spec049AjusteTests.Ajuste_De_Quien_No_Es_Tecnico_Responde_403_CA_049_15` |
+| CA-16 | `Spec049AjusteTests.Ajuste_Con_Valor_Invalido_Responde_422_Sin_Repetirlo_CA_049_16` |
+| CA-17 | `Spec049AjusteTests.Ajuste_Con_Cuerpo_Ilegible_Responde_400_CA_049_17` |
+| CA-18 | `Spec049AjusteTests.Ajuste_Con_Otro_Pendiente_O_Cotizacion_No_Aceptada_Responde_409_CA_049_18` |
+| CA-19 | `Spec049AjusteTests.Cliente_Aprueba_El_Ajuste_Y_Responde_200_CA_049_19` |
+| CA-20 | `Spec049AjusteTests.Decision_De_Ajuste_Sin_Token_Responde_401_CA_049_20` |
+| CA-21 | `Spec049AjusteTests.Decision_De_Ajuste_De_Quien_No_Es_El_Dueno_Responde_403_O_404_CA_049_21` |
+| CA-22 | `Spec049AjusteTests.Decision_De_Ajuste_Invalida_Responde_422_CA_049_22` |
+| CA-23 | `Spec049AjusteTests.Decision_De_Ajuste_Con_Cuerpo_Ilegible_Responde_400_CA_049_23` |
+| CA-24 | `Spec049AjusteTests.Decision_De_Ajuste_Inexistente_Responde_404_CA_049_24` |
+| CA-25 | `Spec049AjusteTests.Decision_De_Ajuste_Ya_Decidido_O_Vencido_Responde_409_CA_049_25` |
+| CA-26 | `Spec049CotizacionFinalTests.Crea_La_Cotizacion_Y_Avisa_Al_Cliente_Y_La_Segunda_Es_409_CA_049_26` |
+| CA-27 | `Spec049CotizacionFinalTests.Decision_Es_Definitiva_Rechazo_Deja_Solo_Visita_Y_Vencer_Rechaza_CA_049_27` |
+| CA-28 | `Spec049AjusteTests.Propone_Con_Motivo_Valido_Y_Con_Uno_Pendiente_Responde_409_CA_049_28` |
+| CA-29 | `Spec049AjusteTests.Precio_Cambia_Solo_Si_Se_Aprueba_Y_Vence_Sin_Cambiarlo_CA_049_29` |
+| CA-30 | `Spec049CotizacionFinalTests.Eventos_De_La_Cotizacion_Final_Solo_Llevan_Identificadores_CA_049_30` y `Spec049AjusteTests.Eventos_Del_Ajuste_Solo_Llevan_Identificadores_CA_049_30` |
+| CA-31 | `Spec049TransversalesTests.Identificadores_Ajenos_En_El_Cuerpo_Se_Ignoran_Y_Manda_El_Sub_CA_049_31` |
+| CA-32 | `Spec049TransversalesTests.Registros_Y_Errores_Sin_Datos_Personales_CA_049_32` |
+| CA-33 | `Spec049TransversalesTests.Supera_El_Limite_Responde_429_Con_RetryAfter_CA_049_33` y `Spec049TransversalesTests.Cuerpo_Mayor_A_8_KB_Responde_413_CA_049_33` |
+| CA-34 | `Spec049TransversalesTests.Repetir_La_Creacion_No_Deja_Duplicados_Ni_Pide_IdempotencyKey_CA_049_34` |
 
 ## 5. Contrato
 | ID | Método y ruta | Quién | Entrada | Respuestas |
@@ -189,7 +191,7 @@ Definir y especificar los endpoints COT-06, COT-07, AJU-01, AJU-02 del Excel de 
 | visitaId | ObjectId | Sí | Debe existir y estar en curso | Compuesto |
 | cotizacionId | ObjectId | Sí | Debe existir | No |
 | montoNuevo | Entero | Sí | Mayor que el tope en al menos 100 pesos | No |
-| motivo | Texto | Sí | Mínimo 10 caracteres. Moderado | No |
+| motivo | Texto | Sí | De 10 a 300 caracteres (enmienda 2026-11-23, aprobada por José Julián Hernández Hernández el 2026-11-24: antes 8). Moderado | No |
 | estado | Texto | Sí | Solo esos valores | Compuesto |
 | creadoEn | Fecha y hora UTC | Sí | Lo asigna el servidor | No |
 | decididoEn | Fecha y hora UTC | No |  | No |
@@ -274,7 +276,33 @@ Las pruebas citan el caso como `CA_049_NN` en el nombre (para `python scripts/sd
 - Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
 - Dependencias: tareas de vencimiento de la spec 054 y los topes de la spec 020. El cobro de la visita queda fuera de esta spec.
 
+
+## Nota de enmienda (2026-11-23, decisión de José)
+- **Estado de esta enmienda:** aprobada por José Julián Hernández Hernández el 2026-11-24. La aprobación de abajo es la original; la firma de esta enmienda es la línea «Enmienda» de la sección Aprobación.
+- **Largo del motivo del ajuste: de 10 a 300 caracteres, no de 8 a 300.** El texto original decía 8 en R-08 (reglas de `motivo`), en R-15 y en la tabla de campos de §6; el código aplica 10 (`FinalQuoteRules.MinReason = 10`, usado por `FinalQuoteValidators`, con su comentario «PARA VALIDACIÓN DE JOSÉ») y `docs/endpoints.md` ya dice 10. El 8 que sí vale es el de `descripcion` de la cotización final (R-13, `MinDescription = 8`), que no cambia. Las dos reglas cercanas con motivo de 8 a 300 son de otras specs (050 R-26 y 061 R-01) y tampoco cambian.
+- **Tabla criterio → prueba (§4.1):** se reemplazan los nombres que no existían por los de las pruebas de #352 (`Spec049CotizacionFinalTests`, `Spec049AjusteTests` y `Spec049TransversalesTests`). Quedan como previstos hasta que #352 se fusione con el CI en verde.
+
+## Nota de enmienda (2026-11-27, avisos de cotización final y de ajuste de precio)
+
+- **Estado de esta enmienda:** PROPUESTA SIN FIRMA; vale desde que se firma la línea «Enmienda 2026-11-27» de la sección Aprobación. La aprobación original y las enmiendas ya firmadas se conservan.
+- **Motivo:** R-17 pide estos avisos, pero el catálogo cerrado de la spec 037 no tiene sus tipos y los eventos no se entregan.
+- Se agregan al catálogo de la spec 037, con `recurso` = `visitaId` y categoría `visitas`. El texto es fijo, sin precios ni texto de las personas.
+
+| Evento de Mercado | Aviso | Recibe (`rol`) | Título | Texto |
+|---|---|---|---|---|
+| `CotizacionFinalEnviada` | `cotizacion_final_nueva` | la persona cliente (`cliente`) | Cotización final | Tienes una cotización final por revisar. Responde antes de que venza. |
+| `CotizacionFinalDecidida` y `CotizacionFinalVencida` | `cotizacion_final_respondida` | el técnico (`tecnico`) | Cotización final respondida | Tu cotización final ya tiene respuesta. Revisa la visita. |
+| `AjustePrecioPropuesto` | `ajuste_precio_nuevo` | la persona cliente (`cliente`) | Cambio de precio propuesto | Te proponen un cambio de precio. Revísalo y responde antes de que venza. |
+| `AjustePrecioDecidido` y `AjustePrecioVencido` | `ajuste_precio_respondido` | el técnico (`tecnico`) | Cambio de precio respondido | Tu propuesta de cambio de precio ya tiene respuesta. Revisa la visita. |
+
+- El destinatario sale de los `datos` del evento; en `AjustePrecioDecidido` y `AjustePrecioVencido`, que no lo llevan, se lee de la visita al entregar. Los eventos no cambian de forma.
+- La app muestra el texto del aviso dentro de la app que crea el servidor. Para el aviso en el teléfono, la spec 024 de la app debe agregar estos nombres; mientras no los conozca, abre la pestaña de su tipo.
+- **CA-35:** Dado cada evento de la tabla, cuando la bandeja lo entrega, entonces solo la persona indicada recibe el aviso indicado, con la visita como `recurso`, y repetirlo no lo duplica.
+- **CA-36:** Dado un aviso de esta enmienda, cuando se inspeccionan la petición interna y el aviso guardado, entonces no contienen precios, motivos, descripciones ni datos de la otra parte.
+
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
+- [x] Enmienda 2026-11-23 — nombre: José Julián Hernández Hernández fecha: 2026-11-24
 - [x] Sin conflicto con la constitución
+- [x] Enmienda 2026-11-27 — nombre: José Julián Hernández Hernández fecha: 2026-11-27
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

@@ -34,7 +34,7 @@ public sealed class Spec042ConfianzaTests
         var items = json.GetProperty("items").EnumerateArray().ToList();
         items.Select(i => i.GetProperty("nombre").GetString()).Should().Equal("Demo Dos", "Demo Uno");
         items[0].GetProperty("tecnicoId").GetString().Should().Be(second.Id.ToString());
-        items[0].EnumerateObject().Select(p => p.Name).Should().BeSubsetOf(["tecnicoId", "nombre", "fotoUrl", "nivelVerificacion", "guardadoEn"], "solo datos públicos");
+        items[0].EnumerateObject().Select(p => p.Name).Should().BeSubsetOf(["tecnicoId", "tecnicoUsuarioId", "nombre", "fotoUrl", "nivelVerificacion", "guardadoEn"], "solo datos públicos");
         json.TryGetProperty("nextCursor", out _).Should().BeFalse("no hay otra página");
     }
 
@@ -278,14 +278,8 @@ public sealed class Spec042ConfianzaTests
         await using var host = await Spec020Host.StartAsync();
         var technician = await host.SeedPublicTechnicianAsync();
         var sub = Guid.NewGuid().ToString("D");
-        var collection = host.Database.GetCollection<BsonDocument>("tecnicos_confianza");
 
-        // El emulador a veces contesta 500 por bloqueo mutuo; esa ráfaga se repite con la colección vacía, así el conteo sigue siendo exacto.
-        var summary = await ResponseSummary.WithoutEmulatorDeadlockAsync(async () =>
-        {
-            await collection.DeleteManyAsync(FilterDefinition<BsonDocument>.Empty);
-            return await ResponseSummary.ReadAsync(await Task.WhenAll(Enumerable.Range(0, 5).Select(_ => host.SaveTrustedAsync(sub, technician.Id))));
-        });
+        var summary = await ResponseSummary.ReadAsync(await Task.WhenAll(Enumerable.Range(0, 5).Select(_ => host.SaveTrustedAsync(sub, technician.Id))));
 
         summary.Count(HttpStatusCode.Created).Should().Be(1, $"solo una crea; respuestas: {summary}");
         summary.Count(HttpStatusCode.OK).Should().Be(4, $"las otras cuatro encuentran el registro; respuestas: {summary}");

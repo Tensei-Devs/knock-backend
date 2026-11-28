@@ -1,3 +1,5 @@
+using Knock.Hosting.Concurrency;
+using Knock.Hosting.Data;
 using Knock.Market.Api.Hosting;
 using Knock.Market.Api.Modules.Trust.Domain;
 using Microsoft.Extensions.Options;
@@ -7,7 +9,7 @@ using MongoDB.Driver;
 namespace Knock.Market.Api.Modules.Trust.Data;
 
 /// <summary>Un técnico visible tal como lo necesita la lista de confianza: identificador y datos públicos (spec 042, R-12).</summary>
-internal sealed record TrustTechnicianView(ObjectId Id, string Name, string? PhotoUrl, string VerificationLevel);
+internal sealed record TrustTechnicianView(ObjectId Id, string Name, string? PhotoUrl, string VerificationLevel, string? UserId = null);
 
 /// <summary>Un técnico guardado: el registro de la persona, la fecha en que lo guardó y el identificador del registro (base del cursor).</summary>
 internal sealed record TrustSaved(ObjectId TechnicianId, DateTime SavedAtUtc, ObjectId RecordId);
@@ -31,6 +33,7 @@ internal sealed class TrustStore(
     private const string _idField = "_id";
     private const int _duplicateKey = 11000;
     private const int _writeConflictCode = 112;
+    private const int _lockErrorCode = 24;
     private const int _maxWriteConflictAttempts = 6;
     private const int _backoffMilliseconds = 50;
     private const int _maxScans = 10;
@@ -56,8 +59,14 @@ internal sealed class TrustStore(
         return views.GetValueOrDefault(id);
     }
 
-    /// <summary>Guarda al técnico para la persona: lo crea o, si ya estaba, lo deja como está. Una carrera entre dos peticiones iguales la decide el índice único.</summary>
-    public async Task<TrustSaveResult> SaveAsync(string clientId, ObjectId technicianId, DateTime nowUtc, CancellationToken cancellationToken)
+    /// <summary>
+    /// Guarda al técnico para la persona: lo crea o, si ya estaba, lo deja como está. Dentro de la instancia las peticiones iguales se turnan (<see cref="KeyedGate"/>): varios upserts a la vez sobre el
+    /// índice único se bloqueaban entre sí en documentdb-local (código 24) y agotaban los reintentos como 500. Entre instancias decide el índice único con la relectura y el reintento de <see cref="SaveOnceAsync"/>.
+    /// </summary>
+    public Task<TrustSaveResult> SaveAsync(string clientId, ObjectId technicianId, DateTime nowUtc, CancellationToken cancellationToken) =>
+        KeyedGate.RunAsync(clientId + "|" + technicianId, () => SaveSerializedAsync(clientId, technicianId, nowUtc, cancellationToken), cancellationToken);
+
+    private async Task<TrustSaveResult> SaveSerializedAsync(string clientId, ObjectId technicianId, DateTime nowUtc, CancellationToken cancellationToken)
     {
         var filter = Builders<BsonDocument>.Filter.Eq(_clientField, clientId) & Builders<BsonDocument>.Filter.Eq(_technicianField, technicianId);
         return await SaveOnceAsync(
@@ -73,7 +82,7 @@ internal sealed class TrustStore(
     }
 
     /// <summary>
-    /// Lógica de <see cref="SaveAsync"/>: ante «llave duplicada» o conflicto de escritura (112) relee el registro; si existe, el otro guardado ganó (<c>Created: false</c>); si no, reintenta
+    /// Lógica de <see cref="SaveAsync"/>: ante «llave duplicada», conflicto de escritura (112) o interbloqueo (24, solo si el mensaje dice «deadlock») relee el registro; si existe, el otro guardado ganó (<c>Created: false</c>); si no, reintenta
     /// con espera creciente y, agotados los intentos, relanza la excepción. Si el upsert no insertó porque ya estaba, devuelve el registro existente.
     /// </summary>
     internal static async Task<TrustSaveResult> SaveOnceAsync(Func<Task<bool>> upsert, Func<Task<DateTime?>> readSaved, DateTime nowUtc, Func<TimeSpan, Task> wait)
@@ -154,7 +163,11 @@ internal sealed class TrustStore(
     private static bool IsConflict(Exception exception) =>
         exception is MongoWriteException { WriteError.Category: ServerErrorCategory.DuplicateKey }
         or MongoWriteException { WriteError.Code: _writeConflictCode }
-        or MongoCommandException { Code: _duplicateKey or _writeConflictCode };
+        or MongoCommandException { Code: _duplicateKey or _writeConflictCode }
+        || IsDeadlock(exception);
+
+    private static bool IsDeadlock(Exception exception) =>
+        exception is MongoCommandException { Code: _lockErrorCode } command && command.Message.Contains("deadlock", StringComparison.OrdinalIgnoreCase);
 
     private async Task<List<TrustSaved>> ReadBatchAsync(
         string clientId, (DateTime SavedAtUtc, ObjectId Id)? after, int size, CancellationToken cancellationToken)
@@ -179,7 +192,7 @@ internal sealed class TrustStore(
         var filters = Builders<BsonDocument>.Filter;
         var documents = await Technicians
             .Find(filters.In(_idField, ids) & filters.Eq("oculto", false) & filters.Eq("estado", "activo"), _findOptions)
-            .Project(Builders<BsonDocument>.Projection.Include("nombre").Include("fotoUrl").Include("nivelVerificacion"))
+            .Project(Builders<BsonDocument>.Projection.Include("nombre").Include("fotoUrl").Include("nivelVerificacion").Include("usuarioId"))
             .ToListAsync(cancellationToken);
         return documents
             .Where(d => d.TryGetValue("nombre", out var name) && name.IsString)
@@ -189,6 +202,7 @@ internal sealed class TrustStore(
                     d[_idField].AsObjectId,
                     d["nombre"].AsString,
                     d.TryGetValue("fotoUrl", out var photo) && photo.IsString ? photo.AsString : null,
-                    d.TryGetValue("nivelVerificacion", out var level) && level.IsString ? level.AsString : "ninguno"));
+                    d.TryGetValue("nivelVerificacion", out var level) && level.IsString ? level.AsString : "ninguno",
+                    d.TryGetValue("usuarioId", out var user) && user.IsString ? user.AsString : null));
     }
 }

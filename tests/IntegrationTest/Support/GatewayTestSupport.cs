@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using Knock.Gateway.Hosting;
+using Knock.Hosting.RateLimiting;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 

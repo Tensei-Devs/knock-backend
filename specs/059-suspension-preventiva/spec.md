@@ -127,7 +127,7 @@ La columna «Caso HU» de §4.1 vincula cada criterio con el caso TC de la ficha
 | Evento `CuentaSuspendida` | `{ eventoId, usuarioId, reporteId, desde }`, solo identificadores. Productor: Identidad. Consumidor: Mercado (`POST /api/v1/interno/eventos`, firma con `interno-key-identity`, spec 054 R-15) | esta spec; el catálogo de `tipo` de `outbox` de la 054 debe ampliarse (§8) |
 | Evento `CuentaReactivada` | `{ eventoId, usuarioId, desde }`. Mismo canal | igual |
 | `sesion_revocada { sid }` | Una por sesión de la app revocada (sin cambio de forma) | spec 037 R-13 |
-| Aviso a clientes con cita | `{ eventoId, tipo, destinatarioId, rol: "cliente", recurso: visitaId }` de Mercado a Mensajería (spec 037 R-11). **El `tipo` queda por definir (duda 5)** | spec 037 (su catálogo se amplía) |
+| Aviso a clientes con cita | `{ eventoId, tipo, destinatarioId, rol: "cliente", recurso: visitaId }` de Mercado a Mensajería (spec 037 R-11). **El `tipo` es `visita_afectada` (enmienda a la spec 037)** | spec 037 (su catálogo se amplía) |
 | Auditoría | `panel_auditoria`: `cuenta_suspendida`, `cuenta_reactivada` | spec 033 R-23 |
 
 **Códigos de error de negocio nuevos** (se fijan al implementar, en inglés y snake_case, y entran al catálogo): rechazo de suspender la propia cuenta (R-07) y rechazo de reactivar una cuenta que no está suspendida (R-15). `docs/events.md` documenta los dos eventos con productor y consumidor.
@@ -221,13 +221,19 @@ Cada una se contesta sí o no sobre la recomendación del autor; responder «sí
 | 4 | **`Reactivar` solo lo invoca la resolución de la apelación del panel (permiso `reports:resolve` y doble factor); no se agrega ruta aquí.** | No hay hoy una ruta que desestime un reporte ya decidido ni que resuelva una apelación. | Se agrega la ruta de reactivación a esta spec (más puntos). |
 | 5 | **Esta spec solo avisa a los clientes con cita próxima (tipo nuevo en la spec 037); no cancela visitas, ni toca cotizaciones ni conversaciones.** | Qué pasa con una visita `confirmada` o en curso depende de las specs 021, 027 y 050. | Se define aquí la cancelación de visitas y sus efectos. |
 | 6 | **La regla gradual queda apagada hasta que se fijen sus valores: sin `UmbralAdvertencias` configurado no se aplica; la spec solo deja el mecanismo.** | DECISIONES §5 habla de strikes y suspensión de 7 o 30 días sin umbrales, vigencia ni quién la levanta. | El Tech Lead da los valores (umbral, vigencia de una advertencia, duración, quién levanta) y se escriben en la spec. |
-| 7 | **El contador de advertencias lo implementa la spec 043 (T-08); esta spec solo lo lee de `reportes`.** | T-08 de la 043 sigue pendiente. | Lo implementa esta spec y se mueve la tarea. |
+| 7 | **El contador de advertencias lo implementa esta spec (`IWarningCounter`, en `ReportesStore`, subtarea 059c) y solo lee `reportes`.** *(Texto corregido el 2026-11-23, ver la nota de enmienda.)* | `IWarningCounter` ya existe en el código (059c); la tarea T-08 de la 043 no es un requisito previo. | El contador se mueve a la spec 043 y se retira de aquí. |
 | 8 | **Suspender una cuenta con eliminación programada (spec 039) pausa el plazo de gracia.** | Sin pausa, la eliminación podría borrar evidencia y evadir la revisión. | El plazo sigue corriendo y se conserva la evidencia por otro medio. |
 | 9 | **No se agrega `version_seguridad`.** | La cancelación por `sid` en Redis ya cubre la revocación (§13). | Se agrega para invalidar JWT sin Redis. |
 | 10 | **El estado de suspensión visible en el panel queda fuera de esta spec** (ticket de la 053). | La 053 no tiene ruta para ello. | Se agrega a esta spec el campo y la ruta de lectura. |
 | 11 | **Se mantiene la numeración 059.** | Ya está en `sprint-05` con su fila del índice (PR #199); renumerar cambiaría las pruebas `CA_059_NN`. También confirma D-01 de §14. | Se renumera antes de fusionar. |
 | 12 | **Se acepta que, si Redis se pierde, un JWT pueda servir hasta 15 minutos (riesgo ya aceptado en la spec 016) también para una suspensión crítica.** | Alternativa: que el gateway consulte un campo de la cuenta en cada petición (costo y latencia). | El gateway consulta el estado de la cuenta y se agrega un caso. |
 | 13 | **Se confirman D-02, D-03 y D-04 de §14** (casos `CA-NN`, permiso `reports:resolve`, sesiones del panel incluidas en la revocación). | Son decisiones tomadas por el autor sin consulta. | Se indica cuál cambiar. |
+
+## Nota de enmienda (2026-11-23, decisión de José)
+- **Punto 7 de §15:** el texto original decía que el contador de advertencias lo implementaba la spec 043 (T-08). Se concilió con el código: `IWarningCounter` ya existe (subtarea 059c) y vive en `ReportesStore`; la tarea T-08 de la 043 no bloquea esta spec.
+- **Valores de la regla gradual (R-16, decisión 6 de §15):** umbral de **3 advertencias vigentes en 90 días** y suspensión de **7 días**, como configuración (`Suspension:UmbralAdvertencias`, `Suspension:VigenciaAdvertenciasDias`, `Suspension:DuracionGradualDias`). Una advertencia es vigente si se decidió hace 90 días o menos. La suspensión gradual vence sola (spec 060, R-06a) y se levanta antes solo por apelación aceptada en el panel.
+- **Caso nuevo CA-20:** dadas 3 advertencias decididas, de las cuales una tiene más de 90 días, cuando se decide la tercera, entonces la cuenta no se suspende (prueba `Spec059GradualTests.Una_Advertencia_Fuera_De_La_Ventana_No_Cuenta_CA_059_20`).
+- No se marcan firmas: la aprobación de abajo es la original.
 
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-20

@@ -46,7 +46,9 @@ Aunque alguien baje el nivel de `Microsoft.AspNetCore` a `Information` o `Verbos
 - **El filtro está en código:** ningún ajuste de `appsettings` ni variable de entorno vuelve a habilitar esos eventos. Los de `Warning` o más no se descartan y pasan por la redacción del formateador (`RedactingJsonFormatter` con `TelemetryRedactor`), que todavía no redacta `q` ni `cp` (T-03).
 - **La petición se registra una sola vez**, con `UseSerilogRequestLogging`: método, plantilla de la ruta (`/api/v1/x/{id}`), código, duración y los identificadores de correlación; nunca la ruta con valores, la consulta, el host ni los encabezados.
 - **Pruebas:** `SecurityTest/Logging/Spec035RegistrosTests` arranca Mercado, Identidad y Mensajería con todos los niveles en `Verbose` y falla si algún registro lleva un valor o un nombre de la consulta de prueba (también con una llamada saliente); `IntegrationTest/Gateway/Spec035GatewayRegistrosTests` lo hace con el gateway real y un reenvío; `UnitTest/Hosting/Spec035QueryBearingSourcesTests` fija el comportamiento del filtro en las cuatro copias.
-- **Fuera de esta tarea:** la regla de redacción de consultas en `TelemetryRedactor` (R-04, T-03), la regla de Semgrep contra `UseHttpLogging` y la prueba de trazas (T-04) y las redes de confianza de `ForwardedHeaders` (KNOCK-180).
+- **Redacción de consultas (R-04):** `TelemetryRedactor` redacta cualquier consulta de URL en el texto de un registro como última barrera (`Spec035RedaccionTests`).
+- **Semgrep:** la regla `knock-sin-http-logging` (`.semgrep/semgrep.yaml`, muestra en `.semgrep/muestras/HttpLogging.cs`) bloquea `UseHttpLogging` y `AddHttpLogging`.
+- **Redes de confianza (KNOCK-180):** fuera de `Development` los cuatro proyectos no arrancan si `ForwardedHeaders:KnownNetworks` y `ForwardedHeaders:KnownProxies` están vacíos, ni con una red pública o más amplia que /16 (IPv4) o /48 (IPv6); el mensaje nombra la llave, nunca el valor (`Knock.Hosting.ForwardedHeaders.ForwardedHeadersValidator`). El gateway reemplaza `X-Forwarded-For` por la IP que resolvió, fija `X-Forwarded-Proto` y quita `X-Forwarded-Host`, `X-Forwarded-Prefix`, `Forwarded` y `X-Original-For` antes de reenviar (`ForwardedHeadersTransform`). Los hosts de prueba en `Production` fijan `ForwardedHeaders:KnownNetworks:0`.
 
 ## `traceId` y `correlationId`
 
@@ -97,3 +99,39 @@ Las hace el líder con el recurso creado. La evidencia (capturas y consulta KQL,
 4. Esperar de 2 a 5 minutos y buscar en Application Insights con las dos consultas de arriba. Deben aparecer la petición fallida, su excepción y su log, sin query ni datos personales.
 
 **Caso 16 (V2).** Con la API como en el paso 2, repetir la petición del paso 3 más de 5 veces en menos de 5 minutos (y más del 2 % del tráfico de esa ventana). La alerta de 5xx debe dispararse y llegar al correo del grupo de acciones. La de latencia se revisa en el portal (regla creada y su consulta).
+
+## Bandeja de salida y tareas programadas (spec 054, T-07)
+
+Identidad (`knock-api`) y Mercado (`knock-market`) publican el medidor `Knock.Procesos` (`Knock.Hosting.Procesos`). Mensajería no tiene bandeja ni ejecutor propios, así que no lo publica.
+
+| Instrumento | Cuándo suma | Atributos |
+|---|---|---|
+| `knock.procesos.intentos` | Una vez por cada intento de entrega o de ejecución | `proceso` (`outbox` o `tareas_programadas`), `tipo`, `id`, `intento`, `resultado` (`entregado`, `hecha`, `reintento`, `fallido`, `fallida`, `reserva_perdida`) |
+| `knock.procesos.alertas` | En cada evaluación, por cada evento o tarea en alerta | Los mismos, con `resultado` = `fallido`, `fallida` o `atrasado` |
+
+- **Qué está en alerta:** lo `fallido`/`fallida`, y lo `pendiente` o `en_proceso` cuya `programadaPara` (o `creadoEn`, si el mensaje no la tiene) pasó hace más de 10 minutos. Incluye los tipos que todavía no tienen manejador o entrega registrada: siguen pendientes y a los 10 minutos alertan.
+- **Cada cuánto:** `TareasProgramadas:IntervaloSegundos` (15 por omisión), en un proceso de fondo aparte. Cada evaluación lee como máximo 100 documentos por colección y por motivo.
+- **Registros:** cada intento en `Information` («Background attempt»); cada alerta en `Error` («process_alert») una vez mientras siga en alerta, por réplica.
+- **Sin datos personales:** nunca la carga, `datos` ni la clave de negocio. Varios `_id` de la bandeja llevan el `sub`, el `sid` o el id de la persona, así que el `id` publicado (métricas, intentos, alertas y fallos de la bandeja) es el `_id` solo si es un ObjectId; en otro caso son los primeros 32 hexadecimales de su SHA-256.
+- **Buscar el documento:** calcular ese resumen sobre los `_id` de la colección (`printf '%s' "<_id>" | sha256sum | cut -c1-32`). Quien ya conozca el `_id` puede relacionarlo: es un seudónimo, no un dato anónimo.
+- **Salud:** `/health/ready` no cambia: una cola atrasada no saca al servicio del balanceo (R-14).
+- **Pendiente:** la regla de alerta en Azure (Terraform) sobre `knock.procesos.alertas` mayor que cero, o sobre `process_alert` en los registros, todavía no existe. Hasta entonces no se avisa a nadie.
+
+```kusto
+traces
+| where message startswith "process_alert:"
+| order by timestamp desc
+```
+
+## Reparto entre réplicas (spec 034, R-06)
+
+Con dos réplicas por componente, `tests/perf/spec034-deploy-sin-corte.js` marca cada petición con `X-Correlation-Id = <RUN_ID>-<vu>-<iteración>` (`RUN_ID` se fija con la variable `RUN_ID`). Después se cuentan las instancias distintas por componente; deben ser 2 en cada uno:
+
+```kusto
+// <RUN_ID> es el prefijo del correlation id de la corrida
+requests
+| where tostring(customDimensions["knock.correlation_id"]) startswith "<RUN_ID>"
+| summarize instancias = dcount(cloud_RoleInstance) by cloud_RoleName
+```
+
+Ninguna respuesta incluye el nombre de la réplica ni del contenedor: el conteo se hace solo en Application Insights.

@@ -1,4 +1,6 @@
+using Knock.Hosting.Data;
 using Knock.Identity.Api.Hosting;
+using Knock.Identity.Api.Modules.Trust.Crypto;
 using Knock.Identity.Api.Modules.Trust.Domain;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
@@ -34,7 +36,27 @@ internal sealed record NewVerification(
     DateTime CaptureExpiresAt,
     string ConsentText,
     string ConsentVersion,
-    string DeviceId);
+    string DeviceId,
+    string CurpHmac,
+    WrappedVerificationKey WrappedKey);
+
+/// <summary>Lo que confirmar una foto y enviar necesitan de la verificación de una persona. Lleva la llave envuelta y el HMAC: nunca sale del módulo.</summary>
+internal sealed record VerificationForCapture(
+    ObjectId Id,
+    string Level,
+    string State,
+    DateTime CaptureExpiresAt,
+    WrappedVerificationKey? WrappedKey,
+    string? CurpHmac,
+    IReadOnlyList<StoredPhoto> Photos);
+
+/// <summary>Resultado de pasar una verificación a <c>en_revision</c>.</summary>
+internal enum SubmitOutcome
+{
+    Submitted,
+    NotSubmittable,
+    DuplicateCurp,
+}
 
 /// <summary>Lo que la verificación necesita de MongoDB; existe para probar el servicio con dobles sin base de datos.</summary>
 internal interface IVerificationStore
@@ -51,6 +73,31 @@ internal interface IVerificationStore
     /// En una transacción: cancela la captura viva de la persona (R-07: una sola por persona), guarda la verificación nueva en <c>en_captura</c> y su consentimiento.
     /// </summary>
     Task CreateAsync(NewVerification verification, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Si otra persona (distinta de <paramref name="exceptSub"/>) tiene una verificación vigente (<c>en_revision</c> o <c>verificada</c>) con alguno de esos HMAC de
+    /// CURP (R-06). Recibe un HMAC por cada versión de llave configurada: así una llave rotada no deja pasar duplicados guardados con la anterior.
+    /// </summary>
+    Task<bool> ExistsLiveCurpAsync(IReadOnlyCollection<string> curpHmacs, string exceptSub, CancellationToken cancellationToken);
+
+    /// <summary>La verificación <paramref name="id"/> si es de la persona (R-19: ajena e inexistente son lo mismo).</summary>
+    Task<VerificationForCapture?> FindOwnedAsync(string sub, ObjectId id, CancellationToken cancellationToken);
+
+    /// <summary>Marca la foto <c>cifrada</c> solo si seguía <c>pendiente</c>; <see langword="false"/> si ya no lo estaba.</summary>
+    Task<bool> MarkPhotoEncryptedAsync(ObjectId id, string type, DateTime confirmedAt, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Pasa a <c>en_revision</c> (R-13) en una sola escritura: estado, <c>enviadoEn</c>, <c>expiraEn</c> y <c>curpVigente</c>. Solo si sigue <c>en_captura</c> y ninguna foto está <c>pendiente</c>.
+    /// Si otra cuenta ganó la carrera por la misma CURP, el índice único parcial lo rechaza y devuelve <see cref="SubmitOutcome.DuplicateCurp"/> (CA-20).
+    /// <paramref name="purgeScheduler"/> programa las tareas de purga de la spec 057 en la MISMA transacción que el cambio de estado: o quedan las dos cosas o ninguna.
+    /// </summary>
+    Task<SubmitOutcome> SubmitAsync(
+        string sub,
+        ObjectId id,
+        DateTime sentAt,
+        DateTime expiresAt,
+        VerificationPurgeScheduler purgeScheduler,
+        CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -140,7 +187,9 @@ internal sealed class VerificationStore(
                 await Verifications.UpdateManyAsync(transaction, living, Builders<BsonDocument>.Update
                     .Set(_stateField, VerificationStates.NotVerified)
                     .Set("motivo", VerificationReasons.CaptureReplaced)
-                    .Set("fotos.$[].estado", PhotoStates.Deleted), cancellationToken: token);
+                    .Set("fotos.$[].estado", PhotoStates.Deleted)
+                    .Unset("llaveEnvuelta")
+                    .Unset("llaveKekVersion"), cancellationToken: token);
                 await Verifications.InsertOneAsync(transaction, ToDocument(verification), cancellationToken: token);
                 await Consents.InsertOneAsync(transaction, new BsonDocument
                 {
@@ -157,6 +206,80 @@ internal sealed class VerificationStore(
             cancellationToken: cancellationToken);
     }
 
+    public async Task<bool> ExistsLiveCurpAsync(IReadOnlyCollection<string> curpHmacs, string exceptSub, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(curpHmacs);
+        if (curpHmacs.Count == 0)
+        {
+            return false;
+        }
+
+        var filter = _filter.In("curpHmac", curpHmacs) & _filter.Eq("curpVigente", true) & _filter.Ne(_userIdField, exceptSub);
+        return await Verifications.Find(filter, FindOptions).Project(Builders<BsonDocument>.Projection.Include(_idField)).Limit(1).AnyAsync(cancellationToken);
+    }
+
+    public async Task<VerificationForCapture?> FindOwnedAsync(string sub, ObjectId id, CancellationToken cancellationToken)
+    {
+        var document = await Verifications.Find(_filter.Eq(_idField, id) & _filter.Eq(_userIdField, sub), FindOptions).Limit(1).FirstOrDefaultAsync(cancellationToken);
+        if (document is null)
+        {
+            return null;
+        }
+
+        var photos = ToVerification(document).Photos;
+        var wrapped = Text(document, "llaveEnvuelta") is { } value ? new WrappedVerificationKey(value, Text(document, "llaveKekVersion") ?? string.Empty) : null;
+        return new VerificationForCapture(id, Text(document, "nivel") ?? VerificationLevels.Basic, Text(document, _stateField) ?? VerificationStates.NotVerified,
+            Date(document, "capturaVenceEn") ?? DateTime.MinValue, wrapped, Text(document, "curpHmac"), photos);
+    }
+
+    public async Task<bool> MarkPhotoEncryptedAsync(ObjectId id, string type, DateTime confirmedAt, CancellationToken cancellationToken)
+    {
+        var filter = _filter.Eq(_idField, id) & _filter.ElemMatch<BsonDocument>("fotos", new BsonDocument { ["tipo"] = type, [_stateField] = PhotoStates.Pending });
+        var update = Builders<BsonDocument>.Update
+            .Set("fotos.$.estado", PhotoStates.Encrypted)
+            .Set("fotos.$.blob", $"{id}/{type}")
+            .Set("fotos.$.confirmadoEn", confirmedAt);
+        return (await Verifications.UpdateOneAsync(filter, update, cancellationToken: cancellationToken)).ModifiedCount == 1;
+    }
+
+    public async Task<SubmitOutcome> SubmitAsync(
+        string sub,
+        ObjectId id,
+        DateTime sentAt,
+        DateTime expiresAt,
+        VerificationPurgeScheduler purgeScheduler,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(purgeScheduler);
+        var filter = _filter.Eq(_idField, id) & _filter.Eq(_userIdField, sub) & _filter.Eq(_stateField, VerificationStates.Capturing)
+            & _filter.Not(_filter.ElemMatch<BsonDocument>("fotos", new BsonDocument { [_stateField] = PhotoStates.Pending }));
+        var update = Builders<BsonDocument>.Update
+            .Set(_stateField, VerificationStates.UnderReview)
+            .Set("enviadoEn", sentAt)
+            .Set("expiraEn", expiresAt)
+            .Set("curpVigente", true);
+        try
+        {
+            using var session = await database.Client.StartSessionAsync(cancellationToken: cancellationToken);
+            return await session.WithTransactionAsync(
+                async (transaction, token) =>
+                {
+                    if ((await Verifications.UpdateOneAsync(transaction, filter, update, cancellationToken: token)).ModifiedCount != 1)
+                    {
+                        return SubmitOutcome.NotSubmittable;
+                    }
+
+                    await purgeScheduler.ScheduleAsync(transaction, id, sentAt, cancellationToken);
+                    return SubmitOutcome.Submitted;
+                },
+                cancellationToken: cancellationToken);
+        }
+        catch (MongoWriteException ex) when (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            return SubmitOutcome.DuplicateCurp;
+        }
+    }
+
     private static BsonDocument ToDocument(NewVerification v) => new()
     {
         [_idField] = v.Id,
@@ -164,7 +287,10 @@ internal sealed class VerificationStore(
         ["nivel"] = v.Level,
         [_stateField] = VerificationStates.Capturing,
         ["fotos"] = new BsonArray(VerificationLevels.PhotosFor(v.Level).Select(type => new BsonDocument { ["tipo"] = type, [_stateField] = PhotoStates.Pending })),
+        ["curpHmac"] = v.CurpHmac,
         ["curpVigente"] = false,
+        ["llaveEnvuelta"] = v.WrappedKey.Value,
+        ["llaveKekVersion"] = v.WrappedKey.KekVersion,
         [_createdAtField] = v.CreatedAt,
         ["capturaVenceEn"] = v.CaptureExpiresAt,
     };

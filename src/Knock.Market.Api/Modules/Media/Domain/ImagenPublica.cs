@@ -5,6 +5,9 @@ internal enum PropositoImagen { Perfil, Trabajo }
 
 internal static class PropositoImagenExtensions
 {
+    /// <summary>Propósito privado (spec 062): las fotos de una solicitud no son una imagen pública y siguen el flujo de <c>MediaService</c>.</summary>
+    public const string Solicitud = "solicitud";
+
     public static PropositoImagen? Parse(string? value) => value switch
     {
         "perfil" => PropositoImagen.Perfil,

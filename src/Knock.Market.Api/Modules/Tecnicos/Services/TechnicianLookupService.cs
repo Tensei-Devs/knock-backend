@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using Knock.Contracts.Catalog;
 using Knock.Market.Api.Modules.Catalog;
 using Knock.Market.Api.Modules.Tecnicos.Domain;
@@ -23,12 +24,20 @@ internal sealed record TechnicianCoverage(
 /// <summary>Nombre de negocio de un técnico visible, para el autocompletado (TEC-03).</summary>
 internal sealed record BusinessName(string Id, string Nombre);
 
+/// <summary>Nombre de un servicio de un técnico visible, para el autocompletado (TEC-03). <paramref name="TecnicoId"/> es el técnico que lo ofrece.</summary>
+internal sealed record ServiceName(string TecnicoId, string Nombre);
+
 internal interface ITechnicianLookupReader
 {
     Task<TechnicianCoverage?> FindCoverageAsync(ObjectId id, CancellationToken cancellationToken);
 
-    /// <summary>Hasta <paramref name="limit"/> negocios de técnicos visibles cuyo nombre contiene <paramref name="text"/> (sin mayúsculas).</summary>
+    /// <summary>Hasta <paramref name="limit"/> servicios de técnicos visibles cuyo nombre contiene <paramref name="text"/> (sin mayúsculas ni acentos), sin nombres repetidos.</summary>
+    Task<IReadOnlyList<ServiceName>> FindServiceNamesAsync(string text, int limit, CancellationToken cancellationToken);
+
+    /// <summary>Hasta <paramref name="limit"/> negocios de técnicos visibles cuyo nombre contiene <paramref name="text"/> (sin mayúsculas ni acentos).</summary>
     Task<IReadOnlyList<BusinessName>> FindBusinessNamesAsync(string text, int limit, CancellationToken cancellationToken);
+
+    Task<TechnicianListPage> FindListAsync(TechnicianListQuery query, CancellationToken cancellationToken);
 }
 
 internal enum CoverageStatus
@@ -49,7 +58,9 @@ internal sealed class TechnicianLookupService(
     ICatalogApi catalog,
     INeighborhoodCenterCatalog centers,
     IMemoryCache cache,
-    TimeProvider clock)
+    TimeProvider clock,
+    TechnicianReadCache? readCache = null,
+    TechnicianBlockFilter? blockFilter = null)
 {
     public const int MaxSuggestions = 8;
 
@@ -117,6 +128,12 @@ internal sealed class TechnicianLookupService(
             .Take(MaxSuggestions).ToList();
         if (trades.Count < MaxSuggestions)
         {
+            var services = await reader.FindServiceNamesAsync(text.Trim(), MaxSuggestions - trades.Count, cancellationToken);
+            trades.AddRange(services.Select(s => new Suggestion("servicio", s.Nombre, null, s.TecnicoId)));
+        }
+
+        if (trades.Count < MaxSuggestions)
+        {
             var businesses = await reader.FindBusinessNamesAsync(text.Trim(), MaxSuggestions - trades.Count, cancellationToken);
             trades.AddRange(businesses.Select(b => new Suggestion("negocio", b.Nombre, null, b.Id)));
         }
@@ -139,6 +156,21 @@ internal sealed class TechnicianLookupService(
         return string.Join(' ', builder.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries));
     }
 
+    /// <summary>Patrón para buscar <paramref name="text"/> dentro de un nombre sin distinguir acentos: cada vocal y la «n» aceptan sus variantes acentuadas.
+    /// El texto se normaliza y se escapa, así que nunca se interpreta como expresión regular. Se usa con la opción de ignorar mayúsculas.</summary>
+    internal static string AccentInsensitivePattern(string text) =>
+        string.Concat(Normalize(text).Select(c => c switch
+        {
+            'A' => "[aAáÁàÀäÄâÂ]",
+            'E' => "[eEéÉèÈëËêÊ]",
+            'I' => "[iIíÍìÌïÏîÎ]",
+            'O' => "[oOóÓòÒöÖôÔ]",
+            'U' => "[uUúÚùÙüÜûÛ]",
+            'N' => "[nNñÑ]",
+            ' ' => @"\s+",
+            _ => Regex.Escape(c.ToString()),
+        }));
+
     internal static double DistanceKm(double lat1, double lon1, double lat2, double lon2)
     {
         static double Radians(double degrees) => degrees * Math.PI / 180.0;
@@ -147,4 +179,81 @@ internal sealed class TechnicianLookupService(
         var a = (Math.Sin(dLat / 2) * Math.Sin(dLat / 2)) + (Math.Cos(Radians(lat1)) * Math.Cos(Radians(lat2)) * Math.Sin(dLon / 2) * Math.Sin(dLon / 2));
         return 2 * _earthRadiusKm * Math.Asin(Math.Min(1, Math.Sqrt(a)));
     }
+
+    /// <summary>TEC-02 (spec 046, R-04): filtros estructurados, orden y cursor por página. La caché de la réplica dura
+    /// 30 segundos por consulta; su clave no lleva datos de otra persona, y se invalida al escribir (R-07).</summary>
+    public Task<TechnicianListOutcome> SearchAsync(TechnicianListQuery query, CancellationToken cancellationToken) => SearchAsync(query, null, cancellationToken);
+
+    /// <summary>Igual, y con sesión quita a los técnicos con un bloqueo en cualquier sentido con <paramref name="viewer"/> (spec 043, R-16), después de la caché compartida.</summary>
+    public async Task<TechnicianListOutcome> SearchAsync(TechnicianListQuery query, string? viewer, CancellationToken cancellationToken)
+    {
+        var outcome = await SearchSharedAsync(query, cancellationToken);
+        if (blockFilter is null || outcome.Response is not { } response || string.IsNullOrWhiteSpace(viewer))
+        {
+            return outcome;
+        }
+
+        var hidden = await blockFilter.HiddenAsync(viewer, response.Tecnicos.Select(t => t.Id), cancellationToken);
+        return hidden.Count == 0 ? outcome : outcome with { Response = response with { Tecnicos = [.. response.Tecnicos.Where(t => !hidden.Contains(t.Id))] } };
+    }
+
+    private async Task<TechnicianListOutcome> SearchSharedAsync(TechnicianListQuery query, CancellationToken cancellationToken)
+    {
+        var key = CacheKey(query);
+        if (cache.TryGetValue(key, out TechnicianListResponse? cached) && cached is not null)
+        {
+            return new TechnicianListOutcome(TechnicianListStatus.Ok, cached);
+        }
+
+        if (query.Oficio is not null && await catalog.FindActiveTradeAsync(query.Oficio, cancellationToken) is null)
+        {
+            return new TechnicianListOutcome(TechnicianListStatus.OficioInvalid, null);
+        }
+
+        if (query.Colonia is not null && await catalog.FindNeighborhoodAsync(query.Colonia, cancellationToken) is null)
+        {
+            return new TechnicianListOutcome(TechnicianListStatus.ColoniaNotFound, null);
+        }
+
+        if (query.Orden == "distancia" && (query.Lat is null || query.Lng is null))
+        {
+            return new TechnicianListOutcome(TechnicianListStatus.MissingPosition, null);
+        }
+
+        var page = await reader.FindListAsync(query, cancellationToken);
+        var response = new TechnicianListResponse(page.Tecnicos.Select(ToResponse).ToList(), page.NextCursor);
+        cache.Set(key, response, SuggestionsLifetime);
+        lock (_listKeysLock)
+        {
+            _listKeys.Add(key);
+        }
+
+        return new TechnicianListOutcome(TechnicianListStatus.Ok, response);
+    }
+
+    /// <summary>Quita de la caché de esta réplica todas las consultas de lista (llamada por las escrituras del perfil).</summary>
+    public void ForgetListCache()
+    {
+        readCache?.Invalidate();
+        lock (_listKeysLock)
+        {
+            foreach (var key in _listKeys)
+            {
+                cache.Remove(key);
+            }
+
+            _listKeys.Clear();
+        }
+    }
+
+    internal static TechnicianProfileResponse ToResponse(TechnicianProfileRecord record) =>
+        new(record.Id.ToString(), record.Nombre, record.NombreNegocio, record.FotoUrl, record.Verificacion,
+            record.Calificacion is { } rating ? Math.Round(rating, 1, MidpointRounding.AwayFromZero) : null, record.Anios,
+            TechnicianProfileService.Shorten(record.Descripcion), record.Oficios, Detalle: null);
+
+    internal static string CacheKey(TechnicianListQuery query) =>
+        $"tecnicos:lista:{query.Oficio ?? ""}|{query.Colonia ?? ""}|{query.Lat ?? ""}|{query.Lng ?? ""}|{query.RadioKm ?? ""}|{query.DisponibleHoy ?? ""}|{query.SoloVerificados ?? ""}|{query.Orden ?? ""}|{query.Cursor ?? ""}|{query.Limite ?? ""}";
+
+    private readonly HashSet<string> _listKeys = [];
+    private readonly object _listKeysLock = new();
 }

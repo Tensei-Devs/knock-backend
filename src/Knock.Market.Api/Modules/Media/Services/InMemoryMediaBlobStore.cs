@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Knock.Market.Api.Modules.Media.Data;
 using Knock.Market.Api.Modules.Media.Domain;
 
 namespace Knock.Market.Api.Modules.Media.Services;
@@ -10,6 +11,12 @@ internal sealed class InMemoryMediaBlobStore : IMediaBlobStore
     private int _version;
 
     public Task EnsureContainersAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    public Task<EnlaceSubida> CreateUploadLinkAsync(string quarantineBlob, string contentType, CancellationToken cancellationToken) =>
+        Task.FromResult(new EnlaceSubida(
+            new Uri($"https://blob.invalid/cuarentena/{quarantineBlob}?sig=test"),
+            DateTimeOffset.UtcNow.AddMinutes(5),
+            new Dictionary<string, string> { ["x-ms-blob-type"] = "BlockBlob", ["Content-Type"] = contentType }));
 
     public void UploadRaw(string blob, byte[] content)
     {

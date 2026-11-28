@@ -37,6 +37,8 @@ public sealed class Spec021ListadoTests
         var first = json.GetProperty("cotizaciones")[0];
         first.GetProperty("tipoPrecio").GetString().Should().Be("fijo", "el técnico verificado con calificación va primero en «recomendadas»");
         first.GetProperty("tecnico").GetProperty("verificado").GetBoolean().Should().BeTrue();
+        first.GetProperty("tecnicoUsuarioId").GetString().Should().Be(verified.Sub, "la app abre el chat con el sub del técnico, no con su tecnicoId");
+        first.GetProperty("tecnicoUsuarioId").GetString().Should().NotBe(first.GetProperty("tecnico").GetProperty("id").GetString());
     }
 
     [Fact]

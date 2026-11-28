@@ -1,7 +1,7 @@
 extern alias MarketApi;
-
 using System.Security.Cryptography;
 using Knock.IntegrationTest.Support;
+using MarketApi::Knock.Market.Api.Common.Text;
 using MarketApi::Knock.Market.Api.Modules.Catalog.Data;
 using MarketApi::Knock.Market.Api.Modules.Catalog.Domain;
 using MarketApi::Knock.Market.Api.Modules.Catalog.Services;
@@ -82,6 +82,8 @@ internal sealed class SecurityMarketFactory(IReadOnlyDictionary<string, string?>
             ["ConnectionStrings:KnockMongo"] = mongo.ConnectionString,
             ["ConnectionStrings:KnockRedis"] = redisConnectionString,
             ["Mongo:Databases:Catalog"] = "market_sec_" + Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(6)),
+            // Mercado exige la dirección base de las imágenes públicas al arrancar (spec 032, R-03); en Production no hay appsettings.Development que la dé.
+            ["Imagenes:BaseUrlPublica"] = "https://localhost/imagenes-publicas",
         };
         foreach (var (key, value) in overrides ?? new Dictionary<string, string?>())
         {
@@ -120,6 +122,7 @@ internal sealed class SecurityMarketFactory(IReadOnlyDictionary<string, string?>
     {
         ArgumentNullException.ThrowIfNull(builder);
         builder.UseEnvironment(environment);
+        builder.UseSetting("ForwardedHeaders:KnownNetworks:0", "10.0.0.0/16"); // spec 035, R-09: fuera de Development hay que fijar las redes de confianza
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
             SecurityHostConfiguration.Apply(configuration, _highLimit, settings);

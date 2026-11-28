@@ -69,11 +69,48 @@ internal sealed class FakeAccountStore : IAccountStore
         return Task.FromResult(true);
     }
 
+    /// <summary>Casos de recuperación vencidos por la tarea <c>VencerRecuperacion</c>: usuario y segundo Unix de creación.</summary>
+    public List<(string UserId, long CreatedAtSeconds)> ExpiredRecoveries { get; } = [];
+
+    public Task<bool> ExpireRecoveryAsync(string userId, long createdAtSeconds, DateTime now, CancellationToken cancellationToken)
+    {
+        var index = RecoveryCases.FindIndex(c => c.UserId == userId && new DateTimeOffset(c.CreatedAt, TimeSpan.Zero).ToUnixTimeSeconds() == createdAtSeconds);
+        if (index < 0)
+        {
+            return Task.FromResult(false);
+        }
+
+        RecoveryCases.RemoveAt(index);
+        ExpiredRecoveries.Add((userId, createdAtSeconds));
+        return Task.FromResult(true);
+    }
+
     /// <summary>Cuentas con una exportación en curso (por <c>_id</c>).</summary>
     public HashSet<string> ExportsInProgress { get; } = [];
 
     public Task<ExportStartOutcome> TryStartExportAsync(string userId, DateTime now, CancellationToken cancellationToken) =>
         Task.FromResult(ExportsInProgress.Add(userId) ? ExportStartOutcome.Started : ExportStartOutcome.AlreadyInProgress);
+
+    /// <summary>Última exportación lista por <c>_id</c> de la cuenta: nombre del ZIP y momento.</summary>
+    public Dictionary<string, (string BlobName, DateTime ReadyAt)> LastExports { get; } = [];
+
+    public Task SetLastExportAsync(string userId, string blobName, DateTime readyAt, CancellationToken cancellationToken)
+    {
+        LastExports[userId] = (blobName, readyAt);
+        return Task.CompletedTask;
+    }
+
+    public Task<ExportStatus?> FindExportStatusAsync(string sub, CancellationToken cancellationToken)
+    {
+        var account = Accounts.FirstOrDefault(candidate => candidate.Sub == sub);
+        if (account is null)
+        {
+            return Task.FromResult<ExportStatus?>(null);
+        }
+
+        var last = LastExports.TryGetValue(account.Id, out var stored) ? stored : default;
+        return Task.FromResult<ExportStatus?>(new ExportStatus(ExportsInProgress.Contains(account.Id), last.BlobName, last.BlobName is null ? null : last.ReadyAt));
+    }
 
     public Task ClearExportAsync(string userId, CancellationToken cancellationToken)
     {
@@ -116,6 +153,24 @@ internal sealed class FakeAccountStore : IAccountStore
 
         Accounts[index] = Accounts[index] with { State = "eliminacion_programada", DeleteAt = deleteAt };
         return Task.FromResult(true);
+    }
+
+    /// <summary>Cuentas borradas por <see cref="EraseAccountAsync"/>, por <c>_id</c>.</summary>
+    public List<string> Erased { get; } = [];
+
+    public Task<IReadOnlyList<string>?> EraseAccountAsync(string userId, DateTime now, CancellationToken cancellationToken)
+    {
+        var index = Accounts.FindIndex(a => a.Id == userId);
+        if (index < 0 || Accounts[index].State != "eliminacion_programada" || Accounts[index].DeleteAt > now)
+        {
+            return Task.FromResult<IReadOnlyList<string>?>(null);
+        }
+
+        Accounts[index] = Accounts[index] with { State = "eliminada", DeleteAt = null };
+        Erased.Add(userId);
+        var revoked = Sessions.Where(s => s.UserId == userId && !s.Revoked).ToList();
+        revoked.ForEach(s => s.Revoked = true);
+        return Task.FromResult<IReadOnlyList<string>?>([.. revoked.Select(s => s.Id)]);
     }
 
     public Task<bool> CancelDeletionAsync(string userId, DateTime now, CancellationToken cancellationToken)

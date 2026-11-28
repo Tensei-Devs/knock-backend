@@ -1,7 +1,8 @@
 # Matriz de límites de peticiones
 
-> TT-API-03 (KNOCK-37). Los valores salen de `src/Knock.Api/appsettings.json` (sección `RateLimiting`), sin secretos, y se afinan con el k6 de TT-QA-02.
-> Orden en el pipeline: `docs/MIDDLEWARES.md`. Implementación: `src/Knock.Api/Hosting/RateLimitingExtensions.cs`.
+> TT-API-03 (KNOCK-37). Los valores por IP salen del `appsettings.json` de cada proyecto (sección `RateLimiting`), sin secretos, y se afinan con el k6 de TT-QA-02.
+> Orden en el pipeline: `docs/MIDDLEWARES.md`. Implementación: `src/Knock.Hosting/RateLimiting/RateLimitingExtensions.cs`; políticas con nombre en `MarketRateLimits`, `IdentityRateLimits` y `MessagingRateLimits`; gateway en `src/Knock.Gateway/Hosting`.
+> La sección «Matriz por política (verificada contra el código)» del final es la lista completa y vigente; las secciones por spec son su historia.
 
 ## Políticas por IP
 
@@ -14,7 +15,9 @@
 
 **Mensajería** (`Knock.Messaging.Api`, BUG-004 / KNOCK-241) aplica el mismo mecanismo por IP con dos políticas, sin la estricta de `/auth` (no tiene rutas de sesión): **Global** 100 peticiones por minuto (cualquier ruta salvo `/health` y `/health/ready`) y **propia de `/health/ready`** 60 por minuto, configuradas en `RateLimiting:Global` y `RateLimiting:Ready` de su `appsettings.json`. Responde `429` con `Retry-After`. El chat de 30 mensajes por minuto por persona lo define la spec 026. **Límite conocido (aceptado):** el limitador vive en la memoria de cada réplica, así que con 2 réplicas el límite efectivo se duplica, igual que en Identidad y Mercado (se mueve a Redis en el Sprint 5). Además, la IP del cliente solo es la real cuando `ForwardedHeaders` confía en la red del ingreso (`ForwardedHeaders:KnownNetworks`, del #61, KNOCK-201, que Mensajería ya usa): si el despliegue no la fija, Mensajería ve la IP del proxy y el límite se comparte entre todos los clientes. La prueba de «otra IP no se ve afectada» (TC-BUG-004-04) fija la IP con un encabezado de prueba, no de punta a punta.
 
-**Panel interno (spec 033, KNOCK-75).** Los cinco endpoints de sesión y activación del panel llevan la política estricta por IP de arriba, con la misma configuración (`RateLimiting:Auth`) y contador aparte del de `/auth`. El resto de `/api/v{n}/panel/**` lleva la política por usuario del gateway (`RateLimiting:User`) con el `sub` del token del panel (contador propio `ratelimit:panel-user:{sub}`). Aparte de ellos, los fallos de TOTP se cuentan por IP en Redis (`panel:fallos-ip:{ip}`: 10 en 15 minutos dan 429 `limit_exceeded`) y por cuenta en MongoDB (5 en 15 minutos dan 429 `locked`); ver la spec 033, R-11.
+**Rutas de revisión del panel (spec 053, R-25 y CA-39).** `GET /api/v1/admin/verificaciones` y `GET /api/v1/admin/reportes` llevan la política `panel-lectura` (**120 por minuto**) y `GET /api/v1/admin/verificaciones/{id}` (abre la verificación y firma los enlaces de las fotos) y las dos `POST .../{id}/decision` llevan `panel-decision` (**30 por minuto**), ambas **por sesión del panel** (claim `sid`): otra sesión de la misma cuenta cuenta aparte. Como el limitador corre antes de que el esquema del panel autentique, el `sid` se lee del token sin validar su firma solo para repartir el contador (un token inventado cuenta en su propia partición y la ruta lo rechaza con 401); sin token legible cuenta por IP. 429 con `Retry-After`; las dos decisiones responden 413 con un cuerpo mayor a 2 048 bytes. Contador en Redis compartido con respaldo por copia (`Knock.Hosting`, `PerKey`).
+
+**Panel interno (spec 033, KNOCK-75).** Los cinco endpoints de sesión y activación del panel llevan la política estricta por IP de arriba, con la misma configuración (`RateLimiting:Auth`) y contador aparte del de `/auth`. El resto de `/api/v{n}/panel/**` y todo `/api/v{n}/admin/**` (spec 053) lleva la política por usuario del gateway (`RateLimiting:User`) con el `sub` del token del panel (contador propio `ratelimit:panel-user:{sub}`). Aparte de ellos, los fallos de TOTP se cuentan por IP en Redis (`panel:fallos-ip:{ip}`: 10 en 15 minutos dan 429 `limit_exceeded`) y por cuenta en MongoDB (5 en 15 minutos dan 429 `locked`); ver la spec 033, R-11.
 
 - Las peticiones a `/auth/*` cuentan en las dos políticas (la estricta y la global).
 - `/health` (sin comprobaciones) es la **única exención** del límite. `/health/ready` hace un ping a MongoDB por petición anónima, así que desde TT-API-06 (KNOCK-138) tiene su propia política por IP (60 por minuto) y no cuenta en la global.
@@ -60,9 +63,9 @@
 
 `GET /api/v1/tecnicos/{id}` es pública y no tiene política propia: rigen los límites globales del gateway y el límite por IP de Mercado. La caché de 1 minuto del perfil reduce las lecturas a MongoDB por técnico.
 
-`PUT /api/v1/tecnicos/me`, `PUT /api/v1/tecnicos/me/disponibilidad`, `GET`/`PUT /api/v1/tecnicos/me/horarios` y `GET /api/v1/tecnicos/me/trabajo` no tienen política propia: rigen los límites globales del gateway y el límite por IP de Mercado. Los cuerpos de las escrituras se limitan a 8 KB, 1 KB y 4 KB (413).
+`GET` y `PUT /api/v1/tecnicos/me`, `PUT /api/v1/tecnicos/me/disponibilidad`, `GET`/`PUT /api/v1/tecnicos/me/horarios` y `GET /api/v1/tecnicos/me/trabajo` no tienen política propia: rigen los límites globales del gateway y el límite por IP de Mercado. Los cuerpos de las escrituras se limitan a 8 KB, 1 KB y 4 KB (413).
 
-`GET /api/v1/tecnicos/autocompletar` es pública: la frena el límite global por IP del gateway y de Mercado (R-41) y la caché de 30 s por texto. `GET /api/v1/tecnicos/{id}/llega-a-mi-colonia` pide sesión y usa los límites globales; su caché de 1 minuto evita repetir la lectura.
+`GET /api/v1/tecnicos/autocompletar` es pública: la frena el límite global por IP del gateway y de Mercado (R-41) y la caché de 30 s por texto. `GET /api/v1/tecnicos/{id}/llega-a-mi-colonia` pide sesión y usa los límites globales; su caché de 1 minuto evita repetir la lectura. GET /api/v1/tecnicos es pública y no tiene política propia: rigen los límites globales del gateway y el límite por IP de Mercado; en el servidor, la respuesta se cachea 30 s por réplica con claves que no llevan datos de otra persona, y las escrituras del perfil invalidan la caché de lista (KNOCK-90).
 
 ## Lista de espera en Mercado (spec 023, KNOCK-47)
 
@@ -85,6 +88,11 @@
 ## Técnicos de confianza en Mercado (spec 042, KNOCK-91)
 
 `GET`, `PUT` y `DELETE /api/v1/me/tecnicos-confianza` comparten la política `tecnicos-confianza`: **30 peticiones por minuto por `sub`**, por proceso (ventana fija del limitador de Mercado), además de los límites generales. La 31.ª responde 429 con `Retry-After`. `PUT` y `DELETE` no llevan cuerpo: más de 1 KiB responde 413. Con dos réplicas pueden pasar hasta 60 por minuto; el límite compartido queda para KNOCK-247.
+
+Las rutas de servicios del técnico (`GET /api/v1/tecnicos/{id}/servicios` y `POST`, `PUT`, `DELETE /api/v1/tecnicos/me/servicios`) comparten la política `tecnicos-servicios`: **30 peticiones por minuto por `sub`**, por proceso, además de los límites generales. La 31.ª responde 429 con `Retry-After`. Cuerpos de más de 2 KiB (1 KiB en `DELETE`) responden 413 (spec 047, KNOCK-57).
+`GET /api/v1/admin/oficios-pedidos` y `GET /api/v1/admin/lista-espera` comparten la política `admin-catalogo`: **60 peticiones por minuto por IP** (el token del panel no pasa por el esquema de la app, así que aún no hay `sub` en el limitador), por proceso, además de los límites generales. La 61.ª responde 429 con `Retry-After`. Decisión provisional (spec 045, KNOCK-111).
+
+`POST /api/v1/admin/opiniones/{id}/ocultar` y `POST /api/v1/admin/opiniones/{id}/mostrar` (spec 061) comparten la política `admin-opiniones`: **30 peticiones por minuto por IP** (como las demás rutas de `/admin` de Mercado, el token del panel aún no deja el `sub` al limitador; la spec pide «por persona del panel» y queda así hasta que el limitador lo lea), por proceso, además de los límites generales. La 31.ª responde 429 con `Retry-After`. El cuerpo de `ocultar` se limita a 2 KiB.
 ## Chat de visita en Mensajería (spec 026, KNOCK-62)
 
 `EnviarMensaje` del hub `/hubs/chat` limita a **30 mensajes por minuto por persona** (`Chat:MensajesPorMinuto`, de 1 a 600), con una ventana fija de 60 segundos y un contador compartido en Redis (`chat:limite:{sub}`) que se incrementa y vence en una sola operación atómica, así que dos copias del servicio comparten el total. Al pasarse, la invocación responde `{ ok: false, codigo: "message_limit", reintentarEnSegundos }` y el mensaje no se retransmite. El saludo del hub (`POST /hubs/chat/negotiate`) y sus reintentos son peticiones HTTP y siguen los límites generales del gateway y del servicio. Si Redis no responde, el saludo responde 503 y no se acepta la conexión.
@@ -110,7 +118,11 @@ Las cinco rutas de `/api/v1/me/casa-y-auto` (CAS-01 a CAS-05) no tienen polític
 
 ## Cuenta y datos personales en Identidad (spec 039, KNOCK-284)
 
-Políticas por `sub` del JWT (ventana fija, por proceso; con dos réplicas el límite efectivo se duplica), todas con 429 y `Retry-After`: `POST /me/cambio-numero` **3 por hora** (R-20), `POST /me/cambio-numero/confirmar` **5 por hora**, `POST /me/exportaciones` **3 por hora** y `POST /me/eliminacion` **5 por hora**; estos tres últimos son valores propuestos porque la spec no los fija. `POST /recuperacion-acceso` (pública) tiene **3 por hora por IP** y además **3 por hora por número** (nuevo y anterior, contados por su HMAC en `RecoveryAttemptLimiter`, en memoria del proceso). `GET/PUT /me/consentimientos`, `GET /me/pendientes` y `POST /me/eliminacion/cancelar` usan solo el límite general. Cuerpos: 4 KiB en cambio de número y recuperación, 8 KiB en eliminación, 1 KiB en consentimientos, exportaciones y cancelar (413). Para que las políticas por persona lean el `sub`, Identidad ejecuta `UseAuthentication` antes de `UseRateLimiter`.
+Políticas por `sub` del JWT (ventana fija, por proceso; con dos réplicas el límite efectivo se duplica), todas con 429 y `Retry-After`: `POST /me/cambio-numero` **3 por hora** (R-20), `POST /me/cambio-numero/confirmar` **5 por hora**, `POST /me/exportaciones` **3 por hora** y `POST /me/eliminacion` **5 por hora**; estos tres últimos son valores propuestos porque la spec no los fija. `POST /recuperacion-acceso` (pública) tiene **3 por hora por IP** y además **3 por hora por número** (nuevo y anterior, contados por su HMAC en `RecoveryAttemptLimiter`, en memoria del proceso). `POST` y `GET /suspension/apelacion` (pública, spec 060) llevan la política `suspension-apelacion`: **20 por hora por IP** (`IdentityRateLimits`) y **5 por hora por número** (HMAC, `SuspensionAppealLimiter`, en memoria del proceso); cuerpo de 2 KiB (413). `GET/PUT /me/consentimientos`, `GET /me/pendientes` y `POST /me/eliminacion/cancelar` usan solo el límite general. Cuerpos: 4 KiB en cambio de número y recuperación, 8 KiB en eliminación, 1 KiB en consentimientos, exportaciones y cancelar (413). Para que las políticas por persona lean el `sub`, Identidad ejecuta `UseAuthentication` antes de `UseRateLimiter`.
+
+## Bloqueos y reportes en Identidad (spec 043, KNOCK-95)
+
+Políticas por `sub` del JWT, con 429 y `Retry-After`: `POST` y `DELETE /usuarios/{id}/bloqueo` **30 por hora**, `POST /reportes` y `POST /reportes/{id}/apelacion` **10 por hora**, `GET /me/bloqueos` y `GET /reportes/me` **120 por minuto**. Son valores propuestos porque la spec 043 (R-26) no los fija: pendientes de validación de José. Cuerpos: 4 KiB en crear reporte y en apelar (413).
 
 ## Verificación de identidad en Identidad (spec 025, KNOCK-79)
 
@@ -118,3 +130,132 @@ Políticas por `sub` del JWT (ventana fija, por proceso; con dos réplicas el l�
 ## Exploración sin cuenta (HU-005, KNOCK-53)
 
 Las lecturas públicas de exploración son `GET /api/v1/oficios`, `GET /api/v1/tecnicos/autocompletar` y `GET /api/v1/tecnicos/{id}`; no tienen política propia: las frena el límite global por IP del gateway y de Mercado (100 por minuto), no uno de 60. El criterio CA4 de la HU-005 pide 429 tras 60 peticiones por minuto por IP; bajar el valor es una decisión pendiente del equipo, porque la matriz parte de TT-API-03 con 100 y afectaría a toda la API. `/api/v1/busqueda` y `/api/v1/zonas/cp/{cp}` piden sesión por decisión de las specs 027 y 023 (la apertura de zonas a la exploración sigue como pregunta abierta en la 023). TC-HU-005-04 comprueba en el gateway que las tres rutas públicas responden sin token y dan 429 con `Retry-After` al pasar el límite configurado.
+
+`POST /api/v1/solicitudes/{id}/cancelar` tiene una política por `sub` del JWT de **10 cancelaciones por hora** (`RateLimitingExtensions.CancelRequestPolicy`, spec 029, R-14), ventana fija y por proceso; la respuesta 429 incluye `Retry-After`. El cuerpo se limita a 8 KB (413).
+
+## Catálogo de oficios, oficios pedidos y lista de espera en Mercado (spec 045, KNOCK-134)
+
+`GET /api/v1/oficios/{clave}` es pública y no tiene política propia: la frenan el límite global por IP del gateway y de Mercado (100 por minuto) y la caché de 24 horas de oficios activos. `GET`, `POST` y `PUT /api/v1/admin/oficios` comparten con `GET /api/v1/admin/oficios-pedidos` y `GET /api/v1/admin/lista-espera` la política `admin-catalogo`: **60 peticiones por minuto por IP**, por proceso (el token del panel no pasa por el esquema de la app, así que aún no hay `sub` en el limitador); la respuesta 429 incluye `Retry-After`. `POST /api/v1/oficios-pedidos` usa la política `tecnicos-registro` (**5 por hora por `sub`**, la misma de `POST /api/v1/tecnicos`, porque es parte del flujo de registro; así no se toca `RateLimitingExtensions`). Los cuerpos se limitan a 4 KiB en las dos rutas de escritura del panel y a 1 KiB en `POST /api/v1/oficios-pedidos`; más responde 413. Con dos réplicas el límite efectivo se duplica, como en las demás políticas de Mercado.
+
+## Visitas, cotización final y agenda en Mercado (specs 049 y 050)
+
+Políticas por `sub` del JWT (ventana fija; el contador vive en Redis compartido entre réplicas, con respaldo por copia, `Knock.Hosting`), además de los límites generales. La que se pasa responde 429 `rate_limited` con `Retry-After`. Los valores salen de `MarketRateLimits` (existen en sprint-05).
+
+| Política | Rutas | Límite | Ventana | Clave |
+|---|---|---|---|---|
+| `agenda-tecnico` | `GET /api/v1/agenda` | 60 peticiones | 1 minuto | `sub` |
+| `visitas-cambios` | `POST /api/v1/visitas/{id}/reprogramar`, `.../reprogramar/respuesta`, `.../cancelar`, `.../cliente-ausente`, `.../tecnico-ausente`, `.../terminar`, `.../no-terminado` y `PUT .../permiso-fotos` (una sola política de 8 rutas) | 20 peticiones | 1 minuto | `sub` |
+| `visitas-cotizacion-final` | `POST /api/v1/visitas/{id}/cotizacion-final` | 10 peticiones | 1 minuto | `sub` |
+| `visitas-cotizacion-final-decision` | `POST /api/v1/visitas/{id}/cotizacion-final/decision` | 20 peticiones | 1 minuto | `sub` |
+| `cotizaciones-ajuste-precio` | `POST /api/v1/cotizaciones/{id}/ajuste-precio` | 10 peticiones | 1 minuto | `sub` |
+| `ajustes-decision` | `POST /api/v1/ajustes/{id}/decision` | 20 peticiones | 1 minuto | `sub` |
+
+`GET /api/v1/tecnicos/me/reputacion` y `GET /api/v1/tecnicos/{id}/fotos-trabajos` no tienen política propia: rigen los límites globales.
+
+## Ampliar y referencia de mercado en Mercado (spec 048)
+
+`POST /api/v1/solicitudes/{id}/ampliar` tiene la política `solicitudes-ampliar`: **10 peticiones por hora por `sub`**. `GET /api/v1/cotizaciones/referencia-mercado` tiene `cotizaciones-referencia`: **30 peticiones por minuto por `sub`**. Ambas en `MarketRateLimits`.
+
+## Mapa y Explorar en Mercado (spec 046)
+
+`GET /api/v1/mapa/tecnicos` (`tecnicos-mapa`) y `GET /api/v1/explorar` (`tecnicos-explorar`) son públicos: **60 peticiones por minuto por IP cada uno**, con contador propio por política (clave `{política}:{IP del cliente}`), además del límite global. Están en sprint-05.
+
+## Opiniones en Mercado (spec 051)
+
+Las tres rutas de opiniones (`GET /api/v1/tecnicos/{id}/opiniones`, `POST /api/v1/visitas/{id}/opinion` y `POST /api/v1/opiniones/{id}/respuesta`) comparten la política `opiniones`: **30 peticiones por minuto por `sub`**. Está en sprint-05.
+
+## Asistente en Mercado (spec 052)
+
+`POST /api/v1/asistente/conversaciones`, `.../resumen-chat` y `.../borrador-cotizacion` (las que llaman al modelo) tienen la política `asistente-ia`: **10 peticiones por minuto por `sub`**. `GET /api/v1/asistente/rango-precio` y `PUT`/`GET .../bitacora/{solicitudId}` tienen `asistente-consulta`: **60 peticiones por minuto por `sub`**. Aparte, el presupuesto de la IA se frena con `Asistente:Limites` (`TokensPorUsuarioPorDia` 20 000, `TokensGlobalesPorDia` 200 000, `TiempoMaximoSegundos` 10, `TokensSalidaMaximos` 800): al agotarlo responde 429 `ai_daily_limit_reached` con `Retry-After`. `Asistente:Habilitado` viene en `false`. Está en sprint-05.
+
+## Conversaciones, dispositivos y avisos en Mensajería (specs 030, 037 y 044)
+
+Políticas por `sub` del JWT de `MessagingRateLimits` (ventana fija; contador compartido en Redis), además del límite global por IP de Mensajería. La respuesta 429 lleva `Retry-After`.
+
+| Política | Rutas | Límite | Ventana | Clave |
+|---|---|---|---|---|
+| `conversaciones-crear` | `POST /api/v1/conversaciones` | 20 peticiones | 1 hora | `sub` |
+| `conversaciones-mensajes` | `POST /api/v1/conversaciones/{id}/mensajes` | 30 peticiones | 1 minuto | `sub` |
+| `dispositivos` | `POST /api/v1/dispositivos` y `DELETE /api/v1/dispositivos/{id}` | 30 peticiones | 1 hora | `sub` |
+| `avisos-leer` | `GET /api/v1/avisos`, `GET /api/v1/avisos/no-leidos/contador` y `GET /api/v1/me/preferencias-avisos` | 120 peticiones | 1 minuto | `sub` |
+| `avisos-marcar` | `POST /api/v1/avisos/{id}/leido` y `POST /api/v1/avisos/leidos` | 60 peticiones | 1 minuto | `sub` |
+| `avisos-preferencias` | `PUT /api/v1/me/preferencias-avisos` | 20 peticiones | 1 minuto | `sub` |
+
+- El 429 de `conversaciones-mensajes` lleva `code` `message_limit` (spec 030, R-11); los demás, `rate_limited`.
+- Existen en sprint-05 todas las políticas de esta tabla.
+- `GET /api/v1/conversaciones`, `.../no-leidas`, `GET /api/v1/conversaciones/{id}`, `.../mensajes` y `POST .../leido` no tienen política propia: rigen los límites globales.
+- El límite global por IP de Mensajería (100 por minuto, `/health/ready` 60) sigue siendo por copia (`SharedGlobalCounters = false`); las políticas por `sub` de arriba sí usan el contador compartido. La línea sobre Redis en el párrafo de Mensajería de arriba quedó atrás: las políticas por persona ya lo usan.
+
+## Verificación de identidad: confirmar foto (spec 025, R-19)
+
+`POST /api/v1/me/verificacion/{id}/fotos/{tipo}/confirmar` tiene la política `verificacion-confirmar` (`IdentityRateLimits.VerificationConfirmPolicy`): **10 peticiones por hora por `sub`**. Está en el PR #272 de integración de Identidad, sin fusionar. `POST /api/v1/me/verificacion/{id}/enviar` no tiene política propia.
+
+## Rutas internas (specs 037, 039, 043, 053 y 054)
+
+Ninguna ruta de `/api/v1/interno/*` tiene política de límite propia: no son políticas de `RateLimiting`, sino de **autorización** del token de servicio (`InternalHistory`, `InternalEvents`, `InternalBlocks`, `InternalAccount`, `InternalTechnicianHidden`, `InternalNotFinishedReport` en Mercado; `InternalNotices` en Mensajería). Las llama solo otro servicio de Knock, no pasan por el gateway y solo les aplica el límite global por IP de su servicio. Los nombres `InternalBlocks`, `InternalEvents`, `InternalNotices` y `AccountPolicy` de la lista de trabajo corresponden a esas políticas de autorización (`AccountPolicy` es la constante de `InternalAccount`); no hay un valor de peticiones por minuto que documentar.
+
+## Matriz por política (verificada contra el código, 2026-11-23, spec 035 T-09)
+
+Todas las políticas con nombre usan el contador compartido en Redis con respaldo por copia (`KnockRateLimitPolicies`). `PerSubject` limita por `sub` del JWT (sin `sub` no limita: la autenticación ya respondió) y `PerClient` por IP resuelta (spec 035: confianza solo en `ForwardedHeaders:KnownNetworks`, `ForwardLimit = 1`, el gateway reemplaza `X-Forwarded-For`). Cualquier ruta cuenta además en la política global por IP del servicio y en las del gateway. Los valores de `appsettings.json` son: Identidad y Mercado `Global` 100/min, `Auth` 10/min (estricta de `/api/v{n}/auth/*`; Identidad suma la sesión del panel) y `Ready` 60/min; Mensajería `Global` 100/min y `Ready` 60/min, sin `Auth`, y con los contadores globales en memoria por copia (`SharedGlobalCounters = false`). Gateway: `Ip` 100/min, `Auth` 10/min, `User` 120/min, `Search` 30/min y `Discard` 30/hora.
+
+**Identidad** (`IdentityRateLimits`)
+
+| Política | Controller | Límite | Clave |
+|---|---|---|---|
+| `cambio-numero-comprobar` | `MeCambioNumeroController` | 3 por hora | `sub` |
+| `cambio-numero-confirmar` | `MeCambioNumeroController` | 5 por hora | `sub` |
+| `recuperacion-acceso` | `AccessRecoveryController` | 3 por hora | IP |
+| `suspension-apelacion` | `SuspensionAppealController` | 20 por hora | IP |
+| `exportaciones` | `MeExportacionesController` (POST) | 3 por hora | `sub` |
+| `exportaciones-ultima` | `MeExportacionesController` (GET `ultima`) | 30 por hora (valor propuesto) | `sub` |
+| `eliminacion` | `MeEliminacionController` | 5 por hora | `sub` |
+| `bloqueos` | `BloqueosController` (POST y DELETE) | 30 por hora | `sub` |
+| `reportes` | `ReportesController` (crear y apelar) | 10 por hora | `sub` |
+| `seguridad-leer` | `BloqueosController` y `ReportesController` (lecturas propias) | 120 por minuto | `sub` |
+| `verificacion-crear` | `MeVerificacionController` | 3 por hora | `sub` |
+| `panel-lectura` | `AdminVerificacionesController` (cola, VER-03) y `AdminReportesController` (cola, REP-04) | 120 por minuto | `sid` del token del panel |
+| `panel-decision` | `AdminVerificacionesController` (abrir, VER-04, y decidir, VER-05) y `AdminReportesController` (decidir, REP-05) | 30 por minuto | `sid` del token del panel |
+| `verificacion-confirmar` | `FotosVerificacionController` | 10 por hora | `sub` |
+
+**Mercado** (`MarketRateLimits`)
+
+| Política | Controller | Límite | Clave |
+|---|---|---|---|
+| `waitlist` | `ListaEsperaController` | 5 por hora | `sub` |
+| `solicitudes-crear` | `SolicitudesController` | 10 por hora | `sub` |
+| `solicitudes-cancelar` | `CancelacionController` | 10 por hora | `sub` |
+| `solicitudes-ampliar` | `AmpliarController` | 10 por hora | `sub` |
+| `cotizaciones-referencia` | `MarketReferenceController` | 30 por minuto | `sub` |
+| `quotes` | `CotizacionesController` | 3 por minuto | `sub` |
+| `cotizaciones-comparar` | `QuoteComparisonController` | 60 por minuto | `sub` |
+| `cotizaciones-elegir` | `ChooseQuoteController` | 10 por minuto | `sub` |
+| `visitas-llegada` | `ArrivalController` | 5 por minuto | `sub` |
+| `tecnicos-confianza` | `TrustedTechniciansController` | 30 por minuto | `sub` |
+| `tecnicos-servicios` | `ServiciosController` | 30 por minuto | `sub` |
+| `opiniones` | `OpinionesController` | 30 por minuto | `sub` |
+| `admin-catalogo` | `AdminCatalogController`, `AdminTradesController` | 60 por minuto | IP |
+| `admin-opiniones` | `AdminReviewsController` | 30 por minuto | IP |
+| `agenda-tecnico` | `VisitScheduleController` (agenda) | 60 por minuto | `sub` |
+| `visitas-cambios` | `VisitScheduleController` (reprogramar, responder, cancelar, ausente) | 20 por minuto | `sub` |
+| `visitas-cotizacion-final` | `FinalQuoteController` | 10 por minuto | `sub` |
+| `visitas-cotizacion-final-decision` | `FinalQuoteController` | 20 por minuto | `sub` |
+| `cotizaciones-ajuste-precio` | `FinalQuoteController` | 10 por minuto | `sub` |
+| `ajustes-decision` | `FinalQuoteController` | 20 por minuto | `sub` |
+| `tecnicos-registro` | `TecnicosController` y `TradeRequestsController` | 5 por hora | `sub` |
+| `tecnicos-mapa` | `MapaController` | 60 por minuto | IP |
+| `tecnicos-explorar` | `ExplorarController` | 60 por minuto | IP |
+| `asistente-ia` | `AsistenteController` (rutas que llaman al modelo) | 10 por minuto | `sub` |
+| `asistente-consulta` | `AsistenteController` (consultas) | 60 por minuto | `sub` |
+
+**Mensajería** (`MessagingRateLimits`)
+
+| Política | Controller | Límite | Clave |
+|---|---|---|---|
+| `conversaciones-crear` | `ConversacionesController` | 20 por hora | `sub` |
+| `conversaciones-mensajes` | `MensajesController` (con `code` propio `message_limit`) | 30 por minuto | `sub` |
+| `dispositivos` | `DispositivosController` | 30 por hora | `sub` |
+| `avisos-leer` | `AvisosController`, `MePreferenciasAvisosController` (lecturas) | 120 por minuto | `sub` |
+| `avisos-marcar` | `AvisosController` | 60 por minuto | `sub` |
+| `avisos-preferencias` | `MePreferenciasAvisosController` (escritura) | 20 por minuto | `sub` |
+
+**Humo de dos clientes (spec 035, CA-15).** Desde el entorno de evaluación, dos clientes con IP distinta agotan `/auth` por separado: el primero debe llegar a 429 sin afectar al segundo. El comando está en `tests/smoke/spec035-dos-clientes.sh` (no se corre contra Azure desde el repositorio).

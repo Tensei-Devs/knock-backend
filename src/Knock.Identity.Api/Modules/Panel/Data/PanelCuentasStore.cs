@@ -1,3 +1,4 @@
+using Knock.Hosting.Data;
 using Knock.Identity.Api.Hosting;
 using Knock.Identity.Api.Modules.Panel.Domain;
 using Microsoft.Extensions.Options;
@@ -45,6 +46,13 @@ internal sealed class PanelCuentasStore(
         await Accounts.Indexes.CreateOneAsync(
             new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending(SubField), new CreateIndexOptions { Unique = true, Name = "sub_1" }),
             cancellationToken: cancellationToken);
+
+    /// <summary>Si hay una cuenta del panel activa, distinta de <paramref name="excludedSub"/>, con alguno de esos roles (spec 060, R-05).</summary>
+    public async Task<bool> AnyActiveWithRoleAsync(IReadOnlyList<string> roles, string excludedSub, CancellationToken cancellationToken) =>
+        await Accounts
+            .Find(_filter.Ne(SubField, excludedSub) & _filter.Eq(StateField, PanelCuentaEstado.Activa) & _filter.In(RolesField, roles), _findOptions)
+            .Limit(1)
+            .AnyAsync(cancellationToken);
 
     public async Task<CuentaPanel?> FindBySubAsync(string sub, CancellationToken cancellationToken) =>
         ToAccount(await Accounts.Find(_filter.Eq(SubField, sub), _findOptions).Limit(1).FirstOrDefaultAsync(cancellationToken));

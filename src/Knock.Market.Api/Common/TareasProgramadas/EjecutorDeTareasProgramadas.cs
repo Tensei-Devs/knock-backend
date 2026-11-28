@@ -1,3 +1,5 @@
+using Knock.Hosting.Procesos;
+
 namespace Knock.Market.Api.Common.TareasProgramadas;
 
 internal interface IManejadorDeTarea
@@ -16,48 +18,52 @@ internal sealed partial class EjecutorDeTareasProgramadas(
 
     public async Task<bool> ExecuteOneAsync(CancellationToken cancellationToken)
     {
-        if (_handlers.Count == 0)
+        var types = _handlers.Keys.ToArray();
+        var reserved = types.Length == 0 ? null : await store.ReserveAsync(clock.GetUtcNow().UtcDateTime, cancellationToken, types);
+        if (reserved is null)
         {
             return false;
         }
 
-        var task = await store.ReserveAsync(clock.GetUtcNow().UtcDateTime, cancellationToken, _handlers.Keys.ToArray());
-        if (task is null)
-        {
-            return false;
-        }
+        await RunAsync(reserved, cancellationToken);
+        return true;
+    }
 
+    private async Task RunAsync(TareaReservada task, CancellationToken cancellationToken)
+    {
         try
         {
             await _handlers[task.Tipo].HandleAsync(task, cancellationToken);
-            if (!await store.CompleteAsync(task, clock.GetUtcNow().UtcDateTime, cancellationToken))
+            var completed = await store.CompleteAsync(task, clock.GetUtcNow().UtcDateTime, cancellationToken);
+            Record(task, ProcesosMetrics.Outcome(completed, succeeded: true, lastFailure: false, ProcesosMetrics.Hecha, ProcesosMetrics.Fallida));
+            if (!completed)
             {
                 LeaseLost(logger, task.Id.ToString());
             }
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception error) when (error is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        catch (Exception error) when (!(error is OperationCanceledException && cancellationToken.IsCancellationRequested))
         {
             await RecordFailureAsync(task, cancellationToken);
         }
-
-        return true;
     }
 
     private async Task RecordFailureAsync(TareaReservada task, CancellationToken cancellationToken)
     {
-        if (!await store.FailAsync(task, clock.GetUtcNow().UtcDateTime, cancellationToken))
+        var owned = await store.FailAsync(task, clock.GetUtcNow().UtcDateTime, cancellationToken);
+        var lastFailure = task.Intentos + 1 >= 5;
+        Record(task, ProcesosMetrics.Outcome(owned, succeeded: false, lastFailure, ProcesosMetrics.Hecha, ProcesosMetrics.Fallida));
+        if (!owned)
         {
             LeaseLost(logger, task.Id.ToString());
         }
-        else if (task.Intentos + 1 >= 5)
+        else if (lastFailure)
         {
             TaskFailed(logger, task.Tipo, task.Id.ToString());
         }
     }
+
+    private void Record(TareaReservada task, string outcome) =>
+        ProcesosMetrics.RecordAttempt(logger, ProcesosMetrics.Tareas, task.Tipo, task.Id.ToString(), task.Intentos + 1, outcome);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Scheduled task lease lost: {TaskId}")]
     private static partial void LeaseLost(ILogger logger, string taskId);
