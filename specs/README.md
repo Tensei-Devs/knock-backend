@@ -71,6 +71,9 @@ Cada carpeta tiene `spec.md`, `plan.md` y `task.md`. Estados: Borrador → Aprob
 | 059 | Suspensión preventiva en casos críticos (KNOCK-97) | Borrador | [`059-suspension-preventiva`](059-suspension-preventiva/spec.md) |
 | 063 | Lectura de la cotización final y de los ajustes pendientes (KNOCK-266) | Aprobada | [`063-lectura-de-cotizacion-final-y-ajustes`](063-lectura-de-cotizacion-final-y-ajustes/spec.md) |
 | 064 | El técnico no se presentó (KNOCK-266) | Aprobada | [`064-tecnico-no-se-presento`](064-tecnico-no-se-presento/spec.md) |
+| 065 | Comprobación de app legítima (App Check) en observación (KNOCK-266) | Borrador | [`065-app-check-en-observacion`](065-app-check-en-observacion/spec.md) |
+| 066 | Bloquear a la otra parte desde una conversación (KNOCK-266) | Borrador | [`066-bloquear-desde-el-chat`](066-bloquear-desde-el-chat/spec.md) |
+| 067 | Sugerir el oficio con aprendizaje automático (KNOCK-266) | Borrador | [`067-sugerir-oficio-con-aprendizaje-automatico`](067-sugerir-oficio-con-aprendizaje-automatico/spec.md) |
 | BUG-002 | Falta Strict-Transport-Security en el gateway (KNOCK-239) | Aprobada | [`BUG-002-falta-strict-transport-security-en-el-gateway`](BUG-002-falta-strict-transport-security-en-el-gateway/spec.md) |
 | BUG-003 | El gateway y Mensajería exponen `Server: Kestrel` (KNOCK-240) | Aprobada | [`BUG-003-el-gateway-expone-el-encabezado-server`](BUG-003-el-gateway-expone-el-encabezado-server/spec.md) |
 | BUG-004 | Mensajería sin JWT, encabezados ni límite propios (KNOCK-241) | Aprobada | [`BUG-004-mensajeria-sin-jwt-encabezados-ni-limite`](BUG-004-mensajeria-sin-jwt-encabezados-ni-limite/spec.md) |
