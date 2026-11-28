@@ -226,6 +226,9 @@
 - **TEC-03 y TEC-06:** el autocompletado usa `ICatalogApi.ListActiveTradesAsync` (nuevo, solo lectura) para no leer `oficios` desde otro módulo, y busca negocios con el texto escapado. «Llega a mi colonia» atiende la colonia base siempre y, a domicilio, las colonias cuyo centro queda dentro del radio.
 - **A evitar:** escribir `tallerDireccion` en claro fuera de las semillas de demostración; agregar otra ruta de `/tecnicos` sin su entrada en el gateway (`mercado-tecnicos` solo enruta `POST`).
 
+## 2026-11-27 — KNOCK-63 · Respaldo con la configuración por omisión
+- CA-15 usa el registro real de dependencias de Asistente con configuración vacía. Comprueba que el cliente devuelve una plantilla con `disabled` y que el módulo no registra credencial Azure ni cliente HTTP. La prueba no consume tokens.
+
 ## 2026-11-16 — KNOCK-63: ajuste de consumo real y revisión de T-04
 - **Decisión:** el ajuste aplica el gasto real incluso si supera la reserva y conserva una marca `applied` con el TTL original; un reintento devuelve `AlreadyApplied`, una reserva ausente `NotFound` y Redis o contadores inconsistentes `Unavailable`. Tras caducar la marca ya no se distingue de una reserva inexistente. El llamador fija el `DateOnly`: T-06 debe obtener el día de `America/Mexico_City` con una sola fuente `TimeProvider` y reutilizar el día de la reserva al ajustar.
 - **Redis:** los scripts Lua usan tres claves sin hash tag común y suponen Redis de un solo nodo, como el despliegue actual; Redis Cluster puede rechazarlos por hash slots distintos. No se ha probado ni habilitado Cluster. Redis sin persistencia puede perder contadores y marcas al reiniciarse; un resultado `Unavailable` no demuestra si un ajuste incierto se aplicó.
