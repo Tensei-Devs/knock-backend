@@ -1,3 +1,5 @@
+using Knock.Contracts.Moderation;
+using Knock.Market.Api.Common.Moderation;
 using Knock.Market.Api.Modules.Requests.Data;
 using Knock.Market.Api.Modules.Requests.Domain;
 using Knock.Market.Api.Modules.Requests.Validators;
@@ -44,9 +46,14 @@ internal interface INoteModerator
     Task<NoteModerationResult> ModerateAsync(string note, CancellationToken cancellationToken);
 }
 
-internal sealed class UnavailableNoteModerator : INoteModerator
+/// <summary>
+/// Moderador de la nota de la cotización (spec 020, R-15) y del motivo del ajuste de precio (spec 049, R-08) sobre el moderador de contenido del Market (spec 031), el mismo de la
+/// descripción de la solicitud. Falla cerrado: lo que no sea una aprobación (no disponible, tope diario o un valor desconocido) no se publica (constitución §2.13).
+/// </summary>
+internal sealed class ContentNoteModerator(IContentModerator moderator) : INoteModerator
 {
-    public Task<NoteModerationResult> ModerateAsync(string note, CancellationToken cancellationToken) => Task.FromResult(NoteModerationResult.Unavailable);
+    public Task<NoteModerationResult> ModerateAsync(string note, CancellationToken cancellationToken) =>
+        moderator.ReviewTextAsync(note, NoteModerationResult.Approved, NoteModerationResult.Rejected, NoteModerationResult.Unavailable, cancellationToken);
 }
 
 internal sealed class QuoteService(ITechnicianDirectory technicians, IQuoteRequestReader requests, QuoteValidator validator, TimeProvider clock, INoteModerator moderator, IQuoteWriter writer, IBlockLookup blocks)

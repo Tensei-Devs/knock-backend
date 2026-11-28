@@ -1,5 +1,6 @@
 using Knock.Contracts.Moderation;
 using Knock.Market.Api.Common.Errors;
+using Knock.Market.Api.Common.Moderation;
 using Knock.Market.Api.Common.TareasProgramadas;
 using Knock.Market.Api.Modules.Media;
 using Knock.Market.Api.Modules.Reviews.Data;
@@ -101,12 +102,8 @@ internal sealed class ReviewService(IReviewStore store, IContentModerator modera
         cache.Remove(CacheKey(review.TechnicianId, null, ReviewRules.DefaultLimit));
     }
 
-    private async Task<string> ModerateAsync(string text, CancellationToken cancellationToken) => (await moderator.ReviewTextAsync(text, cancellationToken)).Outcome switch
-    {
-        ModerationOutcome.Allowed => ReviewRules.Published,
-        ModerationOutcome.Rejected => ReviewRules.Rejected,
-        _ => ReviewRules.Pending,
-    };
+    private Task<string> ModerateAsync(string text, CancellationToken cancellationToken) =>
+        moderator.ReviewTextAsync(text, ReviewRules.Published, ReviewRules.Rejected, ReviewRules.Pending, cancellationToken);
 
     private static DomainException NotAllowed() => new(DomainErrorKind.Conflict, "The visit cannot be reviewed.", ReviewRules.ReviewNotAllowedCode);
 
