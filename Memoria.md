@@ -3,6 +3,9 @@
 ## 2026-11-27 — KNOCK-272 · Evidencia histórica de la spec 007
 - El `task.md` de la spec 007 enlaza las corridas verificadas para construcción selectiva de contenedores, fallo de una prueba de integración con gate en rojo y humo de la primera promoción a `main` (#154) con la etiqueta de las cuatro imágenes.
 - El job de pruebas sigue compilando toda la solución .NET. La etiqueta documentada identifica la publicación de esa corrida y la comprobación de qué imagen sigue activa queda en el seguimiento separado.
+## KNOCK-113 — Manuales listos para revisión
+- `docs/manuales/` contiene los borradores para cliente, técnico, personal del panel y mantenimiento. El manual del panel registra el alcance de `sprint-05`, donde existe la pantalla inicial.
+- Los manuales de cliente, técnico y mantenimiento incorporan los recorridos y la comprobación del entorno. Las capturas con cuentas ficticias se toman después de publicar. Queda la revisión cruzada de TT-DOC-01.
 
 ## 2026-11-24 — KNOCK-71: integración de cascada con envíos de la 028
 - **Avance:** `Spec029CierreTests` usa `EnviosStore` y reloj inyectado para probar cancelación y vencimiento: cierra envíos activos y cotizados, conserva descartados y avisa solo al técnico que cotizó. T-02 sigue parcial: no se forzó una carrera real entre reparto y cierre ni se acreditó la cobertura completa.
