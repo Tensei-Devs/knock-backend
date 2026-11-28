@@ -1,8 +1,5 @@
 # Memoria — knock-backend
 
-## 2026-11-27 — KNOCK-279 · Propuesta de retención de uso de IA
-- La spec 024 propone 35 días para conciliar un mes de gasto y limitar cuánto tiempo se guarda el registro vinculado a `usuarioId`. El Tech Lead debe aprobar el plazo y la caducidad de los datos existentes antes de aplicar el TTL.
-
 ## 2026-11-24 — KNOCK-71: integración de cascada con envíos de la 028
 - **Avance:** `Spec029CierreTests` usa `EnviosStore` y reloj inyectado para probar cancelación y vencimiento: cierra envíos activos y cotizados, conserva descartados y avisa solo al técnico que cotizó. T-02 sigue parcial: no se forzó una carrera real entre reparto y cierre ni se acreditó la cobertura completa.
 - **Verificación:** build Release con warnings como errores; integración 028/029 61/61 y base 028/029 2/2; `dotnet format`, trazador 029, codemap y excepciones correctos. El trazador reconoce nombres, no prueba cobertura completa. T-04 y T-06 ya existían en la rama y sus pruebas filtradas pasaron; sin cambios de producción ni dependencias.
@@ -1381,3 +1378,6 @@
 - **Qué cambió:** `KeyVaultVerificationKeyWrapper` (WrapKey/UnwrapKey RSA-OAEP-256 sobre `curp-kek`, identidad administrada) detrás de `Verificacion:KeyVault:Habilitado` (apagado; sigue `UnavailableVerificationKeyWrapper`, falla cerrado); Terraform apagado (`enable_curp_kek`, `enable_curp_keyvault`, `curp_kek_version`).
 - **Dependencias nuevas (MIT):** `Azure.Identity` 1.21.0 (misma versión que Mercado) y `Azure.Security.KeyVault.Keys` 4.8.0, solo en `Knock.Identity.Api`; la llave maestra nunca sale del vault.
 - **A evitar:** encender el interruptor sin `KekVersion` ni rol; crear en Terraform la llave que ya existe sin importarla.
+
+## 2026-11-27 — KNOCK-279 · Propuesta de retención de uso de IA
+- La spec 024 propone 35 días para conciliar un mes de gasto y limitar cuánto tiempo se guarda el registro vinculado a `usuarioId`. El Tech Lead debe aprobar el plazo y la caducidad de los datos existentes antes de aplicar el TTL.
