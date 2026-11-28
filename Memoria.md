@@ -79,6 +79,10 @@
 - **Bloqueo:** build y pruebas con `--no-restore` fallan con NU1101 por `Otp.NET` y `QRCoder` ausentes en la caché local. Formato agotó 180 s. No se cambió NuGetAudit ni se restauraron paquetes. No se exportó OpenAPI con binarios anteriores.
 - **Pendiente:** disponer de los paquetes y assets restaurados externamente, ejecutar la prueba roja y completar T-02 antes de T-03 y T-05. La prueba inicial no demuestra CA-01 ni CA-06 completos.
 
+## 2026-11-27 — KNOCK-185 · Caducidad de registros de Media
+- Se agregó CA-04 a `Spec058ArchivosScriptTests` y se aplicó el script dos veces en un contenedor DocumentDB local de la misma imagen que usa la suite. Vencieron dos registros con fechas pasadas y quedó el registro listo con fecha 9999. La espera observada fue de 52 segundos.
+- `DatabaseTest` quedó pendiente porque NuGet no respondió a la restauración. La limpieza del contenedor legado en Azure requiere la intervención autorizada definida en T-09.
+
 ## 2026-11-20 — KNOCK-185: borrador de la spec 058, colección `archivos` de Media
 - **Decisión:** el registro de archivos privados pasa a la colección `archivos` (`_id` ObjectId, `archivoId` UUID v7 único) y el tope de 10 subidas pendientes se cuenta en MongoDB insertando y verificando, no con un contador aparte. Queda en Borrador; el Tech Lead contestó «sí» a D1 a D8 con la recomendación del autor (2026-11-20) y se aplicaron en la spec: tope 10, 30 minutos y 7 días, `limit_exceeded`, `archivoId` de 32 hexadecimales (spec 020 R-04 enmendada, tarea T-08 para validador y OpenAPI), migración solo si Azure tiene JSON, colecciones separadas, índice compuesto y regla de 1 día en `cuarentena` (R-19, la aplica una persona).
 - **Porqué:** la constitución y la spec 003 prohíben dato de negocio en Blob; insertar y verificar no depende de transacciones ni de índices parciales y nunca deja más pendientes que el tope aunque rechace alguna de más.
