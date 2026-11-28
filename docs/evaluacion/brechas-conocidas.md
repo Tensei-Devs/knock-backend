@@ -12,7 +12,7 @@ Lista honesta de lo que **no** está o **no actúa** hoy, para que nadie (person
 | Revisiones obligatorias de PR | Deshabilitadas por decisión del Tech Lead; el control es la revisión del dueño más el CI (`gate`). | `docs/BRANCH_PROTECTION.md` |
 
 ## B. Controles que faltan
-- **Aprobación humana para producción:** `ci-deploy` despliega solo tras un `ci-pr` verde en `main`; no usa `environment:` con revisores. Sin SBOM ni firma de imágenes.
+- **Aprobación humana para producción:** `ci-deploy` despliega solo tras un `ci-pr` verde en `main`; no usa `environment:` con revisores. `ci-pr` genera un SBOM CycloneDX (KNOCK-266) de lo que construye; faltan la firma de imágenes, la atestación de procedencia y el SBOM de la imagen que publica `ci-deploy`.
 - **SonarCloud:** el análisis está preparado en una rama aparte (KNOCK-297) y no actúa hasta estar en `main`; hasta entonces el quality gate figura como `NONE`.
 - **Dependabot:** la configuración del backend es antigua (agrupa paquetes de EF y Npgsql, que el proyecto no usa, y apunta Docker a una ruta que ya no existe).
 - **Versionamiento por etiquetas:** `docs/VERSIONES_DESPLEGADAS.md` no tiene filas ni hay etiquetas `<componente>-vX.Y.Z` publicadas, aunque la spec 012 las promete.

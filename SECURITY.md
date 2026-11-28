@@ -14,6 +14,9 @@ Incluye: componente y versión, pasos para reproducir, impacto y, si puedes, una
 Proyecto académico en piloto: no hay programa de recompensas. No hagas pruebas contra producción ni con datos de otras personas;
 usa Staging y cuentas de prueba.
 
+## Respuesta a incidentes
+Cómo se detecta, quién decide, cómo se contiene y qué falta: [`docs/plan-respuesta-incidentes.md`](docs/plan-respuesta-incidentes.md).
+
 ## Versiones con soporte
 Solo la versión más reciente de cada componente (`api-v*`, `app-v*`, `panel-v*`).
 
