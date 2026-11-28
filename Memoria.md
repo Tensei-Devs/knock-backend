@@ -6,6 +6,9 @@
 ## KNOCK-113 — Manuales listos para revisión
 - `docs/manuales/` contiene los borradores para cliente, técnico, personal del panel y mantenimiento. El manual del panel registra el alcance de `sprint-05`, donde existe la pantalla inicial.
 - Los manuales de cliente, técnico y mantenimiento incorporan los recorridos y la comprobación del entorno. Las capturas con cuentas ficticias se toman después de publicar. Queda la revisión cruzada de TT-DOC-01.
+## KNOCK-271 — Contrato de fotos privadas de solicitud
+- Las specs 032 y 058 enlazan las rutas privadas y el 429 de la 062. La tabla de tareas de la 062 apunta al mapeo vigente de errores y a la enmienda aprobada sobre OpenAPI.
+- Pendiente: recorrer la subida con SAS de delegación real, confirmar el archivo y enviarlo en una solicitud ficticia. Azurite no emite SAS de delegación y su recorrido parte de un blob de cuarentena preparado por la prueba.
 
 ## 2026-11-24 — KNOCK-71: integración de cascada con envíos de la 028
 - **Avance:** `Spec029CierreTests` usa `EnviosStore` y reloj inyectado para probar cancelación y vencimiento: cierra envíos activos y cotizados, conserva descartados y avisa solo al técnico que cotizó. T-02 sigue parcial: no se forzó una carrera real entre reparto y cierre ni se acreditó la cobertura completa.
