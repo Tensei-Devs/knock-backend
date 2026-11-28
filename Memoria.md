@@ -1,5 +1,9 @@
 # Memoria — knock-backend
 
+## KNOCK-113 — Borradores de manuales
+- `docs/manuales/` contiene los borradores para cliente, técnico, personal del panel y mantenimiento. El manual del panel registra el alcance de `sprint-05`, donde existe la pantalla inicial.
+- Quedan las capturas con cuentas ficticias y la revisión cruzada de TT-DOC-01.
+
 ## 2026-11-24 — KNOCK-71: integración de cascada con envíos de la 028
 - **Avance:** `Spec029CierreTests` usa `EnviosStore` y reloj inyectado para probar cancelación y vencimiento: cierra envíos activos y cotizados, conserva descartados y avisa solo al técnico que cotizó. T-02 sigue parcial: no se forzó una carrera real entre reparto y cierre ni se acreditó la cobertura completa.
 - **Verificación:** build Release con warnings como errores; integración 028/029 61/61 y base 028/029 2/2; `dotnet format`, trazador 029, codemap y excepciones correctos. El trazador reconoce nombres, no prueba cobertura completa. T-04 y T-06 ya existían en la rama y sus pruebas filtradas pasaron; sin cambios de producción ni dependencias.
