@@ -216,7 +216,9 @@ public sealed class Spec037DespachoTests
     [Fact]
     public void Catalog_EveryDispatchableEventHasFixedTextWithinTheLengthLimits_R_14()
     {
-        string[] expected = ["solicitud_nueva", "solicitud_sin_tecnicos", "cotizacion_nueva", "cotizacion_aceptada", "visita_afectada", "reporte_decidido", "opinion_oculta", "tecnico_no_se_presento", "solicitud_cancelada", "solicitud_vencida", "cotizacion_vencida", "mensaje_nuevo", "exportacion_lista"];
+        string[] expected = ["solicitud_nueva", "solicitud_sin_tecnicos", "cotizacion_nueva", "cotizacion_aceptada", "visita_afectada", "reporte_decidido", "opinion_oculta", "tecnico_no_se_presento", "solicitud_cancelada", "solicitud_vencida", "cotizacion_vencida", "mensaje_nuevo", "exportacion_lista",
+            "reprogramacion_propuesta", "visita_reprogramada", "reprogramacion_sin_cambio", "visita_cancelada", "cliente_ausente", "visita_terminada",
+            "cotizacion_final_nueva", "cotizacion_final_respondida", "ajuste_precio_nuevo", "ajuste_precio_respondido"];
         AvisoCatalog.Events.Should().BeEquivalentTo(expected);
         foreach (var evento in AvisoCatalog.Events)
         {
@@ -276,8 +278,8 @@ public sealed class Spec037DespachoTests
     [Theory]
     [InlineData("tecnico", "tecnico")]
     [InlineData("cliente", "cliente")]
-    [InlineData(null, "cliente")]
-    public async Task Dispatch_TheInAppNoticeKeepsTheRoleOfTheBody_R_14(string? role, string expected)
+    [InlineData(null, null)]
+    public async Task Dispatch_TheInAppNoticeKeepsTheRoleOfTheBody_AndStaysWithoutOneWhenThereIsNone_R_14(string? role, string? expected)
     {
         var harness = new Harness();
 

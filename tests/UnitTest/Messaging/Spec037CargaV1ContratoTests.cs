@@ -24,6 +24,16 @@ public sealed class Spec037CargaV1ContratoTests
     [InlineData("reporte_decidido", "sistema")]
     [InlineData("opinion_oculta", "sistema")]
     [InlineData("exportacion_lista", "sistema")]
+    [InlineData("reprogramacion_propuesta", "visitas")]
+    [InlineData("visita_reprogramada", "visitas")]
+    [InlineData("reprogramacion_sin_cambio", "visitas")]
+    [InlineData("visita_cancelada", "visitas")]
+    [InlineData("cliente_ausente", "visitas")]
+    [InlineData("visita_terminada", "visitas")]
+    [InlineData("cotizacion_final_nueva", "visitas")]
+    [InlineData("cotizacion_final_respondida", "visitas")]
+    [InlineData("ajuste_precio_nuevo", "visitas")]
+    [InlineData("ajuste_precio_respondido", "visitas")]
     public void Payload_SerializesToTheV1ContractShape_CA_037_04_CA_037_10(string evento, string tipo)
     {
         var aviso = Guid.NewGuid();
@@ -53,6 +63,18 @@ public sealed class Spec037CargaV1ContratoTests
     [InlineData("opinion_oculta", "cliente", false)]
     [InlineData("opinion_oculta", null, false)]
     [InlineData("solicitud_nueva", null, false)]
+    [InlineData("reprogramacion_propuesta", "cliente", true)]
+    [InlineData("reprogramacion_propuesta", "tecnico", true)]
+    [InlineData("reprogramacion_propuesta", null, false)]
+    [InlineData("visita_reprogramada", "tecnico", true)]
+    [InlineData("reprogramacion_sin_cambio", "tecnico", true)]
+    [InlineData("visita_cancelada", "cliente", true)]
+    [InlineData("cliente_ausente", "tecnico", false)]
+    [InlineData("visita_terminada", "cliente", true)]
+    [InlineData("cotizacion_final_nueva", "tecnico", false)]
+    [InlineData("cotizacion_final_respondida", "cliente", false)]
+    [InlineData("ajuste_precio_nuevo", "cliente", true)]
+    [InlineData("ajuste_precio_respondido", "cliente", false)]
     public void RoleRulesOfTheFixedNotices_CA_037_20(string tipo, string? rol, bool expected) =>
         AvisoRules.RoleMatches(tipo, rol).Should().Be(expected);
 }

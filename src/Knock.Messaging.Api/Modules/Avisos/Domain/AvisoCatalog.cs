@@ -33,6 +33,16 @@ internal static class AvisoCatalog
         ["cotizacion_vencida"] = new("Cotización vencida", "Una de tus cotizaciones venció.", "cotizacion"),
         [AvisoRules.NewMessageEvent] = new("Mensaje nuevo", "Tienes un mensaje nuevo.", "conversacion"),
         [AvisoRules.ExportReadyEvent] = new("Tu exportación está lista", "Ya está lista la exportación de tus datos. Ábrela desde la app para descargarla.", "exportacion"),
+        ["reprogramacion_propuesta"] = new("Propuesta de nueva fecha", "Te proponen cambiar la fecha de una visita. Responde antes de que venza.", "visita"),
+        ["visita_reprogramada"] = new("Visita reprogramada", "Cambió la fecha de una visita. Revísala en la app.", "visita"),
+        ["reprogramacion_sin_cambio"] = new("La fecha no cambió", "Tu propuesta de nueva fecha no se aceptó. La visita sigue como estaba.", "visita"),
+        ["visita_cancelada"] = new("Visita cancelada", "Se canceló una visita próxima. Revísala en la app.", "visita"),
+        ["cliente_ausente"] = new("Visita no realizada", "El técnico registró que no te encontró en la visita. Si crees que es un error, contacta a soporte.", "visita"),
+        ["visita_terminada"] = new("Visita terminada", "Tu visita quedó terminada. Ya puedes dejar tu opinión.", "visita"),
+        ["cotizacion_final_nueva"] = new("Cotización final", "Tienes una cotización final por revisar. Responde antes de que venza.", "visita"),
+        ["cotizacion_final_respondida"] = new("Cotización final respondida", "Tu cotización final ya tiene respuesta. Revisa la visita.", "visita"),
+        ["ajuste_precio_nuevo"] = new("Cambio de precio propuesto", "Te proponen un cambio de precio. Revísalo y responde antes de que venza.", "visita"),
+        ["ajuste_precio_respondido"] = new("Cambio de precio respondido", "Tu propuesta de cambio de precio ya tiene respuesta. Revisa la visita.", "visita"),
     }.ToFrozenDictionary(StringComparer.Ordinal);
 
     /// <summary>La plantilla del <paramref name="evento"/>, o <see langword="null"/> si no es del catálogo.</summary>

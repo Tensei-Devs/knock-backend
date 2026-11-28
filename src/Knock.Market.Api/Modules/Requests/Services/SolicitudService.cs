@@ -175,10 +175,10 @@ internal sealed class SolicitudService(
             return await ClientViewAsync(sub, record, totals.GetValueOrDefault(record.Id), cancellationToken);
         }
 
-        // Spec 029, R-13: una solicitud cancelada o vencida solo la ve su dueño; el técnico recibe 404.
+        // Spec 029, R-13 y CA-10: una solicitud cancelada o vencida la ven su dueño y el técnico elegido (su visita se canceló o alguien faltó); los demás reciben 404.
         if (TransicionesDeSolicitud.IsClosedWithoutAppointment(record.Estado))
         {
-            return null;
+            return await store.WasChosenAsync(sub, record.Id, cancellationToken) ? await TechnicianViewAsync(sub, record, cancellationToken) : null;
         }
 
         return await TechnicianMaySeeAsync(sub, record, cancellationToken) ? await TechnicianViewAsync(sub, record, cancellationToken) : null;

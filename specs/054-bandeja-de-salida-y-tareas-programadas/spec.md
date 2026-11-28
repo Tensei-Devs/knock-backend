@@ -208,7 +208,36 @@ Las pruebas citan el caso como `CA_054_NN` en el nombre (para `python scripts/sd
 - **Dependencias:** la spec 037 (entrega de avisos y claves por emisor, H-1), la biblioteca técnica compartida (KNOCK-251) para quitar la copia del ejecutor en Identidad y el costo de las consultas cada 15 segundos con dos réplicas (spec 034), que es bajo por estar indexadas.
 - **Riesgo aceptado:** si Mensajería necesita tareas propias, esta spec se amplía.
 
+## Nota de enmienda (2026-11-24, pendiente de firma)
+- **Estado de esta enmienda:** **sin firmar**; propuesta para validación de José Julián Hernández Hernández.
+- **R-15, ruta de exportación de Mensajería.** La ruta nombrada `/api/v1/interno/exportacion` se implementa como `GET /api/v1/interno/cuentas/{usuarioId}/exportacion` en Mensajería (igual que la de Mercado), con el permiso `exportacion` y el `usuarioId` en el token (detalle en la nota de la spec 039 de la misma fecha). Solo la llama Identidad.
+
+## Nota de enmienda (2026-11-27, avisos de la visita)
+
+- **Estado de esta enmienda:** PROPUESTA SIN FIRMA; vale desde que se firma la línea «Enmienda 2026-11-27» de la sección Aprobación. La aprobación original y las enmiendas ya firmadas se conservan.
+- **Motivo:** la spec 050 pide avisar al reprogramar, al cancelar tarde, al marcar al cliente ausente y al terminar; los eventos no se entregan, el catálogo de la spec 037 no tiene sus tipos y a algunos les faltan datos para saber a quién avisar.
+- Se agregan al catálogo de la spec 037, con `recurso` = `visitaId` y categoría `visitas`. El texto es fijo y sin datos de la otra parte.
+
+| Evento de Mercado | Aviso | Recibe | Título | Texto |
+|---|---|---|---|---|
+| `ReprogramacionPropuesta` | `reprogramacion_propuesta` | la parte que no propuso | Propuesta de nueva fecha | Te proponen cambiar la fecha de una visita. Responde antes de que venza. |
+| `VisitaReprogramada` | `visita_reprogramada` | las dos partes | Visita reprogramada | Cambió la fecha de una visita. Revísala en la app. |
+| `ReprogramacionRechazada` y `ReprogramacionVencida` | `reprogramacion_sin_cambio` | quien propuso | La fecha no cambió | Tu propuesta de nueva fecha no se aceptó. La visita sigue como estaba. |
+| `CancelacionTardia` | `visita_cancelada` | la parte que no canceló | Visita cancelada | Se canceló una visita próxima. Revísala en la app. |
+| `ClienteAusente` | `cliente_ausente` | la persona cliente | Visita no realizada | El técnico registró que no te encontró en la visita. Si crees que es un error, contacta a soporte. |
+| `VisitaTerminada` | `visita_terminada` | la persona cliente | Visita terminada | Tu visita quedó terminada. Ya puedes dejar tu opinión. |
+
+- **Datos que faltan:** `ReprogramacionPropuesta`, `ReprogramacionRechazada` y `ReprogramacionVencida` agregan a `datos` el campo `propuestaPor` (`cliente` o `tecnico`), porque la propuesta se borra de la visita. Quien canceló se lee de la visita. `ClienteAusente` es un evento nuevo, con identificadores, que se escribe en la misma transacción que marca la ausencia; `VisitaCerrada` no cambia.
+- **Identificador de eventos repetibles:** una visita admite más de una propuesta, así que `ReprogramacionPropuesta`, `VisitaReprogramada`, `ReprogramacionRechazada` y `ReprogramacionVencida` llevan versión en el `_id` (`{tipo}:{recursoId}:{version}`, R-02). Hoy usan solo la visita.
+- **Sin aviso por decisión:** una cancelación con más de 24 horas (la spec 050 solo pide aviso inmediato en la tardía), `CotizacionRechazada`, `CotizacionRetirada`, `VisitaConfirmada`, `VisitaEnCurso` (diferido por la spec 037), `OpinionCreada`, `PermisoFotosCambiado` y `AvisoConfianzaPreparado`. El consumo de `VisitaBloqueada` es un reporte de Identidad y no se define aquí.
+- Los eventos anteriores sin `propuestaPor` no se migran: quedan `fallido`.
+- **CA-23:** Dado cada evento de la tabla, cuando la bandeja lo entrega, entonces solo reciben el aviso indicado las personas indicadas, con la visita como `recurso`, y repetirlo no lo duplica.
+- **CA-24:** Dada una visita con una propuesta rechazada o vencida, cuando se propone otra fecha, entonces la propuesta se guarda y su evento queda con un `_id` distinto.
+- **CA-25:** Dado el cliente marcado como ausente, cuando se confirma el cambio, entonces existe un solo `ClienteAusente` solo con identificadores.
+
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
+- [x] Enmienda 2026-11-24 — nombre: José Julián Hernández Hernández fecha: 2026-11-26
 - [x] Sin conflicto con la constitución
+- [x] Enmienda 2026-11-27 — nombre: José Julián Hernández Hernández fecha: 2026-11-27
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

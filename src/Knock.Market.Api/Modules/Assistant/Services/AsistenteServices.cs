@@ -29,6 +29,9 @@ internal sealed record RequestAccess(bool Participates, DateTime? ClosedAtUtc);
 internal interface ISolicitudesAsistente
 {
     Task<RequestAccess> GetAccessAsync(string solicitudId, string sub, CancellationToken cancellationToken);
+
+    /// <summary>Cuándo se cerró cada solicitud pedida, participe o no el técnico; las abiertas no aparecen (R-21).</summary>
+    Task<IReadOnlyDictionary<string, DateTime>> GetClosedAtAsync(IReadOnlyCollection<string> solicitudIds, CancellationToken cancellationToken);
 }
 
 internal sealed record PriceRange(decimal Minimum, decimal Maximum, int Samples, string Source);

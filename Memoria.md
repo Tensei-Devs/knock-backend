@@ -1,5 +1,15 @@
 # Memoria — knock-backend
 
+## 2026-11-27 — KNOCK-272 · Evidencia histórica de la spec 007
+- El `task.md` de la spec 007 enlaza las corridas verificadas para construcción selectiva de contenedores, fallo de una prueba de integración con gate en rojo y humo de la primera promoción a `main` (#154) con la etiqueta de las cuatro imágenes.
+- El job de pruebas sigue compilando toda la solución .NET. La etiqueta documentada identifica la publicación de esa corrida y la comprobación de qué imagen sigue activa queda en el seguimiento separado.
+## KNOCK-113 — Manuales listos para revisión
+- `docs/manuales/` contiene los borradores para cliente, técnico, personal del panel y mantenimiento. El manual del panel registra el alcance de `sprint-05`, donde existe la pantalla inicial.
+- Los manuales de cliente, técnico y mantenimiento incorporan los recorridos y la comprobación del entorno. Las capturas con cuentas ficticias se toman después de publicar. Queda la revisión cruzada de TT-DOC-01.
+## KNOCK-271 — Contrato de fotos privadas de solicitud
+- Las specs 032 y 058 enlazan las rutas privadas y el 429 de la 062. La tabla de tareas de la 062 apunta al mapeo vigente de errores y a la enmienda aprobada sobre OpenAPI.
+- Pendiente: recorrer la subida con SAS de delegación real, confirmar el archivo y enviarlo en una solicitud ficticia. Azurite no emite SAS de delegación y su recorrido parte de un blob de cuarentena preparado por la prueba.
+
 ## 2026-11-24 — KNOCK-71: integración de cascada con envíos de la 028
 - **Avance:** `Spec029CierreTests` usa `EnviosStore` y reloj inyectado para probar cancelación y vencimiento: cierra envíos activos y cotizados, conserva descartados y avisa solo al técnico que cotizó. T-02 sigue parcial: no se forzó una carrera real entre reparto y cierre ni se acreditó la cobertura completa.
 - **Verificación:** build Release con warnings como errores; integración 028/029 61/61 y base 028/029 2/2; `dotnet format`, trazador 029, codemap y excepciones correctos. El trazador reconoce nombres, no prueba cobertura completa. T-04 y T-06 ya existían en la rama y sus pruebas filtradas pasaron; sin cambios de producción ni dependencias.
@@ -78,6 +88,10 @@
 - **Estado:** se escribió una prueba inicial de integración para la cascada de cancelación y vencimiento en `Spec029CierreTests`; no compila ni se ha verificado, y el servicio aún no existe. T-02 parcial; T-03 y T-05 pendientes, respetando el orden solicitado.
 - **Bloqueo:** build y pruebas con `--no-restore` fallan con NU1101 por `Otp.NET` y `QRCoder` ausentes en la caché local. Formato agotó 180 s. No se cambió NuGetAudit ni se restauraron paquetes. No se exportó OpenAPI con binarios anteriores.
 - **Pendiente:** disponer de los paquetes y assets restaurados externamente, ejecutar la prueba roja y completar T-02 antes de T-03 y T-05. La prueba inicial no demuestra CA-01 ni CA-06 completos.
+
+## 2026-11-27 — KNOCK-185 · Caducidad de registros de Media
+- Se agregó CA-04 a `Spec058ArchivosScriptTests` y se aplicó el script dos veces en un contenedor DocumentDB local de la misma imagen que usa la suite. Vencieron dos registros con fechas pasadas y quedó el registro listo con fecha 9999. La espera observada fue de 52 segundos.
+- `DatabaseTest` quedó pendiente porque NuGet no respondió a la restauración. La limpieza del contenedor legado en Azure requiere la intervención autorizada definida en T-09.
 
 ## 2026-11-20 — KNOCK-185: borrador de la spec 058, colección `archivos` de Media
 - **Decisión:** el registro de archivos privados pasa a la colección `archivos` (`_id` ObjectId, `archivoId` UUID v7 único) y el tope de 10 subidas pendientes se cuenta en MongoDB insertando y verificando, no con un contador aparte. Queda en Borrador; el Tech Lead contestó «sí» a D1 a D8 con la recomendación del autor (2026-11-20) y se aplicaron en la spec: tope 10, 30 minutos y 7 días, `limit_exceeded`, `archivoId` de 32 hexadecimales (spec 020 R-04 enmendada, tarea T-08 para validador y OpenAPI), migración solo si Azure tiene JSON, colecciones separadas, índice compuesto y regla de 1 día en `cuarentena` (R-19, la aplica una persona).
@@ -217,6 +231,9 @@
 - **TEC-08 a TEC-11 (KNOCK-57 y 58):** rutas de `/tecnicos/me`. La disponibilidad se guarda como `disponibleHasta` (23:59:59 de hoy en `America/Mexico_City`, en UTC). Los horarios se guardan en `tecnicos.horarios` (siete días, `abierto` y `franjas`). `fotoUrl` solo se acepta de los hosts de `Tecnicos:HostsFoto`, vacío por ahora, hasta que exista la subida de la spec 032. `not_a_technician` pasó a `Common/Errors/ErrorCodes` (un código por servicio, spec 002).
 - **TEC-03 y TEC-06:** el autocompletado usa `ICatalogApi.ListActiveTradesAsync` (nuevo, solo lectura) para no leer `oficios` desde otro módulo, y busca negocios con el texto escapado. «Llega a mi colonia» atiende la colonia base siempre y, a domicilio, las colonias cuyo centro queda dentro del radio.
 - **A evitar:** escribir `tallerDireccion` en claro fuera de las semillas de demostración; agregar otra ruta de `/tecnicos` sin su entrada en el gateway (`mercado-tecnicos` solo enruta `POST`).
+
+## 2026-11-27 — KNOCK-63 · Respaldo con la configuración por omisión
+- CA-15 usa el registro real de dependencias de Asistente con configuración vacía. Comprueba que el cliente devuelve una plantilla con `disabled` y que el módulo no registra credencial Azure ni cliente HTTP. La prueba no consume tokens.
 
 ## 2026-11-16 — KNOCK-63: ajuste de consumo real y revisión de T-04
 - **Decisión:** el ajuste aplica el gasto real incluso si supera la reserva y conserva una marca `applied` con el TTL original; un reintento devuelve `AlreadyApplied`, una reserva ausente `NotFound` y Redis o contadores inconsistentes `Unavailable`. Tras caducar la marca ya no se distingue de una reserva inexistente. El llamador fija el `DateOnly`: T-06 debe obtener el día de `America/Mexico_City` con una sola fuente `TimeProvider` y reutilizar el día de la reserva al ajustar.
@@ -1135,6 +1152,11 @@
 - **Decisiones (con porqué):** (1) Opción A de la tarjeta: se conserva la versión nueva y se quita una línea en vez de fijar la 5.0.0 (cambiar la versión pide el visto bueno del Tech Lead). (2) El filtro de casos sigue limitando la ejecución a las pruebas unitarias.
 - **Pendiente:** confirmar que el job corre en este PR, muta y genera reporte, y que la regla R-18 (mutación de `Knock.Hosting`) sigue aplicando.
 - **A evitar:** declarar `solution` y `test-projects` a la vez; subir la versión de dotnet-stryker sin probar el job en un PR.
+
+## 2026-11-27 — KNOCK-100 · Regresión de sprint-05
+- [Backend, `eae26678`](https://github.com/Tensei-Devs/knock-backend/actions/runs/46081013644) pasó compilación, formato y pruebas, integración, base de datos, cobertura combinada, controles de seguridad y el gate.
+- [Frontend, `73aadfa`](https://github.com/Tensei-Devs/knock-frontend/actions/runs/46085914655) pasó análisis, pruebas y build de la app, emulador Android, contrato, panel, landing, controles de seguridad y el gate.
+- La regresión adicional de frontend sobre el descarte de Trabajo registró 1,568 pruebas Flutter en verde, lint, 11 pruebas y build de panel, y 24 pruebas de landing con una omisión prevista por la suite y comprobación de enlaces. Las suites automáticas verdes acreditan esos commits. La revisión de defectos fuera de esas suites queda en la tarjeta.
 
 ## 2026-11-19 · KNOCK-286 · Prueba 422 de la spec 041 ya no falla por azar
 - **Qué cambió:** las pruebas de valor inválido (crear y actualizar, CA-041-05) buscan el valor enviado solo dentro de `errors`, no en todo el cuerpo.

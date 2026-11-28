@@ -307,9 +307,36 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **Etiquetas de Jira:** KNOCK-74 tiene `servicio-mensajeria`, pero la cotización vive en Mercado (módulo Requests) por compartir transacción con la solicitud; conviene corregir la etiqueta.
 - **Transacciones de DocumentDB:** la creación de la cotización y el cambio de estado de la solicitud usan una transacción; si la instancia no las admite, todo falla (el mismo riesgo que la spec 015).
 
+## Nota de enmienda (2026-11-26, estados de la solicitud y de la cotización)
+
+- **Estado de esta enmienda:** propuesta; vale desde que se firma la línea «Enmienda 2026-11-26» de la sección Aprobación. La aprobación original se conserva.
+- **Terminada.** La solicitud pasa de `cita_confirmada` a `terminada` en la misma transacción en que su visita queda `terminada`, sea al terminar la visita (spec 050, R-28) o cuando el cliente rechaza la cotización final y solo se paga la visita (spec 049, R-14). Así la spec 051 (R-14) puede dejarla `calificada`.
+- **Sin opinión.** Si pasan los 30 días sin opinión, la solicitud se queda `terminada`.
+- **Visita cancelada o sin presentarse.** Si la visita queda `cancelada`, la solicitud pasa a `cancelada` con `motivoCancelacion` `visit_cancelled`; si queda `no_presentado`, de cualquiera de las dos partes, con `visit_no_show`. Ocurre en la misma transacción. La solicitud no se reabre: el cliente crea otra. La cotización `aceptada` se queda `aceptada` como historial.
+- **Técnico suspendido.** No hay transición nueva; sigue el aviso de la spec 059. Si después la visita se cancela, aplica el punto anterior.
+- **Retirar una cotización (HU-035).** Sigue fuera de alcance. `retirada` solo se produce por eliminación de la cuenta del técnico. `rechazada` y `retirada` son estados finales.
+- **No cubre** el motivo guardado al eliminar la cuenta del cliente (spec 039, R-15): queda como está.
+- **Código pendiente:** estas transiciones todavía no están implementadas.
+
+## Nota de enmienda (2026-11-27, corrección de solicitudes con la visita ya cerrada)
+
+- **Estado de esta enmienda:** PROPUESTA SIN FIRMA; vale desde que se firma la línea «Enmienda 2026-11-27» de la sección Aprobación. La aprobación original y las enmiendas ya firmadas se conservan.
+- **Motivo:** la regla de estados (enmienda del 2026-11-26) actúa al cerrar la visita. Las solicitudes cuya visita se cerró antes de desplegarla se quedan en `cita_confirmada`: siguen como activas y con la conversación abierta. No se sabe cuántas hay.
+- **Primero se cuenta.** Después de desplegar el código de la enmienda de estados, una persona cuenta en cada ambiente, solo con lecturas, las solicitudes en `cita_confirmada` cuya visita está `terminada`, `cancelada` o `no_presentado`. Si el total es 0 en todos, no se escribe el script y se anota el conteo en la memoria del proyecto. Si hay afectadas, se escribe el script que sigue.
+- **Script de una sola vez** en `db/relleno/`: visita `terminada`, la solicitud queda `terminada`, o `calificada` si la visita ya tiene opinión (aunque esté oculta); visita `cancelada`, la solicitud queda `cancelada` con `visit_cancelled`; visita `no_presentado`, `cancelada` con `visit_no_show`.
+- `terminadaEn` y `canceladaEn` llevan la fecha histórica del cierre de la visita, nunca la de la ejecución, porque de esa fecha dependen los plazos de acceso. No cambia visitas, cotizaciones ni opiniones, y no escribe eventos, tareas ni avisos atrasados.
+- Por omisión solo simula. Lo ejecuta una persona, con un respaldo revisado. No lo ejecutan la entrega ni el despliegue. Una solicitud sin visita, o un cierre sin una fecha válida, se informa y no se escribe.
+- **CA-E01:** Dada la ejecución sin confirmación expresa, entonces informa los conteos y no cambia ningún documento.
+- **CA-E02:** Dada una solicitud afectada de cada tipo, cuando se aplica, entonces queda con el estado, el motivo y la fecha histórica que corresponden.
+- **CA-E03:** Dadas solicitudes con visita `confirmada` (incluida la bloqueada) o `en_curso`, o fuera de `cita_confirmada`, cuando se aplica, entonces no cambian.
+- **CA-E04:** Dada una segunda ejecución, entonces no cambia nada.
+- **CA-E05:** Dada la salida del script, entonces solo contiene conteos, nombres de campos, reglas e identificadores de documento; nunca datos personales ni la cadena de conexión.
+
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-12
 - [x] Sin conflicto con la constitución
 - [x] Enmienda KNOCK-69 (R-09, CA-24 e índice) aprobada — nombre: José Julián Hernández Hernández fecha: 2026-11-19
 - [x] Enmienda KNOCK-185 (R-04, formato de archivoId) aprobada — nombre: José Julián Hernández Hernández fecha: 2026-11-20
+- [x] Enmienda 2026-11-26 — nombre: José Julián Hernández Hernández fecha: 2026-11-26
+- [x] Enmienda 2026-11-27 — nombre: José Julián Hernández Hernández fecha: 2026-11-27
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

@@ -1,6 +1,7 @@
 using Knock.Hosting.Data;
 using Knock.Market.Api.Common.TareasProgramadas;
 using Knock.Market.Api.Hosting;
+using Knock.Market.Api.Modules.Requests.Services;
 using Knock.Market.Api.Modules.Reviews.Data;
 using Knock.Market.Api.Modules.Reviews.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -22,6 +23,7 @@ public static class ReviewsModuleExtensions
         services.AddScoped<IReviewStore, ReviewStore>();
         services.AddScoped<ReviewService>();
         services.AddScoped<ReviewModerationService>();
+        services.AddScoped<IOpinionAnonymizer, ReviewAuthorAnonymizer>();
         services.AddScoped<IManejadorDeTarea, CerrarPeriodoDeOpinion>();
         return services;
     }

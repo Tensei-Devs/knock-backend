@@ -211,7 +211,6 @@ public sealed class Spec028RepartoTests
         ["coloniaBaseId"] = host.ColoniaId.ToString(),
         ["disponibleHasta"] = clock.GetUtcNow().UtcDateTime.AddDays(1),
         ["calificacion"] = 10 - i,
-        ["trabajosTerminados"] = i == 4 ? 0 : 5,
     };
 
     private static IMongoCollection<BsonDocument> Tasks(Spec020Host host) => host.Database.GetCollection<BsonDocument>("tareas_programadas");

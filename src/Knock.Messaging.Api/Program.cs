@@ -66,6 +66,8 @@ app.UseKnockChatGate();
 // Como en Mercado: la sesión se resuelve antes del limitador para que las políticas por persona (sub) vean al usuario; el límite por IP sigue valiendo para todas las rutas.
 app.UseAuthentication();
 app.UseRateLimiter();
+// Spec 010, R-09 y enmienda 2026-11-27: JSON comprimido, salvo el chat (la negociación entrega un token y la compresión retendría el flujo en vivo) y las rutas internas.
+app.UseKnockJsonCompression(Knock.Messaging.Api.Modules.Chat.ChatModuleExtensions.HubsRoot, "/api/v1/interno");
 app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())

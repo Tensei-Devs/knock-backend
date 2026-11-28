@@ -31,6 +31,16 @@ internal static partial class AvisoRules
         ["cotizacion_vencida"] = "cotizaciones",
         [NewMessageEvent] = "mensajes",
         [ExportReadyEvent] = "sistema",
+        ["reprogramacion_propuesta"] = "visitas",
+        ["visita_reprogramada"] = "visitas",
+        ["reprogramacion_sin_cambio"] = "visitas",
+        ["visita_cancelada"] = "visitas",
+        ["cliente_ausente"] = "visitas",
+        ["visita_terminada"] = "visitas",
+        ["cotizacion_final_nueva"] = "visitas",
+        ["cotizacion_final_respondida"] = "visitas",
+        ["ajuste_precio_nuevo"] = "visitas",
+        ["ajuste_precio_respondido"] = "visitas",
     };
 
     public const string SessionRevokedEvent = "sesion_revocada";
@@ -70,9 +80,19 @@ internal static partial class AvisoRules
         ["cotizacion_vencida"] = TechnicianRole,
         [NewMessageEvent] = null,
         [ExportReadyEvent] = null,
+        ["reprogramacion_propuesta"] = null,
+        ["visita_reprogramada"] = null,
+        ["reprogramacion_sin_cambio"] = null,
+        ["visita_cancelada"] = null,
+        ["cliente_ausente"] = ClientRole,
+        ["visita_terminada"] = ClientRole,
+        ["cotizacion_final_nueva"] = ClientRole,
+        ["cotizacion_final_respondida"] = TechnicianRole,
+        ["ajuste_precio_nuevo"] = ClientRole,
+        ["ajuste_precio_respondido"] = TechnicianRole,
     };
 
-    /// <summary>Si el evento es del catálogo cerrado (los ocho de la carga v1 o <c>sesion_revocada</c>).</summary>
+    /// <summary>Si el evento es del catálogo cerrado (los de la carga v1 o <c>sesion_revocada</c>).</summary>
     public static bool IsCatalogType(string? tipo) =>
         tipo is not null && (tipo == SessionRevokedEvent || _typeByEvent.ContainsKey(tipo));
 

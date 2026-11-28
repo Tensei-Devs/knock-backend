@@ -214,7 +214,14 @@ Se tomaron de noche, con el criterio de la constitución; quien apruebe puede ca
 - **Hueco:** sin spec de entrega de avisos (HU-050), el cliente no recibe el aviso de vencimiento en el teléfono; solo verá el estado en Actividad.
 - **Retraso de hasta 15 segundos entre `venceEn` y el estado `vencida`:** mientras tanto `venceEn` ya bloquea cotizar y elegir; la lista puede mostrar la solicitud abierta unos segundos.
 
+## Nota de enmienda (2026-11-26, motivos de cancelación por la visita)
+
+- **Estado de esta enmienda:** propuesta; vale desde que se firma la línea «Enmienda 2026-11-26» de la sección Aprobación. La aprobación original se conserva.
+- `motivoCancelacion` admite, además de los de R-02, `visit_cancelled` y `visit_no_show`. Los escribe el sistema por la regla de la nota del 2026-11-26 de la spec 020; `POST /api/v1/solicitudes/{id}/cancelar` no los acepta como entrada.
+- **Código pendiente.**
+
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-11
 - [x] Sin conflicto con la constitución
+- [x] Enmienda 2026-11-26 — nombre: José Julián Hernández Hernández fecha: 2026-11-26
 - **Estados:** Borrador (agente) → Aprobada (persona; habilita el código) → Implementada (tras el merge)

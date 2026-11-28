@@ -392,7 +392,40 @@ Las pruebas citan el caso como `CA_046_NN` en el nombre (para `python scripts/sd
 - Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
 - Dependencias: almacén de búsqueda de la spec 027, elegibilidad de la 028 y la insignia de verificación de la 025. TEC-12 (resumen) ya lo cubre la spec 036 con `/tecnicos/me/trabajo`.
 
+## Nota de enmienda (2026-11-26, índices y búsqueda implementados)
+
+- **Estado de esta enmienda:** propuesta; vale desde que se firma la línea «Enmienda 2026-11-26» de la sección Aprobación. La aprobación original se conserva.
+- **§6, índices.** Donde dice 2dsphere en `ubicacion` se lee `ubicacionBase` (`db/027`, igual que la spec 027). El compuesto es `oficios + estado + oculto` (`db/027`) y `oficios + estado + oculto + disponibleHasta` (`db/028`). `usuarioId` sigue único.
+- **Texto.** No hay índice de texto en `tecnicos`. El autocompletar (R-08) sugiere oficios, servicios y negocios comparando sin distinguir acentos ni mayúsculas.
+- **Orden por reputación.** Usa el campo `calificacion`, sin índice dedicado.
+- Esta enmienda no cubre la paginación por cursor de `GET /api/v1/tecnicos` con orden por calificación o distancia, que se revisa como defecto aparte.
+
+## Nota de enmienda (2026-11-27, lectura del perfil propio)
+
+- **Estado de esta enmienda:** PROPUESTA SIN FIRMA; vale desde que se firma la línea «Enmienda 2026-11-27» de la sección Aprobación. La aprobación original y las enmiendas ya firmadas se conservan.
+- **Motivo:** solo existe `PUT /api/v1/tecnicos/me`; la app no puede precargar la edición ni conocer su identificador de técnico después del registro. La ruta no está en el Excel de endpoints: se agrega.
+- **R-54:** `GET /api/v1/tecnicos/me` devuelve el perfil propio. La persona es la del `sub` del token; no admite identificadores en ruta, consulta ni cuerpo. Una cuenta sin perfil de técnico recibe 404, como en `GET /api/v1/tecnicos/me/horarios`. Un técnico suspendido u oculto puede leer su perfil.
+- **R-55:** La respuesta 200 es `{ id, nombre, oficios, otroOficio, atencion, radioKm, coloniaId, nombreNegocio, descripcion, anios, estado, verificacion, disponibleHoy, creadoEn, fotoUrl, direccionTaller }`. Los primeros catorce campos tienen el mismo tipo y significado que en la respuesta de `PUT /api/v1/tecnicos/me`. `fotoUrl` es texto o `null`. `direccionTaller` es texto o `null`; solo tiene valor cuando `atencion` es `taller` o `ambos`.
+- **R-56:** Nunca devuelve `usuarioId`, teléfono ni contacto público, ubicación, datos de ocultamiento ni datos de verificación fuera de `verificacion`. Los horarios, los servicios y la reputación siguen en sus rutas propias.
+- **R-57:** Responde con `Cache-Control: private, no-store` y no se guarda en caché del servidor. La dirección del taller se descifra solo para esta respuesta y no se registra. Las respuestas del registro y de `PUT /api/v1/tecnicos/me` no cambian.
+- **R-58:** El gateway enruta `GET` con sesión obligatoria; hoy un `GET` a esa dirección cae en la ruta anónima `/api/v1/tecnicos/{id}`. No tiene política de límite propia: rigen los límites globales (se anota en `docs/rate-limit-matrix.md`).
+
+| ID | Método y ruta | Quién | Entrada | Respuestas |
+|---|---|---|---|---|
+| TEC-15 | `GET /api/v1/tecnicos/me` | cuenta con perfil de técnico | Ninguna | 200; 401; 404; 429 |
+
+- **CA-70:** Dado un técnico con sesión, cuando llama `GET /api/v1/tecnicos/me`, entonces responde 200 con los campos de R-55 y con sus propios datos.
+- **CA-71:** Dada una petición sin token o con token vencido, cuando llama la ruta, entonces responde 401 y no lee datos.
+- **CA-72:** Dada una cuenta sin perfil de técnico, cuando llama la ruta, entonces responde 404.
+- **CA-73:** Dados un técnico de taller y uno solo a domicilio, cuando cada uno consulta, entonces el primero recibe su dirección en `direccionTaller` y el segundo recibe `null`.
+- **CA-74:** Dado cualquier técnico, cuando consulta, entonces la respuesta lleva `Cache-Control: private, no-store`, no contiene los campos excluidos en R-56 y la dirección no aparece en los registros.
+- **CA-75:** Dada la ruta por el gateway, cuando llega un `GET` a `/api/v1/tecnicos/me`, entonces la atiende la ruta autenticada y no la ruta anónima `/api/v1/tecnicos/{id}`.
+- **CA-76:** Dado un técnico que acaba de guardar cambios con `PUT`, cuando consulta, entonces recibe los valores nuevos.
+- La app necesita su propia enmienda (spec de app 036) para consumir la ruta. La tarea se agrega a `task.md` en el PR que la implemente.
+
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
 - [x] Sin conflicto con la constitución
+- [x] Enmienda 2026-11-26 — nombre: José Julián Hernández Hernández fecha: 2026-11-26
+- [x] Enmienda 2026-11-27 — nombre: José Julián Hernández Hernández fecha: 2026-11-27
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

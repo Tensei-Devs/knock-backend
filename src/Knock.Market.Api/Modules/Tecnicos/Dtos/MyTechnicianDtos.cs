@@ -1,5 +1,13 @@
 namespace Knock.Market.Api.Modules.Tecnicos.Dtos;
 
+/// <summary>Respuesta de <c>GET /tecnicos/me</c> (spec 046, TEC-15, R-55 y R-56). <c>direccionTaller</c> solo tiene valor con taller o ambos.</summary>
+internal sealed record MyTechnicianProfileResponse(
+    string Id, string Nombre, IReadOnlyList<string> Oficios, string? OtroOficio,
+    string Atencion, int? RadioKm, string ColoniaId,
+    string? NombreNegocio, string? Descripcion, int? Anios,
+    string Estado, string Verificacion, bool DisponibleHoy, DateTime CreadoEn,
+    string? FotoUrl, string? DireccionTaller);
+
 /// <summary>Cuerpo de <c>PUT /tecnicos/me/disponibilidad</c> (spec 046, TEC-09): el interruptor «Disponible hoy».</summary>
 internal sealed record AvailabilityBody(bool? DisponibleHoy)
 {

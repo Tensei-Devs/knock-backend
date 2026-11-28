@@ -1,5 +1,6 @@
 using Knock.Contracts.Moderation;
 using Knock.Hosting.Data;
+using Knock.Hosting.Procesos;
 using Knock.Market.Api.Common.Bandeja;
 using Knock.Market.Api.Common.Crypto;
 using Knock.Market.Api.Common.TareasProgramadas;
@@ -48,6 +49,7 @@ public static class RequestsModuleExtensions
         services.AddOptions<FieldEncryptionOptions>().BindConfiguration(FieldEncryptionOptions.SectionName);
         services.AddSingleton<FieldCipher>();
         services.AddScoped<IOutbox, MongoOutbox>();
+        services.AddScoped<IDestinatariosDeAviso, DestinatariosDeAvisoStore>();
         services.AddScoped<CandidatosStore>();
         services.AddScoped<EnviosStore>();
         services.AddScoped<BlockProjectionStore>();
@@ -79,6 +81,7 @@ public static class RequestsModuleExtensions
         services.AddScoped<ConversationPermissionService>();
         services.AddScoped<ChooseQuoteService>();
         services.AddScoped<IBandejaStore>(provider => new BandejaStore(provider.GetRequiredKeyedService<IMongoDatabase>(ModuleKey)));
+        services.AddScoped<IConsultaDeAlertas>(provider => new ConsultaDeAlertasMongo(provider.GetRequiredKeyedService<IMongoDatabase>(ModuleKey)));
         services.AddScoped<VisitStore>();
         services.AddScoped<AccountEventStore>();
         services.AddScoped<AccountEventService>();
@@ -105,7 +108,6 @@ public static class RequestsModuleExtensions
     private static IServiceCollection AddAccountDataAndDemoServices(this IServiceCollection services)
     {
         services.AddScoped<AccountDataStore>();
-        services.TryAddScoped<IOpinionAnonymizer, NoOpinionsToAnonymize>();
         services.AddScoped<AccountDataService>();
         services.AddScoped<DemoTechnicianStore>();
         services.AddScoped<DemoTechnicianSeeder>();

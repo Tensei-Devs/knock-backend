@@ -20,7 +20,7 @@ public sealed class Spec044AvisoCreadoPorElDespachadorTests
     private const string _counter = "/api/v1/avisos/no-leidos/contador";
 
     [Fact]
-    public async Task AcceptedEvent_AppearsInTheListAndTheCounterOfTheRecipientOnly_WithoutDevices_R_14()
+    public async Task AcceptedEvent_AppearsInTheListAndTheCounterOfTheRecipientOnly_WithoutDevices_R_14_CA_054_08()
     {
         var fixture = await DocumentDbFixture.SharedAsync();
         var name = "s044_e2e_" + Convert.ToHexString(RandomNumberGenerator.GetBytes(8));
@@ -148,5 +148,52 @@ public sealed class Spec044AvisoCreadoPorElDespachadorTests
         {
             await mongo.DropDatabaseAsync(name);
         }
+    }
+
+    [Fact]
+    public async Task NoticesWithoutRole_AreSavedWithoutOne_AndShowUpForBothRoleFilters_AsSystemType_CA_044_16()
+    {
+        var fixture = await DocumentDbFixture.SharedAsync();
+        var name = "s044_sinrol_" + Convert.ToHexString(RandomNumberGenerator.GetBytes(8));
+        var identityKey = RandomNumberGenerator.GetBytes(32);
+        using var mongo = new MongoClient(fixture.ConnectionString);
+        try
+        {
+            var marketKey = RandomNumberGenerator.GetBytes(32);
+            await using var host = await Spec037InternoAvisosSeguridadTests.CreateHostAsync(fixture.ConnectionString, name, marketKey, identityKey: identityKey);
+            using var client = host.CreateClient();
+            var person = Guid.NewGuid().ToString("D");
+            var common = new { eventoId = Guid.NewGuid().ToString("N"), tipo = "reporte_decidido", destinatarioId = person, recurso = ObjectId.GenerateNewId().ToString() };
+            var technicianOnly = new { eventoId = Guid.NewGuid().ToString("N"), tipo = "opinion_oculta", destinatarioId = person, rol = "tecnico", recurso = ObjectId.GenerateNewId().ToString() };
+            var clientOnly = new { eventoId = Guid.NewGuid().ToString("N"), tipo = "cotizacion_nueva", destinatarioId = person, rol = "cliente", recurso = ObjectId.GenerateNewId().ToString() };
+            using var first = await SecureHttp.PostJsonAsync(client, _internal, common, Spec037InternoAvisosSeguridadTests.Mint("knock-identity", identityKey, "reporte_decidido"));
+            using var second = await SecureHttp.PostJsonAsync(client, _internal, technicianOnly, Spec037InternoAvisosSeguridadTests.Mint("knock-identity", identityKey, "opinion_oculta"));
+            using var third = await SecureHttp.PostJsonAsync(client, _internal, clientOnly, Spec037InternoAvisosSeguridadTests.Mint("knock-market", marketKey, "cotizacion_nueva"));
+            new[] { first, second, third }.Should().OnlyContain(r => r.StatusCode == HttpStatusCode.Accepted);
+
+            var token = TokenForge.Valid(person);
+            var asClient = await TitlesAsync(client, _list + "?comoRol=cliente", token);
+            var asTechnician = await TitlesAsync(client, _list + "?comoRol=tecnico", token);
+            var unfiltered = await TitlesAsync(client, _list, token);
+
+            asClient.Should().BeEquivalentTo("Reporte revisado", "Nueva cotización");
+            asTechnician.Should().BeEquivalentTo("Reporte revisado", "Opinión oculta");
+            unfiltered.Should().HaveCount(3);
+            var stored = await mongo.GetDatabase(name).GetCollection<BsonDocument>("avisos").Find(new BsonDocument("eventoId", common.eventoId)).SingleAsync();
+            stored["comoRol"].IsBsonNull.Should().BeTrue("el aviso común no pertenece a un rol");
+            stored["tipo"].AsString.Should().Be("sistema");
+            await AssertUnreadAsync(client, token, 3);
+        }
+        finally
+        {
+            await mongo.DropDatabaseAsync(name);
+        }
+    }
+
+    private static async Task<string[]> TitlesAsync(HttpClient client, string path, string token)
+    {
+        using var response = await SecureHttp.SendAsync(client, HttpMethod.Get, path, bearer: token);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        return [.. (await SecureHttp.ReadJsonAsync(response)).GetProperty("items").EnumerateArray().Select(n => n.GetProperty("titulo").GetString()!)];
     }
 }

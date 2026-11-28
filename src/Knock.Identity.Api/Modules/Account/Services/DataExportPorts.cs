@@ -43,11 +43,12 @@ internal sealed class UnavailableExportNotice : IExportNotice
     public Task NotifyReadyAsync(string userId, string sub, string exportKey, CancellationToken cancellationToken) => throw new InvalidOperationException("The export notice is not configured.");
 }
 
-/// <summary>Un archivo JSON por servicio dentro del ZIP (spec 039, R-22): <c>identidad.json</c> y <c>mercado.json</c>.</summary>
+/// <summary>Un archivo JSON por servicio dentro del ZIP (spec 039, R-22): <c>identidad.json</c>, <c>mercado.json</c> y <c>mensajeria.json</c> (solo los mensajes propios de la persona).</summary>
 internal static class ExportArchive
 {
     public const string IdentityFile = "identidad.json";
     public const string MarketFile = "mercado.json";
+    public const string MessagingFile = "mensajeria.json";
 
     public static byte[] Build(IReadOnlyDictionary<string, string> files)
     {

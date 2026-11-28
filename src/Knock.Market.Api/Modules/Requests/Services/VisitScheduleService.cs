@@ -220,7 +220,10 @@ internal sealed class VisitScheduleService(VisitScheduleStore store, VisitStore 
     private static string Format(DateOnly day) => day.ToString(VisitScheduleRules.DayFormat, System.Globalization.CultureInfo.InvariantCulture);
 }
 
-/// <summary>Tarea <c>VencerPropuestaDeReprogramacion</c> (spec 054): la propuesta sin respuesta vence y la cita se mantiene.</summary>
+/// <summary>
+/// Tarea <c>VencerPropuestaDeReprogramacion</c> (spec 054): la propuesta sin respuesta vence y la cita se mantiene. La clave es <c>{visitaId}:{propuesta}</c> (cada propuesta programa la suya);
+/// las tareas anteriores traen solo la visita.
+/// </summary>
 internal sealed class VencerPropuestaDeReprogramacion(VisitScheduleStore store, TimeProvider clock) : IManejadorDeTarea
 {
     public string Tipo => VisitScheduleRules.ProposalExpiryTask;
@@ -228,7 +231,7 @@ internal sealed class VencerPropuestaDeReprogramacion(VisitScheduleStore store, 
     public async Task HandleAsync(TareaReservada task, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(task);
-        if (!ObjectId.TryParse(task.ClaveNegocio, out var id))
+        if (!ObjectId.TryParse(task.ClaveNegocio.Split(':')[0], out var id))
         {
             throw new FormatException("Invalid expiry task key.");
         }

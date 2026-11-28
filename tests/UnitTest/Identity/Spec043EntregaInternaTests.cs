@@ -66,6 +66,21 @@ public sealed class Spec043EntregaInternaTests
     }
 
     [Fact]
+    public async Task HiddenTechnicianGoesToMarketWithItsOwnPermission_CA_053_34()
+    {
+        using var handler = new StubHandler(HttpStatusCode.Accepted);
+        var carga = new BsonDocument { ["eventoId"] = "TecnicoOcultado:r1:1", ["usuarioId"] = "u1", ["reporteId"] = "r1" };
+
+        var result = await Delivery(handler).DeliverAsync(new OutboxReservado("TecnicoOcultado:r1:1", "TecnicoOcultado", "market", carga, "r", 0), CancellationToken.None);
+
+        result.Should().Be(ResultadoDeEntrega.Aceptado);
+        handler.Requests.Should().ContainSingle();
+        handler.Requests[0].Uri.AbsolutePath.Should().Be("/api/v1/interno/tecnicos-ocultados");
+        Claims(handler.Requests[0].Token).Should().Contain(("aud", "knock-market")).And.Contain(("permisos", "tecnico-ocultado")).And.Contain(("iss", "knock-identity"));
+        handler.Requests[0].Body.Should().Contain("\"eventoId\":\"TecnicoOcultado:r1:1\"").And.Contain("\"usuarioId\":\"u1\"").And.Contain("\"reporteId\":\"r1\"");
+    }
+
+    [Fact]
     public async Task OtherTypesAndDestinationsStayForRetry()
     {
         using var handler = new StubHandler(HttpStatusCode.Accepted);

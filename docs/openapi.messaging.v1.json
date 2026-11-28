@@ -1461,6 +1461,98 @@
         }
       }
     },
+    "/api/v{version}/interno/cuentas/{usuarioId}/exportacion": {
+      "get": {
+        "tags": [
+          "InternoExportacion"
+        ],
+        "summary": "Mensajes propios de la persona agrupados por conversación. 401 con token inválido; 403 `service_not_allowed` si falta el permiso, el emisor no es Identidad o el token es de otra persona.",
+        "parameters": [
+          {
+            "name": "usuarioId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportacionMensajeriaResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportacionMensajeriaResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportacionMensajeriaResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "headers": {
+              "X-Correlation-Id": {
+                "description": "Identificador de correlación de la petición (se reenvía o se genera en el gateway).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v{version}/conversaciones/{id}/mensajes": {
       "get": {
         "tags": [
@@ -2652,6 +2744,29 @@
         },
         "description": "La otra parte: nombre público y foto, nunca teléfono, correo, `sub` ni dirección (R-06). `fotoUrl` viaja siempre, en `null` cuando no hay."
       },
+      "ConversacionExportada": {
+        "required": [
+          "conversacionId",
+          "rol",
+          "mensajes"
+        ],
+        "type": "object",
+        "properties": {
+          "conversacionId": {
+            "type": "string"
+          },
+          "rol": {
+            "type": "string"
+          },
+          "mensajes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MensajePropioExportado"
+            }
+          }
+        },
+        "description": "Una conversación de la persona con únicamente los mensajes que ella escribió."
+      },
       "ConversacionItem": {
         "required": [
           "conversacionId",
@@ -2959,6 +3074,21 @@
         },
         "description": "Cuerpo de `POST /api/v1/interno/eventos` (spec 048, CA-21 y spec 054, R-03): el evento `CotizacionElegida` que Mercado entrega desde su bandeja de salida. Solo lleva identificadores; cualquier\notro campo (texto libre) queda en Dictionary&lt;string, JsonElement&gt;? EventoInterno.Extra y el validador lo rechaza con 422."
       },
+      "ExportacionMensajeriaResponse": {
+        "required": [
+          "conversaciones"
+        ],
+        "type": "object",
+        "properties": {
+          "conversaciones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConversacionExportada"
+            }
+          }
+        },
+        "description": "Respuesta de la exportación de Mensajería (spec 039, R-22): el contenido de `mensajeria.json`, solo mensajes propios."
+      },
       "IdDispositivo": {
         "required": [
           "id"
@@ -2986,6 +3116,31 @@
           }
         },
         "description": "Cuerpo de `POST /conversaciones/{id}/leido` (spec 030, R-19): la fecha UTC del último mensaje que la app mostró."
+      },
+      "MensajePropioExportado": {
+        "required": [
+          "mensajeId",
+          "texto",
+          "contactoOculto",
+          "creadoEn"
+        ],
+        "type": "object",
+        "properties": {
+          "mensajeId": {
+            "type": "string"
+          },
+          "texto": {
+            "type": "string"
+          },
+          "contactoOculto": {
+            "type": "boolean"
+          },
+          "creadoEn": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "description": "Un mensaje propio para la exportación (spec 039, R-22): solo texto y fecha. Nunca el identificador de la otra parte ni sus mensajes."
       },
       "MensajeResponse": {
         "required": [
@@ -3158,7 +3313,10 @@
             "type": "string"
           },
           "comoRol": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "titulo": {
             "type": "string"
@@ -3175,7 +3333,7 @@
             "format": "date-time"
           }
         },
-        "description": "Un aviso tal como lo ve la persona (R-10): sin códigos de visita, direcciones ni datos sensibles."
+        "description": "Un aviso tal como lo ve la persona (R-10); `ComoRol` es nulo en los avisos comunes a ambos roles: sin códigos de visita, direcciones ni datos sensibles."
       },
       "ProblemDetails": {
         "type": "object",
@@ -3337,6 +3495,9 @@
     },
     {
       "name": "InternoEventos"
+    },
+    {
+      "name": "InternoExportacion"
     },
     {
       "name": "Knock.Messaging.Api"

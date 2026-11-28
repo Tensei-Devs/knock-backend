@@ -49,6 +49,7 @@ internal sealed class VisitCloseStore(
                 return false;
             }
 
+            await SolicitudDeLaVisita.FinishAsync(database, transaction, visit.RequestId, nowUtc, token);
             await outbox.AddAsync(transaction, OutboxMessage.Create(VisitCloseRules.FinishedEvent, visit.Id.ToString(), VisitStore.Identifiers(visit), nowUtc), token);
             var tasks = new TareasProgramadasStore(database);
             await tasks.ScheduleByKeyAsync(transaction, VisitCloseRules.CloseOpinionTask, visit.Id.ToString(), nowUtc + VisitCloseRules.OpinionPeriod, nowUtc, token);

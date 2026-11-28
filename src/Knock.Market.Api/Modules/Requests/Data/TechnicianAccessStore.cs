@@ -9,6 +9,8 @@ internal sealed class TechnicianAccessStore([FromKeyedServices(RequestsModuleExt
     private static readonly string[] _visibleStates = ["activo", "cotizado"];
     private static readonly string[] _closedFields = ["terminadaEn", "canceladaEn", "vencidaEn"];
     private static readonly string[] _closedStates = ["terminada", "calificada", "cancelada", "vencida"];
+    private static readonly ProjectionDefinition<BsonDocument> _closingProjection =
+        Builders<BsonDocument>.Projection.Include("estado").Include("actualizadoEn").Include("terminadaEn").Include("canceladaEn").Include("vencidaEn");
 
     public async Task<(bool Participates, DateTime? ClosedAtUtc)> GetAsync(string solicitudId, string sub, CancellationToken cancellationToken)
     {
@@ -27,9 +29,36 @@ internal sealed class TechnicianAccessStore([FromKeyedServices(RequestsModuleExt
         }
 
         var request = await database.GetCollection<BsonDocument>("solicitudes").Find(f.Eq("_id", id))
-            .Project(Builders<BsonDocument>.Projection.Include("estado").Include("actualizadoEn").Include("terminadaEn").Include("canceladaEn").Include("vencidaEn"))
+            .Project(_closingProjection)
             .FirstOrDefaultAsync(cancellationToken);
         return (true, request is null ? null : ClosedAt(request));
+    }
+
+    public async Task<IReadOnlyDictionary<string, DateTime>> GetClosedAtAsync(IReadOnlyCollection<string> solicitudIds, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(solicitudIds);
+        var ids = new List<ObjectId>(solicitudIds.Count);
+        foreach (var solicitudId in solicitudIds)
+        {
+            if (ObjectId.TryParse(solicitudId, out var parsed))
+            {
+                ids.Add(parsed);
+            }
+        }
+
+        var found = await database.GetCollection<BsonDocument>("solicitudes").Find(Builders<BsonDocument>.Filter.In("_id", ids))
+            .Project(_closingProjection)
+            .ToListAsync(cancellationToken);
+        var closed = new Dictionary<string, DateTime>(StringComparer.Ordinal);
+        foreach (var request in found)
+        {
+            if (ClosedAt(request) is { } at)
+            {
+                closed[request["_id"].AsObjectId.ToString()] = at;
+            }
+        }
+
+        return closed;
     }
 
     private static DateTime? ClosedAt(BsonDocument request)

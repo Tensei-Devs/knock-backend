@@ -107,9 +107,9 @@ Que el registro de cada archivo privado de Media (fotos de una solicitud y, en g
 | CA-23 | `Spec058ContractTests.Fotos_De_Solicitud_Acepta_32_Hexadecimales_CA_058_23` (ContractTest) y regresión de `Spec020FotosTests` |
 
 ## 5. Contrato
-**HTTP: sin cambios.** El módulo `Media` de Mercado hoy no tiene controller: la spec 013 OI-2 dejó solo servicios detrás de interfaces (`Memoria.md`, 2026-11-09) y `docs/openapi.v1.json` no contiene rutas de archivos privados (solo el campo `fotos` de la solicitud, que la 020 pasa a 32 hexadecimales por D4). La spec 032 define las rutas del flujo **público** (`/api/v1/imagenes/subidas`); las del flujo privado todavía no existen en ninguna spec aprobada. Por eso «no cambiar el contrato HTTP» significa: esta tarjeta no agrega, quita ni modifica ninguna ruta, cuerpo ni nombre de blob; lo único que cambia es el formato aceptado de cada `archivoId` en `fotos` de la solicitud (R-18).
+**Alcance original de HTTP (spec 058).** El módulo `Media` de Mercado hoy no tiene controller: la spec 013 OI-2 dejó solo servicios detrás de interfaces (`Memoria.md`, 2026-11-09) y `docs/openapi.v1.json` no contiene rutas de archivos privados (solo el campo `fotos` de la solicitud, que la 020 pasa a 32 hexadecimales por D4). La spec 032 define las rutas del flujo **público** (`/api/v1/imagenes/subidas`); las del flujo privado todavía no existen en ninguna spec aprobada. Por eso «no cambiar el contrato HTTP» significa: esta tarjeta no agrega, quita ni modifica ninguna ruta, cuerpo ni nombre de blob; lo único que cambia es el formato aceptado de cada `archivoId` en `fotos` de la solicitud (R-18).
 
-**Efecto nuevo documentable:** cuando existan las rutas del flujo privado, pedir una subida puede responder **429** `limit_exceeded` con `Retry-After` (R-11). 429 es un estado estándar de la spec 002 (R-11) y el código `limit_exceeded` ya existe (spec 032). Se decidió no crear un código propio (D3, 2026-11-20).
+**Integración posterior (spec 062).** Las fotos privadas de solicitud usan `POST /api/v1/imagenes/subidas` con `proposito: solicitud` y `POST /api/v1/imagenes/subidas/{id}/confirmar`. La confirmación privada omite `url` en el JSON. Pedir una subida puede responder **429** `limit_exceeded` con `Retry-After` (R-11). 429 es un estado estándar de la spec 002 (R-11) y el código `limit_exceeded` ya existe (spec 032). Se decidió no crear un código propio (D3, 2026-11-20).
 
 **Interfaz interna (no REST), `IMediaFileStore` (camelCase en el documento):**
 
@@ -274,7 +274,7 @@ Las ocho se contestaron «sí» con la recomendación del autor y ya están apli
 - **Rechazos de más bajo contención simultánea:** el tope puede rechazar una subida legítima cuando muchas llegan a la vez; es seguro y reintentable, y poco probable con un solo teléfono por persona.
 - **Blobs de cuarentena huérfanos:** el TTL borra el registro pero no el blob; hasta que una persona aplique la regla de ciclo de vida de 1 día (R-19, D8) puede quedar un blob sin registro.
 - **Dependencia con la spec 020:** el formato de `archivoId` quedó alineado en las dos specs (D4); el validador y el OpenAPI de la 020 cambian al implementar (R-18, T-08).
-- **Las rutas HTTP del flujo privado todavía no están definidas** en ninguna spec aprobada; el tope y su 429 se documentan cuando existan.
+- **Flujo HTTP privado de solicitud:** la spec 062 define las rutas y el 429 de R-11; el acceso y la confirmación se rigen por esa spec.
 - **`uso` acepta hoy `perfil`, `solicitud` y `trabajo` en el flujo privado**, aunque la spec 032 manda perfil y trabajo al flujo público; restringirlo a `solicitud` no se hace aquí.
 
 ## Nota de enmienda (2026-11-24, decisión de José)

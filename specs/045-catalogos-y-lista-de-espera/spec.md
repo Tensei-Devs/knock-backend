@@ -300,7 +300,15 @@ Las pruebas citan el caso como `CA_045_NN` en el nombre (para `python scripts/sd
 - Sin dudas abiertas: todas las decisiones de esta spec quedaron resueltas en el cierre del 2026-11-13.
 - Dependencia: las rutas de administración exigen el panel con doble factor (spec 033, H-4) y el permiso `catalog:manage`.
 
+## Nota de enmienda (2026-11-25, decisión de José del 2026-11-24, pendiente de firma)
+- **Estado de esta enmienda:** **sin firmar**. Deja constancia del comportamiento ya fusionado en #394 (auditoría de oficios por bandeja de salida, mismo enfoque que la spec 061). La firma es la línea «Enmienda 2026-11-25» de la sección Aprobación.
+- **R-20.** «Cada alta o cambio queda en la auditoría del panel» se cumple de forma **asíncrona**: Mercado escribe el oficio y el evento `CambioDeOficio` en la **misma transacción**, y la bandeja lo entrega a `POST /api/v1/interno/cambios-de-oficio` de Identidad (token de servicio con permiso `cambio-de-oficio`), que lo guarda en `panel_auditoria` como `oficio_creado` u `oficio_editado`, idempotente por `eventoId`.
+- **Comportamiento ante fallos (cambia).** Antes, sin auditoría disponible el oficio no se escribía y la ruta respondía 503. Ahora el cambio queda aplicado y el evento se reintenta hasta 5 intentos (fallas de red, 5xx y 429). Si se agotan, o si Identidad responde 401, 403 o 422, el mensaje queda `fallido` en la bandeja, que lo conserva.
+- **Contenido.** La auditoría guarda quién (`sub` del panel), cuándo, la acción y la clave del oficio. **No** guarda el detalle campo a campo: `panel_auditoria` (spec 033, R-23) no admite valores. «Qué cambió» se lee como la acción y el oficio afectado.
+- **Operación.** La entrega requiere `Bandeja:Habilitada` (apagada por omisión en el servicio; `deploy/apps/main.tf` la declara `true`) y la dirección y la clave de servicio hacia Identidad. Sin ellas los eventos quedan pendientes.
+
 ## Aprobación
 - [x] Revisor 1 — nombre: José Julián Hernández Hernández fecha: 2026-11-14
+- [x] Enmienda 2026-11-25 — nombre: José Julián Hernández Hernández fecha: 2026-11-26
 - [x] Sin conflicto con la constitución
 - **Estados:** Borrador → Aprobada (una persona; habilita el código) → Implementada (tras el merge)

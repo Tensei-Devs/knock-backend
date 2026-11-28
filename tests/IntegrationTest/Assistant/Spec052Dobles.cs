@@ -41,6 +41,9 @@ internal sealed class DobleConversaciones : IConversacionesAsistente
 internal sealed class DobleSolicitudes : ISolicitudesAsistente
 {
     public Task<RequestAccess> GetAccessAsync(string solicitudId, string sub, CancellationToken cancellationToken) => Task.FromResult(new RequestAccess(true, null));
+
+    public Task<IReadOnlyDictionary<string, DateTime>> GetClosedAtAsync(IReadOnlyCollection<string> solicitudIds, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyDictionary<string, DateTime>>(new Dictionary<string, DateTime>());
 }
 
 internal sealed class DobleReferencia : IReferenciaMercado
@@ -65,4 +68,9 @@ internal sealed class DobleBitacoras : IBitacoraStore
 
     public Task<BitacoraRecord?> FindAsync(string solicitudId, string tecnicoId, CancellationToken cancellationToken) =>
         Task.FromResult(_logs.TryGetValue(solicitudId + "|" + tecnicoId, out var log) ? log : null);
+
+    public Task<IReadOnlyList<BitacoraSinFecha>> ListWithoutExpiryAsync(string? afterId, int limit, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<BitacoraSinFecha>>([]);
+
+    public Task SetExpiryAsync(string solicitudId, DateTime venceEn, CancellationToken cancellationToken) => Task.CompletedTask;
 }

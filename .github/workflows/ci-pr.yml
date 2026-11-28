@@ -181,7 +181,7 @@ jobs:
     needs: detect
     if: needs.detect.outputs.api == 'true' && needs.detect.outputs.docsonly != 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -204,45 +204,13 @@ jobs:
         run: dotnet test tests/UnitTest -c Release --no-build --filter "Category=Performance" --results-directory reports/performance --logger trx
       - name: Arquitectura (fronteras entre servicios)
         run: dotnet test tests/ArchitectureTest -c Release --no-build --logger trx --results-directory reports/architecture
-      # TT-CI-03 (KNOCK-139): emulador de Firebase Auth para las pruebas de inicio de sesión. Sin Java ni credenciales:
-      # solo el proyecto ficticio demo-knock. firebase-tools queda fijado a una versión exacta (15.34.0).
       - name: Emulador de Firebase Auth
-        run: |
-          cfg="$RUNNER_TEMP/firebase-emulator"
-          mkdir -p "$cfg"
-          cat > "$cfg/firebase.json" <<'JSON'
-          {"emulators":{"auth":{"host":"127.0.0.1","port":9099},"ui":{"enabled":false}}}
-          JSON
-          (cd "$cfg" && nohup npx --yes firebase-tools@15.34.0 emulators:start --only auth --project demo-knock > "$cfg/emulator.log" 2>&1 &)
-          for _ in $(seq 1 90); do
-            curl -fsS http://127.0.0.1:9099/ > /dev/null 2>&1 && break
-            sleep 1
-          done
-          if ! curl -fsS http://127.0.0.1:9099/ > /dev/null 2>&1; then
-            echo "::error::El emulador de Firebase Auth no respondió en 90 s"
-            cat "$cfg/emulator.log"
-            exit 1
-          fi
-          echo "FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099" >> "$GITHUB_ENV"
-      - name: Integración (Redis y Azurite con Testcontainers)
-        run: dotnet test tests/IntegrationTest -c Release --no-build --collect:"XPlat Code Coverage" --results-directory reports/integration --logger trx
+        run: bash scripts/ci/firebase_emulator.sh
       - name: Seguridad negativa
         run: dotnet test tests/SecurityTest -c Release --no-build --collect:"XPlat Code Coverage" --results-directory reports/security --logger trx
-      - name: Base de datos (semillas y restricciones)
-        if: hashFiles('tests/DatabaseTest/*.csproj') != ''
-        run: dotnet test tests/DatabaseTest -c Release --no-build --logger trx --results-directory reports/database
       - name: Contrato (captura del wire)
         if: hashFiles('tests/ContractTest/*.csproj') != ''
         run: dotnet test tests/ContractTest -c Release --no-build --logger trx --results-directory reports/contract
-      # Se excluye solo el código que genera el compilador (interceptores de OpenAPI y atributos): no es código de Knock
-      # y no se puede probar. Los umbrales de MIN_LINES y MIN_BRANCHES no cambian.
-      - name: Cobertura combinada
-        run: dotnet tool run reportgenerator -reports:"reports/**/coverage.cobertura.xml" -targetdir:reports/coverage -reporttypes:"Cobertura;MarkdownSummaryGithub;Html" "-classfilters:-Microsoft.AspNetCore.OpenApi.Generated*;-System.Runtime.CompilerServices*"
-      - name: Umbral de cobertura (líneas y ramas)
-        run: python3 scripts/check_coverage.py --cobertura reports/coverage/Cobertura.xml --min "$MIN_LINES" --min-branch "$MIN_BRANCHES"
-      - name: Resumen en el PR
-        if: always()
-        run: cat reports/coverage/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
       - name: Contrato OpenAPI regenerado y sin cambios pendientes
         if: hashFiles('scripts/export_openapi.py') != ''
         run: |
@@ -253,6 +221,100 @@ jobs:
           python3 scripts/export_openapi.py --publico
           python3 scripts/export_openapi.py --comprobar-publico
           git diff --exit-code --name-only -- docs/openapi.v1.json docs/openapi.identity.v1.json docs/openapi.messaging.v1.json docs/openapi.publico.v1.json || { echo "::error::Los contratos listados arriba cambiaron: regénéralos con scripts/export_openapi.py (--service ... y --publico) y súbelos con el código."; exit 1; }
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: always()
+        with:
+          name: api-reports-build
+          path: reports/
+          if-no-files-found: ignore
+
+  # Integración, base de datos y cobertura van en jobs aparte (KNOCK-266): en un solo job sumaban 51 a 55 de sus 60 minutos.
+  # El gate exige los cuatro en verde cuando hay código: aquí un «skipped» no basta.
+  test-integration:
+    name: API — integración
+    needs: detect
+    if: needs.detect.outputs.api == 'true' && needs.detect.outputs.docsonly != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+      - run: dotnet restore Knock.slnx --locked-mode
+      - run: dotnet build tests/IntegrationTest -c Release --no-restore -warnaserror
+      - name: Emulador de Firebase Auth
+        run: bash scripts/ci/firebase_emulator.sh
+      - name: Integración (Redis y Azurite con Testcontainers)
+        run: dotnet test tests/IntegrationTest -c Release --no-build --collect:"XPlat Code Coverage" --results-directory reports/integration --logger trx
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: always()
+        with:
+          name: api-reports-integration
+          path: reports/
+          if-no-files-found: ignore
+
+  test-database:
+    name: API — base de datos
+    needs: detect
+    if: needs.detect.outputs.api == 'true' && needs.detect.outputs.docsonly != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+      - run: dotnet restore Knock.slnx --locked-mode
+      - if: hashFiles('tests/DatabaseTest/*.csproj') != ''
+        run: dotnet build tests/DatabaseTest -c Release --no-restore -warnaserror
+      - name: Base de datos (semillas y restricciones)
+        if: hashFiles('tests/DatabaseTest/*.csproj') != ''
+        run: dotnet test tests/DatabaseTest -c Release --no-build --logger trx --results-directory reports/database
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: always()
+        with:
+          name: api-reports-database
+          path: reports/
+          if-no-files-found: ignore
+
+  coverage:
+    name: API — cobertura combinada
+    needs: [detect, build-test, test-integration]
+    if: needs.detect.outputs.api == 'true' && needs.detect.outputs.docsonly != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+      - name: Restaurar herramientas de .NET
+        run: dotnet tool restore
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: api-reports-build
+          path: reports
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: api-reports-integration
+          path: reports
+      # Se excluye solo el código que genera el compilador (interceptores de OpenAPI y atributos): no es código de Knock
+      # y no se puede probar. Los umbrales de MIN_LINES y MIN_BRANCHES no cambian.
+      - name: Cobertura combinada
+        run: dotnet tool run reportgenerator -reports:"reports/**/coverage.cobertura.xml" -targetdir:reports/coverage -reporttypes:"Cobertura;MarkdownSummaryGithub;Html" "-classfilters:-Microsoft.AspNetCore.OpenApi.Generated*;-System.Runtime.CompilerServices*"
+      - name: Umbral de cobertura (líneas y ramas)
+        run: python3 scripts/check_coverage.py --cobertura reports/coverage/Cobertura.xml --min "$MIN_LINES" --min-branch "$MIN_BRANCHES"
+      - name: Resumen en el PR
+        if: always()
+        run: cat reports/coverage/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+      # Conserva el nombre y la estructura que lee sonarcloud.yml (reports/coverage/Cobertura.xml).
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
@@ -415,7 +477,7 @@ jobs:
 
   container:
     name: Contenedor (build, Trivy, Dockle)
-    needs: [detect, build-test]
+    needs: [detect, build-test, test-integration, test-database, coverage]
     if: needs.detect.outputs.docker == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -476,11 +538,15 @@ jobs:
           persist-credentials: false
       - name: Credenciales efímeras de la pila (no se imprimen)
         run: |
-          for v in CI_DB_PASSWORD:hex:24 CI_REDIS_PASSWORD:hex:24 CI_JWT_KEY:b64:32 CI_KEY_A:b64:32 CI_KEY_B:b64:32 CI_KEY_C:b64:32 CI_KEY_D:b64:32 CI_KEY_E:b64:32 CI_KEY_F:b64:32 CI_BLOB_KEY:b64:32; do
+          for v in CI_DB_PASSWORD:hex:24 CI_REDIS_PASSWORD:hex:24 CI_JWT_KEY:b64:32 CI_KEY_A:b64:32 CI_KEY_B:b64:32 CI_KEY_C:b64:32 CI_KEY_D:b64:32 CI_KEY_E:b64:32 CI_KEY_F:b64:32 CI_KEY_G:b64:32 CI_BLOB_KEY:b64:32; do
             IFS=: read -r nombre tipo largo <<<"$v"
             if [ "$tipo" = hex ]; then valor=$(openssl rand -hex "$largo"); else valor=$(openssl rand -base64 "$largo"); fi
             echo "::add-mask::$valor"; echo "$nombre=$valor" >> "$GITHUB_ENV"
           done
+      - name: Datos ficticios (índices y catálogo de ejemplo con db/entrega.js)
+        run: |
+          docker compose -f deploy/docker-compose.ci.yml up -d --wait --wait-timeout 300 documentdb redis
+          docker compose -f deploy/docker-compose.ci.yml run -T seed
       - name: Levantar gateway, Identidad, Mercado, Mensajería, MongoDB (documentdb-local), Redis y Azurite
         run: |
           docker compose -f deploy/docker-compose.ci.yml up -d --build --wait --wait-timeout 600             || { docker compose -f deploy/docker-compose.ci.yml ps; docker compose -f deploy/docker-compose.ci.yml logs --no-color --tail 80 gateway identity market messaging; exit 1; }
@@ -495,6 +561,23 @@ jobs:
           rules_file_name: security/zap-rules.tsv
           allow_issue_writing: false
           fail_action: true
+      # KNOCK-266: segundo escaneo, también pasivo y con las mismas reglas, sobre una lista de rutas con y sin sesión.
+      - name: Sesiones ficticias para ZAP (llave efímera del job)
+        run: python3 tests/smoke/dast_sesion.py dast-sesion.json
+      - name: ZAP baseline con rutas y sesión ficticia
+        uses: zaproxy/action-baseline@de8ad967d3548d44ef623df22cf95c3b0baf8b25 # v0.15.0
+        with:
+          target: http://localhost:8080
+          rules_file_name: security/zap-rules.tsv
+          cmd_options: --hook /zap/wrk/tests/smoke/zap_rutas.py -P 8099
+          artifact_name: zap_scan_sesion
+          allow_issue_writing: false
+          fail_action: true
+      # Si ZAP no encuentra el hook solo avisa y termina en verde: sin el resumen de rutas, el paso falla.
+      - name: Comprobar que ZAP recorrió las rutas
+        run: |
+          test -s dast-rutas.txt || { echo "::error::ZAP no recorrió las rutas de tests/smoke/zap_rutas.py"; exit 1; }
+          cat dast-rutas.txt
       - name: Apagar
         if: always()
         run: docker compose -f deploy/docker-compose.ci.yml down -v
@@ -502,7 +585,7 @@ jobs:
   gate:
     name: gate
     if: always()
-    needs: [detect, pr-meta, pr-points, governance, build-test, sast, sca, secrets, openapi-diff, iac, container, dast]
+    needs: [detect, pr-meta, pr-points, governance, build-test, test-integration, test-database, coverage, sast, sca, secrets, openapi-diff, iac, container, dast]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -516,6 +599,12 @@ jobs:
           for k, v in needs.items():
               print(f"{k}: {v['result']}")
           bad = {k: v["result"] for k, v in needs.items() if v["result"] not in ("success", "skipped")}
+          outputs = needs["detect"]["outputs"]
+          if outputs.get("api") == "true" and outputs.get("docsonly") != "true":
+              # Con código, las pruebas y la cobertura no pueden quedar omitidas (KNOCK-266).
+              for job in ("build-test", "test-integration", "test-database", "coverage"):
+                  if needs[job]["result"] != "success":
+                      bad[job] = needs[job]["result"]
           if needs["detect"]["outputs"].get("docker") == "true" and needs["detect"]["outputs"].get("dast") != "true":
               sys.exit("BUG-001: falta deploy/docker-compose.ci.yml o tests/smoke/smoke.sh; el humo y el DAST no pueden saltarse")
           sys.exit(f"Fallaron: {bad}" if bad else 0)

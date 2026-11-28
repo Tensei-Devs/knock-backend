@@ -145,6 +145,8 @@ public sealed class Spec061OcultarOpinionTests
 
     private sealed class FakeStore(ReviewModerationOutcome outcome, ObjectId? technician = null) : IReviewStore
     {
+        public Task AnonymizeByAuthorAsync(string clientId, CancellationToken cancellationToken) => throw new NotSupportedException();
+
         public Task<ReviewModerationResult> SetHiddenAsync(ObjectId id, bool hidden, string? reason, string moderatorId, DateTime nowUtc, CancellationToken cancellationToken) =>
             Task.FromResult(new ReviewModerationResult(outcome, technician));
 
